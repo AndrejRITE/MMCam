@@ -96,6 +96,9 @@
     <ClInclude Include="cGenerateReportDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CameraControl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cApp.cpp">

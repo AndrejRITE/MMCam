@@ -159,6 +159,7 @@
     <ClInclude Include="..\MaterialDesign\wxMaterialSharpArt.hpp" />
     <ClInclude Include="..\MaterialDesign\wxMaterialTwoToneArt.hpp" />
     <ClInclude Include="..\MaterialDesign\wxSimpleIconsArt.hpp" />
+    <ClInclude Include="CameraControl.h" />
     <ClInclude Include="cApp.h" />
     <ClInclude Include="cCamPreview.h" />
     <ClInclude Include="cGenerateReportDialog.h" />
