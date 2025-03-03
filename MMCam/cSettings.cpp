@@ -86,7 +86,7 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 #ifdef _DEBUG
 	main_panel->SetBackgroundColour(wxColor(150, 190, 180));
 #else
-	main_panel->SetBackgroundColour(wxColor(255, 255, 255));
+	main_panel->SetBackgroundColour(wxColor(30, 30, 30));
 #endif // _DEBUG
 	wxBoxSizer* main_panel_sizer = new wxBoxSizer(wxVERTICAL);
 

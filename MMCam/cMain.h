@@ -3,6 +3,7 @@
 #define CMAIN_H
 
 #include "wx/wx.h"
+#include "wx/imaglist.h"
 #include "wx/filefn.h"
 #include "wx/textfile.h"
 #include "wx/tglbtn.h"
@@ -24,6 +25,7 @@
 #include "cGenerateReportDialog.h"
 
 #include "src/img/logo.xpm"
+#include <wx/msw/window.h>
 
 #define MAJOR_VERSION 1
 #define MINOR_VERSION 15
@@ -254,6 +256,29 @@ private:
 	void CreateLeftAndRightSide();
 	void CreateLeftSide(wxSizer* left_side_sizer);
 	void CreateRightSide(wxSizer* right_side_sizer);
+
+	auto CreateDetectorPage
+	(
+		wxWindow* parent, 
+		const wxSize& absoluteTxtCtrlSize, 
+		const wxSize& relativeTxtCtrlSize,
+		const wxSize& setBtnSize,
+		const wxSize& incrementDecrementBtnSize,
+		const wxBitmap& centerBitmap,
+		const wxBitmap& homeBitmap
+	) -> wxWindow*;
+
+	auto CreateOpticsPage
+	(
+		wxWindow* parent, 
+		const wxSize& absoluteTxtCtrlSize, 
+		const wxSize& relativeTxtCtrlSize,
+		const wxSize& setBtnSize,
+		const wxSize& incrementDecrementBtnSize,
+		const wxBitmap& centerBitmap,
+		const wxBitmap& homeBitmap
+	) -> wxWindow*;
+
 	void CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
 	void CreateCameraControls(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
 	void CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
@@ -1366,6 +1391,7 @@ private:
 
 	/* wxPanels */
 	wxPanel* m_RightSidePanel{};
+	wxNotebook* m_MotorControlsNotebook{};
 
 	std::vector<std::pair<wxString, bool>> m_StartedThreads{};
 
