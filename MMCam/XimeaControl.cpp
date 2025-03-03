@@ -156,37 +156,6 @@ auto XimeaControl::TryToReconnectLastSelectedCamera() -> bool
 	return InitializeCameraBySN(m_CurrentCameraSN);
 }
 
-//auto XimeaControl::AppendThread() -> int
-//{
-//	m_Threads.emplace_back(true);
-//	return m_Threads.size() - 1;
-//}
-//
-//auto XimeaControl::GetThreadState(int id) -> bool
-//{
-//	if (!m_Threads.size()) return false;
-//	if (id >= m_Threads.size() || id < 0) return false;
-//	else
-//		return m_Threads[id];
-//}
-//
-//auto XimeaControl::TurnOffLastThread() -> bool
-//{
-//	auto n = m_Threads.size() - 1;
-//	while (!m_Threads[n] && n > -1)
-//		--n;
-//
-//	if (n == -1) return false;
-//
-//	m_Threads[n] = false;
-//	return true;
-//}
-//
-//auto XimeaControl::ClearAllThreads() -> void
-//{
-//	m_Threads.clear();
-//}
-
 XimeaControl::~XimeaControl()
 {
 	if (m_IsCameraOpen)
