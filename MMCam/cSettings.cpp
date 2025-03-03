@@ -1151,23 +1151,31 @@ void cSettings::ResetAllMotorsAndRangesInXMLFile()
 
 auto cSettings::RewriteInitializationFile() -> void
 {
+	auto xmlFile = std::make_unique<rapidxml::file<>>(initialization_file_path.c_str());
 	auto document = std::make_unique<rapidxml::xml_document<>>();
 	// Open *.xml file
-	std::ifstream ini_file(initialization_file_path.mb_str());
+	//std::ifstream ini_file(initialization_file_path.mb_str());
 	// Preparing buffer
-	std::stringstream file_buffer;
-	file_buffer << ini_file.rdbuf();
-	ini_file.close();
+	//std::stringstream file_buffer;
+	//file_buffer << ini_file.rdbuf();
+	//ini_file.close();
 
-	std::string content(file_buffer.str());
-	document->parse<0 | rapidxml::parse_no_data_nodes>(&content[0]);
-	rapidxml::xml_node<>* work_station_node = document->first_node("work_station");
+	//std::string content(file_buffer.str());
+	//document->parse<0 | rapidxml::parse_no_data_nodes>(&content[0]);
 
-	if (!work_station_node)
+	document->parse<0>(xmlFile->data());
+	rapidxml::xml_node<>* app_node = document->first_node("MMCam");
+
+	auto element = SettingsVariables::FindNode(app_node, "work_station");
+
+	rapidxml::xml_node<>* work_station_node{};
+	if (element && element->first_node())
+		work_station_node = element;
+	else
 		return;
 
 #ifndef _DEBUG
-	work_station_node->value(m_WorkStations->initialized_work_station.c_str());
+	work_station_node->first_node()->value(m_WorkStations->initialized_work_station.c_str());
 #endif // !_DEBUG
 
 	// Save to file
