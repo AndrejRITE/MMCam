@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<selected_motors>
+	<camera>11485958</camera>
+	<detector>
+		<motor>
+			<sn>37181</sn>
+			<steps_per_mm>800</steps_per_mm>
+		</motor>
+		<motor>
+			<sn>None</sn>
+			<steps_per_mm>800</steps_per_mm>
+		</motor>
+		<motor>
+			<sn>None</sn>
+			<steps_per_mm>800</steps_per_mm>
+		</motor>
+	</detector>
+	<optics>
+		<motor>
+			<sn>None</sn>
+			<steps_per_mm>800</steps_per_mm>
+		</motor>
+		<motor>
+			<sn>None</sn>
+			<steps_per_mm>800</steps_per_mm>
+		</motor>
+		<motor>
+			<sn>None</sn>
+			<steps_per_mm>800</steps_per_mm>
+		</motor>
+	</optics>
+	<station>LEPENI_A</station>
+</selected_motors>

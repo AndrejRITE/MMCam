@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<selected_motors>
+	<camera>37680258</camera>
+	<!--<camera>38285758</camera>--> <!--BlackLab-->
+	<detector>
+		<motor>
+			<sn>18808</sn>
+			<steps_per_mm>800</steps_per_mm>
+		</motor>
+		<motor>
+			<sn>15748</sn>
+			<steps_per_mm>800</steps_per_mm>
+		</motor>
+		<motor>
+			<sn>15715</sn>
+			<steps_per_mm>800</steps_per_mm>
+		</motor>
+	</detector>
+	<optics>
+		<motor>
+			<sn>12586</sn>
+			<steps_per_mm>800</steps_per_mm>
+		</motor>
+		<motor>
+			<sn>12538</sn>
+			<steps_per_mm>800</steps_per_mm>
+		</motor>
+		<motor>
+			<sn>None</sn>
+			<steps_per_mm>800</steps_per_mm>
+		</motor>
+	</optics>
+	<station>DEBUG</station>
+</selected_motors>

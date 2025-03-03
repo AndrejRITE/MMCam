@@ -1166,7 +1166,9 @@ auto cSettings::RewriteInitializationFile() -> void
 	if (!work_station_node)
 		return;
 
+#ifndef _DEBUG
 	work_station_node->value(m_WorkStations->initialized_work_station.c_str());
+#endif // !_DEBUG
 
 	// Save to file
 	std::ofstream out_file(initialization_file_path.mb_str());

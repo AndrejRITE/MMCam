@@ -1619,8 +1619,8 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 {
 	m_CamPreview->SetFocus();
 
-#ifndef _DEBUG
 	m_Settings->ShowModal();
+#ifndef _DEBUG
 #endif // !_DEBUG
 
 	if (!m_Settings->IsActive())

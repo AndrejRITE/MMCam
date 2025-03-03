@@ -85,6 +85,7 @@ if (-not (Test-Path -Path $src_folder))
 }
 Copy-Item -Path "${other_files_folder}\src\bruker.xml" -Destination "${src_folder}\bruker.xml" -Force
 Copy-Item -Path "${other_files_folder}\src\experimental.xml" -Destination "${src_folder}\experimental.xml" -Force
+Copy-Item -Path "${other_files_folder}\src\lepeni_a.xml" -Destination "${src_folder}\lepeni_a.xml" -Force
 Copy-Item -Path "${other_files_folder}\src\specs.xml" -Destination "${src_folder}\specs.xml" -Force
 Copy-Item -Path "${other_files_folder}\src\init.ini" -Destination "${src_folder}\init.ini" -Force
 
