@@ -288,6 +288,8 @@ private:
 	const int m_MotorsCount{ 6 };
 	std::unique_ptr<SettingsVariables::ProgressValues> m_Progress = std::make_unique<SettingsVariables::ProgressValues>();
 	std::unique_ptr<wxTextCtrl> m_GridMeshStepPXTxtCtrl{}, m_CircleMeshStepPXTxtCtrl{};
+
+	wxColour m_BlackAppearenceColor = wxColour(90, 90, 90);
 };
 
 #endif // !CSETTINGS_H

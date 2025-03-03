@@ -84,9 +84,9 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 {	
 	wxPanel* main_panel = new wxPanel(this);
 #ifdef _DEBUG
-	main_panel->SetBackgroundColour(wxColor(150, 190, 180));
+	main_panel->SetBackgroundColour(m_BlackAppearenceColor);
 #else
-	main_panel->SetBackgroundColour(wxColor(30, 30, 30));
+	main_panel->SetBackgroundColour(m_BlackAppearenceColor);
 #endif // _DEBUG
 	wxBoxSizer* main_panel_sizer = new wxBoxSizer(wxVERTICAL);
 
@@ -427,9 +427,9 @@ auto cSettings::CreateOtherSettings(wxBoxSizer* panel_sizer) -> void
 {	
 	wxPanel* main_panel = new wxPanel(this);
 #ifdef _DEBUG
-	main_panel->SetBackgroundColour(wxColor(150, 190, 180));
+	main_panel->SetBackgroundColour(m_BlackAppearenceColor);
 #else
-	main_panel->SetBackgroundColour(wxColor(255, 255, 255));
+	main_panel->SetBackgroundColour(m_BlackAppearenceColor);
 #endif // _DEBUG
 	wxBoxSizer* main_panel_sizer = new wxBoxSizer(wxVERTICAL);
 
