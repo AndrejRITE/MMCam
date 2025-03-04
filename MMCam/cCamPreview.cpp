@@ -137,15 +137,6 @@ auto cCamPreview::GetImageSize() const -> wxSize
 	return m_ImageSize;
 }
 
-auto cCamPreview::InitializeSelectedCamera(const std::string& camera_sn) -> void
-{
-	if (m_XimeaCameraControl->CloseCamera())
-	{
-		m_SelectedCameraSN = camera_sn;
-		m_XimeaCameraControl->InitializeCameraBySN(m_SelectedCameraSN);
-	}
-}
-
 void cCamPreview::UpdateImageParameters()
 {
 	LOG("Started: " + wxString(__FUNCSIG__))
@@ -221,52 +212,52 @@ auto cCamPreview::SetCameraCapturedImage
 	m_ExecutionFinished = true;
 }
 
-void cCamPreview::CaptureAndSaveDataFromCamera
-(
-	const unsigned long& exposure_time_us, 
-	const wxString& path, 
-	const std::string& start_hours,
-	const std::string& start_minutes,
-	const std::string& start_seconds,
-	const int& frame_number, 
-	const float& first_axis_position, 
-	const float& second_axis_position
-)
-{
-	auto image_ptr = m_XimeaCameraControl->GetImage();
-	if (!image_ptr) return;
-
-	/* Save Captured Image */
-	{
-		std::string first_axis_position_str = std::format("{:.3f}", first_axis_position);
-		std::replace(first_axis_position_str.begin(), first_axis_position_str.end(), '.', '_');
-
-		std::string second_axis_position_str = std::format("{:.3f}", second_axis_position);
-		std::replace(second_axis_position_str.begin(), second_axis_position_str.end(), '.', '_');
-		
-		const std::string file_name = std::string(path.mb_str()) + std::string("\\") +
-			std::string("img_") + 
-			std::to_string(frame_number) + std::string("_") + 
-			start_hours + std::string("H_") + 
-			start_minutes + std::string("M_") + 
-			start_seconds + std::string("S_") + 
-			std::to_string(exposure_time_us) + std::string("us") 
-			+ std::string("_1A_") + first_axis_position_str 
-			+ std::string("_2A_") + second_axis_position_str 
-			+ std::string(".tif");
-
-		cv::Mat cv_img
-		(
-			cv::Size(m_XimeaCameraControl->GetImageWidth(), m_XimeaCameraControl->GetImageHeight()),
-			CV_8UC1, 
-			image_ptr, 
-			cv::Mat::AUTO_STEP
-		);
-		cv::imwrite(file_name, cv_img);
-	}
-
-	//SetCameraCapturedImage(image_ptr);
-}
+//void cCamPreview::CaptureAndSaveDataFromCamera
+//(
+//	const unsigned long& exposure_time_us, 
+//	const wxString& path, 
+//	const std::string& start_hours,
+//	const std::string& start_minutes,
+//	const std::string& start_seconds,
+//	const int& frame_number, 
+//	const float& first_axis_position, 
+//	const float& second_axis_position
+//)
+//{
+//	auto image_ptr = m_XimeaCameraControl->GetImage();
+//	if (!image_ptr) return;
+//
+//	/* Save Captured Image */
+//	{
+//		std::string first_axis_position_str = std::format("{:.3f}", first_axis_position);
+//		std::replace(first_axis_position_str.begin(), first_axis_position_str.end(), '.', '_');
+//
+//		std::string second_axis_position_str = std::format("{:.3f}", second_axis_position);
+//		std::replace(second_axis_position_str.begin(), second_axis_position_str.end(), '.', '_');
+//		
+//		const std::string file_name = std::string(path.mb_str()) + std::string("\\") +
+//			std::string("img_") + 
+//			std::to_string(frame_number) + std::string("_") + 
+//			start_hours + std::string("H_") + 
+//			start_minutes + std::string("M_") + 
+//			start_seconds + std::string("S_") + 
+//			std::to_string(exposure_time_us) + std::string("us") 
+//			+ std::string("_1A_") + first_axis_position_str 
+//			+ std::string("_2A_") + second_axis_position_str 
+//			+ std::string(".tif");
+//
+//		cv::Mat cv_img
+//		(
+//			cv::Size(m_XimeaCameraControl->GetImageWidth(), m_XimeaCameraControl->GetImageHeight()),
+//			CV_8UC1, 
+//			image_ptr, 
+//			cv::Mat::AUTO_STEP
+//		);
+//		cv::imwrite(file_name, cv_img);
+//	}
+//
+//	//SetCameraCapturedImage(image_ptr);
+//}
 
 void cCamPreview::CalculateMatlabJetColormapPixelRGB8bit
 (
@@ -687,7 +678,7 @@ void cCamPreview::InitDefaultComponents()
 			m_ParentArguments->x_pos_crosshair, 
 			m_ParentArguments->y_pos_crosshair
 		);
-	m_XimeaCameraControl = std::make_unique<XimeaControl>();
+	//m_XimeaCameraControl = std::make_unique<XimeaControl>();
 }
 
 void cCamPreview::PaintEvent(wxPaintEvent& evt)

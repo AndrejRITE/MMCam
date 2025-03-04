@@ -261,7 +261,6 @@ private:
 	auto ReadInitializationFile() -> void;
 	auto LoadWorkStationFiles() -> void;
 	auto ReadWorkStationFile(const std::string& fileName, const int fileNum) -> void;
-	auto IterateOverConnectedCameras() -> void;
 	void ReadXMLFile();
 	void UpdateUniqueArray();
 	void SelectMotorsAndRangesFromXMLFile();

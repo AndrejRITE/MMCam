@@ -24,6 +24,9 @@
 #include "cSettings.h"
 #include "cGenerateReportDialog.h"
 
+#include "CameraControl.h"
+#include "XimeaControl.h"
+
 #include "src/img/logo.xpm"
 #include <wx/msw/window.h>
 
@@ -1348,7 +1351,8 @@ private:
 	std::unique_ptr<MainFrameVariables::StepperControl[]> m_Optics = std::make_unique<MainFrameVariables::StepperControl[]>(3);
 
 	/* Camera */
-	std::unique_ptr<XimeaControl> m_XimeaControl{};
+	std::unique_ptr<CameraControl> m_CameraControl{};
+	//std::unique_ptr<XimeaControl> m_XimeaControl{};
 	std::unique_ptr<wxTextCtrl> m_CamExposure{};
 	std::unique_ptr<wxStaticText> m_SelectedCameraStaticTXT{};
 	std::unique_ptr<wxButton> m_SingleShotBtn{};
@@ -1409,7 +1413,7 @@ public:
 		wxString* uniqueThreadKey,
 		bool* aliveOrDeadThread,
 		cCamPreview* cam_preview_window,
-		XimeaControl* ximea_control,
+		CameraControl* cameraControl,
 		//const std::string& selected_camera,
 		const int exposure_us
 	);
@@ -1442,7 +1446,7 @@ private:
 private:
 	cMain* m_MainFrame{};
 	cCamPreview* m_CamPreviewWindow{};
-	XimeaControl* m_XimeaControl{};
+	CameraControl* m_CameraControl{};
 	//std::string m_SelectedCameraSN{};
 	int m_ExposureUS{};
 	//std::unique_ptr<XimeaControl> m_XimeaCameraControl{};
@@ -1465,7 +1469,7 @@ public:
 		bool* aliveOrDeadThread,
 		cSettings* settings, 
 		cCamPreview* camera_preview_panel,
-		XimeaControl* ximea_control,
+		CameraControl* cameraControl,
 		const wxString& path, 
 		const unsigned long& exp_time_us,
 		MainFrameVariables::AxisMeasurement* first_axis, 
@@ -1572,7 +1576,7 @@ private:
 	cMain* m_MainFrame{};
 	cSettings* m_Settings{};
 	cCamPreview* m_CameraPreview{};
-	XimeaControl* m_XimeaControl{};
+	CameraControl* m_CameraControl{};
 	wxString m_ImagePath{};
 	unsigned long m_ExposureTimeUS{};
 	MainFrameVariables::AxisMeasurement* m_FirstAxis{}, * m_SecondAxis{};

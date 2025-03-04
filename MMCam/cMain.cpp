@@ -1648,12 +1648,13 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 
 		/* Camera */
 		{
-			m_XimeaControl->SetExposureTime(exposure_time);
-			auto imageSize = wxSize{ (int)m_XimeaControl->GetImageWidth(), (int)m_XimeaControl->GetImageHeight() };
+			//m_XimeaControl->SetExposureTime(exposure_time);
+			m_CameraControl->SetExposureTime(exposure_time);
+			auto imageSize = wxSize{ (int)m_CameraControl->GetWidth(), (int)m_CameraControl->GetHeight() };
 
 			auto dataPtr = std::make_unique<unsigned short[]>(imageSize.GetWidth() * imageSize.GetHeight());
 
-			auto imgPtr = m_XimeaControl->GetImage();
+			auto imgPtr = m_CameraControl->GetImage();
 			if (!imgPtr)
 			{
 				raise_exception_msg();
@@ -1710,7 +1711,7 @@ void cMain::OnSetOutDirectoryBtn(wxCommandEvent& evt)
 #endif // _DEBUG
 
 
-	if (!m_XimeaControl || !m_XimeaControl->IsCameraConnected()) return;
+	if (!m_CameraControl || !m_CameraControl->IsConnected()) return;
 
 	m_OutDirTextCtrl->SetValue(outDirPath);
 	m_FirstStage->EnableAllControls();
@@ -1745,16 +1746,16 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 auto cMain::InitializeSelectedCamera() -> void
 {
 	// We don't need to initialize camera twice!
-	if (m_XimeaControl) return;
+	if (m_CameraControl) return;
 
-	auto curr_camera = m_Settings->GetSelectedCamera();
-	if (curr_camera == "None") return;
+	auto selectedCamera = m_Settings->GetSelectedCamera();
+	if (selectedCamera == "None") return;
 
-	m_XimeaControl = std::make_unique<XimeaControl>();
-	m_XimeaControl->InitializeCameraBySN(curr_camera.ToStdString());
-	if (!m_XimeaControl->IsCameraConnected()) return;
+	m_CameraControl = std::make_unique<XimeaControl>(selectedCamera.ToStdString());
+	m_CameraControl->Initialize();
+	if (!m_CameraControl->IsConnected()) return;
 
-	m_SelectedCameraStaticTXT->SetLabel(curr_camera);	
+	m_SelectedCameraStaticTXT->SetLabel(selectedCamera);	
 
 	// Successful initialization of the camera
 	// Enabling controls
@@ -1819,7 +1820,7 @@ void cMain::OnExit(wxCloseEvent& evt)
 		}
 	}
 #endif // !_DEBUG
-	if (m_XimeaControl->IsCameraConnected())
+	if (m_CameraControl->IsConnected())
 	{
 		if (m_StartStopLiveCapturingTglBtn->GetValue())
 		{
@@ -2374,7 +2375,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			&m_StartedThreads.back().second,
 			m_Settings.get(),
 			m_CamPreview.get(),
-			m_XimeaControl.get(),
+			m_CameraControl.get(),
 			out_dir,
 			exposure_time,
 			first_axis.release(), 
@@ -2446,7 +2447,7 @@ void cMain::StartLiveCapturing()
 		&m_StartedThreads.back().first,
 		&m_StartedThreads.back().second,
 		m_CamPreview.get(), 
-		m_XimeaControl.get(),
+		m_CameraControl.get(),
 		//curr_camera.ToStdString(),
 		exposure_time
 	);
@@ -4130,7 +4131,7 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 {
 	if (m_StartStopLiveCapturingTglBtn->GetValue())
 	{
-		if (!m_XimeaControl || !m_XimeaControl->IsCameraConnected())
+		if (!m_CameraControl || !m_CameraControl->IsConnected())
 		{
 			m_StartStopLiveCapturingTglBtn->SetValue(false);
 			m_StartStopLiveCapturingTglBtn->SetLabel(wxT("Start Live (L)"));
@@ -4214,14 +4215,14 @@ LiveCapturing::LiveCapturing
 	wxString* uniqueThreadKey,
 	bool* aliveOrDeadThread,
 	cCamPreview* cam_preview_window,
-	XimeaControl* ximea_control,
+	CameraControl* cameraControl,
 	const int exposure_us
 ) 
 	: m_MainFrame(main_frame), 
 	m_UniqueThreadKey(uniqueThreadKey),
 	m_AliveOrDeadThread(aliveOrDeadThread),
 	m_CamPreviewWindow(cam_preview_window), 
-	m_XimeaControl(ximea_control),
+	m_CameraControl(cameraControl),
 	m_ExposureUS(exposure_us) {}
 
 wxThread::ExitCode LiveCapturing::Entry()
@@ -4242,34 +4243,25 @@ wxThread::ExitCode LiveCapturing::Entry()
 	auto exit_thread = [&]()
 	{
 		*m_UniqueThreadKey = "";
-		//m_XimeaCameraControl.release();
-		m_XimeaControl = nullptr;
-		//m_MainFrame->LiveCapturingFinishedCapturingAndDrawing(true);
+		m_CameraControl = nullptr;
 	};	
 	
 	wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID_THREAD_LIVE_CAPTURING);
 
-	//evt.SetInt(0);
-	//wxQueueEvent(m_MainFrame, evt.Clone());
-
-	//m_ThreadID = m_XimeaControl->AppendThread();
 	auto text_id = "LiveCapturing ID: " + *m_UniqueThreadKey;
 	LOG(text_id);
 
-	if (!m_XimeaControl->IsCameraConnected())
+	if (!m_CameraControl->IsConnected())
 	{	
-		if (!m_XimeaControl->TryToReconnectLastSelectedCamera())
-		{
-			raise_exception_msg();
-			evt.SetInt(0);
-			wxQueueEvent(m_MainFrame, evt.Clone());
-			exit_thread();
-			return (wxThread::ExitCode)0;
-		}
+		raise_exception_msg();
+		evt.SetInt(0);
+		wxQueueEvent(m_MainFrame, evt.Clone());
+		exit_thread();
+		return (wxThread::ExitCode)0;
 	}
 
-	m_XimeaControl->SetExposureTime(m_ExposureUS);
-	m_ImageSize.Set(m_XimeaControl->GetImageWidth(), m_XimeaControl->GetImageHeight());
+	m_CameraControl->SetExposureTime(m_ExposureUS);
+	m_ImageSize.Set(m_CameraControl->GetWidth(), m_CameraControl->GetHeight());
 
 	if (m_CamPreviewWindow->GetImageSize() != m_ImageSize)
 		m_CamPreviewWindow->SetImageSize(m_ImageSize);
@@ -4285,43 +4277,26 @@ wxThread::ExitCode LiveCapturing::Entry()
 
 	while (m_MainFrame && *m_AliveOrDeadThread)
 	{
-		if (m_XimeaControl->IsCameraInitialized())
+		auto dataPtr = std::make_unique<unsigned short[]>(m_ImageSize.GetWidth() * m_ImageSize.GetHeight());
+
+		if (!m_CameraControl->IsConnected() || !CaptureImage(dataPtr.get()))
 		{
-			if (!m_XimeaControl->IsCameraConnected())
-			{
-				//raise_exception_msg();
-				evt.SetInt(-1);
-				wxQueueEvent(m_MainFrame, evt.Clone());
-				exit_thread();
-				return (wxThread::ExitCode)0;
-			}
-
-			auto dataPtr = std::make_unique<unsigned short[]>(m_ImageSize.GetWidth() * m_ImageSize.GetHeight());
-			if (CaptureImage(dataPtr.get()))
-			{
-				while (*m_AliveOrDeadThread && !*drawingExecutionFinishedPtr)
-				{
-					LOG("Waiting for the Execution finishing.");
-					std::this_thread::sleep_for(interval);
-				}
-
-				evt.SetInt(0);
-				evt.SetPayload(dataPtr.release());
-				wxQueueEvent(m_MainFrame, evt.Clone());
-			}
-			else
-			{
-				//raise_exception_msg();
-				evt.SetInt(-1);
-				wxQueueEvent(m_MainFrame, evt.Clone());
-				//raise_exception_msg();
-				exit_thread();
-				return (wxThread::ExitCode)0;
-			}
-
+			evt.SetInt(-1);
+			wxQueueEvent(m_MainFrame, evt.Clone());
+			exit_thread();
+			return (wxThread::ExitCode)0;
 		}
-		else
-			wxThread::This()->Sleep(500);
+
+		// Waiting for the finishing calculation of the PreviewPanel
+		while (*m_AliveOrDeadThread && !*drawingExecutionFinishedPtr)
+		{
+			LOG("Waiting for the Execution finishing.");
+			std::this_thread::sleep_for(interval);
+		}
+
+		evt.SetInt(0);
+		evt.SetPayload(dataPtr.release());
+		wxQueueEvent(m_MainFrame, evt.Clone());
 	}
 	exit_thread();
 	return (wxThread::ExitCode)0;
@@ -4334,7 +4309,7 @@ auto LiveCapturing::CaptureImage
 {
 	if (!dataPtr) return false;
 
-	auto imgPtr = m_XimeaControl->GetImage();
+	auto imgPtr = m_CameraControl->GetImage();
 	if (!imgPtr) return false;
 
 	memcpy
@@ -4433,7 +4408,7 @@ WorkerThread::WorkerThread
 	bool* aliveOrDeadThread,
 	cSettings* settings, 
 	cCamPreview* camera_preview_panel,
-	XimeaControl* ximea_control,
+	CameraControl* cameraControl,
 	const wxString& path, 
 	const unsigned long& exp_time_us,
 	MainFrameVariables::AxisMeasurement* first_axis, 
@@ -4446,7 +4421,7 @@ WorkerThread::WorkerThread
 	m_AliveOrDeadThread(aliveOrDeadThread),
 	m_Settings(settings), 
 	m_CameraPreview(camera_preview_panel), 
-	m_XimeaControl(ximea_control),
+	m_CameraControl(cameraControl),
 	m_ImagePath(path), 
 	m_ExposureTimeUS(exp_time_us),
 	m_FirstAxis(first_axis), 
@@ -4459,7 +4434,7 @@ WorkerThread::~WorkerThread()
 	m_MainFrame = nullptr;
 	m_Settings = nullptr;
 	m_CameraPreview = nullptr;
-	m_XimeaControl = nullptr;
+	m_CameraControl = nullptr;
 	delete m_FirstAxis;
 	m_FirstAxis = nullptr;
 	delete m_SecondAxis;
@@ -4484,8 +4459,6 @@ wxThread::ExitCode WorkerThread::Entry()
 	{
 		*m_UniqueThreadKey = "";
 		m_Settings->SetCurrentProgress(1, 1);
-		//cam_control = nullptr;
-		//m_MainFrame->WorkerThreadFinished(true);
 	};
 
 	wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID_THREAD_LIVE_CAPTURING);
@@ -4505,17 +4478,17 @@ wxThread::ExitCode WorkerThread::Entry()
 	auto measurementGraphFilePath = graphFileName + wxString(".bmp");
 	//m_MeasurementGraphTxtFilePath = graphFileName + wxString(".txt");
 
-	auto dataSize = m_XimeaControl->GetImageWidth() * m_XimeaControl->GetImageHeight();
+	auto dataSize = m_CameraControl->GetWidth() * m_CameraControl->GetHeight();
 	//auto cam_preview_data_ptr = m_CameraPreview->GetDataPtr();
 	//auto cam_preview_image_ptr = m_CameraPreview->GetImagePtr();
 
-	if (!m_XimeaControl->IsCameraConnected())
+	if (!m_CameraControl->IsConnected())
 	{
 		exit_thread();
 		return (wxThread::ExitCode)0;
 	}
 
-	m_XimeaControl->SetExposureTime(m_ExposureTimeUS);
+	m_CameraControl->SetExposureTime(m_ExposureTimeUS);
 	m_HorizontalFWHMData = std::make_unique<double[]>(m_FirstAxis->step_number);
 	m_VerticalFWHMData = std::make_unique<double[]>(m_FirstAxis->step_number);
 	m_FirstAxisPositionsData = std::make_unique<float[]>(m_FirstAxis->step_number);
@@ -4557,22 +4530,22 @@ wxThread::ExitCode WorkerThread::Entry()
 			dataPtr.get(),
 			wxSize
 			(
-				m_XimeaControl->GetImageWidth(), 
-				m_XimeaControl->GetImageHeight()
+				m_CameraControl->GetWidth(), 
+				m_CameraControl->GetHeight()
 			)
 			) 
 			&& SaveImage
 			(
 				dataPtr.get(), 
-				m_XimeaControl->GetImageWidth(), 
-				m_XimeaControl->GetImageHeight(), 
+				m_CameraControl->GetWidth(), 
+				m_CameraControl->GetHeight(), 
 				fileName
 			) 
 			&& CalculateFWHM
 			(
 				dataPtr.get(), 
-				m_XimeaControl->GetImageWidth(), 
-				m_XimeaControl->GetImageHeight(),
+				m_CameraControl->GetWidth(), 
+				m_CameraControl->GetHeight(),
 				i
 			)
 			)
@@ -4707,7 +4680,7 @@ auto WorkerThread::MoveFirstStage(const float position) -> float
 auto WorkerThread::CaptureImage(unsigned short* const dataPtr, const wxSize& imageSize) -> bool
 {
 	if (!*m_AliveOrDeadThread) return false;
-	auto imgPtr = m_XimeaControl->GetImage();
+	auto imgPtr = m_CameraControl->GetImage();
 	if (!imgPtr) return false;
 
 	if (!*m_AliveOrDeadThread) return false;

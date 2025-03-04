@@ -19,7 +19,6 @@
 #include "FWHMCalculation.h"
 
 #include "cPreviewTools.h"
-#include "XimeaControl.h"
 
 namespace CameraPreviewVariables
 {
@@ -70,7 +69,7 @@ public:
 	auto GetDataPtr() const -> unsigned short*;
 	//auto GetImagePtr() const->wxImage*;
 	auto GetImageSize() const->wxSize;
-	auto InitializeSelectedCamera(const std::string& camera_sn) -> void;
+	//auto InitializeSelectedCamera(const std::string& camera_sn) -> void;
 	auto UpdateImageParameters() -> void;
 
 	auto SetCameraCapturedImage
@@ -78,17 +77,17 @@ public:
 		unsigned short* data_ptr
 	) -> void;
 
-	void CaptureAndSaveDataFromCamera
-	(
-		const unsigned long& exposure_time_us,
-		const wxString& path,
-		const std::string& start_hours,
-		const std::string& start_minutes,
-		const std::string& start_seconds,
-		const int& frame_number,
-		const float& first_axis_position,
-		const float& second_axis_position = 0.f
-	);
+	//void CaptureAndSaveDataFromCamera
+	//(
+	//	const unsigned long& exposure_time_us,
+	//	const wxString& path,
+	//	const std::string& start_hours,
+	//	const std::string& start_minutes,
+	//	const std::string& start_seconds,
+	//	const int& frame_number,
+	//	const float& first_axis_position,
+	//	const float& second_axis_position = 0.f
+	//);
 	void CalculateMatlabJetColormapPixelRGB8bit
 	(
 		const unsigned char& value,
@@ -216,7 +215,7 @@ private:
 	/* Zoom */
 	double m_Zoom{}, m_ZoomOnOriginalSizeImage{};
 
-	std::unique_ptr<XimeaControl> m_XimeaCameraControl{};
+	//std::unique_ptr<XimeaControl> m_XimeaCameraControl{};
 	std::string m_SelectedCameraSN{};
 
 	/* CrossHair Tool */

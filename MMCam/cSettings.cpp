@@ -932,19 +932,6 @@ auto cSettings::ReadInitializationFile() -> void
 		m_WorkStations->initialized_work_station = wxString(element->first_node()->value());
 }
 
-auto cSettings::IterateOverConnectedCameras() -> void
-{
-	auto ximea_cameras = std::make_unique<XimeaControl>();
-	ximea_cameras->InitializeAllCameras();
-
-	auto cameras_count = ximea_cameras->GetCamerasCount();
-	wxString camera_name{};
-	for (auto i{ 0 }; i < cameras_count; ++i)
-	{
-		camera_name = wxString(ximea_cameras->GetCamerasSN()[i]);
-	}
-}
-
 void cSettings::ReadXMLFile()
 {
 }
