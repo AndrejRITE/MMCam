@@ -1404,90 +1404,66 @@ private:
 /* ___ End cMain ___ */
 
 /* ___ Start Live Capturing Theread ___ */
-class LiveCapturing final: public wxThreadHelper
+class LiveCapturing : public wxThreadHelper
 {
 public:
 	LiveCapturing
 	(
 		cMain* main_frame,
+		CameraControl* cameraControl,
+		const int& exposure_us,
 		wxString* uniqueThreadKey,
 		bool* aliveOrDeadThread,
-		cCamPreview* cam_preview_window,
-		CameraControl* cameraControl,
-		//const std::string& selected_camera,
-		const int exposure_us
+		bool* isDrawExecutionFinished
 	);
 	~LiveCapturing();
 
 	virtual void* Entry();
 
-private:
-	auto CaptureImage
+protected:
+	virtual auto CaptureImage
 	(
 		unsigned short* dataPtr
 	) -> bool;
 
-	auto UpdatePixelsMultithread
-	(
-		unsigned short* short_data_ptr, 
-		wxImage* image_ptr
-	) -> void;
-
-	auto AdjustImageParts
-	(
-		const unsigned short* data_ptr,
-		wxImage* image_ptr,
-		const unsigned int start_x,
-		const unsigned int start_y,
-		const unsigned int finish_x,
-		const unsigned int finish_y
-	) -> void;
-
-private:
+protected:
 	cMain* m_MainFrame{};
-	cCamPreview* m_CamPreviewWindow{};
 	CameraControl* m_CameraControl{};
-	//std::string m_SelectedCameraSN{};
 	int m_ExposureUS{};
-	//std::unique_ptr<XimeaControl> m_XimeaCameraControl{};
 	wxSize m_ImageSize{};
 
 	// Thread
 	wxString* m_UniqueThreadKey{};
 	bool* m_AliveOrDeadThread{};
+
+	bool* m_IsDrawExecutionFinished{};
 };
 /* ___ End Worker Thread ___ */
 
 /* ___ Start Worker Theread ___ */
-class WorkerThread final: public wxThreadHelper
+class WorkerThread final: public LiveCapturing
 {
 public:
 	WorkerThread
 	(
 		cMain* main_frame,
+		CameraControl* cameraControl,
+		const int& exposure_us,
 		wxString* uniqueThreadKey,
 		bool* aliveOrDeadThread,
+		bool* isDrawExecutionFinished,
 		cSettings* settings, 
-		cCamPreview* camera_preview_panel,
-		CameraControl* cameraControl,
 		const wxString& path, 
-		const unsigned long& exp_time_us,
 		MainFrameVariables::AxisMeasurement* first_axis, 
 		MainFrameVariables::AxisMeasurement* second_axis,
 		const double pixelSizeUM
 	);
 	~WorkerThread();
 
-	virtual void* Entry();
+	virtual void* Entry() override;
 
 private:
 	auto MoveFirstStage(const float position) -> float;
-
-	auto CaptureImage
-	(
-		unsigned short* const dataPtr, 
-		const wxSize& imageSize
-	) -> bool;
 
 	auto SaveImage
 	(
@@ -1549,7 +1525,7 @@ private:
 				hours + std::string("H_") +
 				minutes + std::string("M_") +
 				seconds + std::string("S_") +
-				std::to_string(m_ExposureTimeUS) + std::string("us")
+				std::to_string(m_ExposureUS) + std::string("us")
 				+ std::string("_1A_") + first_axis_position_str;
 			fileName += secondStagePosition != 0.f ? std::string("_2A_") + second_axis_position_str : "";
 
@@ -1573,23 +1549,14 @@ private:
 	};
 
 private:
-	cMain* m_MainFrame{};
 	cSettings* m_Settings{};
-	cCamPreview* m_CameraPreview{};
-	CameraControl* m_CameraControl{};
 	wxString m_ImagePath{};
-	unsigned long m_ExposureTimeUS{};
 	MainFrameVariables::AxisMeasurement* m_FirstAxis{}, * m_SecondAxis{};
-	int m_ThreadID{ -1 };
 
 	// FWHM
 	std::unique_ptr<double[]> m_HorizontalFWHMData{}, m_VerticalFWHMData{};
 	std::unique_ptr<float[]> m_FirstAxisPositionsData{};
 	double m_PixelSizeUM{};
-
-	// Thread
-	wxString* m_UniqueThreadKey{};
-	bool* m_AliveOrDeadThread{};
 };
 /* ___ End Worker Thread ___ */
 

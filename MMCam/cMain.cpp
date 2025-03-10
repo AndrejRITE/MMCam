@@ -1737,6 +1737,7 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 		m_CamPreview->SetGridMeshStepPX(m_Settings->GetGridMeshStep());
 		m_CamPreview->SetCircleMeshStepPX(m_Settings->GetCircleMeshStep());
 		InitializeSelectedCamera();
+
 		UpdateStagePositions();
 		EnableUsedAndDisableNonUsedMotors();	
 		Refresh();
@@ -1756,6 +1757,9 @@ auto cMain::InitializeSelectedCamera() -> void
 	if (!m_CameraControl->IsConnected()) return;
 
 	m_SelectedCameraStaticTXT->SetLabel(selectedCamera);	
+	
+	auto imageSize = wxSize(m_CameraControl->GetWidth(), m_CameraControl->GetHeight());
+	m_CamPreview->SetImageSize(imageSize);
 
 	// Successful initialization of the camera
 	// Enabling controls
@@ -2368,16 +2372,18 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			: m_CamExposure->GetValue();
 		unsigned long exposure_time = abs(wxAtoi(exposure_time_str)) * 1000; // Because user input is in [ms], we need to recalculate the value to [us]
 
+		auto isDrawExecutionFinished = m_CamPreview->GetExecutionFinishedPtr();
+
 		WorkerThread* worker_thread = new WorkerThread
 		(
 			this,
+			m_CameraControl.get(),
+			exposure_time,
 			&m_StartedThreads.back().first,
 			&m_StartedThreads.back().second,
+			isDrawExecutionFinished,
 			m_Settings.get(),
-			m_CamPreview.get(),
-			m_CameraControl.get(),
 			out_dir,
-			exposure_time,
 			first_axis.release(), 
 			second_axis.release(),
 			m_Settings->GetPixelSizeUM()
@@ -2440,16 +2446,16 @@ void cMain::StartLiveCapturing()
 	//m_XimeaControl->SetExposureTime(exposure_time);
 
 	//auto curr_camera = m_Settings->GetSelectedCamera();
+	auto isDrawExecutionFinished = m_CamPreview->GetExecutionFinishedPtr();
 
 	LiveCapturing* live_capturing = new LiveCapturing
 	(
 		this, 
+		m_CameraControl.get(),
+		exposure_time,
 		&m_StartedThreads.back().first,
 		&m_StartedThreads.back().second,
-		m_CamPreview.get(), 
-		m_CameraControl.get(),
-		//curr_camera.ToStdString(),
-		exposure_time
+		isDrawExecutionFinished
 	);
 
 	if (live_capturing->CreateThread() != wxTHREAD_NO_ERROR)
@@ -4212,18 +4218,21 @@ void cMain::OnYPosCrossHairTextCtrl(wxCommandEvent& evt)
 LiveCapturing::LiveCapturing
 (
 	cMain* main_frame,
+	CameraControl* cameraControl,
+	const int& exposure_us,
 	wxString* uniqueThreadKey,
 	bool* aliveOrDeadThread,
-	cCamPreview* cam_preview_window,
-	CameraControl* cameraControl,
-	const int exposure_us
+	bool* isDrawExecutionFinished
 ) 
 	: m_MainFrame(main_frame), 
+	m_CameraControl(cameraControl),
+	m_ExposureUS(exposure_us),
 	m_UniqueThreadKey(uniqueThreadKey),
 	m_AliveOrDeadThread(aliveOrDeadThread),
-	m_CamPreviewWindow(cam_preview_window), 
-	m_CameraControl(cameraControl),
-	m_ExposureUS(exposure_us) {}
+	m_IsDrawExecutionFinished(isDrawExecutionFinished)
+{
+	m_ImageSize = wxSize(m_CameraControl->GetWidth(), m_CameraControl->GetHeight());
+}
 
 wxThread::ExitCode LiveCapturing::Entry()
 {
@@ -4263,12 +4272,10 @@ wxThread::ExitCode LiveCapturing::Entry()
 	m_CameraControl->SetExposureTime(m_ExposureUS);
 	m_ImageSize.Set(m_CameraControl->GetWidth(), m_CameraControl->GetHeight());
 
-	if (m_CamPreviewWindow->GetImageSize() != m_ImageSize)
-		m_CamPreviewWindow->SetImageSize(m_ImageSize);
+	//if (m_CamPreviewWindow->GetImageSize() != m_ImageSize)
+		//m_CamPreviewWindow->SetImageSize(m_ImageSize);
 	//auto image_ptr = m_CamPreviewWindow->GetImagePtr();
 	//auto short_data_ptr = m_CamPreviewWindow->GetDataPtr();
-
-	auto drawingExecutionFinishedPtr = m_CamPreviewWindow->GetExecutionFinishedPtr();
 
 	const auto checkingInterval = m_ExposureUS / 3;
 	const auto interval = std::chrono::microseconds(checkingInterval);  
@@ -4288,7 +4295,7 @@ wxThread::ExitCode LiveCapturing::Entry()
 		}
 
 		// Waiting for the finishing calculation of the PreviewPanel
-		while (*m_AliveOrDeadThread && !*drawingExecutionFinishedPtr)
+		while (*m_AliveOrDeadThread && !*m_IsDrawExecutionFinished)
 		{
 			LOG("Waiting for the Execution finishing.");
 			std::this_thread::sleep_for(interval);
@@ -4322,81 +4329,9 @@ auto LiveCapturing::CaptureImage
 	return true;
 }
 
-auto LiveCapturing::UpdatePixelsMultithread
-(
-	unsigned short* short_data_ptr, 
-	wxImage* image_ptr
-) -> void
-{
-	auto numThreads = std::thread::hardware_concurrency();
-	auto tileSize = m_ImageSize.GetHeight() % numThreads > 0 ? m_ImageSize.GetHeight() / numThreads + 1 : m_ImageSize.GetHeight() / numThreads;
-
-	std::vector<std::thread> threads;
-	threads.reserve(numThreads);
-
-	for (auto i{ 0 }; i < numThreads; ++i)
-	{
-		auto start_x = 0;
-		auto start_y = i * tileSize;
-		auto finish_x = m_ImageSize.GetWidth();
-		auto finish_y = (i + 1) * tileSize > m_ImageSize.GetHeight() ? m_ImageSize.GetHeight() : (i + 1) * tileSize;
-
-		threads.emplace_back
-		(
-			std::thread
-			(
-			&LiveCapturing::AdjustImageParts, 
-			this, 
-			&short_data_ptr[start_y * m_ImageSize.GetWidth() + start_x], 
-			image_ptr, 
-			start_x, 
-			start_y, 
-			finish_x, 
-			finish_y
-			)
-		);
-	}
-
-	for (auto& thread : threads)
-	{
-		thread.join();
-	}
-}
-
-auto LiveCapturing::AdjustImageParts
-(
-	const unsigned short* data_ptr, 
-	wxImage* image_ptr,
-	const unsigned int start_x, 
-	const unsigned int start_y, 
-	const unsigned int finish_x, 
-	const unsigned int finish_y
-) -> void
-{
-	if (!data_ptr) return;
-	if (!image_ptr->IsOk()) return;
-	unsigned short current_value{};
-	unsigned char red{}, green{}, blue{};
-	unsigned long long position_in_data_pointer{};
-
-	for (auto y{ start_y }; y < finish_y; ++y)
-	{
-		for (auto x{ start_x }; x < finish_x; ++x)
-		{
-			current_value = data_ptr[position_in_data_pointer];
-			/* Matlab implementation of JetColormap */
-			/* Because XIMEA camera can produce 12-bit per pixel maximum, we use RGB12bit converter */
-			m_CamPreviewWindow->CalculateMatlabJetColormapPixelRGB12bit(current_value, red, green, blue);
-			image_ptr->SetRGB(x, y, red, green, blue);
-			++position_in_data_pointer;
-		}
-	}
-}
-
 LiveCapturing::~LiveCapturing()
 {
 	m_MainFrame = nullptr;
-	m_CamPreviewWindow = nullptr;
 }
 /* ___ End Live Capturing Thread ___ */
 
@@ -4404,26 +4339,28 @@ LiveCapturing::~LiveCapturing()
 WorkerThread::WorkerThread
 (
 	cMain* main_frame,
+	CameraControl* cameraControl,
+	const int& exposure_us,
 	wxString* uniqueThreadKey,
 	bool* aliveOrDeadThread,
+	bool* isDrawExecutionFinished,
 	cSettings* settings, 
-	cCamPreview* camera_preview_panel,
-	CameraControl* cameraControl,
 	const wxString& path, 
-	const unsigned long& exp_time_us,
 	MainFrameVariables::AxisMeasurement* first_axis, 
 	MainFrameVariables::AxisMeasurement* second_axis,
 	const double pixelSizeUM
 ) 
-	: 
-	m_MainFrame(main_frame),
-	m_UniqueThreadKey(uniqueThreadKey),
-	m_AliveOrDeadThread(aliveOrDeadThread),
+	: LiveCapturing
+	(
+		main_frame, 
+		cameraControl, 
+		exposure_us,
+		uniqueThreadKey, 
+		aliveOrDeadThread, 
+		isDrawExecutionFinished
+	),
 	m_Settings(settings), 
-	m_CameraPreview(camera_preview_panel), 
-	m_CameraControl(cameraControl),
 	m_ImagePath(path), 
-	m_ExposureTimeUS(exp_time_us),
 	m_FirstAxis(first_axis), 
 	m_SecondAxis(second_axis),
 	m_PixelSizeUM(pixelSizeUM)
@@ -4433,7 +4370,6 @@ WorkerThread::~WorkerThread()
 {
 	m_MainFrame = nullptr;
 	m_Settings = nullptr;
-	m_CameraPreview = nullptr;
 	m_CameraControl = nullptr;
 	delete m_FirstAxis;
 	m_FirstAxis = nullptr;
@@ -4488,10 +4424,13 @@ wxThread::ExitCode WorkerThread::Entry()
 		return (wxThread::ExitCode)0;
 	}
 
-	m_CameraControl->SetExposureTime(m_ExposureTimeUS);
+	m_CameraControl->SetExposureTime(m_ExposureUS);
 	m_HorizontalFWHMData = std::make_unique<double[]>(m_FirstAxis->step_number);
 	m_VerticalFWHMData = std::make_unique<double[]>(m_FirstAxis->step_number);
 	m_FirstAxisPositionsData = std::make_unique<float[]>(m_FirstAxis->step_number);
+
+	const auto checkingInterval = m_ExposureUS / 3;
+	const auto interval = std::chrono::microseconds(checkingInterval);  
 
 	float first_axis_rounded_go_to{};
 	float first_axis_position{}, second_axis_position{};
@@ -4523,25 +4462,17 @@ wxThread::ExitCode WorkerThread::Entry()
 
 		auto dataPtr = std::make_unique<unsigned short[]>(dataSize);
 
-		/* Capture Image */
 		if (
-			CaptureImage
-			(
-			dataPtr.get(),
-			wxSize
-			(
-				m_CameraControl->GetWidth(), 
-				m_CameraControl->GetHeight()
-			)
-			) 
-			&& SaveImage
+			!m_CameraControl->IsConnected() || 
+			!CaptureImage(dataPtr.get()) || 
+			!SaveImage
 			(
 				dataPtr.get(), 
 				m_CameraControl->GetWidth(), 
 				m_CameraControl->GetHeight(), 
 				fileName
-			) 
-			&& CalculateFWHM
+			) ||
+			!CalculateFWHM
 			(
 				dataPtr.get(), 
 				m_CameraControl->GetWidth(), 
@@ -4550,16 +4481,55 @@ wxThread::ExitCode WorkerThread::Entry()
 			)
 			)
 		{
-			evt.SetInt(0);
-			evt.SetPayload(dataPtr.release());
+			evt.SetInt(-1);
 			wxQueueEvent(m_MainFrame, evt.Clone());
-		}
-		else
-		{
-			//raise_exception_msg("XIMEA");
 			exit_thread();
 			return (wxThread::ExitCode)0;
 		}
+
+		// Waiting for the finishing calculation of the PreviewPanel
+		while (*m_AliveOrDeadThread && !*m_IsDrawExecutionFinished)
+		{
+			LOG("Waiting for the Execution finishing.");
+			std::this_thread::sleep_for(interval);
+		}
+
+		evt.SetInt(0);
+		evt.SetPayload(dataPtr.release());
+		wxQueueEvent(m_MainFrame, evt.Clone());
+
+		///* Capture Image */
+		//if (
+		//	CaptureImage
+		//	(
+		//	dataPtr.get()
+		//	) 
+		//	&& SaveImage
+		//	(
+		//		dataPtr.get(), 
+		//		m_CameraControl->GetWidth(), 
+		//		m_CameraControl->GetHeight(), 
+		//		fileName
+		//	) 
+		//	&& CalculateFWHM
+		//	(
+		//		dataPtr.get(), 
+		//		m_CameraControl->GetWidth(), 
+		//		m_CameraControl->GetHeight(),
+		//		i
+		//	)
+		//	)
+		//{
+		//	evt.SetInt(0);
+		//	evt.SetPayload(dataPtr.release());
+		//	wxQueueEvent(m_MainFrame, evt.Clone());
+		//}
+		//else
+		//{
+		//	//raise_exception_msg("XIMEA");
+		//	exit_thread();
+		//	return (wxThread::ExitCode)0;
+		//}
 
 		/* Update Current Progress */
 		//m_Settings->SetCurrentProgress(i, m_FirstAxis->step_number);
@@ -4675,26 +4645,6 @@ auto WorkerThread::MoveFirstStage(const float position) -> float
 	}
 
 	return firstAxisPos;
-}
-
-auto WorkerThread::CaptureImage(unsigned short* const dataPtr, const wxSize& imageSize) -> bool
-{
-	if (!*m_AliveOrDeadThread) return false;
-	auto imgPtr = m_CameraControl->GetImage();
-	if (!imgPtr) return false;
-
-	if (!*m_AliveOrDeadThread) return false;
-
-	LOG("MEMCPY Start");
-	memcpy
-	(
-		dataPtr, 
-		imgPtr, 
-		sizeof(unsigned short) * imageSize.GetWidth() * imageSize.GetHeight()
-	);
-	LOG("MEMCPY Finish");
-
-	return true;
 }
 
 auto WorkerThread::SaveImage
@@ -5122,7 +5072,7 @@ wxBitmap WorkerThread::CreateGraph
 	auto exposureFinishX = 0;
 	{
 		dc.SetTextForeground(wxColour(0, 0, 0));
-		auto exposureStr = wxString::Format(wxT("%i"), (int)m_ExposureTimeUS / 1000);
+		auto exposureStr = wxString::Format(wxT("%i"), (int)m_ExposureUS / 1000);
 		exposureStr += " [us]";
 		auto textSize = dc.GetTextExtent(exposureStr);
 		auto startExposureTextX = 5;
