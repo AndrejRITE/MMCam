@@ -282,7 +282,10 @@ private:
 	std::unique_ptr<SettingsVariables::WorkStations> m_WorkStations{};
 	std::unique_ptr<wxButton> m_OkBtn{}, m_CancelBtn{}, m_RefreshBtn{};
 	std::unique_ptr<SettingsVariables::MotorSettingsArray> m_Motors{};
+	
+	// TODO: Move to Polymorphic class IMotorFactory
 	std::unique_ptr<MotorArray> m_PhysicalMotors{};
+
 	std::unique_ptr<SettingsVariables::Cameras> m_Cameras{};
 	const int m_MotorsCount{ 6 };
 	std::unique_ptr<SettingsVariables::ProgressValues> m_Progress = std::make_unique<SettingsVariables::ProgressValues>();
