@@ -4409,9 +4409,10 @@ wxThread::ExitCode WorkerThread::Entry()
 	auto cur_mins = str_time.substr(3, 2);
 	auto cur_secs = str_time.substr(6, 2);
 
-	auto graphFileName = m_ImagePath + wxString("\\") + wxString("ximea_measurement_result_") + cur_hours + wxString("H_") + cur_mins + wxString("M_") + cur_secs + wxString("S");
+	auto graphFileName = m_ImagePath + wxString("\\") + wxString("measurement_result_") + cur_hours + wxString("H_") + cur_mins + wxString("M_") + cur_secs + wxString("S");
 
 	auto measurementGraphFilePath = graphFileName + wxString(".bmp");
+	wxFileName measurementFileName(measurementGraphFilePath);
 	//m_MeasurementGraphTxtFilePath = graphFileName + wxString(".txt");
 
 	auto dataSize = m_CameraControl->GetWidth() * m_CameraControl->GetHeight();
@@ -4591,11 +4592,21 @@ wxThread::ExitCode WorkerThread::Entry()
 			timestamp
 		);
 
-		SaveGraph(bmp, measurementGraphFilePath);
+		SaveGraph(bmp, measurementFileName.GetFullPath());
 
 		// Open the image with the default application
-		if (!wxLaunchDefaultApplication(measurementGraphFilePath))
-			wxLogError("Could not open file '%s' with the default application.", measurementGraphFilePath);
+		if (!wxLaunchDefaultApplication(measurementFileName.GetFullPath()))
+			wxLogError("Could not open file '%s' with the default application.", measurementFileName.GetFullPath());
+
+		measurementFileName.SetExt("txt");
+		SaveFWHMTXTData
+		(
+			measurementFileName.GetFullPath(), 
+			m_FirstAxis->step_number, 
+			m_HorizontalFWHMData.get(),
+			m_VerticalFWHMData.get(),
+			m_FirstAxisPositionsData.get()
+		);
 
 		m_MainFrame->UpdateStagePositions();
 
@@ -4891,8 +4902,6 @@ wxBitmap WorkerThread::CreateGraph
 		);
 	}
 
-
-
 	// Draw the data curves
 	double minGlobalValue{}, maxGlobalValue{};
 	auto minmaxHorizontalValues = std::minmax_element(horizontalFWHMData, horizontalFWHMData + dataSize);
@@ -5128,6 +5137,42 @@ auto WorkerThread::SaveGraph
 
 	// Save the bitmap as a BMP file
 	if (!bitmap.SaveFile(filePath, wxBITMAP_TYPE_BMP)) return;
+}
+
+auto WorkerThread::SaveFWHMTXTData
+(
+	const wxString& filePath, 
+	const size_t dataSize,
+	const double* horizontalFWHMData, 
+	const double* verticalFWHMData, 
+	const float* firstAxisData, 
+	const float* secondAxisData
+) -> void
+{
+	std::ofstream file(filePath.ToStdString()); // Create a file
+
+	if (!file.is_open()) return;
+
+	// Write Header
+	file << "First Axis Position [mm]" << '\t';
+
+	if (secondAxisData)
+		file << "Second Axis Position [mm]" << '\t';
+
+	file << "Horizontal FWHM [um]" << '\t';
+	file << "Vertical FWHM [um]" << '\n';
+
+	for (auto i{ 0 }; i < dataSize; ++i)
+	{
+		file << firstAxisData[i] << '\t';
+
+		if (secondAxisData)
+			file << secondAxisData[i] << '\t';
+
+		file << horizontalFWHMData[i] << '\t';
+		file << verticalFWHMData[i] << '\n';
+	}
+	file.close();  // Close the file
 }
 /* ___ End Worker Thread ___ */
 

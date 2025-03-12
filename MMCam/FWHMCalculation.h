@@ -166,6 +166,41 @@ namespace FWHM
 		return true;
 	}
 
+	static auto CalculateMean
+	(
+		const unsigned int* data, 
+		size_t sizeOfArray, 
+		size_t sizeToCompute, 
+		bool calculateFromTheLeftSide
+	) -> double 
+	{
+		if (sizeOfArray == 0 || sizeToCompute == 0) return 0.0; // Handle empty input
+
+		double mean = 0.0;
+		size_t count = 0;
+		
+		if (calculateFromTheLeftSide)
+		{
+			for (auto i = 0; i < sizeToCompute; ++i) 
+			{
+				++count;
+				mean += (data[i] - mean) / count;  // Incremental mean update
+			}
+		}
+		else
+		{
+			if (sizeToCompute > sizeOfArray) return mean;
+
+			for (auto i = sizeOfArray - 1; i >= sizeOfArray - sizeToCompute; --i) 
+			{
+				++count;
+				mean += (data[i] - mean) / count;  // Incremental mean update
+			}
+		}
+
+		return mean;
+	}
+
 	static auto CalculateFWHM
 	(
 		const unsigned int* const array,
@@ -198,8 +233,19 @@ namespace FWHM
 		auto minSum = *minElementIter;
 		if (worstSum) *worstSum = minSum;
 
+		// Average Min value
+		auto averageMinSum = minSum;
+		{
+			// Mean from the left side
+			auto leftMean = CalculateMean(array, size, size / 4, true);
+			// Mean from the right side
+			auto rightMean = CalculateMean(array, size, size / 4, false);
+
+			averageMinSum = static_cast<unsigned int>((leftMean + rightMean) / 2.0);
+		}
+
 		// Step 2: Calculate the half-maximum
-		double halfMax = static_cast<double>(maxSum - minSum) / 2.0 + minSum;
+		double halfMax = static_cast<double>(maxSum - averageMinSum) / 2.0 + averageMinSum;
 
 		if (bestPosition < 0 || bestPosition > size - 1) return -1.0;
 

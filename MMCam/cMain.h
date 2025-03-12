@@ -1500,6 +1500,17 @@ private:
 		const wxString filePath
 	) -> void;
 
+	auto SaveFWHMTXTData
+	(
+		const wxString& filePath,
+		const size_t dataSize,
+		const double* horizontalFWHMData, 
+		const double* verticalFWHMData, 
+		const float* firstAxisData, 
+		const float* secondAxisData = nullptr
+	) -> void;
+
+
 	auto PrepareFileName
 	(
 		const int imageNumber,

@@ -715,6 +715,8 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 			return;
 		}
 
+		DrawScaleBar(gc);
+
 		DrawCrossHair(gc);
 
 		DrawGridMesh(gc);
@@ -1053,6 +1055,73 @@ auto cCamPreview::DrawCircleMesh(wxGraphicsContext* gc_) -> void
 		currRadius += m_CircleMeshStepPX / m_ZoomOnOriginalSizeImage;
 	}
 	gc_->StrokePath(path);
+}
+
+auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
+{
+	if (!m_ImageData || !m_Image.IsOk() || m_PixelSizeUM == 0.0) return;
+
+	auto scale_bar_start_draw = wxRealPoint
+	(
+		m_CanvasSize.GetWidth() - 70,
+		m_CanvasSize.GetHeight() - 20
+	);
+	// Set line color and thickness
+	auto pen_thickness = 4;
+	wxColour fontColour(255, 255, 0, 180);
+	gc_->SetPen(wxPen(fontColour, pen_thickness));
+
+	auto scale_bar_scale_size{ 10 };
+	auto scale_bar_um_array = std::make_unique<unsigned int[]>(scale_bar_scale_size);
+	for (auto i{ 0 }; i < scale_bar_scale_size; ++i)
+		scale_bar_um_array[i] = pow(10, i);
+
+	int selected_scale{ scale_bar_scale_size - 1 };
+	double length_horizontal_line = m_Zoom / m_ZoomOnOriginalSizeImage * scale_bar_um_array[selected_scale] / m_PixelSizeUM;
+	while (length_horizontal_line > m_CanvasSize.GetWidth() / 3.0 && selected_scale > 0)
+	{
+		--selected_scale;
+		length_horizontal_line = m_Zoom / m_ZoomOnOriginalSizeImage * scale_bar_um_array[selected_scale] / m_PixelSizeUM;
+	}
+
+	// Draw the first horizntal line from (x1, y1) to (x2, y2)
+	gc_->StrokeLine
+	(
+		scale_bar_start_draw.x,
+		scale_bar_start_draw.y,
+		scale_bar_start_draw.x - length_horizontal_line,
+		scale_bar_start_draw.y
+	);
+
+	// Draw the text
+	{
+		wxRealPoint drawPoint{};
+		wxFont font = wxFont(16, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+		gc_->SetFont(font, fontColour);
+		wxDouble widthText{}, heightText{};
+		wxString curr_value{};
+		auto currentScaleValue = scale_bar_um_array[selected_scale];
+		int thousandsCount = 0;
+		while (currentScaleValue % 1'000 == 0)
+		{
+			currentScaleValue /= 1'000;
+			++thousandsCount;
+		}
+
+		//curr_value = wxString::Format(wxT("%i"), scale_bar_um_array[selected_scale]);
+		curr_value = wxString::Format(wxT("%i"), currentScaleValue);
+		for (auto i{ 0 }; i < thousandsCount; ++i)
+			curr_value += wxString("'000");
+
+		curr_value += wxString(" [micron");
+		curr_value += scale_bar_um_array[selected_scale] == 1 ? wxString("]") : wxString("s]");
+		gc_->GetTextExtent(curr_value, &widthText, &heightText);
+		drawPoint.x = scale_bar_start_draw.x - length_horizontal_line / 2.0;
+		drawPoint.x -= widthText / 2.0;
+		drawPoint.y = scale_bar_start_draw.y - 25;
+		drawPoint.y -= heightText / 2.0;
+		gc_->DrawText(curr_value, drawPoint.x, drawPoint.y);
+	}
 }
 
 auto cCamPreview::DrawSpotCroppedWindow(wxGraphicsContext* gc_) -> void

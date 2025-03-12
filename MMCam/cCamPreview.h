@@ -110,6 +110,7 @@ public:
 		if (m_CropSizeMM != 0.0)
 			m_ROIWindowWidth = static_cast<int>(std::ceil(m_CropSizeMM / (m_PixelSizeUM / 1000.0)));
 	};
+
 	auto SetCropSizeMM(const double crop_sizeMM) 
 	{ 
 		m_CropSizeMM = crop_sizeMM > 0.0 ? crop_sizeMM : 0.0; 
@@ -155,6 +156,8 @@ private:
 
 	auto DrawGridMesh(wxGraphicsContext* gc_) -> void;
 	auto DrawCircleMesh(wxGraphicsContext* gc_) -> void;
+
+	auto DrawScaleBar(wxGraphicsContext* gc_) -> void;
 	
 	auto DrawSpotCroppedWindow(wxGraphicsContext* gc_) -> void;
 	auto DrawSumLines(wxGraphicsContext* gc_) -> void;
@@ -243,6 +246,8 @@ private:
 	bool m_DisplayFocusCenter{};
 	bool m_DisplayCrossHair{};
 
+	/* Scale Bar */
+	bool m_DisplayScaleBar{ true };
 
 	std::unique_ptr<CameraPreviewVariables::InputPreviewPanelArgs> m_ParentArguments{};
 
