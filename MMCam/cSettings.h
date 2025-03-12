@@ -17,7 +17,7 @@
 #include "rapidxml_utils.hpp"
 #include "rapidxml_print.hpp"
 
-#include "Motor.h"
+#include "StandaMotor.h"
 #include "XimeaControl.h"
 
 
@@ -284,7 +284,7 @@ private:
 	std::unique_ptr<SettingsVariables::MotorSettingsArray> m_Motors{};
 	
 	// TODO: Move to Polymorphic class IMotorFactory
-	std::unique_ptr<MotorArray> m_PhysicalMotors{};
+	std::unique_ptr<IMotorArray> m_PhysicalMotors{};
 
 	std::unique_ptr<SettingsVariables::Cameras> m_Cameras{};
 	const int m_MotorsCount{ 6 };

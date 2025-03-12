@@ -22,6 +22,9 @@
     <Filter Include="Source Files\MaterialDesign">
       <UniqueIdentifier>{16ff1013-2f7f-4a6a-ac0d-e058b639441c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Interfaces">
+      <UniqueIdentifier>{cbe40996-59c6-49b6-a80f-596a2969b025}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cApp.h">
@@ -36,7 +39,7 @@
     <ClInclude Include="cSettings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Motor.h">
+    <ClInclude Include="StandaMotor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
@@ -99,6 +102,12 @@
     <ClInclude Include="CameraControl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="IMotorArray.h">
+      <Filter>Header Files\Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="IMotor.h">
+      <Filter>Header Files\Interfaces</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cApp.cpp">
@@ -113,7 +122,7 @@
     <ClCompile Include="cSettings.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Motor.cpp">
+    <ClCompile Include="StandaMotor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="XimeaControl.cpp">

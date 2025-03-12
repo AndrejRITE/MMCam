@@ -167,8 +167,10 @@
     <ClInclude Include="cPreviewTools.h" />
     <ClInclude Include="cSettings.h" />
     <ClInclude Include="FWHMCalculation.h" />
+    <ClInclude Include="IMotor.h" />
+    <ClInclude Include="IMotorArray.h" />
     <ClInclude Include="json.hpp" />
-    <ClInclude Include="Motor.h" />
+    <ClInclude Include="StandaMotor.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="resource1.h" />
     <ClInclude Include="XimeaControl.h" />
@@ -192,7 +194,7 @@
     <ClCompile Include="cMain.cpp" />
     <ClCompile Include="cPreviewTools.cpp" />
     <ClCompile Include="cSettings.cpp" />
-    <ClCompile Include="Motor.cpp" />
+    <ClCompile Include="StandaMotor.cpp" />
     <ClCompile Include="XimeaControl.cpp" />
   </ItemGroup>
   <ItemGroup>

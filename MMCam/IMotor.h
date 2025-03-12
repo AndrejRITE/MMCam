@@ -11,9 +11,9 @@ public:
     virtual ~IMotor() = default;
 
     // Common motor operations
-    virtual void GoCenter() = 0;
-    virtual void GoHomeAndZero() = 0;
-    virtual void GoToPos(float stage_position) = 0;
+    virtual bool GoCenter() = 0;
+    virtual bool GoHomeAndZero() = 0;
+    virtual bool GoToAbsolutePosition(float stagePosition) = 0;
 
     // Getters
     virtual unsigned int GetDeviceSerNum() const = 0;
@@ -21,8 +21,10 @@ public:
     virtual float GetDeviceActualStagePos() const = 0;
 
     // Setters
-    virtual void SetDeviceName(const std::string& device_name) = 0;
-    virtual void SetSerNum(unsigned int s_n) = 0;
+    virtual void SetDeviceName(const std::string& deviceName) = 0;
+    virtual void SetMotorSerialNumber(unsigned int& serialNumber) = 0;
+    virtual void SetStepsPerMMRatio(const int stepsPerMMRatio) = 0;
+    virtual void UpdateCurrentPosition() = 0;
 };
 
 #endif // IMOTOR_H

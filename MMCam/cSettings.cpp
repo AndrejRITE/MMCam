@@ -559,7 +559,7 @@ void cSettings::InitComponents()
 	m_WorkStations = std::make_unique<SettingsVariables::WorkStations>();
 	m_Motors = std::make_unique<SettingsVariables::MotorSettingsArray>();
 	m_Cameras = std::make_unique<SettingsVariables::Cameras>();
-	m_PhysicalMotors = std::make_unique<MotorArray>();
+	m_PhysicalMotors = std::make_unique<IMotorArray>();
 }
 
 void cSettings::BindControls()
@@ -765,7 +765,7 @@ auto cSettings::CompareXMLWithConnectedDevices()
 	};
 
 
-	auto physical_motors = m_PhysicalMotors->GetNamesWithRanges();
+	auto physical_motors = m_PhysicalMotors->GetSerialNumbersWithRanges();
 	unsigned short serial_numbers_in_xml = m_Motors->unique_motors_map.size();
 	m_Motors->unique_motors_map.clear();
 	for (const auto& motor : physical_motors)
