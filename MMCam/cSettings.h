@@ -150,7 +150,7 @@ public:
 
 	bool MotorHasSerialNumber(const int motorName)
 	{
-		return m_PhysicalMotors->MotorHasSerialNumber
+		return m_PhysicalMotors->IsMotorConnected
 		(
 			m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[motorName].ToStdString()
 		);
@@ -176,7 +176,7 @@ public:
 	/* Setters */
 	float GoToAbsPos(const int motorName, const float absolute_position)
 	{
-		return m_PhysicalMotors->GoMotorToAbsPos
+		return m_PhysicalMotors->GoMotorToAbsolutePosition
 		(
 			m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[motorName].ToStdString(),
 			absolute_position

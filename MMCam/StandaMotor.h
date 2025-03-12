@@ -52,8 +52,8 @@ public:
 
 	// Getters 
 	unsigned int GetDeviceSerNum() const override { return m_MotorSerialNumber; };
-	float GetDeviceRange() const override { return m_MotorSettings->stageRange; };
-	float GetDeviceActualStagePos() const override { return m_MotorSettings->stagePos; };
+	float GetDeviceRange() const override { return m_MotorSettings ? m_MotorSettings->stageRange : 0.f; };
+	float GetDeviceActualStagePos() const override { return m_MotorSettings ? m_MotorSettings->stagePos : 0.f; };
 
 	// Setters 
 	void SetDeviceName(const std::string& deviceName) override 
@@ -66,7 +66,7 @@ public:
 
 	// Other Functions
 	//void SetResult(result_t result) { m_StandaSettings->result = result; };
-	void SetCalibration(calibration_t calibration) { m_StandaSettings->calibration = calibration; };
+	void SetCalibration(calibration_t calibration) { if (!m_StandaSettings) return; m_StandaSettings->calibration = calibration; };
 	//void SetState(status_t state) { m_StandaSettings->state = state; };
 	//void SetCalbState(status_calb_t calb_state) { m_StandaSettings->calb_state = calb_state; };
 
@@ -74,6 +74,8 @@ public:
 
 	void SetStepsPerMMRatio(const int stepsPerMMRatio) override 
 	{
+		if (!m_MotorSettings) return;
+
 		m_MotorSettings->stepsPerMMRatio = stepsPerMMRatio;
 		UpdateStageRange();
 		UpdateCurrentPosition();
@@ -81,6 +83,7 @@ public:
 
 	void UpdateCurrentPosition() override
 	{
+		if (!m_MotorSettings) return;
 		//m_MotorSettings->motorPos = m_CurrentMotorDeg;
 		m_MotorSettings->motorPos = m_StandaSettings->state.CurPosition;
 		m_MotorSettings->stagePos = m_MotorSettings->motorPos / m_MotorSettings->stepsPerMMRatio;
@@ -90,29 +93,36 @@ public:
 	/* Move constructor */
 	StandaMotor(StandaMotor&& other) noexcept
 		: m_MotorSettings(std::move(other.m_MotorSettings)),
-		//m_StandaSettings(std::move(other.m_StandaSettings)),
+		m_StandaSettings(std::move(other.m_StandaSettings)),
 		m_DeviceName(std::move(other.m_DeviceName)),
 		m_MotorSerialNumber(other.m_MotorSerialNumber)
 	{
-		other.m_MotorSettings = nullptr;
-		//other.m_StandaSettings = nullptr;
-		other.m_DeviceName = "";
 		other.m_MotorSerialNumber = 0;
+		other.m_DeviceName = "";
 	};
 
 	/* Move assignment */
-	auto& operator=(StandaMotor&& other) noexcept
+	StandaMotor& operator=(StandaMotor&& other) noexcept
 	{
-		m_MotorSettings.reset(other.m_MotorSettings.release());
-		//m_StandaSettings.reset(other.m_StandaSettings.release());
-		m_DeviceName = std::move(other.m_DeviceName);
-		m_MotorSerialNumber = other.m_MotorSerialNumber;
+		if (this != &other)
+		{
+			m_MotorSettings = std::move(other.m_MotorSettings);
+			m_StandaSettings = std::move(other.m_StandaSettings);
+			m_DeviceName = std::move(other.m_DeviceName);
+			m_MotorSerialNumber = other.m_MotorSerialNumber;
+		}
 		return *this;
 	};
+
+	// Deleted copy constructor & assignment
+	StandaMotor(const StandaMotor&) = delete;
+	StandaMotor& operator=(const StandaMotor&) = delete;
 
 private:
 	auto UpdateStageRange() -> void
 	{
+		if (!m_MotorSettings) return;
+
 		/* Min position */
 		m_MotorSettings->minStagePos = m_MotorSettings->minMotorPos / m_MotorSettings->stepsPerMMRatio;
 
@@ -134,18 +144,19 @@ private:
 	//std::unique_ptr<char[]> m_DeviceName{};
 	std::string m_DeviceName{};
 	unsigned int m_MotorSerialNumber{};
-	int m_CurrentMotorDeg{};
+	//int m_CurrentMotorDeg{};
 	const long long m_WaitAfterMovementMilliseconds{ 500 };
 };
 
-class StandaMotorArray final : public IMotorArray
+class StandaMotorArray final : virtual public IMotorArray
 {
 public:
-	StandaMotorArray(const std::string ipAddress = "");
+	StandaMotorArray(const std::string& ipAddress = "");
 
 	/* Getter */
 	std::map<unsigned int, float> GetSerialNumbersWithRanges() const override { return m_NamesOfMotorsWithRanges; };
 	float GetActualStagePos(const std::string& motor_sn) const override;
+	bool IsMotorConnected(const std::string& motor_sn) const override;
 
 	/* Setter */
 	float GoMotorHome(const std::string& motor_sn) override;
@@ -155,16 +166,13 @@ public:
 
 	void SetStepsPerMMForTheMotor(const std::string motor_sn, const int stepsPerMM) override;
 
-	//auto AreAllMotorsInitialized() const -> bool { return !m_UninitializedMotors.size(); };
-	//auto GetUninitializedMotors() const -> std::vector<unsigned int> { return m_UninitializedMotors; };
+private:
+	auto InitAllMotors(const std::string ip_address) -> bool;
+	auto FillNames() -> void;
 
 private:
-	auto FillNames();
-	bool InitAllMotors(const std::string ip_address);
-
-
-private:
-	std::vector<IMotor> m_MotorsArray{};
+	//std::vector<IMotor> m_MotorsArray;
+	std::vector<std::unique_ptr<IMotor>> m_MotorsArray;
 	std::map<unsigned int, float> m_NamesOfMotorsWithRanges{};
 	const float error_position = 0.0f;
 

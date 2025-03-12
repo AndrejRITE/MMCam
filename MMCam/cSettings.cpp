@@ -559,7 +559,7 @@ void cSettings::InitComponents()
 	m_WorkStations = std::make_unique<SettingsVariables::WorkStations>();
 	m_Motors = std::make_unique<SettingsVariables::MotorSettingsArray>();
 	m_Cameras = std::make_unique<SettingsVariables::Cameras>();
-	m_PhysicalMotors = std::make_unique<IMotorArray>();
+	m_PhysicalMotors = std::make_unique<StandaMotorArray>();
 }
 
 void cSettings::BindControls()

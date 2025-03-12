@@ -14,6 +14,7 @@ public:
 	// Getters
 	virtual std::map<unsigned int, float> GetSerialNumbersWithRanges() const = 0;
 	virtual float GetActualStagePos(const std::string& motor_sn) const = 0;
+	virtual bool IsMotorConnected(const std::string& motor_sn) const = 0;
 
 	// Setters
 	virtual float GoMotorHome(const std::string& motor_sn) = 0;

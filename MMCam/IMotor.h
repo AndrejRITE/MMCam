@@ -22,8 +22,9 @@ public:
 
     // Setters
     virtual void SetDeviceName(const std::string& deviceName) = 0;
-    virtual void SetMotorSerialNumber(unsigned int& serialNumber) = 0;
+    virtual void SetMotorSerialNumber(unsigned int serialNumber) = 0;
     virtual void SetStepsPerMMRatio(const int stepsPerMMRatio) = 0;
+	virtual void SetRange(const float minMotorDeg, const float maxMotorDeg) = 0;
     virtual void UpdateCurrentPosition() = 0;
 };
 
