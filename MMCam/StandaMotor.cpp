@@ -4,7 +4,7 @@
 StandaMotor::StandaMotor()
 {
 	m_MotorSettings = std::make_unique<MotorVariables::Settings>();
-	//m_StandaSettings = std::make_unique<StandaVariables::C_Settings>();
+	m_StandaSettings = std::make_unique<StandaVariables::C_Settings>();
 }
 
 bool StandaMotor::GoCenter()
@@ -328,6 +328,8 @@ auto StandaMotorArray::InitAllMotors(const std::string ip_address) -> bool
 		//calibration_c.MicrostepMode = MICROSTEP_MODE_FRAC_256;
 
 		//m_MotorsArray[i].SetCalibration(calibration_c);
+		m_MotorsArray[i]->SetConversionFactor(calibration_c.A);
+		m_MotorsArray[i]->SetMicrostepMode(calibration_c.MicrostepMode);
 
 		/* Get Status */
 		if ((result_c = get_status_calb(device_c, &state_calb_c, &calibration_c)) != result_ok)
@@ -335,7 +337,7 @@ auto StandaMotorArray::InitAllMotors(const std::string ip_address) -> bool
 			appendUnitializedMotor(device_sn, i);
 			continue;
 		}
-		//m_MotorsArray[i].SetState(state_c);
+		m_MotorsArray[i]->SetCurrentMotorPosition(state_c.CurPosition);
 
 		get_edges_settings_calb(device_c, &edges_settings_calb_c, &calibration_c);
 		m_MotorsArray[i]->SetRange(edges_settings_calb_c.LeftBorder, edges_settings_calb_c.RightBorder);
