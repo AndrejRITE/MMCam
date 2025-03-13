@@ -16,7 +16,7 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "FWHMCalculation.h"
+#include "PostprocessingAlgorithms.h"
 
 #include "cPreviewTools.h"
 

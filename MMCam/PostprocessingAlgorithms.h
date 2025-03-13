@@ -1,6 +1,6 @@
 #pragma once
-#ifndef FWHMCALCULATION_H
-#define FWHMCALCULATION_H
+#ifndef POSTPROCESSINGALGORITHMS_H
+#define POSTPROCESSINGALGORITHMS_H
 
 #include <numeric>
 #include <thread>
@@ -8,7 +8,7 @@
 #include <atomic>
 #include <memory>
 
-namespace FWHM
+namespace PostprocessingAlgorithms
 {
 	static auto CalculateSumHorizontally
 	(

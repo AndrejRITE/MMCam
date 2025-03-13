@@ -25,6 +25,18 @@
     <Filter Include="Header Files\Interfaces">
       <UniqueIdentifier>{cbe40996-59c6-49b6-a80f-596a2969b025}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Camera">
+      <UniqueIdentifier>{e1d48ff5-4562-46c1-be1e-afeb38f1f440}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Motors">
+      <UniqueIdentifier>{803f6663-eacc-427c-aac8-ca85d4f6a992}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Camera">
+      <UniqueIdentifier>{d6d38b99-bea0-42e7-a98b-4c32ca675ca5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Motors">
+      <UniqueIdentifier>{da974a69-6438-4030-842e-1068edd01b0f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cApp.h">
@@ -39,13 +51,7 @@
     <ClInclude Include="cSettings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="StandaMotor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="XimeaControl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cPreviewTools.h">
@@ -93,7 +99,7 @@
     <ClInclude Include="resource1.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FWHMCalculation.h">
+    <ClInclude Include="PostprocessingAlgorithms.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cGenerateReportDialog.h">
@@ -108,6 +114,12 @@
     <ClInclude Include="IMotor.h">
       <Filter>Header Files\Interfaces</Filter>
     </ClInclude>
+    <ClInclude Include="XimeaControl.h">
+      <Filter>Header Files\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="StandaMotor.h">
+      <Filter>Header Files\Motors</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cApp.cpp">
@@ -120,12 +132,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="cSettings.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="StandaMotor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="XimeaControl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="cPreviewTools.cpp">
@@ -169,6 +175,12 @@
     </ClCompile>
     <ClCompile Include="cGenerateReportDialog.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XimeaControl.cpp">
+      <Filter>Source Files\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="StandaMotor.cpp">
+      <Filter>Source Files\Motors</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -606,7 +606,7 @@ auto cCamPreview::CalculateFWHM() -> void
 		{
 			try 
 			{
-				FWHM::CalculateSumVertically
+				PostprocessingAlgorithms::CalculateSumVertically
 				(
 					m_ImageData.get(),
 					m_ImageSize.GetWidth(),
@@ -616,7 +616,7 @@ auto cCamPreview::CalculateFWHM() -> void
 
 				LOG("CalculatedSumVertically: " + wxString(__FUNCSIG__));
 
-				m_HorizontalFWHM_PX = FWHM::CalculateFWHM
+				m_HorizontalFWHM_PX = PostprocessingAlgorithms::CalculateFWHM
 				(
 					m_HorizontalSumArray.get(),
 					m_ImageSize.GetWidth(),
@@ -637,7 +637,7 @@ auto cCamPreview::CalculateFWHM() -> void
 		{
 			try 
 			{
-				FWHM::CalculateSumHorizontally
+				PostprocessingAlgorithms::CalculateSumHorizontally
 				(
 					m_ImageData.get(),
 					m_ImageSize.GetWidth(),
@@ -647,7 +647,7 @@ auto cCamPreview::CalculateFWHM() -> void
 
 				LOG("CalculatedSumHorizontally: " + wxString(__FUNCSIG__));
 
-				m_VerticalFWHM_PX = FWHM::CalculateFWHM
+				m_VerticalFWHM_PX = PostprocessingAlgorithms::CalculateFWHM
 				(
 					m_VerticalSumArray.get(),
 					m_ImageSize.GetHeight(),

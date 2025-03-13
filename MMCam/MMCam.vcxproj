@@ -166,7 +166,7 @@
     <ClInclude Include="cMain.h" />
     <ClInclude Include="cPreviewTools.h" />
     <ClInclude Include="cSettings.h" />
-    <ClInclude Include="FWHMCalculation.h" />
+    <ClInclude Include="PostprocessingAlgorithms.h" />
     <ClInclude Include="IMotor.h" />
     <ClInclude Include="IMotorArray.h" />
     <ClInclude Include="json.hpp" />
