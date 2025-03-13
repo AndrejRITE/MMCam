@@ -166,9 +166,10 @@ namespace PostprocessingAlgorithms
 		return true;
 	}
 
+	template <typename T>
 	static auto CalculateMean
 	(
-		const unsigned int* data, 
+		const T* data, 
 		size_t sizeOfArray, 
 		size_t sizeToCompute, 
 		bool calculateFromTheLeftSide
@@ -201,97 +202,192 @@ namespace PostprocessingAlgorithms
 		return mean;
 	}
 
-	static auto CalculateFWHM
+	static auto CalculateVerticalFWHM
 	(
-		const unsigned int* const array,
-		size_t size,
-		int* bestPos = nullptr,
-		unsigned int* bestSum = nullptr,
-		int* worstPos = nullptr,
-		unsigned int* worstSum = nullptr,
-		int* fwhmMiddlePosPX = nullptr
-	) -> double
+		const unsigned short* const dataPtr,
+		const unsigned int* const horizontalSumPtr,
+		size_t imgWidth,
+		size_t imgHeight,
+		unsigned int* worstHorizontalSum = nullptr,
+		unsigned int* bestHorizontalSum = nullptr,
+		//int* bestPosX = nullptr,
+		//unsigned int* bestSumX = nullptr,
+		//int* worstPosX = nullptr,
+		//unsigned int* worstSumX = nullptr,
+		int* fwhmMiddlePosY = nullptr
+	) -> int
 	{
+		if (!dataPtr || !horizontalSumPtr) return -1;
+		if (!imgWidth || !imgHeight) return -1;
 
-		if (!size) return -1.0;
+		if (fwhmMiddlePosY) *fwhmMiddlePosY = -1;
 
-		// Step 1: Find the maximum value
-		auto minmaxElementIter = std::minmax_element(array, &array[size - 1]);
-		auto minElementIter = minmaxElementIter.first;
-		auto maxElementIter = minmaxElementIter.second;
-		// Best Position and Sum
-		auto bestPosition = static_cast<int>(std::distance(array, maxElementIter));
-		if (bestPos) *bestPos = bestPosition;
-
-		auto maxSum = *maxElementIter;
-		if (bestSum) *bestSum = maxSum;
-
-		// Worst Position and Sum
-		auto minPos = static_cast<int>(std::distance(array, minElementIter));
-		if (worstPos) *worstPos = minPos;
-
-		auto minSum = *minElementIter;
-		if (worstSum) *worstSum = minSum;
-
-		// Average Min value
-		auto averageMinSum = minSum;
+		// Vertical FWHM Data
 		{
-			// Mean from the left side
-			auto leftMean = CalculateMean(array, size, size / 4, true);
-			// Mean from the right side
-			auto rightMean = CalculateMean(array, size, size / 4, false);
-
-			averageMinSum = static_cast<unsigned int>((leftMean + rightMean) / 2.0);
-		}
-
-		// Step 2: Calculate the half-maximum
-		double halfMax = static_cast<double>(maxSum - averageMinSum) / 2.0 + averageMinSum;
-
-		if (bestPosition < 0 || bestPosition > size - 1) return -1.0;
-
-		// Step 3: Find indices where array crosses the half-maximum
-		int leftIndex = -1, rightIndex = -1;
-
-		// Looking for the left index
-		for (auto i = 0; i < size; ++i)
-		{
-			if (leftIndex == -1 && array[i] >= halfMax) 
+			int startOf1DDataCut{};
 			{
-				leftIndex = static_cast<int>(i);
-				break;
+				// Find the maximum value
+				auto minmaxElementIter = std::minmax_element(horizontalSumPtr, &horizontalSumPtr[imgWidth - 1]);
+				auto minElementIter = minmaxElementIter.first;
+				auto maxElementIter = minmaxElementIter.second;
+
+				if (worstHorizontalSum) *worstHorizontalSum = *minElementIter;
+				if (bestHorizontalSum) *bestHorizontalSum = *maxElementIter;
+
+				// Best Position and Sum
+				auto bestXPositionInSum = static_cast<int>(std::distance(horizontalSumPtr, maxElementIter));
+				//if (bestPosX) *bestPosX = bestXPositionInSum;
+
+				if (bestXPositionInSum < 0 || bestXPositionInSum >= imgWidth) return -1;
+
+				startOf1DDataCut = bestXPositionInSum;
 			}
-		}
 
-#ifdef _DEBUG
-		if (leftIndex == -1)
-			StoreArrayDataWithTabulator
-			(
-				array, 
-				size, 
-				"D:\\Projects\\RIGAKU\\MMCam\\MMCam\\src\\dbg_fld\\data.txt"
-			);
-#endif // _DEBUG
+			auto verticalDataSlice = std::make_unique<unsigned short[]>(imgHeight);
+			for (auto i{ 0 }; i < imgHeight; ++i)
+				verticalDataSlice[i] = dataPtr[imgWidth * i + startOf1DDataCut];
 
+			auto minmaxElementIter = std::minmax_element(verticalDataSlice.get(), &verticalDataSlice[imgHeight - 1]);
+			auto maxValue = *minmaxElementIter.second;
 
-		if (leftIndex == -1) return -1.0;
-
-		// Looking for the right index
-		for (auto j = size - 1; j >= leftIndex; --j)
-		{
-			if (leftIndex != -1 && array[j] >= halfMax) 
+			// Average Min value
+			auto averageMin = 0U;
 			{
-				rightIndex = static_cast<int>(j);
-				break;
+				// Mean from the left side
+				auto leftMean = CalculateMean(verticalDataSlice.get(), imgHeight, imgHeight / 4, true);
+				// Mean from the right side
+				auto rightMean = CalculateMean(verticalDataSlice.get(), imgHeight, imgHeight / 4, false);
+
+				averageMin = static_cast<unsigned int>((leftMean + rightMean) / 2.0);
 			}
+
+			// Calculate the half-maximum
+			double halfMax = static_cast<double>(maxValue - averageMin) / 2.0 + averageMin;
+
+			int leftIndex = -1, rightIndex = -1;
+			// Looking for the left index
+			for (auto i = 0; i < imgHeight; ++i)
+			{
+				if (leftIndex == -1 && verticalDataSlice[i] >= halfMax)
+				{
+					leftIndex = static_cast<int>(i);
+					break;
+				}
+			}
+
+			if (leftIndex == -1) return -1;
+
+			// Looking for the right index
+			for (auto j = imgHeight - 1; j >= leftIndex; --j)
+			{
+				if (leftIndex != -1 && verticalDataSlice[j] >= halfMax)
+				{
+					rightIndex = static_cast<int>(j);
+					break;
+				}
+			}
+
+			// Handle edge cases where the full width is not well-defined
+			if (leftIndex == -1 || rightIndex == -1 || rightIndex <= leftIndex) return -1;
+
+			if (fwhmMiddlePosY) *fwhmMiddlePosY = leftIndex + (rightIndex - leftIndex) / 2;
+
+			// Compute FWHM
+			return (rightIndex - leftIndex);
 		}
+	}
 
-		// Handle edge cases where the full width is not well-defined
-		if (leftIndex == -1 || rightIndex == -1 || rightIndex <= leftIndex) return -1.0;
+	static auto CalculateHorizontalFWHM
+	(
+		const unsigned short* const dataPtr,
+		const unsigned int* const verticalSumPtr,
+		size_t imgWidth,
+		size_t imgHeight,
+		unsigned int* worstVerticalSum = nullptr,
+		unsigned int* bestVerticalSum = nullptr,
+		int* fwhmMiddlePosX = nullptr
+	) -> int
+	{
+		if (!dataPtr || !verticalSumPtr) return -1;
+		if (!imgWidth || !imgHeight) return -1;
 
-		if (fwhmMiddlePosPX) *fwhmMiddlePosPX = leftIndex + (rightIndex - leftIndex) / 2;
+		if (fwhmMiddlePosX) *fwhmMiddlePosX = -1;
 
-		// Step 4: Compute FWHM
-		return static_cast<double>(rightIndex - leftIndex);
+		// Horizontal FWHM Data
+		{
+			int startOf1DDataCut{};
+			{
+				// Find the maximum value
+				auto minmaxElementIter = std::minmax_element(verticalSumPtr, &verticalSumPtr[imgHeight - 1]);
+				auto minElementIter = minmaxElementIter.first;
+				auto maxElementIter = minmaxElementIter.second;
+
+				if (worstVerticalSum) *worstVerticalSum = *minElementIter;
+				if (bestVerticalSum) *bestVerticalSum = *maxElementIter;
+
+				// Best Position 
+				auto bestYPositionInSum = static_cast<int>(std::distance(verticalSumPtr, maxElementIter));
+
+				if (bestYPositionInSum < 0 || bestYPositionInSum >= imgHeight) return -1;
+
+				startOf1DDataCut = bestYPositionInSum;
+			}
+
+			auto horizontalDataSlice = std::make_unique<unsigned short[]>(imgWidth);
+
+			memcpy(horizontalDataSlice.get(), &dataPtr[imgWidth * startOf1DDataCut], sizeof(unsigned short) * imgWidth);
+
+			//for (auto i{ 0 }; i < imgWidth; ++i)
+			//	horizontalDataSlice[i] = dataPtr[imgWidth * i + startOf1DDataCut];
+
+			auto minmaxElementIter = std::minmax_element(horizontalDataSlice.get(), &horizontalDataSlice[imgWidth - 1]);
+			auto maxValue = *minmaxElementIter.second;
+
+			// Average Min value
+			auto averageMin = 0U;
+			{
+				// Mean from the left side
+				auto leftMean = CalculateMean(horizontalDataSlice.get(), imgWidth, imgWidth / 4, true);
+				// Mean from the right side
+				auto rightMean = CalculateMean(horizontalDataSlice.get(), imgWidth, imgWidth / 4, false);
+
+				averageMin = static_cast<unsigned int>((leftMean + rightMean) / 2.0);
+			}
+
+			// Calculate the half-maximum
+			double halfMax = static_cast<double>(maxValue - averageMin) / 2.0 + averageMin;
+
+			int leftIndex = -1, rightIndex = -1;
+			// Looking for the left index
+			for (auto i = 0; i < imgWidth; ++i)
+			{
+				if (leftIndex == -1 && horizontalDataSlice[i] >= halfMax)
+				{
+					leftIndex = static_cast<int>(i);
+					break;
+				}
+			}
+
+			if (leftIndex == -1) return -1;
+
+			// Looking for the right index
+			for (auto j = imgWidth - 1; j >= leftIndex; --j)
+			{
+				if (leftIndex != -1 && horizontalDataSlice[j] >= halfMax)
+				{
+					rightIndex = static_cast<int>(j);
+					break;
+				}
+			}
+
+			// Handle edge cases where the full width is not well-defined
+			if (leftIndex == -1 || rightIndex == -1 || rightIndex <= leftIndex) return -1;
+
+			if (fwhmMiddlePosX) *fwhmMiddlePosX = leftIndex + (rightIndex - leftIndex) / 2;
+
+			// Compute FWHM
+			return (rightIndex - leftIndex);
+		}
 	}
 }
 #endif

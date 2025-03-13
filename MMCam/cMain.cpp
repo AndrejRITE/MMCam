@@ -3529,22 +3529,26 @@ auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 		auto verticalSumArray = std::make_unique<unsigned int[]>(cropWindowSize);
 
 		PostprocessingAlgorithms::CalculateSumVertically(croppedRAWData.get(), cropWindowSize, cropWindowSize, horizontalSumArray.get());
-		horizontalFWHM[i] = PostprocessingAlgorithms::CalculateFWHM
+		verticalFWHM[i] = PostprocessingAlgorithms::CalculateVerticalFWHM
 			(
+				croppedRAWData.get(),
 				horizontalSumArray.get(), 
-				cropWindowSize
-			);
-		horizontalFWHM[i] = horizontalFWHM[i] == - 1.0 ? 0.0 : horizontalFWHM[i];
-		horizontalFWHM[i] *= inputParameters.pixelSizeUM;
-
-		PostprocessingAlgorithms::CalculateSumHorizontally(croppedRAWData.get(), cropWindowSize, cropWindowSize, verticalSumArray.get());
-		verticalFWHM[i] = PostprocessingAlgorithms::CalculateFWHM
-			(
-				verticalSumArray.get(), 
+				cropWindowSize,
 				cropWindowSize
 			);
 		verticalFWHM[i] = verticalFWHM[i] == - 1.0 ? 0.0 : verticalFWHM[i];
 		verticalFWHM[i] *= inputParameters.pixelSizeUM;
+
+		PostprocessingAlgorithms::CalculateSumHorizontally(croppedRAWData.get(), cropWindowSize, cropWindowSize, verticalSumArray.get());
+		horizontalFWHM[i] = PostprocessingAlgorithms::CalculateHorizontalFWHM
+			(
+				croppedRAWData.get(),
+				verticalSumArray.get(), 
+				cropWindowSize,
+				cropWindowSize
+			);
+		horizontalFWHM[i] = horizontalFWHM[i] == - 1.0 ? 0.0 : horizontalFWHM[i];
+		horizontalFWHM[i] *= inputParameters.pixelSizeUM;
 
 		if (gainMax[i] > bestGainMax)
 		{
@@ -4693,22 +4697,26 @@ auto WorkerThread::CalculateFWHM
 	auto verticalSumArray = std::make_unique<unsigned int[]>(imgHeight);
 
 	PostprocessingAlgorithms::CalculateSumVertically(dataPtr, imgWidth, imgHeight, horizontalSumArray.get());
-	m_HorizontalFWHMData[stepNumber] = PostprocessingAlgorithms::CalculateFWHM
+	m_VerticalFWHMData[stepNumber] = PostprocessingAlgorithms::CalculateVerticalFWHM
 		(
+			dataPtr,
 			horizontalSumArray.get(), 
-			imgWidth
-		);
-	m_HorizontalFWHMData[stepNumber] = m_HorizontalFWHMData[stepNumber] == - 1.0 ? 0.0 : m_HorizontalFWHMData[stepNumber];
-	m_HorizontalFWHMData[stepNumber] *= m_PixelSizeUM;
-
-	PostprocessingAlgorithms::CalculateSumHorizontally(dataPtr, imgWidth, imgHeight, verticalSumArray.get());
-	m_VerticalFWHMData[stepNumber] = PostprocessingAlgorithms::CalculateFWHM
-		(
-			verticalSumArray.get(), 
+			imgWidth,
 			imgHeight
 		);
 	m_VerticalFWHMData[stepNumber] = m_VerticalFWHMData[stepNumber] == - 1.0 ? 0.0 : m_VerticalFWHMData[stepNumber];
 	m_VerticalFWHMData[stepNumber] *= m_PixelSizeUM;
+
+	PostprocessingAlgorithms::CalculateSumHorizontally(dataPtr, imgWidth, imgHeight, verticalSumArray.get());
+	m_HorizontalFWHMData[stepNumber] = PostprocessingAlgorithms::CalculateHorizontalFWHM
+		(
+			dataPtr,
+			verticalSumArray.get(), 
+			imgWidth,
+			imgHeight
+		);
+	m_HorizontalFWHMData[stepNumber] = m_HorizontalFWHMData[stepNumber] == - 1.0 ? 0.0 : m_HorizontalFWHMData[stepNumber];
+	m_HorizontalFWHMData[stepNumber] *= m_PixelSizeUM;
 
 	return true;
 }

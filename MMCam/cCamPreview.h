@@ -235,9 +235,9 @@ private:
 	// FWHM
 	bool m_DisplayFWHM{};
 	std::unique_ptr<unsigned int[]> m_HorizontalSumArray{}, m_VerticalSumArray{};
-	double m_HorizontalFWHM_PX{ -1.0 }, m_VerticalFWHM_PX{ -1.0 };
-	std::pair<int, unsigned int> m_HorizontalWorstPosSum{}, m_HorizonalBestPosSum{};
-	std::pair<int, unsigned int> m_VerticalWorstPosSum{}, m_VerticalBestPosSum{};
+	int m_HorizontalFWHM_PX{ -1 }, m_VerticalFWHM_PX{ -1 };
+	unsigned int m_HorizontalWorstSum{}, m_HorizonalBestSum{};
+	unsigned int m_VerticalWorstSum{}, m_VerticalBestSum{};
 	int m_HorizontalMiddleFWHMPosPixel{}, m_VerticalMiddleFWHMPosPixel{};
 	double m_PixelSizeUM{}, m_CropSizeMM{};
 	int m_ROIWindowWidth{};

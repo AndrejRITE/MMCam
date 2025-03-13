@@ -602,7 +602,7 @@ auto cCamPreview::OnKeyReleased(wxKeyEvent& evt) -> void
 auto cCamPreview::CalculateFWHM() -> void
 {
 	// Create threads for horizontal and vertical calculations
-	std::thread horizontalThread([&]()
+	std::thread verticalThread([&]()
 		{
 			try 
 			{
@@ -616,24 +616,24 @@ auto cCamPreview::CalculateFWHM() -> void
 
 				LOG("CalculatedSumVertically: " + wxString(__FUNCSIG__));
 
-				m_HorizontalFWHM_PX = PostprocessingAlgorithms::CalculateFWHM
+				m_VerticalFWHM_PX = PostprocessingAlgorithms::CalculateVerticalFWHM
 				(
+					m_ImageData.get(),
 					m_HorizontalSumArray.get(),
 					m_ImageSize.GetWidth(),
-					&m_HorizonalBestPosSum.first,
-					&m_HorizonalBestPosSum.second,
-					&m_HorizontalWorstPosSum.first,
-					&m_HorizontalWorstPosSum.second,
-					&m_HorizontalMiddleFWHMPosPixel
+					m_ImageSize.GetHeight(),
+					&m_HorizontalWorstSum,
+					&m_HorizonalBestSum,
+					&m_VerticalMiddleFWHMPosPixel
 				);
 			}
 			catch (const std::exception& e) 
 			{
-				LOG("Exception in horizontal thread: " + wxString(e.what()));
+				LOG("Exception in vertical thread: " + wxString(e.what()));
 			}
 		});
 
-	std::thread verticalThread([&]()
+	std::thread horizontalThread([&]()
 		{
 			try 
 			{
@@ -647,15 +647,15 @@ auto cCamPreview::CalculateFWHM() -> void
 
 				LOG("CalculatedSumHorizontally: " + wxString(__FUNCSIG__));
 
-				m_VerticalFWHM_PX = PostprocessingAlgorithms::CalculateFWHM
+				m_HorizontalFWHM_PX = PostprocessingAlgorithms::CalculateHorizontalFWHM
 				(
+					m_ImageData.get(),
 					m_VerticalSumArray.get(),
+					m_ImageSize.GetWidth(),
 					m_ImageSize.GetHeight(),
-					&m_VerticalBestPosSum.first,
-					&m_VerticalBestPosSum.second,
-					&m_VerticalWorstPosSum.first,
-					&m_VerticalWorstPosSum.second,
-					&m_VerticalMiddleFWHMPosPixel
+					&m_VerticalWorstSum,
+					&m_VerticalBestSum,
+					&m_HorizontalMiddleFWHMPosPixel
 				);
 			}
 			catch (const std::exception& e) 
@@ -1128,8 +1128,7 @@ auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 auto cCamPreview::DrawSpotCroppedWindow(wxGraphicsContext* gc_) -> void
 {
 	if (!m_Image.IsOk() || !m_HorizontalSumArray || !m_VerticalSumArray) return;
-	if (m_HorizontalFWHM_PX == -1.0 || m_VerticalFWHM_PX == -1.0) return;
-	if (!m_HorizonalBestPosSum.second || !m_VerticalBestPosSum.second) return;
+	if (m_HorizontalFWHM_PX == -1 || m_VerticalFWHM_PX == -1) return;
 	if (!m_DisplayFocusCenter) return;
 
 	if (m_ROIWindowWidth <= 0) return;
@@ -1189,8 +1188,8 @@ auto cCamPreview::DrawSpotCroppedWindow(wxGraphicsContext* gc_) -> void
 auto cCamPreview::DrawSumLines(wxGraphicsContext* gc_) -> void
 {
 	if (!m_DisplayFWHM) return;
-	if (m_HorizontalFWHM_PX == -1.0 || m_VerticalFWHM_PX == -1.0) return;
-	if (!m_HorizonalBestPosSum.second || !m_VerticalBestPosSum.second) return;
+	if (m_HorizontalFWHM_PX == -1 || m_VerticalFWHM_PX == -1) return;
+	if (!m_HorizonalBestSum || !m_VerticalBestSum) return;
 
 	DrawHorizontalSumLine(gc_);
 	DrawVerticalSumLine(gc_);
@@ -1213,7 +1212,7 @@ auto cCamPreview::DrawHorizontalSumLine(wxGraphicsContext* gc_) -> void
 
 	wxDouble offset_x{ m_Zoom / m_ZoomOnOriginalSizeImage }, max_height{ (wxDouble)m_ImageOnCanvasSize.GetHeight() / 4 };
 	wxDouble current_x{}, current_y{}, start_x{ start_draw.x }, start_y{}, current_length{ m_Zoom / m_ZoomOnOriginalSizeImage };
-	auto max_value = m_HorizonalBestPosSum.second - m_HorizontalWorstPosSum.second;
+	auto max_value = m_HorizonalBestSum - m_HorizontalWorstSum;
 	LOGI("Max Value: ", max_value);
 	max_value = max_value == 0 ? 1 : max_value;
 	auto multiplicator = (double)max_height / max_value;
@@ -1221,8 +1220,8 @@ auto cCamPreview::DrawHorizontalSumLine(wxGraphicsContext* gc_) -> void
 
 	for (auto i = 0; i < m_ImageSize.GetWidth() - 1; ++i)
 	{
-		start_y = start_draw.y - std::floor(((int)m_HorizontalSumArray[i] - (int)m_HorizontalWorstPosSum.second) * multiplicator);
-		current_y = start_draw.y - std::floor(((int)m_HorizontalSumArray[i + 1] - (int)m_HorizontalWorstPosSum.second) * multiplicator);
+		start_y = start_draw.y - std::floor(((int)m_HorizontalSumArray[i] - (int)m_HorizontalWorstSum) * multiplicator);
+		current_y = start_draw.y - std::floor(((int)m_HorizontalSumArray[i + 1] - (int)m_HorizontalWorstSum) * multiplicator);
 		gc_->StrokeLine(start_x, start_y, start_x + current_length, current_y);
 		start_x += offset_x;
 	}
@@ -1247,15 +1246,15 @@ auto cCamPreview::DrawVerticalSumLine(wxGraphicsContext* gc_) -> void
 
 	wxDouble offset_y{ m_Zoom / m_ZoomOnOriginalSizeImage }, max_height{ (wxDouble)m_ImageOnCanvasSize.GetWidth() / 4 };
 	wxDouble current_x{}, current_y{}, start_x{}, start_y{ start_draw.y }, current_length{ m_Zoom / m_ZoomOnOriginalSizeImage };
-	auto max_value = m_VerticalBestPosSum.second - m_VerticalWorstPosSum.second;
+	auto max_value = m_VerticalBestSum - m_VerticalWorstSum;
 	max_value = max_value == 0 ? 1 : max_value;
 	auto multiplicator = (double)max_height / max_value;
 	LOGF("V Multiplicator: ", multiplicator);
 
 	for (auto i = 0; i < m_ImageSize.GetHeight() - 1; ++i)
 	{
-		start_x = start_draw.x - std::floor(((int)m_VerticalSumArray[i] - (int)m_VerticalWorstPosSum.second) * multiplicator);
-		current_x = start_draw.x - std::floor(((int)m_VerticalSumArray[i + 1] - (int)m_VerticalWorstPosSum.second) * multiplicator);
+		start_x = start_draw.x - std::floor(((int)m_VerticalSumArray[i] - (int)m_VerticalWorstSum) * multiplicator);
+		current_x = start_draw.x - std::floor(((int)m_VerticalSumArray[i + 1] - (int)m_VerticalWorstSum) * multiplicator);
 		gc_->StrokeLine(start_x, start_y, current_x, start_y + current_length);
 		start_y += offset_y;
 	}
