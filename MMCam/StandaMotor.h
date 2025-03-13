@@ -66,8 +66,8 @@ public:
 
 	// Other Functions
 	//void SetResult(result_t result) { m_StandaSettings->result = result; };
-	void SetConversionFactor(const double A) override { if (!m_StandaSettings) return; m_StandaSettings->calibration.A = A; };
-	void SetMicrostepMode(const unsigned int microstepMode) override { if (!m_StandaSettings) return; m_StandaSettings->calibration.MicrostepMode = microstepMode; };
+	void SetConversionFactor(const double A) { if (!m_StandaSettings) return; m_StandaSettings->calibration.A = A; };
+	void SetMicrostepMode(const unsigned int microstepMode) { if (!m_StandaSettings) return; m_StandaSettings->calibration.MicrostepMode = microstepMode; };
 	//void SetState(status_t state) { m_StandaSettings->state = state; };
 	void SetCurrentMotorPosition(const int motorPosition) override { if (!m_StandaSettings) return; m_StandaSettings->state.CurPosition = motorPosition;};
 	//void SetCalbState(status_calb_t calb_state) { m_StandaSettings->calb_state = calb_state; };
@@ -174,7 +174,7 @@ private:
 
 private:
 	//std::vector<IMotor> m_MotorsArray;
-	std::vector<std::unique_ptr<IMotor>> m_MotorsArray;
+	std::vector<StandaMotor> m_MotorsArray;
 	std::map<unsigned int, float> m_NamesOfMotorsWithRanges{};
 	const float error_position = 0.0f;
 

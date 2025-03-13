@@ -26,8 +26,7 @@ public:
     virtual void SetStepsPerMMRatio(const int stepsPerMMRatio) = 0;
 	virtual void SetRange(const float minMotorDeg, const float maxMotorDeg) = 0;
 	virtual void SetCurrentMotorPosition(const int motorPosition) = 0;
-	virtual void SetConversionFactor(const double A) = 0;
-	virtual void SetMicrostepMode(const unsigned int microstepMode) = 0;
+
     virtual void UpdateCurrentPosition() = 0;
 };
 
