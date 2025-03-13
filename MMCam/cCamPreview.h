@@ -217,6 +217,7 @@ private:
 
 	/* Zoom */
 	double m_Zoom{}, m_ZoomOnOriginalSizeImage{};
+	const double m_ZoomStep{ 1.4 };
 
 	//std::unique_ptr<XimeaControl> m_XimeaCameraControl{};
 	std::string m_SelectedCameraSN{};

@@ -425,13 +425,13 @@ void cCamPreview::OnMouseWheelMoved(wxMouseEvent& evt)
 		//m_CursorPosOnCanvas = evt.GetPosition();
 		if (evt.GetWheelRotation() > 0 && m_Zoom / m_ZoomOnOriginalSizeImage < 64.0)
 		{
-			AddZoom(2.0);
+			AddZoom(m_ZoomStep);
 		}
 		else if (evt.GetWheelRotation() < 0)
 		{
 			if (m_Zoom > 1.0)
 			{
-				AddZoom(0.5);
+				AddZoom(1 / m_ZoomStep);
 			}
 		}
 		/* CrossHair Tool */
