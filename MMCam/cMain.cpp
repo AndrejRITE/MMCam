@@ -1528,6 +1528,26 @@ auto cMain::OnFWHMButton(wxCommandEvent& evt) -> void
 	(
 		currState
 	);
+
+	// Enable Focus Center Displaying
+	{
+		currID = MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING;
+
+		if (!currState)
+		{
+			m_MenuBar->menu_tools->Check(currID, currState);
+			m_VerticalToolBar->tool_bar->ToggleTool(currID, currState);
+
+			m_IsFocusCenterChecked = currState;
+			m_CamPreview->ActivateFocusCenterDisplaying
+			(
+				currState
+			);
+		}
+
+		m_MenuBar->menu_tools->Enable(currID, currState);
+		m_VerticalToolBar->tool_bar->EnableTool(currID, currState);
+	}
 }
 
 auto cMain::OnGridMeshButton(wxCommandEvent& evt) -> void
@@ -1769,10 +1789,11 @@ auto cMain::InitializeSelectedCamera() -> void
 		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, true);
 		m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, true);
 		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, true);
-		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, true);
+		//m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, true);
 		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, true);
 		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, true);
 		m_VerticalToolBar->tool_bar->Enable();
+		m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 	}
 
 	//m_MenuBar->menu_edit->Check(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_FWHM_DISPLAYING, true);
