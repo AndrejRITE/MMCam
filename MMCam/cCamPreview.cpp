@@ -715,6 +715,7 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 			return;
 		}
 
+		DrawActualZoomedPositionOverImage(gc);
 		DrawScaleBar(gc);
 
 		DrawCrossHair(gc);
@@ -1361,6 +1362,79 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 			gc_->Translate(-draw_point.x, -draw_point.y);
 			gc_->DrawText(curr_value, draw_point.x, draw_point.y);
 		}
+	}
+}
+
+auto cCamPreview::DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> void
+{
+	if (m_Zoom <= 1.0) return;
+	if (!m_Image.IsOk()) return;
+
+	wxDouble offset_x{ 50.0 }, offset_y{ 50.0 };
+	wxDouble max_width{ 100.0 }, max_height{ 100.0 };
+	auto image_minuature = wxRect2DDouble
+	(
+		GetSize().GetWidth() - max_width - offset_x,
+		offset_y,
+		m_Image.GetWidth() >= m_Image.GetHeight() ? max_width : max_height * m_Image.GetWidth() / (wxDouble)m_Image.GetHeight(),
+		m_Image.GetHeight() >= m_Image.GetWidth() ? max_height : max_width * m_Image.GetHeight() / (wxDouble)m_Image.GetWidth()
+	);
+	gc_->SetPen(wxPen(wxColour("gold"), 1, wxPENSTYLE_SOLID));
+	gc_->DrawRectangle
+	(
+		image_minuature.m_x,
+		image_minuature.m_y,
+		image_minuature.m_width,
+		image_minuature.m_height
+	);
+
+	auto actual_view = wxRect2DDouble
+	(
+		//image_minuature.m_x - m_StartDrawPos.x * max_width / (double)m_Image.GetWidth(),
+		//image_minuature.m_y - m_StartDrawPos.y * max_height / (double)m_Image.GetHeight(),
+		image_minuature.m_x - m_StartDrawPos.x * image_minuature.m_width / (double)m_Image.GetWidth(),
+		image_minuature.m_y - m_StartDrawPos.y * image_minuature.m_height / (double)m_Image.GetHeight(),
+		GetSize().GetWidth() * m_ZoomOnOriginalSizeImage / m_Zoom / m_Image.GetWidth() * image_minuature.m_width,
+		GetSize().GetHeight() * m_ZoomOnOriginalSizeImage / m_Zoom / m_Image.GetHeight() * image_minuature.m_height
+	);
+	//LOG2F("Width: ", actual_view.m_width, " Height: ", actual_view.m_height);
+	gc_->SetPen(wxPen(wxColour("gold"), 2, wxPENSTYLE_SOLID));
+	if (actual_view.m_width < 7.0 || actual_view.m_height < 7.0)
+	{
+		wxPoint2DDouble start_draw_cross =
+		{
+			actual_view.m_x + actual_view.m_width / 2.0,
+			actual_view.m_y + actual_view.m_height / 2.0
+		};
+
+		// Length of the line
+		wxDouble leg_length{ 10.0 };
+		auto rotate_angle = M_PI / 4.0; // Rotation in [rad]
+		// Draw the cross
+		gc_->StrokeLine
+		(
+			start_draw_cross.m_x - leg_length / 2.0 * cos(rotate_angle),
+			start_draw_cross.m_y - leg_length / 2.0 * sin(rotate_angle),
+			start_draw_cross.m_x + leg_length / 2.0 * cos(rotate_angle),
+			start_draw_cross.m_y + leg_length / 2.0 * sin(rotate_angle)
+		);  // Horizontal line
+		gc_->StrokeLine
+		(
+			start_draw_cross.m_x - leg_length / 2.0 * cos(rotate_angle),
+			start_draw_cross.m_y + leg_length / 2.0 * sin(rotate_angle),
+			start_draw_cross.m_x + leg_length / 2.0 * cos(rotate_angle),
+			start_draw_cross.m_y - leg_length / 2.0 * sin(rotate_angle)
+		);  // Vertical line
+	}
+	else
+	{
+		gc_->DrawRectangle
+		(
+			actual_view.m_x,
+			actual_view.m_y,
+			actual_view.m_width,
+			actual_view.m_height
+		);
 	}
 }
 

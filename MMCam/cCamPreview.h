@@ -164,6 +164,8 @@ private:
 	auto DrawHorizontalSumLine(wxGraphicsContext* gc_) -> void;
 	auto DrawVerticalSumLine(wxGraphicsContext* gc_) -> void;
 	auto DrawActualImageSize(wxGraphicsContext* gc_) -> void;
+	auto DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> void;
+
 	void OnSize(wxSizeEvent& evt);
 	void ChangeSizeOfImageInDependenceOnCanvasSize();
 	auto UpdateCrossHairOnSize() -> void;
