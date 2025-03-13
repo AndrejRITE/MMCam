@@ -7,6 +7,7 @@
 #include <vector>
 #include <atomic>
 #include <memory>
+#include <string>
 
 namespace PostprocessingAlgorithms
 {
@@ -210,11 +211,8 @@ namespace PostprocessingAlgorithms
 		size_t imgHeight,
 		unsigned int* worstHorizontalSum = nullptr,
 		unsigned int* bestHorizontalSum = nullptr,
-		//int* bestPosX = nullptr,
-		//unsigned int* bestSumX = nullptr,
-		//int* worstPosX = nullptr,
-		//unsigned int* worstSumX = nullptr,
-		int* fwhmMiddlePosY = nullptr
+		int* fwhmMiddlePosY = nullptr,
+		unsigned int* minValueInVerticalFWHM = nullptr
 	) -> int
 	{
 		if (!dataPtr || !horizontalSumPtr) return -1;
@@ -259,6 +257,8 @@ namespace PostprocessingAlgorithms
 				auto rightMean = CalculateMean(verticalDataSlice.get(), imgHeight, imgHeight / 4, false);
 
 				averageMin = static_cast<unsigned int>((leftMean + rightMean) / 2.0);
+				
+				if (minValueInVerticalFWHM) *minValueInVerticalFWHM = averageMin;
 			}
 
 			// Calculate the half-maximum
@@ -305,13 +305,16 @@ namespace PostprocessingAlgorithms
 		size_t imgHeight,
 		unsigned int* worstVerticalSum = nullptr,
 		unsigned int* bestVerticalSum = nullptr,
-		int* fwhmMiddlePosX = nullptr
+		int* fwhmMiddlePosX = nullptr,
+		unsigned int* minValueInHorizontalFWHM = nullptr
 	) -> int
 	{
 		if (!dataPtr || !verticalSumPtr) return -1;
 		if (!imgWidth || !imgHeight) return -1;
 
 		if (fwhmMiddlePosX) *fwhmMiddlePosX = -1;
+
+		auto averagingDataLength = 1.0 / 4;
 
 		// Horizontal FWHM Data
 		{
@@ -347,11 +350,12 @@ namespace PostprocessingAlgorithms
 			auto averageMin = 0U;
 			{
 				// Mean from the left side
-				auto leftMean = CalculateMean(horizontalDataSlice.get(), imgWidth, imgWidth / 4, true);
+				auto leftMean = CalculateMean(horizontalDataSlice.get(), imgWidth, imgWidth * averagingDataLength, true);
 				// Mean from the right side
-				auto rightMean = CalculateMean(horizontalDataSlice.get(), imgWidth, imgWidth / 4, false);
+				auto rightMean = CalculateMean(horizontalDataSlice.get(), imgWidth, imgWidth * averagingDataLength, false);
 
 				averageMin = static_cast<unsigned int>((leftMean + rightMean) / 2.0);
+				if (minValueInHorizontalFWHM) *minValueInHorizontalFWHM = averageMin;
 			}
 
 			// Calculate the half-maximum
@@ -388,6 +392,83 @@ namespace PostprocessingAlgorithms
 			// Compute FWHM
 			return (rightIndex - leftIndex);
 		}
+	}
+
+	static auto CalculateHEWRadius
+	(
+		const unsigned short* const dataPtr,
+		size_t imgWidth,
+		size_t imgHeight,
+		int spotCenterPosX,
+		int spotCenterPosY,
+		unsigned int minValueInData
+	) -> int
+	{
+		if (!dataPtr) return -1;
+		if (!imgWidth || !imgHeight) return -1;
+
+		auto maxValue = dataPtr[spotCenterPosY * imgWidth + spotCenterPosX];
+
+		auto wholeDataHeight = maxValue - minValueInData;
+
+		auto percentageToInclude = 90; // Max 100%
+
+		auto minimumThreshold = minValueInData + wholeDataHeight * (100.0 - percentageToInclude) / 100.0;
+
+		// Go to the right side
+		auto stepsToRightSide = 0;
+		auto currentYPositionInData = spotCenterPosY;
+		auto currentXPositionInData = spotCenterPosX;
+		auto currentValue = maxValue;
+
+		while (currentXPositionInData < imgWidth && currentValue > minimumThreshold)
+		{
+			currentValue = dataPtr[currentYPositionInData * imgWidth + currentXPositionInData];
+			++currentXPositionInData;
+			++stepsToRightSide;
+		}
+
+		// Go to the left side
+		auto stepsToLeftSide = 0;
+		currentYPositionInData = spotCenterPosY;
+		currentXPositionInData = spotCenterPosX;
+		currentValue = maxValue;
+		while (currentXPositionInData >= 0 && currentValue > minimumThreshold)
+		{
+			currentValue = dataPtr[currentYPositionInData * imgWidth + currentXPositionInData];
+			--currentXPositionInData;
+			++stepsToLeftSide;
+		}
+
+		auto horizontalHEW = std::min(stepsToLeftSide, stepsToRightSide);
+
+		// Go Up
+		auto stepsUp = 0;
+		currentYPositionInData = spotCenterPosY;
+		currentXPositionInData = spotCenterPosX;
+		currentValue = maxValue;
+		while (currentYPositionInData >= 0 && currentValue > minimumThreshold)
+		{
+			currentValue = dataPtr[currentYPositionInData * imgWidth + currentXPositionInData];
+			--currentYPositionInData;
+			++stepsUp;
+		}
+
+		// Go Down
+		auto stepsDown = 0;
+		currentYPositionInData = spotCenterPosY;
+		currentXPositionInData = spotCenterPosX;
+		currentValue = maxValue;
+		while (currentYPositionInData < imgHeight && currentValue > minimumThreshold)
+		{
+			currentValue = dataPtr[currentYPositionInData * imgWidth + currentXPositionInData];
+			++currentYPositionInData;
+			++stepsDown;
+		}
+
+		auto verticalHEW = std::min(stepsUp, stepsDown);
+
+		return std::min(verticalHEW, horizontalHEW);
 	}
 }
 #endif

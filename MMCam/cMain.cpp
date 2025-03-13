@@ -260,6 +260,7 @@ void cMain::InitDefaultStateWidgets()
 			//m_Z_Detector->DisableAllControls();
 		}
 	}
+	default_relative_value = 0.1f;
 	/* Disabling Optics Widgets */
 	{
 		/* X */
@@ -4936,12 +4937,21 @@ wxBitmap WorkerThread::CreateGraph
 	auto minmaxHorizontalValues = std::minmax_element(horizontalFWHMData, horizontalFWHMData + dataSize);
 	auto minmaxVerticalValues = std::minmax_element(verticalFWHMData, verticalFWHMData + dataSize);
 	
-	minGlobalValue = std::min(*minmaxHorizontalValues.first, *minmaxVerticalValues.first);
+	//minGlobalValue = std::min(*minmaxHorizontalValues.first, *minmaxVerticalValues.first);
 	maxGlobalValue = std::max(*minmaxHorizontalValues.second, *minmaxVerticalValues.second);
 
 	// Scaling minmaxGlobalValues
-	minGlobalValue = std::floor((minGlobalValue - 0.1 * (maxGlobalValue - minGlobalValue)) * 10.0) / 10.0;
-	maxGlobalValue = std::ceil((maxGlobalValue + 0.1 * (maxGlobalValue - minGlobalValue)) * 10.0) / 10.0;
+	//minGlobalValue = std::floor((minGlobalValue - 0.1 * (maxGlobalValue - minGlobalValue)) * 10.0) / 10.0;
+	maxGlobalValue = std::ceil(maxGlobalValue / 10.0);
+
+	auto i = 1;
+	while (maxGlobalValue > 10.0)
+	{
+		maxGlobalValue = std::ceil(maxGlobalValue / 10.0);
+		++i;
+	}
+
+	maxGlobalValue *= pow(10, i);
 	
 	// Draw the Left Axis Ruler
 	{
@@ -4972,7 +4982,7 @@ wxBitmap WorkerThread::CreateGraph
 
 		for (auto i{ 0 }; i <= verticalAxisHorizontalLinesCount; ++i)
 		{
-			currTextValue = wxString::Format(wxT("%.2f"), (maxGlobalValue - minGlobalValue) / verticalAxisHorizontalLinesCount * i + minGlobalValue);
+			currTextValue = wxString::Format(wxT("%.f"), (maxGlobalValue - minGlobalValue) / verticalAxisHorizontalLinesCount * i + minGlobalValue);
 			auto textSize = dc.GetTextExtent(currTextValue);
 			dc.DrawText
 			(

@@ -159,6 +159,7 @@ private:
 
 	auto DrawScaleBar(wxGraphicsContext* gc_) -> void;
 	
+	auto DrawHEWCircle(wxGraphicsContext* gc_) -> void;
 	auto DrawSpotCroppedWindow(wxGraphicsContext* gc_) -> void;
 	auto DrawSumLines(wxGraphicsContext* gc_) -> void;
 	auto DrawHorizontalSumLine(wxGraphicsContext* gc_) -> void;
@@ -196,6 +197,7 @@ private:
 	auto OnKeyReleased(wxKeyEvent& evt) -> void;
 
 	auto CalculateFWHM() -> void;
+	auto CalculateHEW() -> void;
 
 private:
 	/* Buttons on keyboard */
@@ -238,6 +240,7 @@ private:
 	int m_HorizontalFWHM_PX{ -1 }, m_VerticalFWHM_PX{ -1 };
 	unsigned int m_HorizontalWorstSum{}, m_HorizonalBestSum{};
 	unsigned int m_VerticalWorstSum{}, m_VerticalBestSum{};
+	unsigned int m_MinValueInData{};
 	int m_HorizontalMiddleFWHMPosPixel{}, m_VerticalMiddleFWHMPosPixel{};
 	double m_PixelSizeUM{}, m_CropSizeMM{};
 	int m_ROIWindowWidth{};
@@ -248,6 +251,8 @@ private:
 
 	bool m_DisplayFocusCenter{};
 	bool m_DisplayCrossHair{};
+
+	int m_HEWDiameter{};
 
 	/* Scale Bar */
 	bool m_DisplayScaleBar{ true };

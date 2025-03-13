@@ -59,7 +59,10 @@ auto cCamPreview::ActivateFWHMDisplaying(bool activate) -> void
 {
 	m_DisplayFWHM = activate;
 	if (activate)
+	{
 		CalculateFWHM();
+		CalculateHEW();
+	}
 
 	Refresh();
 }
@@ -601,6 +604,7 @@ auto cCamPreview::OnKeyReleased(wxKeyEvent& evt) -> void
 
 auto cCamPreview::CalculateFWHM() -> void
 {
+	unsigned int minValueInHorizontalData{}, minValueInVerticalData{};
 	// Create threads for horizontal and vertical calculations
 	std::thread verticalThread([&]()
 		{
@@ -624,7 +628,8 @@ auto cCamPreview::CalculateFWHM() -> void
 					m_ImageSize.GetHeight(),
 					&m_HorizontalWorstSum,
 					&m_HorizonalBestSum,
-					&m_VerticalMiddleFWHMPosPixel
+					&m_VerticalMiddleFWHMPosPixel,
+					&minValueInVerticalData
 				);
 			}
 			catch (const std::exception& e) 
@@ -655,7 +660,8 @@ auto cCamPreview::CalculateFWHM() -> void
 					m_ImageSize.GetHeight(),
 					&m_VerticalWorstSum,
 					&m_VerticalBestSum,
-					&m_HorizontalMiddleFWHMPosPixel
+					&m_HorizontalMiddleFWHMPosPixel,
+					&minValueInHorizontalData
 				);
 			}
 			catch (const std::exception& e) 
@@ -667,6 +673,23 @@ auto cCamPreview::CalculateFWHM() -> void
 	// Wait for both threads to complete execution
 	horizontalThread.join();
 	verticalThread.join();
+
+	m_MinValueInData = (minValueInHorizontalData + minValueInVerticalData) / 2;
+}
+
+auto cCamPreview::CalculateHEW() -> void
+{
+	m_HEWDiameter = PostprocessingAlgorithms::CalculateHEWRadius
+	(
+		m_ImageData.get(),
+		m_ImageSize.GetWidth(),
+		m_ImageSize.GetHeight(),
+		m_HorizontalMiddleFWHMPosPixel,
+		m_VerticalMiddleFWHMPosPixel,
+		m_MinValueInData
+	);
+
+	m_HEWDiameter *= 2;
 }
 
 void cCamPreview::InitDefaultComponents()
@@ -723,6 +746,7 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 		DrawGridMesh(gc);
 		DrawCircleMesh(gc);
 
+		DrawHEWCircle(gc);
 		DrawSpotCroppedWindow(gc);
 		DrawSumLines(gc);
 
@@ -763,14 +787,14 @@ auto cCamPreview::UpdateWXImage() -> void
 	unsigned int tileSize{};
 	tileSize = m_ImageSize.GetHeight() % numThreads > 0 ? m_ImageSize.GetHeight() / numThreads + 1 : m_ImageSize.GetHeight() / numThreads;
 
-	for (auto i{ 0 }; i < numThreads; ++i)
+	for (auto i{ 0 }; i < (int)numThreads; ++i)
 	{
 		wxPoint start{}, finish{};
 		start.x = 0;
 		start.y = i * tileSize;
 
 		finish.x = m_ImageSize.GetWidth();
-		finish.y = (i + 1) * tileSize > m_ImageSize.GetHeight() ? m_ImageSize.GetHeight() : (i + 1) * tileSize;
+		finish.y = (i + 1) * (int)tileSize > m_ImageSize.GetHeight() ? m_ImageSize.GetHeight() : (i + 1) * tileSize;
 
 		threads.emplace_back
 		(
@@ -1123,6 +1147,39 @@ auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 		drawPoint.y -= heightText / 2.0;
 		gc_->DrawText(curr_value, drawPoint.x, drawPoint.y);
 	}
+}
+
+auto cCamPreview::DrawHEWCircle(wxGraphicsContext* gc_) -> void
+{
+	if (!m_Image.IsOk() || !m_HorizontalSumArray || !m_VerticalSumArray) return;
+	if (m_HorizontalFWHM_PX == -1 || m_VerticalFWHM_PX == -1) return;
+	if (!m_DisplayFocusCenter) return;
+
+	if (m_ROIWindowWidth <= 0) return;
+
+	if (m_HEWDiameter <= 0) return;
+
+	auto penColour = wxColour("green");
+	auto penSize = 2;
+	auto penStyle = wxPENSTYLE_DOT_DASH;
+	gc_->SetPen(wxPen(penColour, penSize, penStyle));
+
+	auto centerPoint = wxRealPoint();
+	{
+		centerPoint.x = (m_StartDrawPos.x + m_HorizontalMiddleFWHMPosPixel + 0.5) * m_Zoom / m_ZoomOnOriginalSizeImage;
+		centerPoint.y = (m_StartDrawPos.y + m_VerticalMiddleFWHMPosPixel + 0.5) * m_Zoom / m_ZoomOnOriginalSizeImage;
+	}
+
+	wxGraphicsPath path = gc_->CreatePath();
+
+	path.AddCircle
+	(
+		centerPoint.x, 
+		centerPoint.y, 
+		m_HEWDiameter / 2 * m_Zoom / m_ZoomOnOriginalSizeImage
+	);
+
+	gc_->StrokePath(path);
 }
 
 auto cCamPreview::DrawSpotCroppedWindow(wxGraphicsContext* gc_) -> void
