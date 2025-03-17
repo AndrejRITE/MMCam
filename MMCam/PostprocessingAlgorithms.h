@@ -406,6 +406,7 @@ namespace PostprocessingAlgorithms
 	{
 		if (!dataPtr) return -1;
 		if (!imgWidth || !imgHeight) return -1;
+		if (spotCenterPosX == -1 || spotCenterPosY == -1) return -1;
 
 		auto maxValue = dataPtr[spotCenterPosY * imgWidth + spotCenterPosX];
 

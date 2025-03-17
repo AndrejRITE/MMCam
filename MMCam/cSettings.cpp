@@ -6,8 +6,9 @@ cSettings::cSettings(wxWindow* parent_frame)
 		wxID_ANY, 
 		"Settings", 
 		wxDefaultPosition, 
-		wxDefaultSize, 
-		wxDEFAULT_DIALOG_STYLE)
+		wxDefaultSize 
+	)
+		//wxDEFAULT_DIALOG_STYLE)
 {
 	CreateMainFrame();
 	InitDefaultStateWidgets();
@@ -75,8 +76,11 @@ void cSettings::CreateSettings()
 	CreateMotorsSelection(ms_sizer);
 
 	CreateOtherSettings(ms_sizer);
-	
+
 	main_sizer->Add(ms_sizer, 1, wxEXPAND);
+
+	auto btnSizer = CreateButtonSizer(wxOK | wxCANCEL | wxOK_DEFAULT);
+	main_sizer->Add(btnSizer, 0, wxCENTER | wxALL, 5);
 	SetSizerAndFit(main_sizer);
 }
 
@@ -521,22 +525,23 @@ auto cSettings::CreateOtherSettings(wxBoxSizer* panel_sizer) -> void
 
 	main_panel_sizer->Add(settings_grid_sizer, 0, wxCENTER | wxALL, 5);
 
+
 	/* Control Buttons */
 	{
-		m_RefreshBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("Refresh"));
+		//m_RefreshBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("Refresh"));
 
-		m_OkBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("OK"));
-		m_OkBtn->SetFocus();
+		//m_OkBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("OK"));
+		//m_OkBtn->SetFocus();
 
-		m_CancelBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("Cancel"));
+		//m_CancelBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("Cancel"));
 
-		wxBoxSizer* btns_sizer = new wxBoxSizer(wxHORIZONTAL);
-		btns_sizer->Add(m_RefreshBtn.get());
-		btns_sizer->AddStretchSpacer();
-		btns_sizer->Add(m_OkBtn.get(), 0, wxRIGHT, 2);
-		btns_sizer->Add(m_CancelBtn.get());
+		//wxBoxSizer* btns_sizer = new wxBoxSizer(wxHORIZONTAL);
+		//btns_sizer->Add(m_RefreshBtn.get());
+		//btns_sizer->AddStretchSpacer();
+		//btns_sizer->Add(m_OkBtn.get(), 0, wxRIGHT, 2);
+		//btns_sizer->Add(m_CancelBtn.get());
 
-		main_panel_sizer->Add(btns_sizer, 0, wxEXPAND | wxALL, 2);
+		//main_panel_sizer->Add(btns_sizer, 0, wxEXPAND | wxALL, 2);
 	}
 
 	main_panel->SetSizer(main_panel_sizer);
@@ -551,7 +556,7 @@ void cSettings::InitDefaultStateWidgets()
 		//m_Motors->m_Optics[2].motor->Disable();
 	}
 
-	m_RefreshBtn->Disable();
+	//m_RefreshBtn->Disable();
 }
 
 void cSettings::InitComponents()
@@ -566,9 +571,9 @@ void cSettings::BindControls()
 {
 	m_WorkStations->work_station_choice->Bind(wxEVT_CHOICE, &cSettings::OnWorkStationChoice, this);
 	/* Binding Bottom Buttons */
-	m_RefreshBtn->Bind(wxEVT_BUTTON, &cSettings::OnRefreshBtn, this);
-	m_OkBtn->Bind(wxEVT_BUTTON, &cSettings::OnOkBtn, this);
-	m_CancelBtn->Bind(wxEVT_BUTTON, &cSettings::OnCancelBtn, this);
+	//m_RefreshBtn->Bind(wxEVT_BUTTON, &cSettings::OnRefreshBtn, this);
+	//m_OkBtn->Bind(wxEVT_BUTTON, &cSettings::OnOkBtn, this);
+	//m_CancelBtn->Bind(wxEVT_BUTTON, &cSettings::OnCancelBtn, this);
 }
 
 void cSettings::UpdateRangesTextCtrls()

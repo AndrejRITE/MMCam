@@ -1769,22 +1769,19 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 {
 	m_CamPreview->SetFocus();
 
-	m_Settings->ShowModal();
+	if (m_Settings->ShowModal() != wxID_OK) return;
 #ifndef _DEBUG
 #endif // !_DEBUG
 
-	if (!m_Settings->IsActive() && m_Settings->GetOkBtnState())
-	{
-		m_CamPreview->SetPixelSizeUM(m_Settings->GetPixelSizeUM());
-		m_CamPreview->SetCropSizeMM(m_Settings->GetCropSizeMM());
-		m_CamPreview->SetGridMeshStepPX(m_Settings->GetGridMeshStep());
-		m_CamPreview->SetCircleMeshStepPX(m_Settings->GetCircleMeshStep());
-		InitializeSelectedCamera();
+	m_CamPreview->SetPixelSizeUM(m_Settings->GetPixelSizeUM());
+	m_CamPreview->SetCropSizeMM(m_Settings->GetCropSizeMM());
+	m_CamPreview->SetGridMeshStepPX(m_Settings->GetGridMeshStep());
+	m_CamPreview->SetCircleMeshStepPX(m_Settings->GetCircleMeshStep());
+	InitializeSelectedCamera();
 
-		UpdateStagePositions();
-		EnableUsedAndDisableNonUsedMotors();	
-		Refresh();
-	}
+	UpdateStagePositions();
+	EnableUsedAndDisableNonUsedMotors();	
+	Refresh();
 }
 
 auto cMain::InitializeSelectedCamera() -> void
