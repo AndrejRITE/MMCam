@@ -3,6 +3,7 @@
 #define CMAIN_H
 
 #include "wx/wx.h"
+#include "wx/scrolwin.h"
 #include "wx/imaglist.h"
 #include "wx/filefn.h"
 #include "wx/textfile.h"
@@ -316,6 +317,7 @@ private:
 
 	void OnExit(wxCloseEvent& evt);
 	void OnExit(wxCommandEvent& evt);
+	void OnSize(wxSizeEvent& evt);
 
 	/* Stepper Control Functions */
 	/* _____________________Detector X_____________________ */
@@ -1396,8 +1398,10 @@ private:
 	wxColour m_BlackAppearenceColor = wxColour(30, 30, 30);
 
 	/* wxPanels */
-	wxPanel* m_RightSidePanel{};
-	wxNotebook* m_MotorControlsNotebook{};
+	wxScrolledWindow* m_RightSidePanel{};
+	//wxPanel* m_RightSidePanel{};
+	wxNotebook* m_MotorControlsNotebook{}, *m_MotorControlsNotebookSupport{};
+	wxWindow* m_OpticsPage{};
 
 	std::vector<std::pair<wxString, bool>> m_StartedThreads{};
 

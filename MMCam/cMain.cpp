@@ -2,6 +2,7 @@
 
 wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_CLOSE(cMain::OnExit)
+	//EVT_SIZE(cMain::OnSize)
 	EVT_MENU(MainFrameVariables::ID_MENUBAR_FILE_QUIT, cMain::OnExit)
 	EVT_MENU(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
 	EVT_MENU(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, cMain::OnStartStopLiveCapturingMenu)
@@ -105,7 +106,10 @@ cMain::cMain(const wxString& title_)
 
 	CenterOnScreen();
 	// Maximize application's window
+#ifndef _DEBUG
 	Maximize();
+#endif // !_DEBUG
+
 	Show();
 
 	// Enable Dark Mode
@@ -316,7 +320,7 @@ void cMain::CreateLeftAndRightSide()
 
 	int height_left_and_right_panels{ 600 };
 	wxBoxSizer* right_sizer = new wxBoxSizer(wxVERTICAL);
-	wxSize sizeOfRightSide = { 300, height_left_and_right_panels };
+	wxSize sizeOfRightSide = { 350, height_left_and_right_panels };
 	right_sizer->SetMinSize(sizeOfRightSide);
 	CreateRightSide(right_sizer);
 
@@ -351,7 +355,9 @@ void cMain::CreateLeftSide(wxSizer* left_side_sizer)
 
 void cMain::CreateRightSide(wxSizer* right_side_sizer)
 {
-	m_RightSidePanel = new wxPanel(this);
+	m_RightSidePanel = new wxScrolledWindow(this);
+	//m_RightSidePanel = new wxPanel(this);
+	m_RightSidePanel->SetScrollRate(5, 5); // Needed for scrolling
 #ifdef _DEBUG
 	m_RightSidePanel->SetBackgroundColour(wxColor(150, 100, 180));
 #else
@@ -364,7 +370,11 @@ void cMain::CreateRightSide(wxSizer* right_side_sizer)
 	CreateCameraControls(m_RightSidePanel, right_side_panel_sizer);
 	CreateMeasurement(m_RightSidePanel, right_side_panel_sizer);
 
+
 	m_RightSidePanel->SetSizer(right_side_panel_sizer);
+	m_RightSidePanel->FitInside();         // Adjust scrolling area
+	//m_RightSidePanel->Layout();
+
 	right_side_sizer->Add(m_RightSidePanel, 1, wxEXPAND);
 }
 
@@ -1030,6 +1040,7 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 
 	// Create an image list (16x16 pixels per icon)
 	wxImageList* imageList = new wxImageList(16, 16, true);
+	wxImageList* imageListSupport = new wxImageList(16, 16, true);
 
 	/* Detector bitmap */
 	wxBitmap detectorBitmap{};
@@ -1066,6 +1077,8 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 	int detectorImgIndex = imageList->Add(detectorBitmap);
 	int opticsImgIndex = imageList->Add(opticsBitmap);
 
+	int opticsImgIndexSupport = imageListSupport->Add(opticsBitmap);
+
 	m_MotorControlsNotebook = new wxNotebook(right_side_panel, wxID_ANY);
 
 	m_MotorControlsNotebook->AssignImageList(imageList);
@@ -1087,24 +1100,31 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 		detectorImgIndex
 	);
 
-	m_MotorControlsNotebook->AddPage
+	m_MotorControlsNotebookSupport = new wxNotebook(right_side_panel, wxID_ANY);
+
+	m_OpticsPage = CreateOpticsPage
 	(
-		CreateOpticsPage
-		(
-			m_MotorControlsNotebook,
-			absolute_text_ctrl_size, 
-			relative_text_ctrl_size,
-			set_btn_size,
-			inc_dec_size,
-			centerBitmap,
-			homeBitmap
-		), 
+		m_MotorControlsNotebookSupport,
+		absolute_text_ctrl_size,
+		relative_text_ctrl_size,
+		set_btn_size,
+		inc_dec_size,
+		centerBitmap,
+		homeBitmap
+	);
+
+	m_MotorControlsNotebookSupport->AssignImageList(imageListSupport);
+
+	m_MotorControlsNotebookSupport->AddPage
+	(
+		m_OpticsPage,
 		"Optics",
 		false,
-		opticsImgIndex
+		opticsImgIndexSupport
 	);
 
 	right_side_panel_sizer->Add(m_MotorControlsNotebook, 0, wxEXPAND);
+	right_side_panel_sizer->Add(m_MotorControlsNotebookSupport, 0, wxEXPAND);
 	//right_side_panel_sizer->Add(sc_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
 }
 
@@ -1503,6 +1523,7 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 		wxColour nb_color = wxColour(normalized_black.Red() + 40, normalized_black.Green() + 40, normalized_black.Blue() + 40);
 		m_RightSidePanel->SetBackgroundColour(nb_color);
 		m_MotorControlsNotebook->SetBackgroundColour(nb_color);
+		m_MotorControlsNotebookSupport->SetBackgroundColour(nb_color);
 	}
 	else
 	{
@@ -1511,6 +1532,7 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 		m_VerticalToolBar->tool_bar->SetBackgroundColour(m_DefaultAppearenceColor);
 		m_RightSidePanel->SetBackgroundColour(m_DefaultAppearenceColor);
 		m_MotorControlsNotebook->SetBackgroundColour(m_DefaultAppearenceColor);
+		m_MotorControlsNotebookSupport->SetBackgroundColour(m_DefaultAppearenceColor);
 	}
 	Refresh();
 }
@@ -1918,6 +1940,10 @@ void cMain::OnExit(wxCommandEvent& evt)
 {
 	wxCloseEvent artificialExit(wxEVT_CLOSE_WINDOW);
 	ProcessEvent(artificialExit);
+}
+
+void cMain::OnSize(wxSizeEvent& evt)
+{
 }
 
 void cMain::EnableUsedAndDisableNonUsedMotors()
