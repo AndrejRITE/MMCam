@@ -708,6 +708,8 @@ private:
 	void OnStartStopCapturingTglButton(wxCommandEvent& evt);
 	auto OnStartStopCapturingMenuButton(wxCommandEvent& evt) -> void;
 	auto EnableControlsAfterCapturing() -> void;
+	auto EnableControlsAfterSuccessfulCameraInitialization() -> void;
+	auto DisableControlsAfterUnsuccessfulCameraInitialization() -> void;
 	auto DisableControlsBeforeCapturing() -> void;
 	void OnStartStopLiveCapturingMenu(wxCommandEvent& evt);
 	void OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt);

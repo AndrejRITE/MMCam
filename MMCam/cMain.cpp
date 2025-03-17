@@ -1751,7 +1751,7 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 #ifndef _DEBUG
 #endif // !_DEBUG
 
-	if (!m_Settings->IsActive())
+	if (!m_Settings->IsActive() && m_Settings->GetOkBtnState())
 	{
 		m_CamPreview->SetPixelSizeUM(m_Settings->GetPixelSizeUM());
 		m_CamPreview->SetCropSizeMM(m_Settings->GetCropSizeMM());
@@ -1768,14 +1768,30 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 auto cMain::InitializeSelectedCamera() -> void
 {
 	// We don't need to initialize camera twice!
-	if (m_CameraControl) return;
+	if (m_CameraControl && m_CameraControl->IsConnected())
+	{
+		if (m_StartStopLiveCapturingTglBtn->GetValue())
+		{
+			m_StartStopLiveCapturingTglBtn->SetValue(false);
+			wxCommandEvent artStopLive(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+			ProcessEvent(artStopLive);
+		}
+		m_CameraControl.release();
+	}
 
+	auto defaultCameraName = wxString("None");
 	auto selectedCamera = m_Settings->GetSelectedCamera();
-	if (selectedCamera == "None") return;
+	if (selectedCamera == defaultCameraName) return;
 
 	m_CameraControl = std::make_unique<XimeaControl>(selectedCamera.ToStdString());
 	m_CameraControl->Initialize();
-	if (!m_CameraControl->IsConnected()) return;
+
+	if (!m_CameraControl->IsConnected())
+	{
+		m_SelectedCameraStaticTXT->SetLabel(defaultCameraName);
+		DisableControlsAfterUnsuccessfulCameraInitialization();
+		return;
+	}
 
 	m_SelectedCameraStaticTXT->SetLabel(selectedCamera);	
 	
@@ -1784,18 +1800,8 @@ auto cMain::InitializeSelectedCamera() -> void
 
 	// Successful initialization of the camera
 	// Enabling controls
-	{
-		m_CamExposure->Enable();
-		m_StartStopLiveCapturingTglBtn->Enable();
-		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, true);
-		m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, true);
-		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, true);
-		//m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, true);
-		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, true);
-		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, true);
-		m_VerticalToolBar->tool_bar->Enable();
-		m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
-	}
+	EnableControlsAfterSuccessfulCameraInitialization();
+	
 
 	//m_MenuBar->menu_edit->Check(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_FWHM_DISPLAYING, true);
 	//wxCommandEvent art_fwhm_displaying(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_FWHM_DISPLAYING);
@@ -1846,7 +1852,7 @@ void cMain::OnExit(wxCloseEvent& evt)
 		}
 	}
 #endif // !_DEBUG
-	if (m_CameraControl->IsConnected())
+	if (m_CameraControl && m_CameraControl->IsConnected())
 	{
 		if (m_StartStopLiveCapturingTglBtn->GetValue())
 		{
@@ -4112,6 +4118,32 @@ auto cMain::EnableControlsAfterCapturing() -> void
 
 	m_OutDirBtn->Enable();
 	m_FirstStage->EnableAllControls();
+}
+
+auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
+{
+	auto enableWidget = true;
+	m_CamExposure->Enable();
+	m_StartStopLiveCapturingTglBtn->Enable();
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, enableWidget);
+	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, enableWidget);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, enableWidget);
+	//m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, enableWidget);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, enableWidget);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, enableWidget);
+	m_VerticalToolBar->tool_bar->Enable();
+
+	if (!m_VerticalToolBar->tool_bar->GetToolState(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING))
+		m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
+}
+
+auto cMain::DisableControlsAfterUnsuccessfulCameraInitialization() -> void
+{
+	auto enableWidget = false;
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, enableWidget);
+	m_StartStopMeasurementTglBtn->Disable();
+	DisableControlsBeforeCapturing();
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, !enableWidget);
 }
 
 auto cMain::DisableControlsBeforeCapturing() -> void

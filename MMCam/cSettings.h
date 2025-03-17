@@ -233,6 +233,15 @@ public:
 		return (unsigned int)step; 
 	};
 
+	auto GetOkBtnState() -> bool
+	{
+		if (m_OkBtnPressed)
+		{
+			m_OkBtnPressed = !m_OkBtnPressed;
+			return !m_OkBtnPressed;
+		}
+		return m_OkBtnPressed;
+	}
 
 private:
 	void CreateMainFrame();
@@ -281,6 +290,7 @@ private:
 	//const wxString xml_file_path = "src\\old_xml\\mtrs.xml";
 	std::unique_ptr<SettingsVariables::WorkStations> m_WorkStations{};
 	std::unique_ptr<wxButton> m_OkBtn{}, m_CancelBtn{}, m_RefreshBtn{};
+	bool m_OkBtnPressed{};
 	std::unique_ptr<SettingsVariables::MotorSettingsArray> m_Motors{};
 	
 	// TODO: Move to Polymorphic class IMotorFactory

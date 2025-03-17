@@ -680,6 +680,8 @@ void cSettings::OnRefreshBtn(wxCommandEvent& evt)
 
 void cSettings::OnOkBtn(wxCommandEvent& evt)
 {
+	m_OkBtnPressed = false;
+
 	if (
 		!CheckIfThereIsCollisionWithMotors() && 
 		CheckIfUserSelectedAllRangesForAllSelectedMotors() && 
@@ -687,6 +689,7 @@ void cSettings::OnOkBtn(wxCommandEvent& evt)
 	{
 		Hide();
 		RewriteInitializationFile();
+		m_OkBtnPressed = true;
 		//UpdatePreviousStatesData();
 		//WriteActualSelectedMotorsAndRangesIntoXMLFile();
 	}

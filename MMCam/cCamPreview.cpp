@@ -886,7 +886,6 @@ auto cCamPreview::DrawFWHMValues(wxGraphicsContext* gc_) -> void
 
 	// Horizontal FWHM
 	{
-
 		if (m_HorizontalFWHM_PX != -1.0)
 		{
 			// um
@@ -938,7 +937,7 @@ auto cCamPreview::DrawHEWValues(wxGraphicsContext* gc_) -> void
 	if (!m_Image.IsOk() || !m_DisplayFocusCenter || !m_HorizontalSumArray || !m_VerticalSumArray) return;
 	if (m_HEWDiameter <= 0.0) return;
 
-	wxColour fontColour(117, 250, 97, 200);
+	wxColour fontColour(234, 54, 128, 200);
 	wxFont font = wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
 	gc_->SetFont(font, fontColour);
 
@@ -1197,8 +1196,8 @@ auto cCamPreview::DrawHEWCircle(wxGraphicsContext* gc_) -> void
 
 	if (m_HEWDiameter <= 0) return;
 
-	auto penColour = wxColour("green");
-	auto penSize = 2;
+	auto penColour = wxColour(234, 54, 128);
+	auto penSize = 3;
 	auto penStyle = wxPENSTYLE_DOT_DASH;
 	gc_->SetPen(wxPen(penColour, penSize, penStyle));
 
