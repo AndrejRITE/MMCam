@@ -1083,7 +1083,7 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 	}
 
 	int detectorImgIndex = imageList->Add(detectorBitmap);
-	int opticsImgIndex = imageList->Add(opticsBitmap);
+	//int opticsImgIndex = imageList->Add(opticsBitmap);
 
 	int opticsImgIndexSupport = imageListSupport->Add(opticsBitmap);
 
@@ -1967,15 +1967,36 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 	}
 	// Optics
 	{
+		bool isAnyMotorActive{};
+
 		/* X */
-		if (m_Settings->MotorHasSerialNumber(SettingsVariables::OPTICS_X)) m_Optics[0].EnableAllControls();
+		if (m_Settings->MotorHasSerialNumber(SettingsVariables::OPTICS_X))
+		{
+			m_Optics[0].EnableAllControls();
+			isAnyMotorActive = true;
+		}
 		else m_Optics[0].DisableAllControls();
+
 		/* Y */
-		if (m_Settings->MotorHasSerialNumber(SettingsVariables::OPTICS_Y)) m_Optics[1].EnableAllControls();
+		if (m_Settings->MotorHasSerialNumber(SettingsVariables::OPTICS_Y))
+		{
+			m_Optics[1].EnableAllControls();
+			isAnyMotorActive = true;
+		}
 		else m_Optics[1].DisableAllControls();
+
 		/* Z */
-		if (m_Settings->MotorHasSerialNumber(SettingsVariables::OPTICS_Z)) m_Optics[2].EnableAllControls();
+		if (m_Settings->MotorHasSerialNumber(SettingsVariables::OPTICS_Z))
+		{
+			m_Optics[2].EnableAllControls();
+			isAnyMotorActive = true;
+		}
 		else m_Optics[2].DisableAllControls();
+
+		if (!isAnyMotorActive) m_MotorControlsNotebookSupport->Hide();
+		else m_MotorControlsNotebookSupport->Show();
+
+		Layout();
 	}
 }
 
