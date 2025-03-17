@@ -179,7 +179,10 @@ void cCamPreview::UpdateImageParameters()
 
 	// FWHM
 	if (m_DisplayFWHM)
+	{
 		CalculateFWHM();
+		CalculateHEW();
+	}
 
 	m_IsImageSet = true;
 	m_IsGraphicsBitmapSet = false;
