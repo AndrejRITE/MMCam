@@ -154,6 +154,7 @@ void cMain::CreateMainFrame()
 	InitComponents();
 	CreateMenuBarOnFrame();
 	CreateVerticalToolBar();
+	CreateStatusBarOnFrame();
 	CreateLeftAndRightSide();
 }
 
@@ -341,7 +342,8 @@ void cMain::CreateLeftSide(wxSizer* left_side_sizer)
 	auto input_args = std::make_unique<CameraPreviewVariables::InputPreviewPanelArgs>
 		(
 			m_CrossHairPosXTxtCtrl.get(),
-			m_CrossHairPosYTxtCtrl.get()
+			m_CrossHairPosYTxtCtrl.get(),
+			m_StatusBar.get()
 			//m_SetCrossHairPosTglBtn.get()
 			);
 
@@ -376,6 +378,12 @@ void cMain::CreateRightSide(wxSizer* right_side_sizer)
 	//m_RightSidePanel->Layout();
 
 	right_side_sizer->Add(m_RightSidePanel, 1, wxEXPAND);
+}
+
+auto cMain::CreateStatusBarOnFrame() -> void
+{
+	m_StatusBar = std::make_unique<wxStatusBar>(this, wxID_ANY);
+	SetStatusBar(m_StatusBar.get());
 }
 
 auto cMain::CreateDetectorPage

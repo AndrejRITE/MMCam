@@ -426,7 +426,7 @@ void CrossHairTool::DrawDataOnVerticalLine(wxGraphicsContext* gc, uint16_t* data
 		path.AddLineToPoint(start_draw_x_position - current_x, current_y);
 	}
 
-	gc->SetPen(*wxBLUE_PEN);
+	gc->SetPen(wxColour(240, 134, 80));
 	gc->DrawPath(path);
 
 }

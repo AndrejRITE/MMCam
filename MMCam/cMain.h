@@ -261,6 +261,8 @@ private:
 	void CreateLeftSide(wxSizer* left_side_sizer);
 	void CreateRightSide(wxSizer* right_side_sizer);
 
+	auto CreateStatusBarOnFrame() -> void;
+
 	auto CreateDetectorPage
 	(
 		wxWindow* parent, 
@@ -1396,6 +1398,8 @@ private:
 	/* Appearance Colors */
 	wxColour m_DefaultAppearenceColor = wxColour(255, 255, 255);
 	wxColour m_BlackAppearenceColor = wxColour(30, 30, 30);
+
+	std::unique_ptr<wxStatusBar> m_StatusBar{};
 
 	/* wxPanels */
 	wxScrolledWindow* m_RightSidePanel{};

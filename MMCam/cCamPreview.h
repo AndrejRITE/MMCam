@@ -31,15 +31,19 @@ namespace CameraPreviewVariables
 	struct InputPreviewPanelArgs
 	{
 		wxTextCtrl* x_pos_crosshair{}, * y_pos_crosshair{};
+		wxStatusBar* statusBar{};
 		//wxToggleButton* set_pos_tgl_btn{};
 		InputPreviewPanelArgs() {};
 		InputPreviewPanelArgs
 		(
 			wxTextCtrl* par_x_pos_crosshair,
-			wxTextCtrl* par_y_pos_crosshair
+			wxTextCtrl* par_y_pos_crosshair,
+			wxStatusBar* par_statusBar
 			//wxToggleButton* par_pos_crosshair_tgl_btn
 		) : x_pos_crosshair(par_x_pos_crosshair),
-			y_pos_crosshair(par_y_pos_crosshair) {};
+			y_pos_crosshair(par_y_pos_crosshair),
+			statusBar(par_statusBar)
+		{};
 			//set_pos_tgl_btn(par_pos_crosshair_tgl_btn) {};
 	};
 }
@@ -77,6 +81,7 @@ public:
 		unsigned short* data_ptr
 	) -> void;
 
+	auto UpdateCursorPositionOnStatusBar() -> void;
 	//void CaptureAndSaveDataFromCamera
 	//(
 	//	const unsigned long& exposure_time_us,

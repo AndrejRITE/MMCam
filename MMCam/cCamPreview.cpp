@@ -218,6 +218,33 @@ auto cCamPreview::SetCameraCapturedImage
 	m_ExecutionFinished = true;
 }
 
+auto cCamPreview::UpdateCursorPositionOnStatusBar() -> void
+{
+	if (!m_Image.IsOk()) return;
+
+	int pixel_offset{ 1 };
+	auto status_bar_text = wxString("");
+	if (m_IsCursorInsideImage)
+	{
+		// X Position
+		status_bar_text =
+			wxString("x=") +
+			wxString::Format(wxT("%i"), (int)(m_CheckedCursorPosOnImage.x + pixel_offset)) +
+			wxString(", ");
+		// Y Position
+		status_bar_text +=
+			wxString("y=") +
+			wxString::Format(wxT("%i"), (int)(m_CheckedCursorPosOnImage.y + pixel_offset)) +
+			wxString(", ");
+		// Value
+		unsigned short value = m_ImageData[(int)m_CheckedCursorPosOnImage.y * m_ImageSize.GetWidth() + (int)m_CheckedCursorPosOnImage.x];
+		status_bar_text +=
+			wxString("value=") +
+			wxString::Format(wxT("%i"), (int)(value));
+	}
+	m_ParentArguments->statusBar->SetStatusText(status_bar_text);
+}
+
 //void cCamPreview::CaptureAndSaveDataFromCamera
 //(
 //	const unsigned long& exposure_time_us, 
@@ -391,27 +418,27 @@ void cCamPreview::CalculateMatlabJetColormapPixelRGB16bit
 
 void cCamPreview::OnMouseMoved(wxMouseEvent& evt)
 {
-	if (m_IsImageSet)
+	if (!m_IsImageSet) return;
+
+	m_CursorPosOnCanvas.x = m_ZoomOnOriginalSizeImage * evt.GetPosition().x;
+	m_CursorPosOnCanvas.y = m_ZoomOnOriginalSizeImage * evt.GetPosition().y;
+
+	/* Mouse position on Image */
+	CalculatePositionOnImage();
+	CheckIfMouseAboveImage();
+
+	UpdateCursorPositionOnStatusBar();
+
+	ChangeCursorInDependenceOfCurrentParameters();
+
+	if (m_Panning)
 	{
-		m_CursorPosOnCanvas.x = m_ZoomOnOriginalSizeImage * evt.GetPosition().x;
-		m_CursorPosOnCanvas.y = m_ZoomOnOriginalSizeImage * evt.GetPosition().y;
-
-		/* Mouse position on Image */
-		CalculatePositionOnImage();
-		CheckIfMouseAboveImage();
-
-
-		ChangeCursorInDependenceOfCurrentParameters();
-
-		if (m_Panning)
-		{
-			ProcessPan(m_CursorPosOnCanvas, true);
-			m_CrossHairTool->SetImageStartDrawPos(wxRealPoint
-			(
-				m_StartDrawPos.x * m_Zoom / m_ZoomOnOriginalSizeImage,
-				m_StartDrawPos.y * m_Zoom / m_ZoomOnOriginalSizeImage
-			));
-		}
+		ProcessPan(m_CursorPosOnCanvas, true);
+		m_CrossHairTool->SetImageStartDrawPos(wxRealPoint
+		(
+			m_StartDrawPos.x * m_Zoom / m_ZoomOnOriginalSizeImage,
+			m_StartDrawPos.y * m_Zoom / m_ZoomOnOriginalSizeImage
+		));
 	}
 }
 
