@@ -747,10 +747,11 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 		DrawCircleMesh(gc);
 
 		DrawHEWCircle(gc);
+		DrawHEWValues(gc);
+
 		DrawSpotCroppedWindow(gc);
 		DrawSumLines(gc);
 
-		/* FWHM */
 		DrawFWHMValues(gc);
 
 		delete gc;
@@ -926,6 +927,43 @@ auto cCamPreview::DrawFWHMValues(wxGraphicsContext* gc_) -> void
 		gc_->Translate(drawPoint.x, drawPoint.y);
 		gc_->Rotate(-M_PI / 2.0); // Rotate 90 degrees counter clockwise (pi/2 radians)
 		gc_->Translate(-drawPoint.x, -drawPoint.y);
+		gc_->DrawText(curr_value, drawPoint.x, drawPoint.y);
+	}
+
+	LOG("Finished: " + wxString(__FUNCSIG__))
+}
+
+auto cCamPreview::DrawHEWValues(wxGraphicsContext* gc_) -> void
+{
+	if (!m_Image.IsOk() || !m_DisplayFocusCenter || !m_HorizontalSumArray || !m_VerticalSumArray) return;
+	if (m_HEWDiameter <= 0.0) return;
+
+	wxColour fontColour(117, 250, 97, 200);
+	wxFont font = wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+	gc_->SetFont(font, fontColour);
+
+	wxDouble widthText{}, heightText{};
+
+	wxDouble offsetX{ 5.0 }, offsetY{ 5.0 };
+	wxRealPoint drawPoint{};
+	wxString curr_value{};
+
+	curr_value = wxEmptyString;
+
+	// HEW
+	{
+		// um
+		curr_value = "HEWd [um]: ";
+		curr_value += wxString::Format(wxT("%.2f"), m_HEWDiameter * m_PixelSizeUM);
+
+		// px
+		curr_value += " HEWd [px]: ";
+		curr_value += wxString::Format(wxT("%i"), (int)m_HEWDiameter);
+
+		gc_->GetTextExtent(curr_value, &widthText, &heightText);
+		drawPoint.x = offsetX;
+		drawPoint.y = offsetY;
+
 		gc_->DrawText(curr_value, drawPoint.x, drawPoint.y);
 	}
 
@@ -1515,11 +1553,15 @@ void cCamPreview::ChangeSizeOfImageInDependenceOnCanvasSize()
 	wxSize current_image_size{ m_ImageSize };
 	wxSize canvas_size{ GetSize().GetWidth(), GetSize().GetHeight() };
 	m_ZoomOnOriginalSizeImage = 1.0;
-	while (canvas_size.GetWidth() < current_image_size.GetWidth() || canvas_size.GetHeight() < current_image_size.GetHeight())
+	while 
+		(
+			canvas_size.GetWidth() < current_image_size.GetWidth() 
+			|| canvas_size.GetHeight() < current_image_size.GetHeight()
+			)
 	{
-		current_image_size.SetWidth(current_image_size.GetWidth() / 2);
-		current_image_size.SetHeight(current_image_size.GetHeight() / 2);
-		m_ZoomOnOriginalSizeImage *= 2.0;
+		current_image_size.SetWidth(current_image_size.GetWidth() / m_ZoomStep);
+		current_image_size.SetHeight(current_image_size.GetHeight() / m_ZoomStep);
+		m_ZoomOnOriginalSizeImage *= m_ZoomStep;
 	}
 	m_ImageOnCanvasSize.Set(current_image_size.GetWidth(), current_image_size.GetHeight());
 	m_CrossHairTool->SetImageOnCanvasSize(current_image_size);

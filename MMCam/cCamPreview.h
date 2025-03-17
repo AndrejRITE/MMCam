@@ -153,6 +153,7 @@ private:
 	void CreateGraphicsBitmapImage(wxGraphicsContext* gc_);
 	void DrawCameraCapturedImage(wxGraphicsContext* gc_);
 	auto DrawFWHMValues(wxGraphicsContext* gc_) -> void;
+	auto DrawHEWValues(wxGraphicsContext* gc_) -> void;
 
 	auto DrawGridMesh(wxGraphicsContext* gc_) -> void;
 	auto DrawCircleMesh(wxGraphicsContext* gc_) -> void;
@@ -221,7 +222,7 @@ private:
 
 	/* Zoom */
 	double m_Zoom{}, m_ZoomOnOriginalSizeImage{};
-	const double m_ZoomStep{ 1.4 };
+	const double m_ZoomStep{ 1.4 }; // Should be bigger than 1.0, otherwise infinity loop
 
 	//std::unique_ptr<XimeaControl> m_XimeaCameraControl{};
 	std::string m_SelectedCameraSN{};
