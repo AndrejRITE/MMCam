@@ -95,7 +95,7 @@ namespace SettingsVariables
 		wxArrayString xml_all_motors[2];
 		wxArrayString xml_selected_motors[2];
 
-		std::map<unsigned int, float> unique_motors_map;
+		std::map<std::string, float> unique_motors_map;
 		//std::set<float> unique_motors_set[2];
 		wxArrayString unique_motors[2];
 

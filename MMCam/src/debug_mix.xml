@@ -5,25 +5,25 @@
 	<motor_manufacturer>XERYON</motor_manufacturer>
 	<detector>
 		<motor>
-			<sn>18808</sn>
+			<sn>95733333332351410021</sn>
 			<steps_per_mm>1</steps_per_mm>
 		</motor>
 		<motor>
-			<sn>15748</sn>
+			<sn>A40313438353519101B1</sn>
 			<steps_per_mm>1</steps_per_mm>
 		</motor>
 		<motor>
-			<sn>15715</sn>
+			<sn>A403134383535191E0D1</sn>
 			<steps_per_mm>1</steps_per_mm>
 		</motor>
 	</detector>
 	<optics>
 		<motor>
-			<sn>12586</sn>
+			<sn>None</sn>
 			<steps_per_mm>1</steps_per_mm>
 		</motor>
 		<motor>
-			<sn>12538</sn>
+			<sn>None</sn>
 			<steps_per_mm>1</steps_per_mm>
 		</motor>
 		<motor>

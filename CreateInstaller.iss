@@ -26,6 +26,7 @@ Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\bindy.dll"; DestDir: "{a
 Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\keyfile.sqlite"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\libximc.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\{#RepoName}.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\{#RepoName}.ini"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\opencv_world4100.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\table.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\xiapi64.dll"; DestDir: "{app}"; Flags: ignoreversion

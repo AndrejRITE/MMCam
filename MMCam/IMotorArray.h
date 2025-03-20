@@ -12,7 +12,7 @@ public:
     virtual ~IMotorArray() = default;
 
 	// Getters
-	virtual std::map<unsigned int, float> GetSerialNumbersWithRanges() const = 0;
+	virtual std::map<std::string, float> GetSerialNumbersWithRanges() const = 0;
 	virtual float GetActualStagePos(const std::string& motor_sn) const = 0;
 	virtual bool IsMotorConnected(const std::string& motor_sn) const = 0;
 

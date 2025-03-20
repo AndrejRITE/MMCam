@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Header Files\ext_lib">
-      <UniqueIdentifier>{8311a345-df65-4834-8a32-8a28e254ab9c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\MaterialDesign">
       <UniqueIdentifier>{c4933ef9-3752-4e69-aeda-ce9a7c9292b8}</UniqueIdentifier>
     </Filter>
@@ -36,6 +33,12 @@
     </Filter>
     <Filter Include="Source Files\Motors">
       <UniqueIdentifier>{da974a69-6438-4030-842e-1068edd01b0f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ExternalLibraries">
+      <UniqueIdentifier>{8311a345-df65-4834-8a32-8a28e254ab9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\OtherHeaders">
+      <UniqueIdentifier>{7371b76b-cc46-4efe-b9b2-77ab602e2ab1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -58,7 +61,7 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="json.hpp">
-      <Filter>Header Files\ext_lib</Filter>
+      <Filter>Header Files\ExternalLibraries</Filter>
     </ClInclude>
     <ClInclude Include="..\MaterialDesign\wxAwesomeBrandsArt.hpp">
       <Filter>Header Files\MaterialDesign</Filter>
@@ -99,9 +102,6 @@
     <ClInclude Include="resource1.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PostprocessingAlgorithms.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="cGenerateReportDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -122,6 +122,12 @@
     </ClInclude>
     <ClInclude Include="XeryonMotor.h">
       <Filter>Header Files\Motors</Filter>
+    </ClInclude>
+    <ClInclude Include="PostprocessingAlgorithms.h">
+      <Filter>Header Files\OtherHeaders</Filter>
+    </ClInclude>
+    <ClInclude Include="SerialPortCommunication.h">
+      <Filter>Header Files\OtherHeaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

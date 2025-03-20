@@ -18,10 +18,11 @@ class XeryonMotor final
 {
 };
 
-class XeryonMotorArray final
+class XeryonMotorArray final : public IMotorArray
 {
-	XeryonMotorArray() = default;
-	~XeryonMotorArray() = default;
+public:
+	XeryonMotorArray() {};
+	~XeryonMotorArray() {};
 
 };
 #endif

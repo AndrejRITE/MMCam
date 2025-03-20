@@ -68,6 +68,10 @@ Copy-Item -Path "${libximc_folder}\libximc.dll" -Destination "${release_folder}\
 Copy-Item -Path "${libximc_folder}\xiwrapper.dll" -Destination "${release_folder}\xiwrapper.dll" -Force
 Copy-Item -Path "${other_files_folder}\keyfile.sqlite" -Destination "${release_folder}\keyfile.sqlite" -Force
 
+# Copy INI file
+Write-Output "Copying INI file into ${release_folder} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
+Copy-Item -Path "${other_files_folder}\${repository_name}.ini" -Destination "${release_folder}\${repository_name}.ini" -Force
+
 # Copy XIMEA files
 Write-Output "Copying XIMEA files into ${release_folder} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
 Copy-Item -Path "${ximea_folder}\xiapi64.dll" -Destination "${release_folder}\xiapi64.dll" -Force
@@ -87,7 +91,7 @@ Copy-Item -Path "${other_files_folder}\src\bruker.xml" -Destination "${src_folde
 Copy-Item -Path "${other_files_folder}\src\experimental.xml" -Destination "${src_folder}\experimental.xml" -Force
 Copy-Item -Path "${other_files_folder}\src\lepeni_a.xml" -Destination "${src_folder}\lepeni_a.xml" -Force
 Copy-Item -Path "${other_files_folder}\src\specs.xml" -Destination "${src_folder}\specs.xml" -Force
-Copy-Item -Path "${other_files_folder}\src\init.ini" -Destination "${src_folder}\init.ini" -Force
+
 
 # Check if the ReportGenerator folder exists, and create it if not
 $report_generator_folder = "${release_folder}\src\ReportGenerator"
@@ -122,6 +126,7 @@ $files_to_archive = @(
 	"${release_folder}\keyfile.sqlite",
 	"${release_folder}\libximc.dll",
 	"${release_folder}\$repository_name.exe",
+	"${release_folder}\$repository_name.ini",
 	"${release_folder}\opencv_world4100.dll",
 	"${release_folder}\table.txt",
 	"${release_folder}\xiapi64.dll",
@@ -149,7 +154,7 @@ Write-Output "Running Inno Setup to generate the installer [$(Get-Date)]" >> "${
 Remove-Item -Path "${inno_setup_script_temp}"
 
 # Define the path of the generated installer
-$installer_path = "${path_to_repository}\bin\x64\Release\${repository_name}Installer_v${build_version}.exe"
+$installer_path = "${release_folder}\${repository_name}Installer_v${build_version}.exe"
 $fileHash = (Get-FileHash -Algorithm SHA256 -Path $installer_path).Hash
 Write-Output "SHA256: [$fileHash]" >> "${path_to_repository}\log.txt"
 

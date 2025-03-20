@@ -51,7 +51,7 @@ public:
 	bool GoToAbsolutePosition(float stagePosition);
 
 	// Getters 
-	unsigned int GetDeviceSerNum() const override { return m_MotorSerialNumber; };
+	std::string GetDeviceSerNum() const override { return m_MotorSerialNumber; };
 	float GetDeviceRange() const override { return m_MotorSettings ? m_MotorSettings->stageRange : 0.f; };
 	float GetDeviceActualStagePos() const override { return m_MotorSettings ? m_MotorSettings->stagePos : 0.f; };
 
@@ -62,7 +62,7 @@ public:
 		m_DeviceName = deviceName;
 	};
 
-	void SetMotorSerialNumber(unsigned int serialNumber) override { m_MotorSerialNumber = serialNumber; };
+	void SetMotorSerialNumber(std::string serialNumber) override { m_MotorSerialNumber = serialNumber; };
 
 	// Other Functions
 	//void SetResult(result_t result) { m_StandaSettings->result = result; };
@@ -99,7 +99,7 @@ public:
 		m_DeviceName(std::move(other.m_DeviceName)),
 		m_MotorSerialNumber(other.m_MotorSerialNumber)
 	{
-		other.m_MotorSerialNumber = 0;
+		other.m_MotorSerialNumber = "";
 		other.m_DeviceName = "";
 	};
 
@@ -145,7 +145,7 @@ private:
 	//int m_StepsPerMM{ 800 }; 
 	//std::unique_ptr<char[]> m_DeviceName{};
 	std::string m_DeviceName{};
-	unsigned int m_MotorSerialNumber{};
+	std::string m_MotorSerialNumber{};
 	//int m_CurrentMotorDeg{};
 	const long long m_WaitAfterMovementMilliseconds{ 500 };
 };
@@ -156,7 +156,7 @@ public:
 	StandaMotorArray(const std::string& ipAddress = "");
 
 	/* Getter */
-	std::map<unsigned int, float> GetSerialNumbersWithRanges() const override { return m_NamesOfMotorsWithRanges; };
+	std::map<std::string, float> GetSerialNumbersWithRanges() const override { return m_NamesOfMotorsWithRanges; };
 	float GetActualStagePos(const std::string& motor_sn) const override;
 	bool IsMotorConnected(const std::string& motor_sn) const override;
 
@@ -175,7 +175,7 @@ private:
 private:
 	//std::vector<IMotor> m_MotorsArray;
 	std::vector<StandaMotor> m_MotorsArray;
-	std::map<unsigned int, float> m_NamesOfMotorsWithRanges{};
+	std::map<std::string, float> m_NamesOfMotorsWithRanges{};
 	const float error_position = 0.0f;
 
 	std::vector<unsigned int> m_UninitializedMotors{};

@@ -771,7 +771,9 @@ auto cSettings::CompareXMLWithConnectedDevices()
 		m_Motors->xml_selected_motors[1].Clear();
 
 		wxString motor_sn{}, motor_range{};
-		std::map<unsigned int, float>::iterator phys_mot_iter = physical_motors.begin();
+		auto phys_mot_iter = physical_motors.begin();
+		//std::map<std::string, float>::iterator phys_mot_iter = physical_motors.begin();
+
 		for (auto motor{ 0 }; motor < m_MotorsCount; ++motor)
 		{
 			if (motor < physical_motors.size())
@@ -853,6 +855,7 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 			m_PhysicalMotors = std::make_unique<StandaMotorArray>();
 			break;
 		case SettingsVariables::XERYON:
+			m_PhysicalMotors = std::make_unique<XeryonMotorArray>();
 			break;
 		default:
 			break;

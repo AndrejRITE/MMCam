@@ -170,6 +170,7 @@
     <ClInclude Include="IMotor.h" />
     <ClInclude Include="IMotorArray.h" />
     <ClInclude Include="json.hpp" />
+    <ClInclude Include="SerialPortCommunication.h" />
     <ClInclude Include="StandaMotor.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="resource1.h" />
