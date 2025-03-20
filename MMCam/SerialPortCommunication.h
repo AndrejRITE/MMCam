@@ -7,7 +7,7 @@
 
 #pragma comment(lib, "setupapi.lib")
 
-std::string extractSerialNumber(const std::string& deviceID) 
+static std::string extractSerialNumber(const std::string& deviceID) 
 {
     size_t lastSlash = deviceID.find_last_of('\\');
     if (lastSlash != std::string::npos) {
@@ -16,7 +16,7 @@ std::string extractSerialNumber(const std::string& deviceID)
     return "Serial Number Not Found";
 }
 
-std::string getSerialNumberFromCOMPort(const std::string& portName) 
+static std::string getSerialNumberFromCOMPort(const std::string& portName) 
 {
     HDEVINFO hDevInfo = SetupDiGetClassDevs(&GUID_DEVCLASS_PORTS, NULL, NULL, DIGCF_PRESENT);
     if (hDevInfo == INVALID_HANDLE_VALUE) 

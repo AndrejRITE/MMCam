@@ -15,6 +15,30 @@ cSettings::cSettings(wxWindow* parent_frame)
 	CenterOnScreen();
 }
 
+int cSettings::ShowModal()
+{
+	auto result = wxDialog::ShowModal();  // Call the base class method
+
+	wxBusyCursor busy;
+
+	if (!m_PhysicalMotors)
+	{
+		switch (m_MotorManufacturer)
+		{
+		case SettingsVariables::STANDA:
+			m_PhysicalMotors = std::make_unique<StandaMotorArray>();
+			break;
+		case SettingsVariables::XERYON:
+			m_PhysicalMotors = std::make_unique<XeryonMotorArray>();
+			break;
+		default:
+			break;
+		}
+	}
+
+	return result;
+}
+
 bool cSettings::IsCapturingFinished() const
 {
 	return m_Progress->is_finished;
@@ -60,6 +84,8 @@ void cSettings::CreateMainFrame()
 	InitComponents();
 	ReadInitializationFile();
 	LoadWorkStationFiles();
+
+
 	//IterateOverConnectedCameras();
 	//ReadXMLFile();
 	CreateSettings();
@@ -638,7 +664,9 @@ auto cSettings::UpdateMotorsAndCameraTXTCtrls(const short selected_work_station)
 	{
 		m_WorkStations->work_station_choice->SetSelection(m_WorkStations->initialized_work_station_num);
 	}
+
 	m_WorkStations->initialized_work_station = m_WorkStations->all_work_station_array_str[m_WorkStations->initialized_work_station_num];
+
 	for (auto i{ 0 }; i < m_WorkStations->work_station_data[0].selected_motors_in_data_file.size(); ++i)
 	{
 		auto motorSN = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[i];
@@ -662,6 +690,9 @@ auto cSettings::UpdateMotorsAndCameraTXTCtrls(const short selected_work_station)
 	}
 	m_Cameras->camera->SetLabel(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_camera_in_data_file);
 	m_Cameras->selected_camera_str = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_camera_in_data_file;
+
+	m_CameraManufacturer = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].camera_manufacturer;
+	m_MotorManufacturer = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].motor_manufacturer;
 }
 
 void cSettings::OnRefreshBtn(wxCommandEvent& evt)
@@ -842,24 +873,9 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 	{
 		auto motorManufacturerStr = wxString(element->first_node()->value());
 		if (motorManufacturerStr == "STANDA")
-			m_MotorManufacturer = SettingsVariables::MotorManufacturers::STANDA;
+			m_WorkStations->work_station_data[fileNum].motor_manufacturer = SettingsVariables::MotorManufacturers::STANDA;
 		else if (motorManufacturerStr == "XERYON")
-			m_MotorManufacturer = SettingsVariables::MotorManufacturers::XERYON;
-	}
-
-	if (!m_PhysicalMotors)
-	{
-		switch (m_MotorManufacturer)
-		{
-		case SettingsVariables::STANDA:
-			m_PhysicalMotors = std::make_unique<StandaMotorArray>();
-			break;
-		case SettingsVariables::XERYON:
-			m_PhysicalMotors = std::make_unique<XeryonMotorArray>();
-			break;
-		default:
-			break;
-		}
+			m_WorkStations->work_station_data[fileNum].motor_manufacturer = SettingsVariables::MotorManufacturers::XERYON;
 	}
 
 	// Detector
@@ -876,7 +892,7 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 			auto steps_node = node->next_sibling();
 			auto steps_per_mm = std::stoi(std::string(steps_node->value()));
 			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(value), steps_per_mm));
-			m_PhysicalMotors->SetStepsPerMMForTheMotor(value, steps_per_mm);
+			//m_PhysicalMotors->SetStepsPerMMForTheMotor(value, steps_per_mm);
 		}
 	}
 
@@ -894,7 +910,7 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 			auto steps_node = node->next_sibling();
 			auto steps_per_mm = std::stoi(std::string(steps_node->value()));
 			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(value), steps_per_mm));
-			m_PhysicalMotors->SetStepsPerMMForTheMotor(value, steps_per_mm);
+			//m_PhysicalMotors->SetStepsPerMMForTheMotor(value, steps_per_mm);
 		}
 	}
 

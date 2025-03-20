@@ -48,7 +48,7 @@ public:
     // Common motor operations
 	bool GoCenter() override;
 	bool GoHomeAndZero() override;
-	bool GoToAbsolutePosition(float stagePosition);
+	bool GoToAbsolutePosition(float stagePosition) override;
 
 	// Getters 
 	std::string GetDeviceSerNum() const override { return m_MotorSerialNumber; };
@@ -178,7 +178,7 @@ private:
 	std::map<std::string, float> m_NamesOfMotorsWithRanges{};
 	const float error_position = 0.0f;
 
-	std::vector<unsigned int> m_UninitializedMotors{};
+	std::vector<std::string> m_UninitializedMotors{};
 };
 
 #endif

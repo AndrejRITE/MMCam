@@ -120,8 +120,10 @@ namespace SettingsVariables
 	struct WorkStationData
 	{
 		wxArrayString selected_motors_in_data_file{};
+		MotorManufacturers motor_manufacturer{};
 		std::map<wxString, int> motors_steps_per_mm{};
 		wxString selected_camera_in_data_file{};
+		CameraManufacturers camera_manufacturer{};
 		wxString work_station_name{};
 	};
 
@@ -178,6 +180,7 @@ public:
 		);
 	}
 
+	int ShowModal() override;
 	/* Progress Getter */
 	bool IsCapturingFinished() const;
 	void ProvideProgressInfo(wxString* msg, int* prgrs);

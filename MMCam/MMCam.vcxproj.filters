@@ -40,6 +40,12 @@
     <Filter Include="Header Files\OtherHeaders">
       <UniqueIdentifier>{7371b76b-cc46-4efe-b9b2-77ab602e2ab1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Motors\Xeryon">
+      <UniqueIdentifier>{953e9892-6271-45a4-8dbb-538253f5d764}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Motors\Xeryon">
+      <UniqueIdentifier>{d659a0bf-07cb-426a-8a46-040576b14243}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cApp.h">
@@ -129,6 +135,18 @@
     <ClInclude Include="SerialPortCommunication.h">
       <Filter>Header Files\OtherHeaders</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\Xeryon\inc\Axis.h">
+      <Filter>Header Files\Motors\Xeryon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\Xeryon\inc\Distance.h">
+      <Filter>Header Files\Motors\Xeryon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\Xeryon\inc\Stage.h">
+      <Filter>Header Files\Motors\Xeryon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\Xeryon\inc\Xeryon.h">
+      <Filter>Header Files\Motors\Xeryon</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cApp.cpp">
@@ -193,6 +211,18 @@
     </ClCompile>
     <ClCompile Include="XeryonMotor.cpp">
       <Filter>Source Files\Motors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\Xeryon\src\Axis.cpp">
+      <Filter>Source Files\Motors\Xeryon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\Xeryon\src\Distance.cpp">
+      <Filter>Source Files\Motors\Xeryon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\Xeryon\src\Stage.cpp">
+      <Filter>Source Files\Motors\Xeryon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\Xeryon\src\Xeryon.cpp">
+      <Filter>Source Files\Motors\Xeryon</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

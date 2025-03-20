@@ -247,7 +247,7 @@ StandaMotorArray::StandaMotorArray(const std::string& ipAddress)
 
 auto StandaMotorArray::InitAllMotors(const std::string ip_address) -> bool
 {
-	auto appendUnitializedMotor = [&](const unsigned int motorSN, const int motorNum)
+	auto appendUnitializedMotor = [&](const std::string motorSN, const int motorNum)
 		{
 			m_UninitializedMotors.push_back(motorSN);
 			m_MotorsArray[motorNum].SetMotorSerialNumber(0);
@@ -296,7 +296,8 @@ auto StandaMotorArray::InitAllMotors(const std::string ip_address) -> bool
 	stage_settings_t stage_settings_c;
 	edges_settings_calb_t edges_settings_calb_c;
 	stage_information_t stage_information_c;
-	unsigned int device_sn{};
+	unsigned int device_sn_int{};
+	std::string device_sn{};
 	for (int i = 0; i < names_count; ++i)
 	{
 		m_MotorsArray.emplace_back(StandaMotor());
@@ -307,8 +308,9 @@ auto StandaMotorArray::InitAllMotors(const std::string ip_address) -> bool
 		strcpy(device_name, get_device_name(devenum_c, i));
 		m_MotorsArray[i].SetDeviceName(device_name);
 		device_c = open_device(device_name);
-		get_serial_number(device_c, &device_sn);
-		m_MotorsArray[i].SetMotorSerialNumber(std::to_string(device_sn));
+		get_serial_number(device_c, &device_sn_int);
+		device_sn = std::to_string(device_sn_int);
+		m_MotorsArray[i].SetMotorSerialNumber(device_sn);
 
 		if ((result_c = get_status(device_c, &state_c)) != result_ok)
 		{
