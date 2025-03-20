@@ -18,7 +18,9 @@
 #include "rapidxml_print.hpp"
 
 #include "StandaMotor.h"
+#include "XeryonMotor.h"
 #include "XimeaControl.h"
+#include <wx/event.h>
 
 
 namespace SettingsVariables
@@ -52,6 +54,12 @@ namespace SettingsVariables
 		ID_CIRCLE_MESH_STEP_TXT_CTRL
 	};
 
+	enum CameraManufacturers
+	{
+		XIMEA,
+		MORAVIAN_INSTRUMENTS
+	};
+
 	enum MotorsNames 
 	{
 		DETECTOR_X,
@@ -60,6 +68,12 @@ namespace SettingsVariables
 		OPTICS_X,
 		OPTICS_Y,
 		OPTICS_Z
+	};
+
+	enum MotorManufacturers
+	{
+		STANDA,
+		XERYON
 	};
 
 	struct MotorSettings
@@ -167,7 +181,7 @@ public:
 	/* Progress Getter */
 	bool IsCapturingFinished() const;
 	void ProvideProgressInfo(wxString* msg, int* prgrs);
-	auto ProvideProgressMessage() const -> wxString;
+	auto ProvideProgressMessage() const->wxString;
 	auto ProvideProgressValue() const -> int;
 
 	/* Progress Setter */
@@ -212,7 +226,7 @@ public:
 	void SetCurrentProgress(const int& curr_capturing_num, const int& whole_capturing_num);
 
 	/* Camera */
-	auto GetSelectedCamera() const -> wxString;
+	auto GetSelectedCamera() const->wxString;
 
 	auto GetPixelSizeUM() const -> double { return m_PixelSizeUM; };
 	auto GetCropSizeMM() const -> double { return m_CropSizeMM; };
@@ -220,28 +234,21 @@ public:
 	auto GetUploadReportFolder() const -> wxString { return m_UploadReportFolder; };
 	auto GetXRayImagesDefaultCaption() const -> wxArrayString { return m_XRayImagesCaptions; };
 
-	auto GetGridMeshStep() const -> unsigned int 
-	{ 
+	auto GetGridMeshStep() const -> unsigned int
+	{
 		int step = 1;
 		m_GridMeshStepPXTxtCtrl->GetValue().ToInt(&step);
-		return (unsigned int)step; 
+		return (unsigned int)step;
 	};
-	auto GetCircleMeshStep() const -> unsigned int 
-	{ 
+	auto GetCircleMeshStep() const -> unsigned int
+	{
 		int step = 1;
 		m_CircleMeshStepPXTxtCtrl->GetValue().ToInt(&step);
-		return (unsigned int)step; 
+		return (unsigned int)step;
 	};
 
-	//auto GetOkBtnState() -> bool
-	//{
-	//	//if (m_OkBtnPressed)
-	//	//{
-	//	//	m_OkBtnPressed = !m_OkBtnPressed;
-	//	//	return !m_OkBtnPressed;
-	//	//}
-	//	//return m_OkBtnPressed;
-	//}
+	auto GetCameraManufacturer() const -> int { return m_CameraManufacturer; }
+	auto GetMotorManufacturer() const -> int { return m_MotorManufacturer; }
 
 private:
 	void CreateMainFrame();
@@ -257,7 +264,6 @@ private:
 	auto OnWorkStationChoice(wxCommandEvent& evt) -> void;
 	auto UpdateMotorsAndCameraTXTCtrls(const short selected_work_station = -1) -> void;
 	void OnRefreshBtn(wxCommandEvent& evt);
-	void OnOkBtn(wxCommandEvent& evt);
 	bool CheckIfThereIsCollisionWithMotors();
 	bool CheckIfUserSelectedAllRangesForAllSelectedMotors();
 	bool CheckIfUserSelectedAllMotorsForAllSelectedRanges();
@@ -282,15 +288,17 @@ private:
 	auto RewriteInitializationFile() -> void;
 
 private:
-	const wxString initialization_file_path = "src\\init.ini";
+	const wxString m_InitializationFilePath = "MMCam.ini";
 	const wxString work_stations_path = "src\\";
-	double m_PixelSizeUM{}, m_CropSizeMM{}, m_CropCircleSizeMM{};
+	double m_CropSizeMM{}, m_CropCircleSizeMM{};
+	double m_PixelSizeUM{};
+	SettingsVariables::MotorManufacturers m_MotorManufacturer{};
+	SettingsVariables::CameraManufacturers m_CameraManufacturer{};
 	wxArrayString m_XRayImagesCaptions{};
 	wxString m_UploadReportFolder{};
 	//const wxString xml_file_path = "src\\old_xml\\mtrs.xml";
 	std::unique_ptr<SettingsVariables::WorkStations> m_WorkStations{};
 	//std::unique_ptr<wxButton> m_OkBtn{}, m_CancelBtn{}, m_RefreshBtn{};
-	bool m_OkBtnPressed{};
 	std::unique_ptr<SettingsVariables::MotorSettingsArray> m_Motors{};
 	
 	// TODO: Move to Polymorphic class IMotorFactory

@@ -564,7 +564,6 @@ void cSettings::InitComponents()
 	m_WorkStations = std::make_unique<SettingsVariables::WorkStations>();
 	m_Motors = std::make_unique<SettingsVariables::MotorSettingsArray>();
 	m_Cameras = std::make_unique<SettingsVariables::Cameras>();
-	m_PhysicalMotors = std::make_unique<StandaMotorArray>();
 }
 
 void cSettings::BindControls()
@@ -681,23 +680,6 @@ void cSettings::OnRefreshBtn(wxCommandEvent& evt)
 		}
 	}
 	ResetAllMotorsAndRangesInXMLFile();
-}
-
-void cSettings::OnOkBtn(wxCommandEvent& evt)
-{
-	m_OkBtnPressed = false;
-
-	if (
-		!CheckIfThereIsCollisionWithMotors() && 
-		CheckIfUserSelectedAllRangesForAllSelectedMotors() && 
-		CheckIfUserSelectedAllMotorsForAllSelectedRanges())
-	{
-		Hide();
-		RewriteInitializationFile();
-		m_OkBtnPressed = true;
-		//UpdatePreviousStatesData();
-		//WriteActualSelectedMotorsAndRangesIntoXMLFile();
-	}
 }
 
 bool cSettings::CheckIfThereIsCollisionWithMotors()
@@ -850,8 +832,35 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 	rapidxml::xml_node<>* selected_motors_node = document->first_node("selected_motors");
 	if (!selected_motors_node) return;
 
+	rapidxml::xml_node<>* element;
+
+	// MotorManufacturer
+	element = SettingsVariables::FindNode(selected_motors_node, "motor_manufacturer");
+	if (element)
+	{
+		auto motorManufacturerStr = wxString(element->first_node()->value());
+		if (motorManufacturerStr == "STANDA")
+			m_MotorManufacturer = SettingsVariables::MotorManufacturers::STANDA;
+		else if (motorManufacturerStr == "XERYON")
+			m_MotorManufacturer = SettingsVariables::MotorManufacturers::XERYON;
+	}
+
+	if (!m_PhysicalMotors)
+	{
+		switch (m_MotorManufacturer)
+		{
+		case SettingsVariables::STANDA:
+			m_PhysicalMotors = std::make_unique<StandaMotorArray>();
+			break;
+		case SettingsVariables::XERYON:
+			break;
+		default:
+			break;
+		}
+	}
+
 	// Detector
-	auto element = SettingsVariables::FindNode(selected_motors_node, "detector");
+	element = SettingsVariables::FindNode(selected_motors_node, "detector");
 	if (element)
 	{
 		for (auto detector = element->first_node(); detector; detector = detector->next_sibling())
@@ -891,6 +900,22 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 	if (element)
 		m_WorkStations->work_station_data[fileNum].selected_camera_in_data_file = wxString(element->first_node()->value());
 
+	// CameraManufacturer
+	element = SettingsVariables::FindNode(selected_motors_node, "camera_manufacturer");
+	if (element)
+	{
+		auto cameraManufacturerStr = wxString(element->first_node()->value());
+		if (cameraManufacturerStr == "XIMEA")
+			m_CameraManufacturer = SettingsVariables::CameraManufacturers::XIMEA;
+		else if (cameraManufacturerStr == "MORAVIAN_INSTRUMENTS")
+			m_CameraManufacturer = SettingsVariables::CameraManufacturers::MORAVIAN_INSTRUMENTS;
+	}
+
+	// PixelSizeUM
+	element = SettingsVariables::FindNode(selected_motors_node, "pixel_size_um");
+	if (element)
+		m_PixelSizeUM = std::atof(element->first_node()->value());
+
 	// Station
 	element = SettingsVariables::FindNode(selected_motors_node, "station");
 	if (element)
@@ -903,7 +928,7 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 
 auto cSettings::ReadInitializationFile() -> void
 {
-	auto xmlFile = std::make_unique<rapidxml::file<>>(initialization_file_path.c_str());
+	auto xmlFile = std::make_unique<rapidxml::file<>>(m_InitializationFilePath.c_str());
 	auto document = std::make_unique<rapidxml::xml_document<>>();
 	document->parse<0>(xmlFile->data());
 	rapidxml::xml_node<>* app_node = document->first_node("MMCam");
@@ -915,10 +940,6 @@ auto cSettings::ReadInitializationFile() -> void
 	element = SettingsVariables::FindNode(app_node, "crop_size_circle_mm");
 	if (element && element->first_node())
 		m_CropCircleSizeMM = std::atof(element->first_node()->value());
-
-	element = SettingsVariables::FindNode(app_node, "pixel_size_um");
-	if (element && element->first_node())
-		m_PixelSizeUM = std::atof(element->first_node()->value());
 
 	element = SettingsVariables::FindNode(app_node, "upload_report_folder");
 	if (element && element->first_node())
@@ -1146,17 +1167,8 @@ void cSettings::ResetAllMotorsAndRangesInXMLFile()
 
 auto cSettings::RewriteInitializationFile() -> void
 {
-	auto xmlFile = std::make_unique<rapidxml::file<>>(initialization_file_path.c_str());
+	auto xmlFile = std::make_unique<rapidxml::file<>>(m_InitializationFilePath.c_str());
 	auto document = std::make_unique<rapidxml::xml_document<>>();
-	// Open *.xml file
-	//std::ifstream ini_file(initialization_file_path.mb_str());
-	// Preparing buffer
-	//std::stringstream file_buffer;
-	//file_buffer << ini_file.rdbuf();
-	//ini_file.close();
-
-	//std::string content(file_buffer.str());
-	//document->parse<0 | rapidxml::parse_no_data_nodes>(&content[0]);
 
 	document->parse<0>(xmlFile->data());
 	rapidxml::xml_node<>* app_node = document->first_node("MMCam");
@@ -1174,7 +1186,7 @@ auto cSettings::RewriteInitializationFile() -> void
 #endif // !_DEBUG
 
 	// Save to file
-	std::ofstream out_file(initialization_file_path.mb_str());
+	std::ofstream out_file(m_InitializationFilePath.mb_str());
 	if (out_file.is_open())
 	{
 		out_file << "<?xml version=\"1.0\"?>\n";

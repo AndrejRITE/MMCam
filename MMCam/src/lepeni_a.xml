@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <selected_motors>
 	<camera>11485958</camera>
+	<camera_manufacturer>XIMEA</camera_manufacturer>
+	<motor_manufacturer>STANDA</motor_manufacturer>
 	<detector>
 		<motor>
 			<sn>37181</sn>
@@ -29,5 +31,6 @@
 			<steps_per_mm>800</steps_per_mm>
 		</motor>
 	</optics>
+	<pixel_size_um>2.2</pixel_size_um>
 	<station>LEPENI_A</station>
 </selected_motors>

@@ -1810,7 +1810,9 @@ auto cMain::InitializeSelectedCamera() -> void
 	auto selectedCamera = m_Settings->GetSelectedCamera();
 	if (selectedCamera == defaultCameraName) return;
 
-	m_CameraControl = std::make_unique<XimeaControl>(selectedCamera.ToStdString());
+	if (m_Settings->GetCameraManufacturer() == SettingsVariables::CameraManufacturers::XIMEA)
+		m_CameraControl = std::make_unique<XimeaControl>(selectedCamera.ToStdString());
+
 	m_CameraControl->Initialize();
 
 	if (!m_CameraControl->IsConnected())

@@ -2,6 +2,8 @@
 <selected_motors>
 	<!--<camera>37680258</camera>-->
 	<camera>38285758</camera> <!--BlackLab-->
+	<camera_manufacturer>XIMEA</camera_manufacturer>
+	<motor_manufacturer>STANDA</motor_manufacturer>
 	<detector>
 		<motor>
 			<sn>18808</sn>
@@ -30,5 +32,6 @@
 			<steps_per_mm>800</steps_per_mm>
 		</motor>
 	</optics>
+	<pixel_size_um>2.2</pixel_size_um>
 	<station>BRUKER</station>
 </selected_motors>

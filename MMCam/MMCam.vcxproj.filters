@@ -120,6 +120,9 @@
     <ClInclude Include="StandaMotor.h">
       <Filter>Header Files\Motors</Filter>
     </ClInclude>
+    <ClInclude Include="XeryonMotor.h">
+      <Filter>Header Files\Motors</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cApp.cpp">
@@ -180,6 +183,9 @@
       <Filter>Source Files\Camera</Filter>
     </ClCompile>
     <ClCompile Include="StandaMotor.cpp">
+      <Filter>Source Files\Motors</Filter>
+    </ClCompile>
+    <ClCompile Include="XeryonMotor.cpp">
       <Filter>Source Files\Motors</Filter>
     </ClCompile>
   </ItemGroup>

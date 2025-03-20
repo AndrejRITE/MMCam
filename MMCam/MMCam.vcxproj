@@ -173,6 +173,7 @@
     <ClInclude Include="StandaMotor.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="resource1.h" />
+    <ClInclude Include="XeryonMotor.h" />
     <ClInclude Include="XimeaControl.h" />
   </ItemGroup>
   <ItemGroup>
@@ -195,6 +196,7 @@
     <ClCompile Include="cPreviewTools.cpp" />
     <ClCompile Include="cSettings.cpp" />
     <ClCompile Include="StandaMotor.cpp" />
+    <ClCompile Include="XeryonMotor.cpp" />
     <ClCompile Include="XimeaControl.cpp" />
   </ItemGroup>
   <ItemGroup>
