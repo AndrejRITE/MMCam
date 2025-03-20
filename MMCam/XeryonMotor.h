@@ -18,6 +18,16 @@
 
 #include "Xeryon.h"
 
+namespace XeryonMotorVariables
+{
+	enum Command
+	{
+		HOME,
+		CENTER,
+		ABS_POSITION,
+		OFFSET
+	};
+}
 
 class XeryonMotor final : public IMotor
 {
@@ -56,21 +66,23 @@ public:
 	XeryonMotorArray();
 
 	// Getters
-	std::map<std::string, float> GetSerialNumbersWithRanges() const override;
+	std::map<std::string, float> GetSerialNumbersWithRanges() const override { return m_NamesOfMotorsWithRanges; };
 	float GetActualStagePos(const std::string& motor_sn) const override;
 	bool IsMotorConnected(const std::string& motor_sn) const override;
 
 	// Setters
-	float GoMotorHome(const std::string& motor_sn) override;
-	float GoMotorCenter(const std::string& motor_sn) override;
-	float GoMotorToAbsolutePosition(const std::string& motor_sn, float abs_pos) override;
-	float GoMotorOffset(const std::string& motor_sn, float offset) override;
+	float GoMotorHome(const std::string& motor_sn) override { return GoMotor(motor_sn, XeryonMotorVariables::Command::HOME); };
+	float GoMotorCenter(const std::string& motor_sn) override { return GoMotor(motor_sn, XeryonMotorVariables::Command::CENTER); };
+	float GoMotorToAbsolutePosition(const std::string& motor_sn, float abs_pos) override { return GoMotor(motor_sn, XeryonMotorVariables::Command::ABS_POSITION, abs_pos); };
+	float GoMotorOffset(const std::string& motor_sn, float offset) override { return GoMotor(motor_sn, XeryonMotorVariables::Command::OFFSET, offset); };
 
 	void SetStepsPerMMForTheMotor(const std::string motor_sn, const int stepsPerMM) override;
 
 private:
 	auto InitAllMotors() -> bool;
 	auto FillNames() -> void;
+
+	auto GoMotor(const std::string& motor_sn, XeryonMotorVariables::Command command, float pos = 0.f) -> float;
 
 private:
 	std::vector<XeryonMotor> m_MotorsArray;
@@ -79,5 +91,6 @@ private:
 	std::map<std::string, float> m_NamesOfMotorsWithRanges{};
 	std::map<std::string, std::string> m_AllAvailableCOMPortsWithSerialNumbers{};
 
+	const float error_position = 0.0f;
 };
 #endif

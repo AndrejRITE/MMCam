@@ -21,22 +21,32 @@ int cSettings::ShowModal()
 
 	wxBusyCursor busy;
 
-	if (!m_PhysicalMotors)
+	switch (m_MotorManufacturer)
 	{
-		switch (m_MotorManufacturer)
-		{
-		case SettingsVariables::STANDA:
-			m_PhysicalMotors = std::make_unique<StandaMotorArray>();
-			break;
-		case SettingsVariables::XERYON:
-			m_PhysicalMotors = std::make_unique<XeryonMotorArray>();
-			break;
-		default:
-			break;
-		}
+	case SettingsVariables::STANDA:
+		m_PhysicalMotors = std::make_unique<StandaMotorArray>();
+		break;
+	case SettingsVariables::XERYON:
+		m_PhysicalMotors = std::make_unique<XeryonMotorArray>();
+		break;
+	default:
+		break;
 	}
 
+	SetMotorStepsPerMM();
+
 	return result;
+}
+
+auto cSettings::SetMotorStepsPerMM() -> void
+{
+	auto motorsCount = m_WorkStations->work_station_data[0].selected_motors_in_data_file.size();
+	for (auto i{ 0 }; i < motorsCount; ++i)
+	{
+		auto motorSN = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[i];
+		auto steps_per_mm = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].motors_steps_per_mm[motorSN];
+		m_PhysicalMotors->SetStepsPerMMForTheMotor(motorSN.ToStdString(), steps_per_mm);
+	}
 }
 
 bool cSettings::IsCapturingFinished() const

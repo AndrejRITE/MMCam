@@ -181,6 +181,7 @@ public:
 	}
 
 	int ShowModal() override;
+	auto SetMotorStepsPerMM() -> void;
 	/* Progress Getter */
 	bool IsCapturingFinished() const;
 	void ProvideProgressInfo(wxString* msg, int* prgrs);

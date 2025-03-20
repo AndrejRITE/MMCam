@@ -377,7 +377,7 @@ auto StandaMotorArray::FillNames() -> void
 
 float StandaMotorArray::GetActualStagePos(const std::string& motor_sn) const
 {
-	if (motor_sn.empty()) return 0.f;
+	if (motor_sn.empty() || motor_sn == "None") return 0.f;
 
 	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
 	{
@@ -389,7 +389,7 @@ float StandaMotorArray::GetActualStagePos(const std::string& motor_sn) const
 
 bool StandaMotorArray::IsMotorConnected(const std::string& motor_sn) const
 {
-	if (motor_sn.empty()) return 0.f;
+	if (motor_sn.empty() || motor_sn == "None") return 0.f;
 
 	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
 	{
@@ -401,7 +401,7 @@ bool StandaMotorArray::IsMotorConnected(const std::string& motor_sn) const
 
 float StandaMotorArray::GoMotorHome(const std::string& motor_sn)
 {
-	if (motor_sn.empty()) return 0.f;
+	if (motor_sn.empty() || motor_sn == "None") return 0.f;
 
 	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
 	{
@@ -416,7 +416,7 @@ float StandaMotorArray::GoMotorHome(const std::string& motor_sn)
 
 float StandaMotorArray::GoMotorCenter(const std::string& motor_sn)
 {
-	if (motor_sn.empty()) return 0.f;
+	if (motor_sn.empty() || motor_sn == "None") return 0.f;
 
 	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
 	{
@@ -431,7 +431,7 @@ float StandaMotorArray::GoMotorCenter(const std::string& motor_sn)
 
 float StandaMotorArray::GoMotorToAbsolutePosition(const std::string& motor_sn, float abs_pos)
 {
-	if (motor_sn.empty()) return 0.f;
+	if (motor_sn.empty() || motor_sn == "None") return 0.f;
 
 	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
 	{
@@ -446,7 +446,7 @@ float StandaMotorArray::GoMotorToAbsolutePosition(const std::string& motor_sn, f
 
 float StandaMotorArray::GoMotorOffset(const std::string& motor_sn, float offset)
 {
-	if (motor_sn.empty()) return 0.f;
+	if (motor_sn.empty() || motor_sn == "None") return 0.f;
 
 	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
 	{
@@ -465,7 +465,7 @@ float StandaMotorArray::GoMotorOffset(const std::string& motor_sn, float offset)
 
 auto StandaMotorArray::SetStepsPerMMForTheMotor(const std::string motor_sn, const int stepsPerMM) -> void
 {
-	if (motor_sn.empty()) return;
+	if (motor_sn.empty() || motor_sn == "None") return;
 
 	if (stepsPerMM <= 0) return;
 

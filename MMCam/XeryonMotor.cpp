@@ -64,43 +64,44 @@ XeryonMotorArray::XeryonMotorArray()
 	InitAllMotors();
 }
 
-std::map<std::string, float> XeryonMotorArray::GetSerialNumbersWithRanges() const
-{
-	return std::map<std::string, float>();
-}
-
 float XeryonMotorArray::GetActualStagePos(const std::string& motor_sn) const
 {
-	return 0.0f;
+	if (motor_sn.empty() || motor_sn == "None") return 0.f;
+
+	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
+	{
+		if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
+			return m_MotorsArray[motor].GetDeviceActualStagePos();
+	}
+	return error_position;
 }
 
 bool XeryonMotorArray::IsMotorConnected(const std::string& motor_sn) const
 {
+	if (motor_sn.empty() || motor_sn == "None") return 0.f;
+
+	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
+	{
+		if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
+			return true;
+	}
 	return false;
-}
-
-float XeryonMotorArray::GoMotorHome(const std::string& motor_sn)
-{
-	return 0.0f;
-}
-
-float XeryonMotorArray::GoMotorCenter(const std::string& motor_sn)
-{
-	return 0.0f;
-}
-
-float XeryonMotorArray::GoMotorToAbsolutePosition(const std::string& motor_sn, float abs_pos)
-{
-	return 0.0f;
-}
-
-float XeryonMotorArray::GoMotorOffset(const std::string& motor_sn, float offset)
-{
-	return 0.0f;
 }
 
 void XeryonMotorArray::SetStepsPerMMForTheMotor(const std::string motor_sn, const int stepsPerMM)
 {
+	if (motor_sn.empty() || motor_sn == "None") return;
+
+	if (stepsPerMM <= 0) return;
+
+	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
+	{
+		if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
+		{
+			m_MotorsArray[motor].SetStepsPerMMRatio((float)stepsPerMM);
+			break;
+		}
+	}
 }
 
 auto XeryonMotorArray::InitAllMotors() -> bool
@@ -174,5 +175,41 @@ auto XeryonMotorArray::FillNames() -> void
 				motor.GetDeviceRange()
 			)
 		);
+}
+
+auto XeryonMotorArray::GoMotor
+(
+	const std::string& motor_sn, 
+	XeryonMotorVariables::Command command, 
+	float pos
+) -> float
+{
+	if (motor_sn.empty() || motor_sn == "None") return 0.f;
+
+	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
+	{
+		if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
+		{
+			switch (command)
+			{
+			case XeryonMotorVariables::HOME:
+				m_MotorsArray[motor].GoHomeAndZero();
+				break;
+			case XeryonMotorVariables::CENTER:
+				m_MotorsArray[motor].GoCenter();
+				break;
+			case XeryonMotorVariables::ABS_POSITION:
+				m_MotorsArray[motor].GoToAbsolutePosition(pos);
+				break;
+			case XeryonMotorVariables::OFFSET:
+				m_MotorsArray[motor].GoToAbsolutePosition(m_MotorsArray[motor].GetDeviceActualStagePos() + pos);
+				break;
+			default:
+				break;
+			}
+			return m_MotorsArray[motor].GetDeviceActualStagePos();
+		}
+	}
+	return error_position;
 }
 
