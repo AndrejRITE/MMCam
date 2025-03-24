@@ -2,66 +2,91 @@
 
 XeryonMotor::XeryonMotor()
 {
+	m_MotorSettings = std::make_unique<MotorVariables::Settings>();
+
 }
 
 bool XeryonMotor::GoCenter()
 {
-	return false;
+
+#ifdef CPP
+	auto currCOMPort = "\\\\.\\" + m_MotorCOMPort;
+	auto controller = std::make_unique<Xeryon>(currCOMPort.c_str(), m_Baudrate);
+	auto axis = controller->addAxis('X', &m_Stage);
+
+	controller->start();
+	//if (!m_Axis) return false;
+
+	axis->findIndex();
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));
+	m_MotorSettings->motorPos = axis->getData(commandForPosition);
+	//UpdateCurrentPosition();
+
+	controller->stop();
+#endif // CPP
+	return true;
 }
 
 bool XeryonMotor::GoHomeAndZero()
 {
-	return false;
+	return GoCenter();
 }
 
 bool XeryonMotor::GoToAbsolutePosition(float stagePosition)
 {
-	return false;
-}
+	//try 
+	//{
+	//	m_MotorSettings->motorPos = script_setAbsolutePosition.attr("move_to_position")
+	//		(m_MotorCOMPort.c_str(), stagePosition).cast<double>();
+	//}
+	//catch (const py::error_already_set& e) 
+	//{
+	//	//std::cerr << "Python Error: " << e.what() << std::endl;
+	//	return false;
+	//}
 
-std::string XeryonMotor::GetDeviceSerNum() const
-{
-	return std::string();
-}
+#ifdef CPP
+	auto currCOMPort = "\\\\.\\" + m_MotorCOMPort;
+	auto controller = std::make_unique<Xeryon>(currCOMPort.c_str(), m_Baudrate);
+	auto axis = controller->addAxis('X', &m_Stage);
 
-float XeryonMotor::GetDeviceRange() const
-{
-	return 0.0f;
+	controller->start();
+
+	auto intPart = (long double)(stagePosition - m_MotorSettings->motorPos) * 1'000'000'000.0;
+	Distance disNM(intPart, Distance::NM);
+	axis->step(disNM);
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));
+	m_MotorSettings->motorPos = axis->getDPOS();
+	auto dpos = (double)axis->getDPOS();
+	auto epos = (double)axis->getEPOS();
+
+	//UpdateCurrentPosition();
+	controller->stop();
+#endif // CPP
+
+	return true;
 }
 
 float XeryonMotor::GetDeviceActualStagePos() const
 {
-	return 0.0f;
-}
+	//if (!m_Axis) return 0.f;
+	//auto currCOMPort = "\\\\.\\" + m_MotorCOMPort;
+	//auto controller = std::make_unique<Xeryon>(currCOMPort.c_str(), m_Baudrate);
+	//auto axis = controller->addAxis('X', &m_Stage);
 
-void XeryonMotor::SetDeviceName(const std::string& deviceName)
-{
-}
+	//auto position = (long double)m_Axis->getData(commandForPosition);
+	//m_MotorSettings->motorPos = position;
 
-void XeryonMotor::SetMotorSerialNumber(std::string serialNumber)
-{
-}
-
-void XeryonMotor::SetStepsPerMMRatio(const int stepsPerMMRatio)
-{
-}
-
-void XeryonMotor::SetRange(const float minMotorDeg, const float maxMotorDeg)
-{
-}
-
-void XeryonMotor::SetCurrentMotorPosition(const int motorPosition)
-{
-}
-
-void XeryonMotor::UpdateCurrentPosition()
-{
+	return m_MotorSettings->motorPos;
 }
 
 // XeryonMotorArray Start
 XeryonMotorArray::XeryonMotorArray()
 {
 	InitAllMotors();
+
 }
 
 float XeryonMotorArray::GetActualStagePos(const std::string& motor_sn) const
@@ -130,21 +155,30 @@ auto XeryonMotorArray::InitAllMotors() -> bool
 	m_MotorsArray.clear();
 	m_MotorsArray.reserve(names_count);
 
+	//m_XeryonControllerArray.reserve(names_count);
+	//m_XeryonAxisArray.reserve(names_count);
+
 	auto iterator = m_AllAvailableCOMPortsWithSerialNumbers.begin();
 
 	auto i{ 0 };
 	while (iterator != m_AllAvailableCOMPortsWithSerialNumbers.end())
 	{
 		m_MotorsArray.emplace_back(XeryonMotor());
+		m_MotorsArray[i].SetMotorCOMPort(iterator->first);
 		m_MotorsArray[i].SetDeviceName(iterator->second);
 		m_MotorsArray[i].SetMotorSerialNumber(iterator->second);
+		//m_MotorsArray[i].SetAxisLetter(m_AxisLetters[i]);
 
-		auto currCOMPort = "\\\\.\\" + iterator->first;
-		auto baudrate = 115'200;
-		auto controller = std::make_unique<Xeryon>(currCOMPort.c_str(), baudrate);
-		const auto stage = XLS_1250;
-		auto axis = controller->addAxis('X', &stage);
-		m_MotorsArray[i].SetCurrentMotorPosition(axis->getData("DPOS"));
+		//auto currCOMPort = "\\\\.\\" + iterator->first;
+		//auto baudrate = 115'200;
+		//m_XeryonControllerArray.emplace_back
+		//(
+		//	std::make_unique<Xeryon>(currCOMPort.c_str(), baudrate)
+		//);
+		//auto axis = m_XeryonControllerArray[i]->addAxis(m_AxisLetters[i], &m_Stage);
+
+		m_MotorsArray[i].SetCurrentMotorPosition(0.f);
+		//m_MotorsArray[i].SetAxis(axis);
 
 		m_MotorsArray[i].SetRange(-12.5f, 12.5f);
 		m_MotorsArray[i].UpdateCurrentPosition();
@@ -184,6 +218,37 @@ auto XeryonMotorArray::GoMotor
 	float pos
 ) -> float
 {
+	auto goCenter = [&](XeryonMotor* motor)
+		{
+			try
+			{
+				script_goCenter = py::module::import("xeryon_goCenter");  // Import Python script
+				motor->SetCurrentMotorPosition(script_goCenter.attr("move_to_position")
+					(motor->GetDeviceCOMPort().c_str()).cast<double>());
+			}
+			catch (const py::error_already_set& e)
+			{
+				auto err = std::string(e.what());
+				return false;
+			}
+		};
+
+	auto setAbsolutePosition = [&](XeryonMotor* motor, float position)
+		{
+			try
+			{
+				script_setAbsolutePosition = py::module::import("xeryon_setAbsolutePosition");  // Import Python script
+				motor->SetCurrentMotorPosition(script_setAbsolutePosition.attr("move_to_position")
+					(motor->GetDeviceCOMPort().c_str(), position).cast<double>());
+			}
+			catch (const py::error_already_set& e)
+			{
+				auto err = std::string(e.what());
+				return false;
+			}
+		};
+
+
 	if (motor_sn.empty() || motor_sn == "None") return 0.f;
 
 	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
@@ -196,13 +261,16 @@ auto XeryonMotorArray::GoMotor
 				m_MotorsArray[motor].GoHomeAndZero();
 				break;
 			case XeryonMotorVariables::CENTER:
-				m_MotorsArray[motor].GoCenter();
+				goCenter(&m_MotorsArray[motor]);
+				//m_MotorsArray[motor].GoCenter();
 				break;
 			case XeryonMotorVariables::ABS_POSITION:
-				m_MotorsArray[motor].GoToAbsolutePosition(pos);
+				setAbsolutePosition(&m_MotorsArray[motor], pos);
+				//m_MotorsArray[motor].GoToAbsolutePosition(pos);
 				break;
 			case XeryonMotorVariables::OFFSET:
-				m_MotorsArray[motor].GoToAbsolutePosition(m_MotorsArray[motor].GetDeviceActualStagePos() + pos);
+				setAbsolutePosition(&m_MotorsArray[motor], m_MotorsArray[motor].GetDeviceActualStagePos() + pos);
+				//m_MotorsArray[motor].GoToAbsolutePosition(m_MotorsArray[motor].GetDeviceActualStagePos() + pos);
 				break;
 			default:
 				break;

@@ -16,19 +16,6 @@
 #include "IMotorArray.h"
 
 
-namespace MotorVariables
-{
-	struct Settings
-	{
-		float motorPos{};
-		float minMotorPos{}, middleMotorPos{}, maxMotorPos{};
-		float stagePos{};
-		float minStagePos{}, middleStagePos{}, maxStagePos{};
-		float motorRange{}, stageRange{};
-		float stepsPerMMRatio{ 800.f };
-	};
-}
-
 namespace StandaVariables
 {
 	struct C_Settings
