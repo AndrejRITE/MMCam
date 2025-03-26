@@ -1343,6 +1343,14 @@ private:
 		//wxLogMessage("File successfully copied to: %s", destination);
 	}
 
+	auto CreateStringWithPrecision(double value, int decimalPlaces) -> wxString
+	{
+		// Create a wxString with the specified number of decimal places
+		wxString formattedString = wxString::Format(wxT("%.") + std::to_string(decimalPlaces) + wxT("f"), value);
+		return formattedString;
+	};
+
+
 private:
 	/* Settings Menu */
 	std::unique_ptr<cSettings> m_Settings{};
@@ -1408,6 +1416,8 @@ private:
 	wxWindow* m_OpticsPage{};
 
 	std::vector<std::pair<wxString, bool>> m_StartedThreads{};
+
+	int m_DecimalDigits = 4;
 
 	wxDECLARE_EVENT_TABLE();
 };

@@ -111,9 +111,6 @@
     <ClInclude Include="cGenerateReportDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CameraControl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="IMotorArray.h">
       <Filter>Header Files\Interfaces</Filter>
     </ClInclude>
@@ -146,6 +143,9 @@
     </ClInclude>
     <ClInclude Include="..\include\Xeryon\inc\Xeryon.h">
       <Filter>Header Files\Motors\Xeryon</Filter>
+    </ClInclude>
+    <ClInclude Include="CameraControl.h">
+      <Filter>Header Files\Interfaces</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

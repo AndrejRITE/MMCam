@@ -243,47 +243,49 @@ void cMain::InitDefaultStateWidgets()
 	m_CamPreview->SetValueDisplayingActive(true);
 	m_IsValueDisplayingChecked = true;
 
-	float default_absolute_value{ 0.0f }, default_relative_value{ 1.0f };
+	wxString defaultAbsoluteValueStr{ CreateStringWithPrecision(0.0, m_DecimalDigits) }, defaultRelativeValueStr{ CreateStringWithPrecision(0.0, m_DecimalDigits) };
+	//float default_absolute_value{ 0.0f }, default_relative_value{ 1.0f };
 	/* Disabling Detector Widgets */
 	{
 		/* X */
 		{
-			m_Detector[0].absolute_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), default_absolute_value));
-			m_Detector[0].relative_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), default_relative_value));
+			m_Detector[0].absolute_text_ctrl->ChangeValue(defaultAbsoluteValueStr);
+			m_Detector[0].relative_text_ctrl->ChangeValue(defaultRelativeValueStr);
 			//m_X_Detector->DisableAllControls();
 		}
 		/* Y */
 		{
-			m_Detector[1].absolute_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), default_absolute_value));
-			m_Detector[1].relative_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), default_relative_value));
+			m_Detector[1].absolute_text_ctrl->ChangeValue(defaultAbsoluteValueStr);
+			m_Detector[1].relative_text_ctrl->ChangeValue(defaultRelativeValueStr);
 			//m_Y_Detector->DisableAllControls();
 		}
 		/* Z */
 		{
-			m_Detector[2].absolute_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), default_absolute_value));
-			m_Detector[2].relative_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), default_relative_value));
+			m_Detector[2].absolute_text_ctrl->ChangeValue(defaultAbsoluteValueStr);
+			m_Detector[2].relative_text_ctrl->ChangeValue(defaultRelativeValueStr);
 			//m_Z_Detector->DisableAllControls();
 		}
 	}
-	default_relative_value = 0.1f;
+	//default_relative_value = 0.1f;
+	defaultRelativeValueStr = CreateStringWithPrecision(0.1, m_DecimalDigits);
 	/* Disabling Optics Widgets */
 	{
 		/* X */
 		{
-			m_Optics[0].absolute_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), default_absolute_value));
-			m_Optics[0].relative_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), default_relative_value));
+			m_Optics[0].absolute_text_ctrl->ChangeValue(defaultAbsoluteValueStr);
+			m_Optics[0].relative_text_ctrl->ChangeValue(defaultRelativeValueStr);
 			//m_X_Optics->DisableAllControls();
 		}
 		/* Y */
 		{
-			m_Optics[1].absolute_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), default_absolute_value));
-			m_Optics[1].relative_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), default_relative_value));
+			m_Optics[1].absolute_text_ctrl->ChangeValue(defaultAbsoluteValueStr);
+			m_Optics[1].relative_text_ctrl->ChangeValue(defaultRelativeValueStr);
 			//m_Y_Optics->DisableAllControls();
 		}
 		/* Z */
 		{
-			m_Optics[2].absolute_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), default_absolute_value));
-			m_Optics[2].relative_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), default_relative_value));
+			m_Optics[2].absolute_text_ctrl->ChangeValue(defaultAbsoluteValueStr);
+			m_Optics[2].relative_text_ctrl->ChangeValue(defaultRelativeValueStr);
 			//m_Z_Optics->DisableAllControls();
 		}
 	}
@@ -293,13 +295,14 @@ void cMain::InitDefaultStateWidgets()
 		//m_OutDirTextCtrl->Disable();
 		//m_OutDirBtn->Disable();
 
-		float default_start{ 0.0f }, default_step{ 0.1f }, default_finish{ 24.0f };
+		wxString defaultStartStr{ CreateStringWithPrecision(0.0, m_DecimalDigits) }, defaultStepStr{ CreateStringWithPrecision(0.1, m_DecimalDigits) }, defaultFinishStr{ CreateStringWithPrecision(24.0, m_DecimalDigits) };
+		//float default_start{ 0.0f }, default_step{ 0.1f }, default_finish{ 24.0f };
 
 		/* First Stage */
 		{
-			m_FirstStage->start->ChangeValue(wxString::Format(wxT("%.3f"), default_start));
-			m_FirstStage->step->ChangeValue(wxString::Format(wxT("%.3f"), default_step));
-			m_FirstStage->finish->ChangeValue(wxString::Format(wxT("%.3f"), default_finish));
+			m_FirstStage->start->ChangeValue(defaultStartStr);
+			m_FirstStage->step->ChangeValue(defaultStepStr);
+			m_FirstStage->finish->ChangeValue(defaultFinishStr);
 			m_FirstStage->DisableAllControls();
 		}
 		/* Second Stage */
@@ -397,8 +400,10 @@ auto cMain::CreateDetectorPage
 	const wxBitmap& homeBitmap
 ) -> wxWindow*
 {
+
 	wxPanel* page = new wxPanel(parent);
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+	auto defaultText = CreateStringWithPrecision(123.456789, m_DecimalDigits);
 	{
 		/* Detector X */
 		wxSizer* const x_detector = new wxStaticBoxSizer(wxHORIZONTAL, page, "&X");
@@ -407,13 +412,13 @@ auto cMain::CreateDetectorPage
 			/* Absolute */
 			{
 				wxSizer* const abs_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Absolute [mm]");
-				wxFloatingPointValidator<float>	abs_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	abs_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				abs_val.SetMin(-1000.f);
 				abs_val.SetMax(1000.f);
 				m_Detector[0].absolute_text_ctrl = new wxTextCtrl(
 					page, 
 					MainFrameVariables::ID_RIGHT_SC_DET_X_ABS_TE_CTL, 
-					wxT("123.456"), 
+					defaultText, 
 					wxDefaultPosition, 
 					absoluteTxtCtrlSize, 
 					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
@@ -442,13 +447,13 @@ auto cMain::CreateDetectorPage
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
 				m_Detector[0].decrement_btn->SetToolTip(wxT("Decrement distance"));
-				wxFloatingPointValidator<float>	rel_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	rel_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				rel_val.SetMin(-1000.f);
 				rel_val.SetMax(1000.f);
 				m_Detector[0].relative_text_ctrl = new wxTextCtrl(
 					page,
 					MainFrameVariables::ID_RIGHT_SC_DET_X_REL_TE_CTL, 
-					wxT("789.123"), 
+					defaultText, 
 					wxDefaultPosition, 
 					relativeTxtCtrlSize, 
 					wxTE_CENTRE, 
@@ -505,13 +510,13 @@ auto cMain::CreateDetectorPage
 			/* Absolute */
 			{
 				wxSizer* const abs_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Absolute [mm]");
-				wxFloatingPointValidator<float>	abs_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	abs_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				abs_val.SetMin(-1000.f);
 				abs_val.SetMax(1000.f);
 				m_Detector[1].absolute_text_ctrl = new wxTextCtrl(
 					page, 
 					MainFrameVariables::ID_RIGHT_SC_DET_Y_ABS_TE_CTL, 
-					wxT("123.456"), 
+					defaultText, 
 					wxDefaultPosition, 
 					absoluteTxtCtrlSize, 
 					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
@@ -540,13 +545,13 @@ auto cMain::CreateDetectorPage
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
 				m_Detector[1].decrement_btn->SetToolTip(wxT("Decrement distance"));
-				wxFloatingPointValidator<float>	rel_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	rel_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				rel_val.SetMin(-1000.f);
 				rel_val.SetMax(1000.f);
 				m_Detector[1].relative_text_ctrl = new wxTextCtrl(
 					page,
 					MainFrameVariables::ID_RIGHT_SC_DET_Y_REL_TE_CTL, 
-					wxT("789.123"), 
+					defaultText, 
 					wxDefaultPosition, 
 					relativeTxtCtrlSize, 
 					wxTE_CENTRE, 
@@ -603,13 +608,13 @@ auto cMain::CreateDetectorPage
 			/* Absolute */
 			{
 				wxSizer* const abs_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Absolute [mm]");
-				wxFloatingPointValidator<float>	abs_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	abs_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				abs_val.SetMin(-1000.f);
 				abs_val.SetMax(1000.f);
 				m_Detector[2].absolute_text_ctrl = new wxTextCtrl(
 					page, 
 					MainFrameVariables::ID_RIGHT_SC_DET_Z_ABS_TE_CTL, 
-					wxT("123.456"), 
+					defaultText, 
 					wxDefaultPosition, 
 					absoluteTxtCtrlSize, 
 					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
@@ -638,13 +643,13 @@ auto cMain::CreateDetectorPage
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
 				m_Detector[2].decrement_btn->SetToolTip(wxT("Decrement distance"));
-				wxFloatingPointValidator<float>	rel_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	rel_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				rel_val.SetMin(-1000.f);
 				rel_val.SetMax(1000.f);
 				m_Detector[2].relative_text_ctrl = new wxTextCtrl(
 					page,
 					MainFrameVariables::ID_RIGHT_SC_DET_Z_REL_TE_CTL, 
-					wxT("789.123"), 
+					defaultText, 
 					wxDefaultPosition, 
 					relativeTxtCtrlSize, 
 					wxTE_CENTRE, 
@@ -710,6 +715,7 @@ auto cMain::CreateOpticsPage
 {
 	wxPanel* page = new wxPanel(parent);
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+	auto defaultText = CreateStringWithPrecision(123.456789, m_DecimalDigits);
 	{
 		/* Optics X */
 		wxSizer* const x_optics = new wxStaticBoxSizer(wxHORIZONTAL, page, "&X");
@@ -718,13 +724,13 @@ auto cMain::CreateOpticsPage
 			/* Absolute */
 			{
 				wxSizer* const abs_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Absolute [mm]");
-				wxFloatingPointValidator<float>	abs_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	abs_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				abs_val.SetMin(-1000.f);
 				abs_val.SetMax(1000.f);
 				m_Optics[0].absolute_text_ctrl = new wxTextCtrl(
 					page, 
 					MainFrameVariables::ID_RIGHT_SC_OPT_X_ABS_TE_CTL, 
-					wxT("123.456"), 
+					defaultText, 
 					wxDefaultPosition, 
 					absoluteTxtCtrlSize, 
 					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
@@ -754,14 +760,14 @@ auto cMain::CreateOpticsPage
 					incrementDecrementBtnSize);
 
 				m_Optics[0].decrement_btn->SetToolTip(wxT("Decrement distance"));
-				wxFloatingPointValidator<float>	rel_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	rel_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				rel_val.SetMin(-1000.f);
 				rel_val.SetMax(1000.f);
 
 				m_Optics[0].relative_text_ctrl = new wxTextCtrl(
 					page,
 					MainFrameVariables::ID_RIGHT_SC_OPT_X_REL_TE_CTL, 
-					wxT("789.123"), 
+					defaultText, 
 					wxDefaultPosition, 
 					relativeTxtCtrlSize, 
 					wxTE_CENTRE, 
@@ -816,14 +822,14 @@ auto cMain::CreateOpticsPage
 			/* Absolute */
 			{
 				wxSizer* const abs_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Absolute [mm]");
-				wxFloatingPointValidator<float>	abs_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	abs_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				abs_val.SetMin(-1000.f);
 				abs_val.SetMax(1000.f);
 
 				m_Optics[1].absolute_text_ctrl = new wxTextCtrl(
 					page, 
 					MainFrameVariables::ID_RIGHT_SC_OPT_Y_ABS_TE_CTL, 
-					wxT("123.456"), 
+					defaultText, 
 					wxDefaultPosition, 
 					absoluteTxtCtrlSize, 
 					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
@@ -852,13 +858,13 @@ auto cMain::CreateOpticsPage
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
 				m_Optics[1].decrement_btn->SetToolTip(wxT("Decrement distance"));
-				wxFloatingPointValidator<float>	rel_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	rel_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				rel_val.SetMin(-1000.f);
 				rel_val.SetMax(1000.f);
 				m_Optics[1].relative_text_ctrl = new wxTextCtrl(
 					page,
 					MainFrameVariables::ID_RIGHT_SC_OPT_Y_REL_TE_CTL, 
-					wxT("789.123"), 
+					defaultText, 
 					wxDefaultPosition, 
 					relativeTxtCtrlSize, 
 					wxTE_CENTRE, 
@@ -913,13 +919,13 @@ auto cMain::CreateOpticsPage
 			/* Absolute */
 			{
 				wxSizer* const abs_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Absolute [mm]");
-				wxFloatingPointValidator<float>	abs_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	abs_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				abs_val.SetMin(-1000.f);
 				abs_val.SetMax(1000.f);
 				m_Optics[2].absolute_text_ctrl = new wxTextCtrl(
 					page, 
 					MainFrameVariables::ID_RIGHT_SC_OPT_Z_ABS_TE_CTL, 
-					wxT("123.456"), 
+					defaultText, 
 					wxDefaultPosition, 
 					absoluteTxtCtrlSize, 
 					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
@@ -948,13 +954,13 @@ auto cMain::CreateOpticsPage
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
 				m_Optics[2].decrement_btn->SetToolTip(wxT("Decrement distance"));
-				wxFloatingPointValidator<float>	rel_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	rel_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				rel_val.SetMin(-1000.f);
 				rel_val.SetMax(1000.f);
 				m_Optics[2].relative_text_ctrl = new wxTextCtrl(
 					page,
 					MainFrameVariables::ID_RIGHT_SC_OPT_Z_REL_TE_CTL, 
-					wxT("789.123"), 
+					defaultText, 
 					wxDefaultPosition, 
 					relativeTxtCtrlSize, 
 					wxTE_CENTRE, 
@@ -1313,6 +1319,7 @@ void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_
 
 	wxSize start_text_ctrl_size = { 54, 20 }, step_text_ctrl_size = {start_text_ctrl_size}, finish_text_ctrl_size{start_text_ctrl_size};
 
+	auto defaultText = CreateStringWithPrecision(123.456789, m_DecimalDigits);
 	{
 		wxSizer* const directions_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, right_side_panel, "&Directions");
 
@@ -1338,14 +1345,14 @@ void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_
 			{
 				wxSizer* const start_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, right_side_panel, "&Start");
 
-				wxFloatingPointValidator<float>	start_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	start_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				start_val.SetMin(-1000.0);
 				start_val.SetMax(1000.0);
 
 				m_FirstStage->start = new wxTextCtrl(
 					right_side_panel,
 					MainFrameVariables::ID_RIGHT_MT_FIRST_STAGE_START,
-					wxT("123.456"), 
+					defaultText, 
 					wxDefaultPosition, 
 					start_text_ctrl_size, 
 					wxTE_CENTRE, 
@@ -1360,14 +1367,14 @@ void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_
 			{
 				wxSizer* const step_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, right_side_panel, "&Step");
 
-				wxFloatingPointValidator<float>	step_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	step_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				step_val.SetMin(-1000.0);
 				step_val.SetMax(1000.0);
 
 				m_FirstStage->step = new wxTextCtrl(
 					right_side_panel, 
 					MainFrameVariables::ID_RIGHT_MT_FIRST_STAGE_STEP,
-					wxT("123.456"), 
+					defaultText, 
 					wxDefaultPosition, 
 					step_text_ctrl_size, 
 					wxTE_CENTRE, 
@@ -1381,14 +1388,14 @@ void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_
 			{
 				wxSizer* const finish_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, right_side_panel, "&Finish");
 
-				wxFloatingPointValidator<float>	finish_val(3, NULL, wxNUM_VAL_DEFAULT);
+				wxFloatingPointValidator<float>	finish_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
 				finish_val.SetMin(-1000.0);
 				finish_val.SetMax(1000.0);
 
 				m_FirstStage->finish = new wxTextCtrl(
 					right_side_panel, 
 					MainFrameVariables::ID_RIGHT_MT_FIRST_STAGE_FINISH,
-					wxT("123.456"), 
+					defaultText, 
 					wxDefaultPosition, 
 					finish_text_ctrl_size, 
 					wxTE_CENTRE, 
