@@ -80,6 +80,12 @@ Copy-Item -Path "${ximea_folder}\xiapi64.dll" -Destination "${release_folder}\xi
 Write-Output "Copying other files into ${release_folder} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
 Copy-Item -Path "${other_files_folder}\table.txt" -Destination "${release_folder}\table.txt" -Force
 
+# Copy Xeryon files
+Write-Output "Copying Xeryon Python files into ${release_folder} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
+Copy-Item -Path "${other_files_folder}\Xeryon.py" -Destination "${release_folder}\Xeryon.py" -Force
+Copy-Item -Path "${other_files_folder}\xeryon_goCenter.py" -Destination "${release_folder}\xeryon_goCenter.py" -Force
+Copy-Item -Path "${other_files_folder}\xeryon_setAbsolutePosition.py" -Destination "${release_folder}\xeryon_setAbsolutePosition.py" -Force
+
 # Check if the src folder exists, and create it if not
 $src_folder = "${release_folder}\src"
 # Check if the temp folder exists, and create it if not
