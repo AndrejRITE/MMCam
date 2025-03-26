@@ -27,7 +27,7 @@ int cSettings::ShowModal()
 		m_PhysicalMotors = std::make_unique<StandaMotorArray>();
 		break;
 	case SettingsVariables::XERYON:
-		m_PhysicalMotors = std::make_unique<XeryonMotorArray>();
+		InitializeXeryonAndCheckPython();
 		break;
 	default:
 		break;
@@ -1223,4 +1223,20 @@ auto cSettings::RewriteInitializationFile() -> void
 		out_file.close();
 	}
 	document->clear();
+}
+
+auto cSettings::InitializeXeryonAndCheckPython() -> void
+{
+	m_PhysicalMotors = std::make_unique<XeryonMotorArray>();
+
+	std::vector<wxString> missing = GetMissingPythonModules("requirements.txt");
+	if (!missing.empty())
+	{
+		wxString message = "Missing modules:\n";
+		for (const auto& mod : missing)
+		{
+			message += mod + "\n";
+		}
+		wxLogMessage(message);
+	}
 }

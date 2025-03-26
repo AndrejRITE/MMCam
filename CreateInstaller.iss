@@ -31,6 +31,7 @@ Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\opencv_world4100.dll"; D
 Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\table.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\xiapi64.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\xiwrapper.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\Xeryon.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\xeryon_goCenter.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\xeryon_setAbsolutePosition.py"; DestDir: "{app}"; Flags: ignoreversion

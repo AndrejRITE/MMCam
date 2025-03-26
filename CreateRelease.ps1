@@ -85,6 +85,7 @@ Write-Output "Copying Xeryon Python files into ${release_folder} [$(Get-Date)]" 
 Copy-Item -Path "${other_files_folder}\Xeryon.py" -Destination "${release_folder}\Xeryon.py" -Force
 Copy-Item -Path "${other_files_folder}\xeryon_goCenter.py" -Destination "${release_folder}\xeryon_goCenter.py" -Force
 Copy-Item -Path "${other_files_folder}\xeryon_setAbsolutePosition.py" -Destination "${release_folder}\xeryon_setAbsolutePosition.py" -Force
+Copy-Item -Path "${other_files_folder}\requirements.txt" -Destination "${release_folder}\requirements.txt" -Force
 
 # Check if the src folder exists, and create it if not
 $src_folder = "${release_folder}\src"

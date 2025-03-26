@@ -4,6 +4,7 @@
 
 #include "wx/wx.h"
 #include "wx/valnum.h"
+#include "wx/textfile.h"
 
 #include <memory>
 #include <map>
@@ -290,6 +291,50 @@ private:
 	void ResetAllMotorsAndRangesInXMLFile();
 
 	auto RewriteInitializationFile() -> void;
+
+	auto InitializeXeryonAndCheckPython() -> void;
+
+	// Python
+	bool IsPythonInstalled()
+	{
+		int exitCode = wxExecute("python --version", wxEXEC_SYNC);
+		if (exitCode != 0)
+		{
+			exitCode = wxExecute("python3 --version", wxEXEC_SYNC);
+		}
+		return (exitCode == 0);
+	}
+
+	bool IsPythonModuleInstalled(const wxString& moduleName)
+	{
+		wxString command = "python -m pip show " + moduleName;
+		int exitCode = wxExecute(command, wxEXEC_SYNC);
+		return (exitCode == 0);
+	}
+
+	std::vector<wxString> GetMissingPythonModules(const wxString& requirementsPath)
+	{
+		std::vector<wxString> missingModules;
+		wxTextFile file(requirementsPath);
+
+		if (!file.Open())
+		{
+			wxLogError("Could not open requirements.txt");
+			return missingModules;
+		}
+
+		for (size_t i = 0; i < file.GetLineCount(); ++i)
+		{
+			wxString module = file.GetLine(i).BeforeFirst('='); // Extract module name before '='
+			if (!IsPythonModuleInstalled(module))
+			{
+				missingModules.push_back(module);
+			}
+		}
+
+		file.Close();
+		return missingModules;
+	}
 
 private:
 	const wxString m_InitializationFilePath = "MMCam.ini";
