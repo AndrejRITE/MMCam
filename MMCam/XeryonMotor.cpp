@@ -85,8 +85,8 @@ float XeryonMotor::GetDeviceActualStagePos() const
 // XeryonMotorArray Start
 XeryonMotorArray::XeryonMotorArray()
 {
+	static py::scoped_interpreter guard{};  // Start Python interpreter
 	InitAllMotors();
-
 }
 
 float XeryonMotorArray::GetActualStagePos(const std::string& motor_sn) const
@@ -222,7 +222,9 @@ auto XeryonMotorArray::GoMotor
 		{
 			try
 			{
-				script_goCenter = py::module::import("xeryon_goCenter");  // Import Python script
+				py::module importlib = py::module::import("importlib");
+				py::module script_goCenter = importlib.attr("reload")(py::module::import("xeryon_goCenter"));
+
 				motor->SetCurrentMotorPosition(script_goCenter.attr("move_to_position")
 					(motor->GetDeviceCOMPort().c_str()).cast<double>());
 			}
@@ -237,7 +239,9 @@ auto XeryonMotorArray::GoMotor
 		{
 			try
 			{
-				script_setAbsolutePosition = py::module::import("xeryon_setAbsolutePosition");  // Import Python script
+				py::module importlib = py::module::import("importlib");
+				py::module script_setAbsolutePosition = importlib.attr("reload")(py::module::import("xeryon_setAbsolutePosition"));
+
 				motor->SetCurrentMotorPosition(script_setAbsolutePosition.attr("move_to_position")
 					(motor->GetDeviceCOMPort().c_str(), position).cast<double>());
 			}

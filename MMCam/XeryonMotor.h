@@ -159,8 +159,7 @@ private:
 	std::map<std::string, float> m_NamesOfMotorsWithRanges{};
 	std::map<std::string, std::string> m_AllAvailableCOMPortsWithSerialNumbers{};
 
-	py::scoped_interpreter m_PythonGuard{};  // Start Python interpreter
-	py::module script_setAbsolutePosition, script_goCenter;
+	//py::module script_setAbsolutePosition, script_goCenter;
 	//const LinearStage m_Stage = XLS_1250;
 	//std::string m_CommandToGetPosition = "DPOS";
 
