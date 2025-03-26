@@ -7,6 +7,7 @@ def move_to_position(comPort, absolutePosition):
     controller.start()
 
     axisX.setUnits(Units.mm)
+    dpos = 0.0
     axisX.setDPOS(absolutePosition)
     dpos = axisX.getDPOS()
 

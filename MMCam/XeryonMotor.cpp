@@ -2,12 +2,37 @@
 
 XeryonMotor::XeryonMotor()
 {
+	static py::scoped_interpreter guard{};  // Start Python interpreter
 	m_MotorSettings = std::make_unique<MotorVariables::Settings>();
-
 }
 
 bool XeryonMotor::GoCenter()
 {
+	auto attempt = 0;
+
+	while (attempt < m_MaxAttemptsToCallPythonFunction)
+	{
+		try
+		{
+			py::module importlib = py::module::import("importlib");
+			py::module script_goCenter = importlib.attr("reload")(py::module::import("xeryon_goCenter"));
+
+			auto currentPosition = script_goCenter.attr("move_to_position")
+				(m_MotorCOMPort.c_str()).cast<double>();
+
+			m_MotorSettings->motorPos = currentPosition;
+			return true;  // Success
+		}
+		catch (const py::error_already_set& e)
+		{
+			auto error = std::string("Python Exception on attempt ") + std::to_string(attempt + 1) 
+				+ ": " + e.what();
+			std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));  // Wait before retrying
+			attempt++;
+		}
+	}
+
+	return false;
 
 #ifdef CPP
 	auto currCOMPort = "\\\\.\\" + m_MotorCOMPort;
@@ -35,16 +60,31 @@ bool XeryonMotor::GoHomeAndZero()
 
 bool XeryonMotor::GoToAbsolutePosition(float stagePosition)
 {
-	//try 
-	//{
-	//	m_MotorSettings->motorPos = script_setAbsolutePosition.attr("move_to_position")
-	//		(m_MotorCOMPort.c_str(), stagePosition).cast<double>();
-	//}
-	//catch (const py::error_already_set& e) 
-	//{
-	//	//std::cerr << "Python Error: " << e.what() << std::endl;
-	//	return false;
-	//}
+	auto attempt = 0;
+
+	while (attempt < m_MaxAttemptsToCallPythonFunction)
+	{
+		try
+		{
+			py::module importlib = py::module::import("importlib");
+			py::module script_setAbsolutePosition = importlib.attr("reload")(py::module::import("xeryon_setAbsolutePosition"));
+
+			auto currentPosition = script_setAbsolutePosition.attr("move_to_position")
+				(m_MotorCOMPort.c_str(), stagePosition).cast<double>();
+
+			SetCurrentMotorPosition(currentPosition);
+			return true;  // Success
+		}
+		catch (const py::error_already_set& e)
+		{
+			auto error = std::string("Python Exception on attempt ") + std::to_string(attempt + 1) 
+				+ ": " + e.what();
+			std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));  // Wait before retrying
+			attempt++;
+		}
+	}
+
+	return false;
 
 #ifdef CPP
 	auto currCOMPort = "\\\\.\\" + m_MotorCOMPort;
@@ -65,8 +105,6 @@ bool XeryonMotor::GoToAbsolutePosition(float stagePosition)
 	//UpdateCurrentPosition();
 	controller->stop();
 #endif // CPP
-
-	return true;
 }
 
 float XeryonMotor::GetDeviceActualStagePos() const
@@ -85,7 +123,6 @@ float XeryonMotor::GetDeviceActualStagePos() const
 // XeryonMotorArray Start
 XeryonMotorArray::XeryonMotorArray()
 {
-	static py::scoped_interpreter guard{};  // Start Python interpreter
 	InitAllMotors();
 }
 
@@ -218,41 +255,6 @@ auto XeryonMotorArray::GoMotor
 	float pos
 ) -> float
 {
-	auto goCenter = [&](XeryonMotor* motor)
-		{
-			try
-			{
-				py::module importlib = py::module::import("importlib");
-				py::module script_goCenter = importlib.attr("reload")(py::module::import("xeryon_goCenter"));
-
-				motor->SetCurrentMotorPosition(script_goCenter.attr("move_to_position")
-					(motor->GetDeviceCOMPort().c_str()).cast<double>());
-			}
-			catch (const py::error_already_set& e)
-			{
-				auto err = std::string(e.what());
-				return false;
-			}
-		};
-
-	auto setAbsolutePosition = [&](XeryonMotor* motor, float position)
-		{
-			try
-			{
-				py::module importlib = py::module::import("importlib");
-				py::module script_setAbsolutePosition = importlib.attr("reload")(py::module::import("xeryon_setAbsolutePosition"));
-
-				motor->SetCurrentMotorPosition(script_setAbsolutePosition.attr("move_to_position")
-					(motor->GetDeviceCOMPort().c_str(), position).cast<double>());
-			}
-			catch (const py::error_already_set& e)
-			{
-				auto err = std::string(e.what());
-				return false;
-			}
-		};
-
-
 	if (motor_sn.empty() || motor_sn == "None") return 0.f;
 
 	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
@@ -265,16 +267,19 @@ auto XeryonMotorArray::GoMotor
 				m_MotorsArray[motor].GoHomeAndZero();
 				break;
 			case XeryonMotorVariables::CENTER:
-				goCenter(&m_MotorsArray[motor]);
-				//m_MotorsArray[motor].GoCenter();
+				m_MotorsArray[motor].GoCenter();
 				break;
 			case XeryonMotorVariables::ABS_POSITION:
-				setAbsolutePosition(&m_MotorsArray[motor], pos);
-				//m_MotorsArray[motor].GoToAbsolutePosition(pos);
+				m_MotorsArray[motor].GoToAbsolutePosition
+				(
+					pos - m_MotorsArray[motor].GetDeviceActualStagePos()
+				);
 				break;
 			case XeryonMotorVariables::OFFSET:
-				setAbsolutePosition(&m_MotorsArray[motor], m_MotorsArray[motor].GetDeviceActualStagePos() + pos);
-				//m_MotorsArray[motor].GoToAbsolutePosition(m_MotorsArray[motor].GetDeviceActualStagePos() + pos);
+				m_MotorsArray[motor].GoToAbsolutePosition
+				(
+					pos
+				);
 				break;
 			default:
 				break;

@@ -8,6 +8,7 @@ def move_to_position(comPort):
     axisX.findIndex()
 
     axisX.setUnits(Units.mm)
+    dpos = 0.0
     dpos = axisX.getDPOS()
 
     controller.stop()
