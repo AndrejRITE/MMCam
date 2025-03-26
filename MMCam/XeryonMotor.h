@@ -61,11 +61,9 @@ public:
 
 	// Getters
 	std::string GetDeviceSerNum() const override { return m_MotorSerialNumber; };
-	std::string GetDeviceCOMPort() const { return m_MotorCOMPort; };
+	std::string GetDeviceCOMPort() const override { return m_MotorCOMPort; };
 	float GetDeviceRange() const override { return (abs(m_MotorSettings->minMotorPos) + abs(m_MotorSettings->maxMotorPos)); };
 	float GetDeviceActualStagePos() const override;
-
-	auto GetAxisLetter() const -> char { return m_AxisLetter; };
 
 	// Setters
 	void SetDeviceName(const std::string& deviceName) override {};
@@ -85,6 +83,29 @@ public:
 		//auto dpos = (long double)m_Axis->getData(commandForPosition);
 		//m_MotorSettings->motorPos = dpos;
 	};
+
+	/* Move constructor */
+	XeryonMotor(XeryonMotor&& other) noexcept
+		: m_MotorSettings(std::move(other.m_MotorSettings)),
+		m_MotorCOMPort(std::move(other.m_MotorCOMPort)),
+		m_MotorSerialNumber(std::move(other.m_MotorSerialNumber))
+	{
+		other.m_MotorSerialNumber = "";
+		other.m_MotorCOMPort = "";
+	};
+
+	/* Move assignment */
+	XeryonMotor& operator=(XeryonMotor&& other) noexcept
+	{
+		if (this != &other)
+		{
+			m_MotorSettings = std::move(other.m_MotorSettings);
+			m_MotorCOMPort = std::move(other.m_MotorCOMPort);
+			m_MotorSerialNumber = std::move(other.m_MotorSerialNumber);
+		}
+		return *this;
+	};
+
 
 private:
 	std::string executePythonScript(const std::string& comPort, double absolutePosition)
@@ -113,15 +134,7 @@ private:
 	std::unique_ptr<MotorVariables::Settings> m_MotorSettings{};
 
 	int m_MaxAttemptsToCallPythonFunction{ 5 };
-
-	//Axis* m_Axis{};
-
-	char m_AxisLetter{};
-
-	const LinearStage m_Stage = XLS_1250;
-	int m_Baudrate = 9'600;
 	const long long m_WaitAfterMovementMilliseconds{ 500 };
-	std::string commandForPosition = "DPOS";
 };
 
 class XeryonMotorArray final : public IMotorArray
@@ -132,6 +145,7 @@ public:
 	// Getters
 	std::map<std::string, float> GetSerialNumbersWithRanges() const override { return m_NamesOfMotorsWithRanges; };
 	float GetActualStagePos(const std::string& motor_sn) const override;
+	std::string GetMotorCOMPort(const std::string& motor_sn) const override;
 	bool IsMotorConnected(const std::string& motor_sn) const override;
 
 	// Setters
@@ -145,6 +159,7 @@ public:
 	float GoMotorOffset(const std::string& motor_sn, float offset) override { return GoMotor(motor_sn, XeryonMotorVariables::Command::OFFSET, offset); };
 
 	void SetStepsPerMMForTheMotor(const std::string motor_sn, const int stepsPerMM) override;
+	void SetCurrentPositionForTheMotor(const std::string motor_sn, const float currentPosition) override;
 
 private:
 	auto InitAllMotors() -> bool;

@@ -1229,6 +1229,14 @@ auto cSettings::InitializeXeryonAndCheckPython() -> void
 {
 	m_PhysicalMotors = std::make_unique<XeryonMotorArray>();
 
+	ReadStagePositionsFromJSONFile();
+
+	// Checking for Python and modules
+	if (!IsPythonInstalled())
+	{
+		wxLogError("Python is not installed on current machine");
+	}
+
 	std::vector<wxString> missing = GetMissingPythonModules("requirements.txt");
 	if (!missing.empty())
 	{
@@ -1239,4 +1247,55 @@ auto cSettings::InitializeXeryonAndCheckPython() -> void
 		}
 		wxLogMessage(message);
 	}
+}
+
+auto cSettings::ReadStagePositionsFromJSONFile() -> void
+{
+	if (m_MotorManufacturer != SettingsVariables::XERYON) return;
+
+	// Read existing stages from JSON (if file exists)
+	auto stages = ReadJson(m_StagesPositionsFilename);
+
+	if (!stages.size()) return;
+
+	auto motorsCount = m_WorkStations->work_station_data[0].selected_motors_in_data_file.size();
+	for (auto i{ 0 }; i < motorsCount; ++i)
+	{
+		auto motorSN = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[i];
+		auto steps_per_mm = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].motors_steps_per_mm[motorSN];
+		for (const auto& stage : stages)
+		{
+			if (stage.SerialNumber == motorSN.ToStdString())
+			{
+				m_PhysicalMotors->SetCurrentPositionForTheMotor
+				(
+					motorSN.ToStdString(), 
+					stage.LastKnownPosition
+				);
+				break;
+			}
+		}
+	}
+
+}
+
+auto cSettings::PrepareStagesDataAndWriteThemIntoJSONFile() -> void
+{
+	if (m_MotorManufacturer != SettingsVariables::XERYON) return;
+
+	std::vector<SettingsVariables::Stage> stages;
+
+	auto serialNumbersWithRanges = m_PhysicalMotors->GetSerialNumbersWithRanges();
+
+	for (auto const& motor : serialNumbersWithRanges)
+	{
+		SettingsVariables::Stage stage;
+		stage.SerialNumber = motor.first;
+		stage.COMPort = m_PhysicalMotors->GetMotorCOMPort(motor.first);
+		stage.LastKnownPosition = m_PhysicalMotors->GetActualStagePos(motor.first);
+		stages.push_back(stage);
+	}
+
+	// Write updated stages back to JSON
+	WriteJson(m_StagesPositionsFilename, stages);
 }

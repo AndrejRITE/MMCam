@@ -30,6 +30,7 @@ public:
 
     // Getters
     virtual std::string GetDeviceSerNum() const = 0;
+    virtual std::string GetDeviceCOMPort() const = 0;
     virtual float GetDeviceRange() const = 0;
     virtual float GetDeviceActualStagePos() const = 0;
 

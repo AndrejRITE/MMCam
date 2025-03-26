@@ -39,6 +39,7 @@ public:
 
 	// Getters 
 	std::string GetDeviceSerNum() const override { return m_MotorSerialNumber; };
+	std::string GetDeviceCOMPort() const override { return ""; };
 	float GetDeviceRange() const override { return m_MotorSettings ? m_MotorSettings->stageRange : 0.f; };
 	float GetDeviceActualStagePos() const override { return m_MotorSettings ? m_MotorSettings->stagePos : 0.f; };
 
@@ -146,6 +147,7 @@ public:
 	std::map<std::string, float> GetSerialNumbersWithRanges() const override { return m_NamesOfMotorsWithRanges; };
 	float GetActualStagePos(const std::string& motor_sn) const override;
 	bool IsMotorConnected(const std::string& motor_sn) const override;
+	std::string GetMotorCOMPort(const std::string& motor_sn) const override { return ""; };
 
 	/* Setter */
 	float GoMotorHome(const std::string& motor_sn) override;
@@ -154,6 +156,7 @@ public:
 	float GoMotorOffset(const std::string& motor_sn, float offset) override;
 
 	void SetStepsPerMMForTheMotor(const std::string motor_sn, const int stepsPerMM) override;
+	void SetCurrentPositionForTheMotor(const std::string motor_sn, const float currentPosition) override {};
 
 private:
 	auto InitAllMotors(const std::string ip_address) -> bool;

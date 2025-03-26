@@ -14,6 +14,7 @@ public:
 	// Getters
 	virtual std::map<std::string, float> GetSerialNumbersWithRanges() const = 0;
 	virtual float GetActualStagePos(const std::string& motor_sn) const = 0;
+	virtual std::string GetMotorCOMPort(const std::string& motor_sn) const = 0;
 	virtual bool IsMotorConnected(const std::string& motor_sn) const = 0;
 
 	// Setters
@@ -23,6 +24,7 @@ public:
 	virtual float GoMotorOffset(const std::string& motor_sn, float offset) = 0;
 
 	virtual void SetStepsPerMMForTheMotor(const std::string motor_sn, const int stepsPerMM) = 0;
+	virtual void SetCurrentPositionForTheMotor(const std::string motor_sn, const float currentPosition) = 0;
 };
 
 #endif // IMOTORARRAY_H

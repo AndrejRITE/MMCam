@@ -17,6 +17,7 @@
 #include "rapidxml.hpp"
 #include "rapidxml_utils.hpp"
 #include "rapidxml_print.hpp"
+#include "json.hpp"
 
 #include "StandaMotor.h"
 #include "XeryonMotor.h"
@@ -149,6 +150,16 @@ namespace SettingsVariables
 		bool is_finished{};
 	};
 
+	struct Stage 
+	{
+		std::string SerialNumber = "";
+		std::string COMPort = "";
+		double LastKnownPosition = 0.0;
+
+		// To serialize Stage to JSON
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Stage, SerialNumber, COMPort, LastKnownPosition)
+	};
+
 	static auto FindNode(rapidxml::xml_node<>* xmlNode, std::string nodeName) -> rapidxml::xml_node<>*
 	{
 		for (auto node = xmlNode->first_node(); node; node = node->next_sibling())
@@ -195,36 +206,48 @@ public:
 	/* Setters */
 	float GoToAbsPos(const int motorName, const float absolute_position)
 	{
-		return m_PhysicalMotors->GoMotorToAbsolutePosition
+		auto position = m_PhysicalMotors->GoMotorToAbsolutePosition
 		(
 			m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[motorName].ToStdString(),
 			absolute_position
 		);
+		PrepareStagesDataAndWriteThemIntoJSONFile();
+
+		return position;
 	};
 
 	float GoOffsetMotor(const int motorName, const float delta)
 	{
-		return m_PhysicalMotors->GoMotorOffset
+		auto position = m_PhysicalMotors->GoMotorOffset
 		(
 			m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[motorName].ToStdString(),
 			delta
 		);
+		PrepareStagesDataAndWriteThemIntoJSONFile();
+
+		return position;
 	};
 
 	float CenterMotor(const int motorName)
 	{
-		return m_PhysicalMotors->GoMotorCenter
+		auto position = m_PhysicalMotors->GoMotorCenter
 		(
 			m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[motorName].ToStdString()
 		);
+		PrepareStagesDataAndWriteThemIntoJSONFile();
 
+		return position;
 	};
+
 	float HomeMotor(const int motorName)
 	{
-		return m_PhysicalMotors->GoMotorHome
+		auto position = m_PhysicalMotors->GoMotorHome
 		(
 			m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[motorName].ToStdString()
 		);
+		PrepareStagesDataAndWriteThemIntoJSONFile();
+
+		return position;
 	};
 
 	/* Progress */
@@ -336,9 +359,53 @@ private:
 		return missingModules;
 	}
 
+	std::vector<SettingsVariables::Stage> ReadJson(const std::string& filename) 
+	{
+		namespace fs = std::filesystem;
+		using json = nlohmann::json;
+
+		std::vector<SettingsVariables::Stage> stages;
+
+		if (fs::exists(filename)) {
+			std::ifstream file(filename);
+			json j;
+			file >> j;
+
+			// Deserialize JSON into stages
+			for (const auto& item : j) 
+			{
+				SettingsVariables::Stage stage;
+				stage.SerialNumber = item.at("SerialNumber").get<std::string>();
+				stage.LastKnownPosition = item.at("LastKnownPosition").get<int>();
+				stages.push_back(stage);
+			}
+		}
+
+		return stages;
+	}
+
+	void WriteJson(const std::string& filename, const std::vector<SettingsVariables::Stage>& stages) 
+	{
+		using json = nlohmann::json;
+		json j;
+
+		// Serialize stages to JSON
+		for (const auto& stage : stages) 
+		{
+			j.push_back(stage);
+		}
+
+		std::ofstream file(filename);
+		file << std::setw(4) << j << std::endl;
+	}
+
+	auto ReadStagePositionsFromJSONFile() -> void;
+	auto PrepareStagesDataAndWriteThemIntoJSONFile() -> void;
+
 private:
 	const wxString m_InitializationFilePath = "MMCam.ini";
 	const wxString work_stations_path = "src\\";
+	const std::string m_StagesPositionsFilename = "StagesPositions.json";
 	double m_CropSizeMM{}, m_CropCircleSizeMM{};
 	double m_PixelSizeUM{};
 	SettingsVariables::MotorManufacturers m_MotorManufacturer{};

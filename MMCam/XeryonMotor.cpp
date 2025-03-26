@@ -138,6 +138,18 @@ float XeryonMotorArray::GetActualStagePos(const std::string& motor_sn) const
 	return error_position;
 }
 
+std::string XeryonMotorArray::GetMotorCOMPort(const std::string& motor_sn) const
+{
+	if (motor_sn.empty() || motor_sn == "None") return "";
+
+	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
+	{
+		if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
+			return m_MotorsArray[motor].GetDeviceCOMPort();
+	}
+	return "";
+}
+
 bool XeryonMotorArray::IsMotorConnected(const std::string& motor_sn) const
 {
 	if (motor_sn.empty() || motor_sn == "None") return 0.f;
@@ -164,6 +176,21 @@ void XeryonMotorArray::SetStepsPerMMForTheMotor(const std::string motor_sn, cons
 			break;
 		}
 	}
+}
+
+void XeryonMotorArray::SetCurrentPositionForTheMotor(const std::string motor_sn, const float currentPosition)
+{
+	if (motor_sn.empty() || motor_sn == "None") return;
+
+	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
+	{
+		if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
+		{
+			m_MotorsArray[motor].SetCurrentMotorPosition((float)currentPosition);
+			break;
+		}
+	}
+
 }
 
 auto XeryonMotorArray::InitAllMotors() -> bool
@@ -224,11 +251,11 @@ auto XeryonMotorArray::InitAllMotors() -> bool
 		++iterator;
 	}
 
-	//std::sort(m_MotorsArray.begin(), m_MotorsArray.end(),
-	//	[](const XeryonMotor& left, const XeryonMotor& right)
-	//	{
-	//		return left.GetDeviceSerNum() < right.GetDeviceSerNum();
-	//	});
+	std::sort(m_MotorsArray.begin(), m_MotorsArray.end(),
+		[](const XeryonMotor& left, const XeryonMotor& right)
+		{
+			return left.GetDeviceSerNum() < right.GetDeviceSerNum();
+		});
 
 	FillNames();
 
