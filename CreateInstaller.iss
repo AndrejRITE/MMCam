@@ -7,13 +7,13 @@ AppPublisher=Rigaku Innovative Technologies Europe
 VersionInfoCompany=Rigaku Innovative Technologies Europe
 DefaultDirName={localappdata}\Programs\{#RepoName}
 DefaultGroupName={#RepoName}
-OutputBaseFilename={#RepoName}Installer_v{#Major}.{#Minor}.{#Build}
-OutputDir=D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release
+OutputBaseFilename={#OutputBaseFilename}
+OutputDir={#OutputDir}
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 DisableWelcomePage=no
-SetupIconFile=D:\Projects\RIGAKU\{#RepoName}\{#RepoName}\src\img\logo.ico
+SetupIconFile={#IconFullPath}
 DisableDirPage=no
 UninstallDisplayIcon={app}\{#RepoName}.exe
 
@@ -21,20 +21,22 @@ UninstallDisplayIcon={app}\{#RepoName}.exe
 Name: "{localappdata}\Programs"; Permissions: users-full
 
 [Files]
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\src\*"; DestDir: "{app}\src"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\bindy.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\keyfile.sqlite"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\libximc.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\{#RepoName}.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\{#RepoName}.ini"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\opencv_world4100.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\table.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\xiapi64.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\xiwrapper.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\Xeryon.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\xeryon_goCenter.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\Projects\RIGAKU\{#RepoName}\bin\x64\Release\xeryon_setAbsolutePosition.py"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\src\*"; DestDir: "{app}\src"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#OutputDir}\bindy.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\keyfile.sqlite"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\libximc.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\{#RepoName}.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\{#RepoName}.ini"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\opencv_world4100.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\table.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\xiapi64.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\xiwrapper.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\cXusb.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\gXeth.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\Xeryon.py"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\xeryon_goCenter.py"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\xeryon_setAbsolutePosition.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\Projects\RIGAKU\{#RepoName}\{#RepoName}\src\img\logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [UninstallDelete]

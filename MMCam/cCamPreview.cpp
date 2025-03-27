@@ -117,12 +117,16 @@ auto cCamPreview::SetImageSize(const wxSize& img_size) -> void
 {
 	m_ImageSize = img_size;
 
+	m_IsImageSet = false;
+
 	m_ImageData = std::make_unique<unsigned short[]>(img_size.GetWidth() * img_size.GetHeight());
 
 	m_HorizontalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetWidth());
 	m_VerticalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetHeight());
 
 	m_Image.Create(img_size);
+
+	UpdateImageParameters();
 }
 
 auto cCamPreview::GetDataPtr() const -> unsigned short*
@@ -163,10 +167,13 @@ void cCamPreview::UpdateImageParameters()
 	}
 
 	/* CrossHair*/
+	if (m_CrossHairTool)
 	{
 		auto imageDataType = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? ToolsVariables::DATA_U12 : ToolsVariables::DATA_U16;
 		m_CrossHairTool->SetImageDataType(imageDataType);
 		m_CrossHairTool->SetImageDimensions(m_ImageSize);
+		m_CrossHairTool->SetXPosFromParent(m_ImageSize.GetWidth() / 2);
+		m_CrossHairTool->SetYPosFromParent(m_ImageSize.GetHeight() / 2);
 		m_CrossHairTool->SetZoomOfOriginalSizeImage(m_ZoomOnOriginalSizeImage);
 		m_CrossHairTool->UpdateZoomValue(m_Zoom);
 		m_CrossHairTool->SetImageStartDrawPos(wxRealPoint
@@ -174,8 +181,6 @@ void cCamPreview::UpdateImageParameters()
 			m_StartDrawPos.x * m_Zoom / m_ZoomOnOriginalSizeImage,
 			m_StartDrawPos.y * m_Zoom / m_ZoomOnOriginalSizeImage
 		));
-		//m_CrossHairTool->SetXPosFromParent(m_ImageSize.GetWidth() / 2);
-		//m_CrossHairTool->SetYPosFromParent(m_ImageSize.GetHeight() / 2);
 	}
 
 	// FWHM

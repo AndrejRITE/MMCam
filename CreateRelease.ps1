@@ -14,6 +14,7 @@ $msbuildPath = "C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBui
 # Specify the build configuration (Release) and platform (e.g., x64, x86)
 $buildConfiguration = "Release"
 $platform = "x64"
+$operatingSystem = "win"
 
 # Build the solution using MSBuild
 & $msbuildPath $solutionPath `
@@ -48,6 +49,7 @@ $release_folder = "${path_to_repository}\bin\x64\Release"
 $opencv_folder = "$env:OPENCV_LATEST\bin"
 $libximc_folder = "$env:LIBXIMC_LATEST\win64"
 $ximea_folder = "$env:XIMEA_LATEST"
+$misdk_folder = "$env:MISDK_LATEST\x64"
 $other_files_folder = "${path_to_repository}\${repository_name}"
 
 # Remove all Installers and 7z archives (previous versions)
@@ -75,6 +77,11 @@ Copy-Item -Path "${other_files_folder}\${repository_name}.ini" -Destination "${r
 # Copy XIMEA files
 Write-Output "Copying XIMEA files into ${release_folder} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
 Copy-Item -Path "${ximea_folder}\xiapi64.dll" -Destination "${release_folder}\xiapi64.dll" -Force
+
+# Copy cXusb.dll and gXeth.dll files
+Write-Output "Copying cXusb.dll and gXeth.dll files [$(Get-Date)]" >> "${path_to_repository}\log.txt"
+Copy-Item -Path "${misdk_folder}\cXusb.dll" -Destination "${release_folder}\cXusb.dll" -Force
+Copy-Item -Path "${misdk_folder}\gXeth.dll" -Destination "${release_folder}\gXeth.dll" -Force
 
 # Copy Other files
 Write-Output "Copying other files into ${release_folder} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
@@ -137,7 +144,13 @@ $files_to_archive = @(
 	"${release_folder}\opencv_world4100.dll",
 	"${release_folder}\table.txt",
 	"${release_folder}\xiapi64.dll",
-    "${release_folder}\xiwrapper.dll"
+    "${release_folder}\xiwrapper.dll",
+	"${release_folder}\cXusb.dll",
+	"${release_folder}\gXeth.dll",
+	"${release_folder}\Xeryon.py",
+	"${release_folder}\xeryon_goCenter.py",
+	"${release_folder}\xeryon_setAbsolutePosition.py",
+	"${release_folder}\requirements.txt"
 )
 
 # Create the 7z archive
@@ -150,8 +163,14 @@ $commit_message = git log -1 --pretty=%B
 # Define release notes with checksum
 $tag_name = "v${major_version}.${minor_version}.${commit_number}"
 
+# Define the path of the generated installer
+$installer_name = "${repository_name}Installer_v${build_version}_${operatingSystem}_${platform}.exe"
+$installer_name_without_extension = "${repository_name}Installer_v${build_version}_${operatingSystem}_${platform}"
+$installer_path = "${path_to_repository}\bin\x64\Release\${installer_name}"
+$icon_full_path = "${path_to_repository}\${repository_name}\src\img\logo.ico"
+
 # Replace placeholders in the Inno Setup script
-(Get-Content $inno_setup_script_temp) -replace "{#Major}", $major_version -replace "{#Minor}", $minor_version -replace "{#Build}", $commit_number -replace "{#RepoName}", $repository_name | Set-Content $inno_setup_script_temp
+(Get-Content $inno_setup_script_temp) -replace "{#Major}", $major_version -replace "{#Minor}", $minor_version -replace "{#Build}", $commit_number -replace "{#RepoName}", $repository_name -replace "{#OutputBaseFilename}", $installer_name_without_extension -replace "{#OutputDir}", $release_folder -replace "{#IconFullPath}", $icon_full_path | Set-Content $inno_setup_script_temp
 
 # Run Inno Setup to generate the installer
 Write-Output "Running Inno Setup to generate the installer [$(Get-Date)]" >> "${path_to_repository}\log.txt"
@@ -161,23 +180,23 @@ Write-Output "Running Inno Setup to generate the installer [$(Get-Date)]" >> "${
 Remove-Item -Path "${inno_setup_script_temp}"
 
 # Define the path of the generated installer
-$installer_path = "${release_folder}\${repository_name}Installer_v${build_version}.exe"
 $fileHash = (Get-FileHash -Algorithm SHA256 -Path $installer_path).Hash
 Write-Output "SHA256: [$fileHash]" >> "${path_to_repository}\log.txt"
 
+$tag_name = "v${major_version}.${minor_version}.${commit_number}"
 $release_notes = @"
-## Release Notes for ${repository_name}_v${major_version}.${minor_version}.${commit_number}
+## Release Notes for ${repository_name}_v${build_version}
 
 ### Commit Message
 - ${commit_message}
 
 ### Download Links
-- [Download ${repository_name}Installer_v${build_version}.exe](https://github.com/AndreiBee/${repository_name}/releases/download/${tag_name}/${repository_name}Installer_v${build_version}.exe)
-- [Download ${repository_name}_v${major_version}.${minor_version}.${commit_number}.7z](https://github.com/AndreiBee/${repository_name}/releases/download/${tag_name}/${archive_name})
+- [Download ${installer_name}](https://github.com/AndreiBee/${repository_name}/releases/download/${tag_name}/${installer_name})
+- [Download ${archive_name}](https://github.com/AndreiBee/${repository_name}/releases/download/${tag_name}/${archive_name})
 
 ### SHA256
 ```
-$fileHash
+${fileHash}
 ```
 "@
 
@@ -186,9 +205,9 @@ Write-Output "Upload $archive_name and ${repository_name}Installer_v$build_versi
 gh release create $tag_name $installer_path $archive_path --title "Release $tag_name" --notes "$release_notes"
 
 # Upload to OneDrive
-Write-Output "Upload ${archive_name} and ${repository_name}Installer_v${build_version}.exe to OneDrive [$(Get-Date)]" >> "${path_to_repository}\log.txt"
-Copy-Item -Path "${installer_path}" -Destination "C:\Users\Andrej Pcelovodov\OneDrive - Rigaku Americas Holding\EXPORT\${repository_name}\${repository_name}Installer_v$build_version.exe" -Force
-Copy-Item -Path "${archive_path}" -Destination "C:\Users\Andrej Pcelovodov\OneDrive - Rigaku Americas Holding\EXPORT\${repository_name}\${repository_name}_v${major_version}.${minor_version}.${commit_number}.7z" -Force
+Write-Output "Upload ${archive_name} and ${installer_name} to OneDrive [$(Get-Date)]" >> "${path_to_repository}\log.txt"
+Copy-Item -Path "${installer_path}" -Destination "C:\Users\Andrej Pcelovodov\OneDrive - Rigaku Americas Holding\EXPORT\${repository_name}\${installer_name}" -Force
+Copy-Item -Path "${archive_path}" -Destination "C:\Users\Andrej Pcelovodov\OneDrive - Rigaku Americas Holding\EXPORT\${repository_name}\${archive_name}" -Force
 
 # Log
 Write-Output "PowerShell script completed at [$(Get-Date)]" >> "${path_to_repository}\log.txt"
