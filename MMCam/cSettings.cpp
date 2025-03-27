@@ -86,7 +86,7 @@ void cSettings::SetCurrentProgress(const int& curr_capturing_num, const int& who
 
 auto cSettings::GetSelectedCamera() const -> wxString
 {
-	return m_Cameras->selected_camera_str;
+	return m_Camera->selectedCameraIDStr;
 }
 
 void cSettings::CreateMainFrame()
@@ -422,16 +422,33 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 	main_panel_sizer->Add(motors_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
 
 	/* Camera */
-	wxSizer* const cameras_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Camera");
+	CreateCameraSection(main_panel, main_panel_sizer);
+
+	main_panel_sizer->AddSpacer(5);
+	main_panel_sizer->AddStretchSpacer();
+
+	UpdatePreviousStatesData();
+
+	main_panel->SetSizer(main_panel_sizer);
+	panel_sizer->Add(main_panel, 1, wxEXPAND);
+}
+
+auto cSettings::CreateCameraSection(wxPanel* panel, wxBoxSizer* panel_sizer) -> void
+{
+	wxSizer* const cameraStaticBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "&Camera");
+	cameraStaticBoxSizer->AddStretchSpacer();
+
+	// ID
 	{
-		auto cam_choice_size = wxSize(80, 24);
-		m_Cameras->camera = new wxTextCtrl
+		auto idBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "&ID");
+		auto txtCtrlSize = wxSize(80, 24);
+		m_Camera->idTxtCtrl = new wxTextCtrl
 		(
-			main_panel, 
-			SettingsVariables::ID_CAM_TXT_CTRL, 
+			panel, 
+			SettingsVariables::ID_CAM_ID_TXT_CTRL, 
 			wxT("None"),
 			wxDefaultPosition, 
-			cam_choice_size,
+			txtCtrlSize,
 			wxTE_CENTRE | wxTE_READONLY
 		);
 
@@ -440,27 +457,81 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 			{
 				if (m_WorkStations->work_station_data[i].work_station_name == m_WorkStations->initialized_work_station)
 				{
-					m_Cameras->selected_camera_str = m_WorkStations->work_station_data[i].selected_camera_in_data_file;
+					m_Camera->selectedCameraIDStr = m_WorkStations->work_station_data[i].selected_camera_in_data_file;
 					m_WorkStations->initialized_work_station_num = i;
 					break;
 				}
 			}
 
-			m_Cameras->camera->SetValue(m_Cameras->selected_camera_str);
+			m_Camera->idTxtCtrl->SetValue(m_Camera->selectedCameraIDStr);
 		}
 
-		cameras_static_box_sizer->AddStretchSpacer();
-		cameras_static_box_sizer->Add(m_Cameras->camera, 0, wxEXPAND);
-		cameras_static_box_sizer->AddStretchSpacer();
+		idBoxSizer->Add(m_Camera->idTxtCtrl, 0, wxEXPAND);
+		cameraStaticBoxSizer->Add(idBoxSizer, 0, wxEXPAND);
 	}
-	main_panel_sizer->Add(cameras_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
-	main_panel_sizer->AddSpacer(5);
-	main_panel_sizer->AddStretchSpacer();
 
-	UpdatePreviousStatesData();
+	cameraStaticBoxSizer->AddStretchSpacer();
+	// Temperature
+	{
+		auto temperatureBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "&Temperature [degC]");
+		auto txtCtrlSize = wxSize(80, 24);
 
-	main_panel->SetSizer(main_panel_sizer);
-	panel_sizer->Add(main_panel, 1, wxEXPAND);
+		wxFloatingPointValidator<float>	val(1, NULL, wxNUM_VAL_ZERO_AS_BLANK);
+		val.SetRange(-20.0, 50.0);
+
+		m_Camera->temperatureTxtCtrl = new wxTextCtrl
+		(
+			panel, 
+			SettingsVariables::ID_CAM_TEMPERATURE_TXT_CTRL, 
+			wxT("15.0"),
+			wxDefaultPosition, 
+			txtCtrlSize,
+			wxTE_CENTRE
+		);
+
+		temperatureBoxSizer->AddStretchSpacer();
+		temperatureBoxSizer->Add(m_Camera->temperatureTxtCtrl, 0, wxEXPAND);
+		temperatureBoxSizer->AddStretchSpacer();
+
+		cameraStaticBoxSizer->Add(temperatureBoxSizer, 0, wxEXPAND);
+	}
+	cameraStaticBoxSizer->AddStretchSpacer();
+
+	// Binning
+	{
+		auto binningBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "&Binning");
+		//auto txtCtrlSize = wxSize(80, 24);
+
+		//wxFloatingPointValidator<float>	val(1, NULL, wxNUM_VAL_ZERO_AS_BLANK);
+		//val.SetRange(-20.0, 50.0);
+
+		m_Camera->binningsArrayStr.Add("1");
+		m_Camera->binningsArrayStr.Add("2");
+		m_Camera->binningsArrayStr.Add("4");
+		m_Camera->binningsArrayStr.Add("8");
+		m_Camera->binningsArrayStr.Add("16");
+
+		m_Camera->binningChoice = new wxChoice
+		(
+			panel, 
+			SettingsVariables::ID_CAM_BINNING_CHOICE, 
+			wxDefaultPosition, 
+			wxDefaultSize,
+			m_Camera->binningsArrayStr
+		);
+
+		m_Camera->binningChoice->SetSelection(0);
+
+		binningBoxSizer->AddStretchSpacer();
+		binningBoxSizer->Add(m_Camera->binningChoice, 0, wxEXPAND);
+		binningBoxSizer->AddStretchSpacer();
+
+		cameraStaticBoxSizer->Add(binningBoxSizer, 0, wxEXPAND);
+	}
+	cameraStaticBoxSizer->AddStretchSpacer();
+
+	panel_sizer->Add(cameraStaticBoxSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
+
 }
 
 auto cSettings::CreateOtherSettings(wxBoxSizer* panel_sizer) -> void
@@ -599,7 +670,7 @@ void cSettings::InitComponents()
 {
 	m_WorkStations = std::make_unique<SettingsVariables::WorkStations>();
 	m_Motors = std::make_unique<SettingsVariables::MotorSettingsArray>();
-	m_Cameras = std::make_unique<SettingsVariables::Cameras>();
+	m_Camera = std::make_unique<SettingsVariables::Camera>();
 }
 
 void cSettings::BindControls()
@@ -698,8 +769,8 @@ auto cSettings::UpdateMotorsAndCameraTXTCtrls(const short selected_work_station)
 			m_Motors->m_Optics[i - 3].steps_per_mm->SetLabel(wxString::Format(wxT("%i"), steps_per_mm));
 		}
 	}
-	m_Cameras->camera->SetLabel(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_camera_in_data_file);
-	m_Cameras->selected_camera_str = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_camera_in_data_file;
+	m_Camera->idTxtCtrl->SetLabel(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_camera_in_data_file);
+	m_Camera->selectedCameraIDStr = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_camera_in_data_file;
 
 	m_CameraManufacturer = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].camera_manufacturer;
 	m_MotorManufacturer = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].motor_manufacturer;

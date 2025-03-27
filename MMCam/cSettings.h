@@ -50,7 +50,9 @@ namespace SettingsVariables
 		ID_MOT_OPT_Z_MOTOR_TXT_CTRL,
 		ID_MOT_OPT_Z_STEPS_PER_MM_ST_TEXT,
 		/* Cameras */
-		ID_CAM_TXT_CTRL,
+		ID_CAM_ID_TXT_CTRL,
+		ID_CAM_TEMPERATURE_TXT_CTRL,
+		ID_CAM_BINNING_CHOICE,
 		/* Other Parameters */
 		ID_GRID_MESH_STEP_TXT_CTRL,
 		ID_CIRCLE_MESH_STEP_TXT_CTRL
@@ -83,11 +85,6 @@ namespace SettingsVariables
 		wxTextCtrl* motor{}; 
 		wxStaticText* steps_per_mm{};
 		wxString motor_sn{};
-		//uint8_t current_selection[2], prev_selection[2];
-		~MotorSettings()
-		{
-			motor->~wxTextCtrl();
-		}
 	};
 
 	struct MotorSettingsArray
@@ -108,15 +105,14 @@ namespace SettingsVariables
 		}
 	};
 
-	struct Cameras
+	struct Camera
 	{
-		wxTextCtrl* camera{};
-		wxString selected_camera_str{};
+		wxTextCtrl* idTxtCtrl{};
+		wxTextCtrl* temperatureTxtCtrl{};
+		wxChoice* binningChoice{};
+		wxString selectedCameraIDStr{};
 
-		~Cameras()
-		{
-			camera->~wxTextCtrl();
-		}
+		wxArrayString binningsArrayStr{};
 	};
 
 	struct WorkStationData
@@ -137,11 +133,6 @@ namespace SettingsVariables
 		wxArrayString all_work_station_array_str{};
 		wxString initialized_work_station{};
 		unsigned short initialized_work_station_num{};
-
-		~WorkStations()
-		{
-			work_station_choice->~wxChoice();
-		}
 	};
 
 	struct ProgressValues
@@ -282,6 +273,7 @@ private:
 	void CreateMainFrame();
 	void CreateSettings();
 	void CreateMotorsSelection(wxBoxSizer* panel_sizer);
+	auto CreateCameraSection(wxPanel* panel, wxBoxSizer* panel_sizer) -> void;
 	auto CreateOtherSettings(wxBoxSizer* panel_sizer) -> void;
 	void InitDefaultStateWidgets();
 	void InitComponents();
@@ -425,7 +417,7 @@ private:
 	// TODO: Move to Polymorphic class IMotorFactory
 	std::unique_ptr<IMotorArray> m_PhysicalMotors{};
 
-	std::unique_ptr<SettingsVariables::Cameras> m_Cameras{};
+	std::unique_ptr<SettingsVariables::Camera> m_Camera{};
 	const int m_MotorsCount{ 6 };
 	std::unique_ptr<SettingsVariables::ProgressValues> m_Progress = std::make_unique<SettingsVariables::ProgressValues>();
 	std::unique_ptr<wxTextCtrl> m_GridMeshStepPXTxtCtrl{}, m_CircleMeshStepPXTxtCtrl{};
