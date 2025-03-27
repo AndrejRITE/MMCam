@@ -5,7 +5,7 @@
 	<motor_manufacturer>XERYON</motor_manufacturer>
 	<detector>
 		<motor>
-			<sn>None</sn>
+			<sn>95733333332351410021</sn>
 			<steps_per_mm>1</steps_per_mm>
 		</motor>
 		<motor>
@@ -19,7 +19,7 @@
 	</detector>
 	<optics>
 		<motor>
-			<sn>95733333332351410021</sn>
+			<sn>None</sn>
 			<steps_per_mm>1</steps_per_mm>
 		</motor>
 		<motor>

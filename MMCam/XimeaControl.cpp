@@ -1,15 +1,5 @@
 #include "XimeaControl.h"
 
-XimeaControl::XimeaControl(std::string cameraSN)
-	: m_CameraSN(std::move(cameraSN))
-{
-}
-
-XimeaControl::~XimeaControl()
-{
-	Close();
-}
-
 auto XimeaControl::Initialize() -> bool
 {
 	m_State = xiOpenDeviceBy(XI_OPEN_BY_SN, m_CameraSN.c_str(), &m_CamHandler);

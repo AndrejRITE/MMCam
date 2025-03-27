@@ -935,9 +935,9 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 	{
 		auto cameraManufacturerStr = wxString(element->first_node()->value());
 		if (cameraManufacturerStr == "XIMEA")
-			m_CameraManufacturer = SettingsVariables::CameraManufacturers::XIMEA;
+			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::XIMEA;
 		else if (cameraManufacturerStr == "MORAVIAN_INSTRUMENTS")
-			m_CameraManufacturer = SettingsVariables::CameraManufacturers::MORAVIAN_INSTRUMENTS;
+			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::MORAVIAN_INSTRUMENTS;
 	}
 
 	// PixelSizeUM

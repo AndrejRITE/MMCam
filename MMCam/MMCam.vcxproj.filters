@@ -147,6 +147,9 @@
     <ClInclude Include="CameraControl.h">
       <Filter>Header Files\Interfaces</Filter>
     </ClInclude>
+    <ClInclude Include="MoravianInstrumentsControl.h">
+      <Filter>Header Files\Camera</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cApp.cpp">
@@ -223,6 +226,9 @@
     </ClCompile>
     <ClCompile Include="..\include\Xeryon\src\Xeryon.cpp">
       <Filter>Source Files\Motors\Xeryon</Filter>
+    </ClCompile>
+    <ClCompile Include="MoravianInstrumentsControl.cpp">
+      <Filter>Source Files\Camera</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
