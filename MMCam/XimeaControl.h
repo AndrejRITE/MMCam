@@ -12,7 +12,10 @@
 class XimeaControl final : public CameraControl
 {
 public:
-	explicit XimeaControl(std::string cameraSN) : m_CameraSN(std::move(cameraSN)) {};
+	explicit XimeaControl(std::string cameraSN) : m_CameraSN(std::move(cameraSN)) 
+	{
+		m_ImageDataType = CameraControlVariables::ImageDataTypes::RAW_12BIT;
+	};
 	~XimeaControl() override { Close(); };
 
 	auto Initialize() -> bool override;

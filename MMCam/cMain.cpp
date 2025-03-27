@@ -1794,6 +1794,11 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 	m_CamPreview->SetCircleMeshStepPX(m_Settings->GetCircleMeshStep());
 	InitializeSelectedCamera();
 
+	auto cameraDataType = m_CameraControl->GetCameraDataType();
+	auto imagePanelDataType = cameraDataType == CameraControlVariables::ImageDataTypes::RAW_12BIT ? CameraPreviewVariables::ImageDataTypes::RAW_12BIT : CameraPreviewVariables::ImageDataTypes::RAW_16BIT;
+
+	m_CamPreview->SetCameraDataType(imagePanelDataType);
+
 	UpdateStagePositions();
 	EnableUsedAndDisableNonUsedMotors();	
 	Refresh();
@@ -1823,6 +1828,7 @@ auto cMain::InitializeSelectedCamera() -> void
 		m_CameraControl = std::make_unique<MoravianInstrumentsControl>(selectedCamera.ToStdString());
 
 	m_CameraControl->Initialize();
+
 
 	if (!m_CameraControl->IsConnected())
 	{
@@ -5210,7 +5216,7 @@ wxBitmap WorkerThread::CreateGraph
 	{
 		dc.SetTextForeground(wxColour(0, 0, 0));
 		auto exposureStr = wxString::Format(wxT("%i"), (int)m_ExposureUS / 1000);
-		exposureStr += " [us]";
+		exposureStr += " [ms]";
 		auto textSize = dc.GetTextExtent(exposureStr);
 		auto startExposureTextX = 5;
 		exposureFinishX = startExposureTextX + textSize.GetWidth();

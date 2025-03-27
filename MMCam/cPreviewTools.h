@@ -28,9 +28,9 @@ namespace ToolsVariables
 {
 	enum DataTypes
 	{
-		DATA_U8 = 0,
-		DATA_U12 = 1,
-		DATA_U16 = 2,
+		DATA_U8,
+		DATA_U12,
+		DATA_U16,
 	};
 }
 

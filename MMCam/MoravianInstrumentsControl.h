@@ -73,6 +73,8 @@ class MoravianInstrumentsControl final : public CameraControl
 public:
 	explicit MoravianInstrumentsControl(std::string cameraSN) : m_CameraSN(std::move(cameraSN)) 
 	{
+		m_ImageDataType = CameraControlVariables::ImageDataTypes::RAW_16BIT;
+
 		m_ActualCameraParameters = std::make_unique<MoravianInstrumentsVariables::ActualCameraParameters>();
 		m_CapturingParameters = std::make_unique<MoravianInstrumentsVariables::CapturingParameters>();
 	};

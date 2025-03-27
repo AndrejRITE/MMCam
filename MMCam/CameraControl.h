@@ -5,6 +5,15 @@
 #include <string>
 #include <memory>
 
+namespace CameraControlVariables
+{
+    enum ImageDataTypes
+    {
+        RAW_12BIT,
+        RAW_16BIT,
+    };
+}
+
 class CameraControl
 {
 public:
@@ -21,6 +30,11 @@ public:
     virtual auto GetHeight() const -> unsigned long = 0;
 
     virtual auto IsConnected() const -> bool = 0;
+
+    auto GetCameraDataType() const -> CameraControlVariables::ImageDataTypes { return m_ImageDataType; };
+
+protected:
+    CameraControlVariables::ImageDataTypes m_ImageDataType{ CameraControlVariables::ImageDataTypes::RAW_12BIT };
 };
 
 #endif // CAMERA_CONTROL_H

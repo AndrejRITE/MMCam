@@ -164,7 +164,8 @@ void cCamPreview::UpdateImageParameters()
 
 	/* CrossHair*/
 	{
-		m_CrossHairTool->SetImageDataType(ToolsVariables::DATA_U12);
+		auto imageDataType = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? ToolsVariables::DATA_U12 : ToolsVariables::DATA_U16;
+		m_CrossHairTool->SetImageDataType(imageDataType);
 		m_CrossHairTool->SetImageDimensions(m_ImageSize);
 		m_CrossHairTool->SetZoomOfOriginalSizeImage(m_ZoomOnOriginalSizeImage);
 		m_CrossHairTool->UpdateZoomValue(m_Zoom);
@@ -366,24 +367,23 @@ void cCamPreview::CalculateMatlabJetColormapPixelRGB12bit(const unsigned short& 
 		g = 0;
 		b = 0;
 	}
-	else if (value == x4_12bit)
+	else 
 	{
-		// Saturation (white)
-		r = 255.f;
-		g = 255.f;
-		b = 255.f;
+		r = 255;
+		g = 255;
+		b = 255;
 	}
 }
 
 void cCamPreview::CalculateMatlabJetColormapPixelRGB16bit
 (
-	const uint16_t& value, 
+	const unsigned short& value, 
 	unsigned char& r, 
 	unsigned char& g, 
 	unsigned char& b
 )
 {
-	uint16_t x0{ 7967 }, x1{ 24415 }, x2{ 40863 }, x3{ 57311 }, x4{ 65535 };
+	unsigned short x0{ 7967 }, x1{ 24415 }, x2{ 40863 }, x3{ 57311 }, x4{ 65535 };
 	if (value < x0)
 	{
 		r = 0;
@@ -408,12 +408,19 @@ void cCamPreview::CalculateMatlabJetColormapPixelRGB16bit
 		g = (float)(x3 - value) * 255.0f / (float)(x3 - x2);
 		b = 0;
 	}
-	else if (value > x3)
+	else if (value > x3 && value < x4)
 	{
 		r = 255.0f * 0.5f + (float)(x4 - value) * (255.0f - 255.0f * 0.5f) / (float)(x4 - x3);
 		g = 0;
 		b = 0;
 	}
+	else
+	{
+		r = 255;
+		g = 255;
+		b = 255;
+	}
+
 }
 
 void cCamPreview::OnMouseMoved(wxMouseEvent& evt)
@@ -856,7 +863,7 @@ auto cCamPreview::AdjustImageParts
 ) -> void
 {
 	if (!data_ptr) return;
-	unsigned short current_value{};
+	auto current_value{ data_ptr[0] };
 	unsigned char red{}, green{}, blue{};
 	unsigned long long position_in_data_pointer{};
 
@@ -867,7 +874,10 @@ auto cCamPreview::AdjustImageParts
 			current_value = data_ptr[position_in_data_pointer];
 			/* Matlab implementation of JetColormap */
 			/* Because XIMEA camera can produce 12-bit per pixel maximum, we use RGB12bit converter */
-			CalculateMatlabJetColormapPixelRGB12bit(current_value, red, green, blue);
+			if (m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT)
+				CalculateMatlabJetColormapPixelRGB12bit(current_value, red, green, blue);
+			else if (m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_16BIT)
+				CalculateMatlabJetColormapPixelRGB16bit(current_value, red, green, blue);
 			m_Image.SetRGB(x, y, red, green, blue);
 			++position_in_data_pointer;
 		}

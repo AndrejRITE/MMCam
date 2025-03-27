@@ -28,6 +28,13 @@ namespace CameraPreviewVariables
 		XIMEA_CAM,
 	};
 
+	enum ImageDataTypes
+	{
+		RAW_12BIT,
+		RAW_16BIT,
+	};
+
+
 	struct InputPreviewPanelArgs
 	{
 		wxTextCtrl* x_pos_crosshair{}, * y_pos_crosshair{};
@@ -66,6 +73,8 @@ public:
 	auto ActivateGridMeshDisplaying(bool activate = false) -> void;
 	auto ActivateCircleMeshDisplaying(bool activate = false) -> void;
 
+	auto SetCameraDataType(CameraPreviewVariables::ImageDataTypes dataType) -> void { m_ImageDataType = dataType; };
+
 	void SetXCrossHairPosFromParentWindow(const int& x_pos);
 	void SetYCrossHairPosFromParentWindow(const int& y_pos);
 	auto SettingCrossHairPosFromParentWindow(bool set = false) -> void;
@@ -93,6 +102,7 @@ public:
 	//	const float& first_axis_position,
 	//	const float& second_axis_position = 0.f
 	//);
+
 	void CalculateMatlabJetColormapPixelRGB8bit
 	(
 		const unsigned char& value,
@@ -100,6 +110,7 @@ public:
 		unsigned char& g,
 		unsigned char& b
 	);
+
 	void CalculateMatlabJetColormapPixelRGB12bit
 	(
 		const unsigned short& value,
@@ -107,6 +118,15 @@ public:
 		unsigned char& g,
 		unsigned char& b
 	);
+
+	void CalculateMatlabJetColormapPixelRGB16bit
+	(
+		const unsigned short& value,
+		unsigned char& r,
+		unsigned char& g,
+		unsigned char& b
+	);
+
 
 	// FWHM
 	auto SetPixelSizeUM(const double pixel_sizeUM) 
@@ -176,7 +196,6 @@ private:
 	void OnSize(wxSizeEvent& evt);
 	void ChangeSizeOfImageInDependenceOnCanvasSize();
 	auto UpdateCrossHairOnSize() -> void;
-	void CalculateMatlabJetColormapPixelRGB16bit(const uint16_t& value, unsigned char& r, unsigned char& g, unsigned char& b);
 	void OnMouseMoved(wxMouseEvent& evt);
 	auto OnEnterPanel(wxMouseEvent& evt) -> void;
 	/* Zooming */
@@ -259,6 +278,8 @@ private:
 	bool m_DisplayCrossHair{};
 
 	int m_HEWDiameter{};
+
+	int m_ImageDataType{};
 
 	/* Scale Bar */
 	bool m_DisplayScaleBar{ true };
