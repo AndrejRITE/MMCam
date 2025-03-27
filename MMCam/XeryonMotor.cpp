@@ -70,7 +70,7 @@ bool XeryonMotor::GoToAbsolutePosition(float stagePosition)
 			py::module script_setAbsolutePosition = importlib.attr("reload")(py::module::import("xeryon_setAbsolutePosition"));
 
 			auto currentPosition = script_setAbsolutePosition.attr("move_to_position")
-				(m_MotorCOMPort.c_str(), stagePosition).cast<double>();
+				(m_MotorCOMPort.c_str(), (double)stagePosition).cast<double>();
 
 			SetCurrentMotorPosition(currentPosition);
 			return true;  // Success

@@ -116,7 +116,7 @@
       <AdditionalIncludeDirectories>$(PYBIND_LATEST);$(PYTHON_LATEST)\include;$(SolutionDir)MaterialDesign;$(WXWIN_LATEST)\include;$(WXWIN_LATEST)\include\msvc;$(OPENCV_LATEST)\..\..\include;$(XIMEA_LATEST);$(LIBXIMC_LATEST);$(SolutionDir)include;$(SolutionDir)include\rapidxml;$(SolutionDir)include\Xeryon\inc;$(SolutionDir)include\Xeryon\src</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

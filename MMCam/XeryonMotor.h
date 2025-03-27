@@ -69,8 +69,7 @@ public:
 	void SetDeviceName(const std::string& deviceName) override {};
 	void SetMotorSerialNumber(std::string serialNumber) override { m_MotorSerialNumber = serialNumber; };
 	void SetStepsPerMMRatio(const int stepsPerMMRatio) override { m_MotorSettings->stepsPerMMRatio = stepsPerMMRatio; };
-	void SetRange(const float minMotorDeg, const float maxMotorDeg) override 
-	{ m_MotorSettings->minMotorPos = minMotorDeg; m_MotorSettings->maxMotorPos = maxMotorDeg; };
+	void SetRange(const float minMotorDeg, const float maxMotorDeg) override { m_MotorSettings->minMotorPos = minMotorDeg; m_MotorSettings->maxMotorPos = maxMotorDeg; };
 	void SetCurrentMotorPosition(const float motorPosition) override { m_MotorSettings->motorPos += motorPosition; };
 
 	//void /*SetAxis*/(Axis* axis) { m_Axis = axis; };

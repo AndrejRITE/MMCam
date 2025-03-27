@@ -380,7 +380,8 @@ private:
 			{
 				SettingsVariables::Stage stage;
 				stage.SerialNumber = item.at("SerialNumber").get<std::string>();
-				stage.LastKnownPosition = item.at("LastKnownPosition").get<int>();
+				stage.COMPort = item.at("COMPort").get<std::string>();
+				stage.LastKnownPosition = item.at("LastKnownPosition").get<double>();
 				stages.push_back(stage);
 			}
 		}

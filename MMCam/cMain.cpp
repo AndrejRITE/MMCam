@@ -1913,14 +1913,13 @@ void cMain::OnExit(wxCloseEvent& evt)
 
 auto cMain::UpdateStagePositions() -> void
 {
-	wxString defaultAbsoluteValueStr{ MainFrameVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) }, defaultRelativeValueStr{ MainFrameVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) };
 	// Detector
 	{
 		m_Detector[0].absolute_text_ctrl->SetValue(
 			MainFrameVariables::CreateStringWithPrecision(	m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_X), m_DecimalDigits)
 		);
 
-		m_Detector[2].absolute_text_ctrl->SetValue(
+		m_Detector[1].absolute_text_ctrl->SetValue(
 			MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Y), m_DecimalDigits)
 		);
 
@@ -1931,6 +1930,11 @@ auto cMain::UpdateStagePositions() -> void
 
 	// Optics
 	{
+#ifndef _DEBUG
+		//auto currPos = m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X);
+		wxLogError(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X), m_DecimalDigits));
+#endif // _DEBUG
+
 		m_Optics[0].absolute_text_ctrl->SetValue(
 			MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X), m_DecimalDigits)
 		);
