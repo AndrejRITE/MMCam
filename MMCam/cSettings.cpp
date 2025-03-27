@@ -1227,6 +1227,8 @@ auto cSettings::RewriteInitializationFile() -> void
 
 auto cSettings::InitializeXeryonAndCheckPython() -> void
 {
+	wxBusyCursor busy;
+
 	m_PhysicalMotors = std::make_unique<XeryonMotorArray>();
 
 	ReadStagePositionsFromJSONFile();

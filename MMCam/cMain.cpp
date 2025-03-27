@@ -243,7 +243,7 @@ void cMain::InitDefaultStateWidgets()
 	m_CamPreview->SetValueDisplayingActive(true);
 	m_IsValueDisplayingChecked = true;
 
-	wxString defaultAbsoluteValueStr{ CreateStringWithPrecision(0.0, m_DecimalDigits) }, defaultRelativeValueStr{ CreateStringWithPrecision(0.0, m_DecimalDigits) };
+	wxString defaultAbsoluteValueStr{ MainFrameVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) }, defaultRelativeValueStr{ MainFrameVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) };
 	//float default_absolute_value{ 0.0f }, default_relative_value{ 1.0f };
 	/* Disabling Detector Widgets */
 	{
@@ -267,7 +267,7 @@ void cMain::InitDefaultStateWidgets()
 		}
 	}
 	//default_relative_value = 0.1f;
-	defaultRelativeValueStr = CreateStringWithPrecision(0.1, m_DecimalDigits);
+	defaultRelativeValueStr = MainFrameVariables::CreateStringWithPrecision(0.1, m_DecimalDigits);
 	/* Disabling Optics Widgets */
 	{
 		/* X */
@@ -295,7 +295,7 @@ void cMain::InitDefaultStateWidgets()
 		//m_OutDirTextCtrl->Disable();
 		//m_OutDirBtn->Disable();
 
-		wxString defaultStartStr{ CreateStringWithPrecision(0.0, m_DecimalDigits) }, defaultStepStr{ CreateStringWithPrecision(0.1, m_DecimalDigits) }, defaultFinishStr{ CreateStringWithPrecision(24.0, m_DecimalDigits) };
+		wxString defaultStartStr{ MainFrameVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) }, defaultStepStr{ MainFrameVariables::CreateStringWithPrecision(0.1, m_DecimalDigits) }, defaultFinishStr{ MainFrameVariables::CreateStringWithPrecision(24.0, m_DecimalDigits) };
 		//float default_start{ 0.0f }, default_step{ 0.1f }, default_finish{ 24.0f };
 
 		/* First Stage */
@@ -403,7 +403,7 @@ auto cMain::CreateDetectorPage
 
 	wxPanel* page = new wxPanel(parent);
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
-	auto defaultText = CreateStringWithPrecision(123.456789, m_DecimalDigits);
+	auto defaultText = MainFrameVariables::CreateStringWithPrecision(123.456789, m_DecimalDigits);
 	{
 		/* Detector X */
 		wxSizer* const x_detector = new wxStaticBoxSizer(wxHORIZONTAL, page, "&X");
@@ -715,7 +715,7 @@ auto cMain::CreateOpticsPage
 {
 	wxPanel* page = new wxPanel(parent);
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
-	auto defaultText = CreateStringWithPrecision(123.456789, m_DecimalDigits);
+	auto defaultText = MainFrameVariables::CreateStringWithPrecision(123.456789, m_DecimalDigits);
 	{
 		/* Optics X */
 		wxSizer* const x_optics = new wxStaticBoxSizer(wxHORIZONTAL, page, "&X");
@@ -1319,7 +1319,7 @@ void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_
 
 	wxSize start_text_ctrl_size = { 54, 20 }, step_text_ctrl_size = {start_text_ctrl_size}, finish_text_ctrl_size{start_text_ctrl_size};
 
-	auto defaultText = CreateStringWithPrecision(123.456789, m_DecimalDigits);
+	auto defaultText = MainFrameVariables::CreateStringWithPrecision(123.456789, m_DecimalDigits);
 	{
 		wxSizer* const directions_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, right_side_panel, "&Directions");
 
@@ -1913,39 +1913,34 @@ void cMain::OnExit(wxCloseEvent& evt)
 
 auto cMain::UpdateStagePositions() -> void
 {
+	wxString defaultAbsoluteValueStr{ MainFrameVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) }, defaultRelativeValueStr{ MainFrameVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) };
 	// Detector
 	{
 		m_Detector[0].absolute_text_ctrl->SetValue(
-			wxString::Format(wxT("%.3f"),
-				m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_X))
+			MainFrameVariables::CreateStringWithPrecision(	m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_X), m_DecimalDigits)
 		);
 
 		m_Detector[2].absolute_text_ctrl->SetValue(
-			wxString::Format(wxT("%.3f"),
-				m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Y))
+			MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Y), m_DecimalDigits)
 		);
 
 		m_Detector[2].absolute_text_ctrl->SetValue(
-			wxString::Format(wxT("%.3f"),
-				m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Z))
+			MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Z), m_DecimalDigits)
 		);
 	}
 
 	// Optics
 	{
 		m_Optics[0].absolute_text_ctrl->SetValue(
-			wxString::Format(wxT("%.3f"),
-				m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X))
+			MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X), m_DecimalDigits)
 		);
 
 		m_Optics[1].absolute_text_ctrl->SetValue(
-			wxString::Format(wxT("%.3f"),
-				m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Y))
+			MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Y), m_DecimalDigits)
 		);
 
 		m_Optics[2].absolute_text_ctrl->SetValue(
-			wxString::Format(wxT("%.3f"),
-				m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Z))
+			MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Z), m_DecimalDigits)
 		);
 	}
 }
@@ -2246,22 +2241,14 @@ void cMain::OnFirstStageChoice(wxCommandEvent& evt)
 	/* Set Start To Current position of motor */
 	m_FirstStage->start->SetValue
 	(
-		wxString::Format
-		(
-			wxT("%.3f"), 
-			(float)start_stage_value
-		)
+		MainFrameVariables::CreateStringWithPrecision(start_stage_value, m_DecimalDigits)
 	);
 	/* Set Finish To Current position of motor + Step */
 	if (!m_FirstStage->step->GetValue().ToDouble(&step_stage_value)) return;
 	finish_stage_value = start_stage_value + 1.0;
 	m_FirstStage->finish->SetValue
 	(
-		wxString::Format
-		(
-			wxT("%.3f"), 
-			(float)finish_stage_value
-		)
+		MainFrameVariables::CreateStringWithPrecision(finish_stage_value, m_DecimalDigits)
 	);
 }
 
@@ -2475,7 +2462,8 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			out_dir,
 			first_axis.release(), 
 			second_axis.release(),
-			m_Settings->GetPixelSizeUM()
+			m_Settings->GetPixelSizeUM(),
+			m_DecimalDigits
 		);
 		ProgressThread* progress_thread = new ProgressThread(m_Settings.get(), this);
 
@@ -3133,14 +3121,14 @@ auto cMain::GeneratePDFReportUsingLatex
 		(
 			destinationFilePath,
 			placeholder,
-			wxString::Format(wxT("%.2f"), reportParameters.focus)
+			MainFrameVariables::CreateStringWithPrecision(reportParameters.focus, m_DecimalDigits)
 		);
 		placeholder = "{#Step}";
 		ReplacePlaceholderInTexFile
 		(
 			destinationFilePath,
 			placeholder,
-			wxString::Format(wxT("%.3f"), reportParameters.step)
+			MainFrameVariables::CreateStringWithPrecision(reportParameters.step, m_DecimalDigits)
 		);
 	}
 
@@ -3358,13 +3346,13 @@ void cMain::OnValueDisplayingCheck(wxCommandEvent& evt)
 void cMain::UpdateAllAxisGlobalPositions()
 {
 	/* Detectors */
-	m_Detector[0].absolute_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_X)));
-	m_Detector[1].absolute_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Y)));
-	m_Detector[2].absolute_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Z)));
+	m_Detector[0].absolute_text_ctrl->ChangeValue(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_X), m_DecimalDigits));
+	m_Detector[1].absolute_text_ctrl->ChangeValue(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Y), m_DecimalDigits));
+	m_Detector[2].absolute_text_ctrl->ChangeValue(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Z), m_DecimalDigits));
 	/* Optics */
-	m_Optics[0].absolute_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X)));
-	m_Optics[1].absolute_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Y)));
-	m_Optics[2].absolute_text_ctrl->ChangeValue(wxString::Format(wxT("%.3f"), m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Z)));
+	m_Optics[0].absolute_text_ctrl->ChangeValue(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X), m_DecimalDigits));
+	m_Optics[1].absolute_text_ctrl->ChangeValue(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Y), m_DecimalDigits));
+	m_Optics[2].absolute_text_ctrl->ChangeValue(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Z), m_DecimalDigits));
 }
 
 void cMain::ExposureValueChanged(wxCommandEvent& evt)
@@ -3760,7 +3748,7 @@ auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 			}
 
 			auto title = wxString("Horizontal FWHM = ");
-			title += wxString::Format(wxT("%.2f"), bestHorizontalFWHM);
+			title += MainFrameVariables::CreateStringWithPrecision(bestHorizontalFWHM, 2);
 			title += " [um]";
 			WriteTempJSONLineProfileDataToTXTFile
 			(
@@ -3794,7 +3782,7 @@ auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 			}
 
 			auto title = wxString("Vertical FWHM = ");
-			title += wxString::Format(wxT("%.2f"), bestVerticalFWHM);
+			title += MainFrameVariables::CreateStringWithPrecision(bestVerticalFWHM, 2);
 			title += " [um]";
 			WriteTempJSONLineProfileDataToTXTFile
 			(
@@ -4467,7 +4455,8 @@ WorkerThread::WorkerThread
 	const wxString& path, 
 	MainFrameVariables::AxisMeasurement* first_axis, 
 	MainFrameVariables::AxisMeasurement* second_axis,
-	const double pixelSizeUM
+	const double pixelSizeUM,
+	const int decimalDigits
 ) 
 	: LiveCapturing
 	(
@@ -4482,7 +4471,8 @@ WorkerThread::WorkerThread
 	m_ImagePath(path), 
 	m_FirstAxis(first_axis), 
 	m_SecondAxis(second_axis),
-	m_PixelSizeUM(pixelSizeUM)
+	m_PixelSizeUM(pixelSizeUM),
+	m_DecimalDigits(decimalDigits)
 {}
 
 WorkerThread::~WorkerThread()
@@ -4937,7 +4927,7 @@ wxBitmap WorkerThread::CreateGraph
 			for (auto i{ 0 }; i < dataSize; ++i)
 			{
 
-				currTextValue = wxString::Format(wxT("%.3f"), positionsData[i]);
+				currTextValue = MainFrameVariables::CreateStringWithPrecision(positionsData[i], m_DecimalDigits);
 				auto textSize = dc.GetTextExtent(currTextValue);
 
 				if (dataSize < 80 || i == 0 || (i + 1) % 10 == 0)

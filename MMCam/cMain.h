@@ -233,6 +233,14 @@ namespace MainFrameVariables
 		wxArrayString circleArray{};
 		wxArrayString xRayArray{};
 	};
+
+	static auto CreateStringWithPrecision(double value, int decimalPlaces) -> wxString
+	{
+		// Create a wxString with the specified number of decimal places
+		wxString formattedString = wxString::Format(wxT("%.") + std::to_string(decimalPlaces) + wxT("f"), value);
+		return formattedString;
+	};
+
 }
 
 class ProgressBar;
@@ -1343,13 +1351,6 @@ private:
 		//wxLogMessage("File successfully copied to: %s", destination);
 	}
 
-	auto CreateStringWithPrecision(double value, int decimalPlaces) -> wxString
-	{
-		// Create a wxString with the specified number of decimal places
-		wxString formattedString = wxString::Format(wxT("%.") + std::to_string(decimalPlaces) + wxT("f"), value);
-		return formattedString;
-	};
-
 
 private:
 	/* Settings Menu */
@@ -1476,7 +1477,8 @@ public:
 		const wxString& path, 
 		MainFrameVariables::AxisMeasurement* first_axis, 
 		MainFrameVariables::AxisMeasurement* second_axis,
-		const double pixelSizeUM
+		const double pixelSizeUM,
+		const int decimalDigits
 	);
 	~WorkerThread();
 
@@ -1583,6 +1585,7 @@ private:
 	cSettings* m_Settings{};
 	wxString m_ImagePath{};
 	MainFrameVariables::AxisMeasurement* m_FirstAxis{}, * m_SecondAxis{};
+	int m_DecimalDigits{ 3 };
 
 	// FWHM
 	std::unique_ptr<double[]> m_HorizontalFWHMData{}, m_VerticalFWHMData{};

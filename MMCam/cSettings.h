@@ -320,18 +320,22 @@ private:
 	// Python
 	bool IsPythonInstalled()
 	{
-		int exitCode = wxExecute("python --version", wxEXEC_SYNC);
+		wxArrayString output;
+		wxArrayString errors;
+		int exitCode = wxExecute("python --version", output, errors);
 		if (exitCode != 0)
 		{
-			exitCode = wxExecute("python3 --version", wxEXEC_SYNC);
+			exitCode = wxExecute("python3 --version", output, errors);
 		}
 		return (exitCode == 0);
 	}
 
 	bool IsPythonModuleInstalled(const wxString& moduleName)
 	{
+		wxArrayString output;
+		wxArrayString errors;
 		wxString command = "python -m pip show " + moduleName;
-		int exitCode = wxExecute(command, wxEXEC_SYNC);
+		int exitCode = wxExecute(command, output, errors);
 		return (exitCode == 0);
 	}
 
