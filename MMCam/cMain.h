@@ -342,8 +342,9 @@ private:
 		wxBusyCursor cursor;
 		double absolute_position{};
 		if (!m_Detector[0].absolute_text_ctrl->GetValue().ToDouble(&absolute_position)) return;
-		auto position = m_Settings->GoToAbsPos(SettingsVariables::DETECTOR_X, (float)absolute_position);
-		m_Detector[0].absolute_text_ctrl->SetValue(wxString::Format(wxT("%.3f"), position));
+		auto currentPosition = m_Settings->GoToAbsPos(SettingsVariables::DETECTOR_X, (float)absolute_position);
+
+		m_Detector[0].absolute_text_ctrl->SetValue(MainFrameVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
 	};
 
 	void OnDecrementDetectorXAbsPos(wxCommandEvent& evt)
@@ -351,12 +352,15 @@ private:
 		wxBusyCursor cursor;
 		double delta_position{};
 		if (!m_Detector[0].relative_text_ctrl->GetValue().ToDouble(&delta_position)) return;
+		auto currentPosition = m_Settings->GoOffsetMotor(SettingsVariables::DETECTOR_X, -(float)delta_position);
+
 		m_Detector[0].absolute_text_ctrl->SetValue(
-			wxString::Format
+			MainFrameVariables::CreateStringWithPrecision
 			(
-				wxT("%.3f"),
-				m_Settings->GoOffsetMotor(SettingsVariables::DETECTOR_X, -(float)delta_position)
-			));
+				currentPosition,
+				m_DecimalDigits
+			)
+		);
 	};
 
 	void OnIncrementDetectorXAbsPos(wxCommandEvent& evt)
@@ -364,32 +368,43 @@ private:
 		wxBusyCursor cursor;
 		double delta_position{};
 		if (!m_Detector[0].relative_text_ctrl->GetValue().ToDouble(&delta_position)) return;
+		auto currentPosition = m_Settings->GoOffsetMotor(SettingsVariables::DETECTOR_X, (float)delta_position);
+
 		m_Detector[0].absolute_text_ctrl->SetValue(
-			wxString::Format
+			MainFrameVariables::CreateStringWithPrecision
 			(
-				wxT("%.3f"),
-				m_Settings->GoOffsetMotor(SettingsVariables::DETECTOR_X, (float)delta_position)
-			));
+				currentPosition,
+				m_DecimalDigits
+			)
+		);
 	};
 
 	void OnCenterDetectorX(wxCommandEvent& evt)
 	{
 		wxBusyCursor cursor;
+		auto currentPosition = m_Settings->CenterMotor(SettingsVariables::DETECTOR_X);
+
 		m_Detector[0].absolute_text_ctrl->SetValue(
-			wxString::Format(
-				wxT("%.3f"),
-				m_Settings->CenterMotor(SettingsVariables::DETECTOR_X)
-			));
+			MainFrameVariables::CreateStringWithPrecision
+			(
+				currentPosition,
+				m_DecimalDigits
+			)
+		);
 	};
 
 	void OnHomeDetectorX(wxCommandEvent& evt)
 	{
 		wxBusyCursor cursor;
+		auto currentPosition = m_Settings->HomeMotor(SettingsVariables::DETECTOR_X);
+
 		m_Detector[0].absolute_text_ctrl->ChangeValue(
-			wxString::Format(
-				wxT("%.3f"),
-				m_Settings->HomeMotor(SettingsVariables::DETECTOR_X)
-			));
+			MainFrameVariables::CreateStringWithPrecision
+			(
+				currentPosition,
+				m_DecimalDigits
+			)
+		);
 	};
 
 	/* _____________________Detector Y_____________________ */

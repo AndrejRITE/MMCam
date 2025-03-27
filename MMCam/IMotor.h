@@ -39,7 +39,7 @@ public:
     virtual void SetMotorSerialNumber(std::string serialNumber) = 0;
     virtual void SetStepsPerMMRatio(const int stepsPerMMRatio) = 0;
 	virtual void SetRange(const float minMotorDeg, const float maxMotorDeg) = 0;
-	virtual void SetCurrentMotorPosition(const int motorPosition) = 0;
+	virtual void SetCurrentMotorPosition(const float motorPosition) = 0;
 
     virtual void UpdateCurrentPosition() = 0;
 };

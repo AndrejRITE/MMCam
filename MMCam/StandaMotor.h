@@ -57,7 +57,7 @@ public:
 	void SetConversionFactor(const double A) { if (!m_StandaSettings) return; m_StandaSettings->calibration.A = A; };
 	void SetMicrostepMode(const unsigned int microstepMode) { if (!m_StandaSettings) return; m_StandaSettings->calibration.MicrostepMode = microstepMode; };
 	//void SetState(status_t state) { m_StandaSettings->state = state; };
-	void SetCurrentMotorPosition(const int motorPosition) override { if (!m_StandaSettings) return; m_StandaSettings->state.CurPosition = motorPosition;};
+	void SetCurrentMotorPosition(const float motorPosition) override { if (!m_StandaSettings) return; m_StandaSettings->state.CurPosition = (int)motorPosition;};
 	//void SetCalbState(status_calb_t calb_state) { m_StandaSettings->calb_state = calb_state; };
 
 	void SetRange(const float minMotorDeg, const float maxMotorDeg) override;
