@@ -2,7 +2,6 @@
 
 wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_CLOSE(cMain::OnExit)
-	//EVT_SIZE(cMain::OnSize)
 	EVT_MENU(MainFrameVariables::ID_MENUBAR_FILE_QUIT, cMain::OnExit)
 	EVT_MENU(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
 	EVT_MENU(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, cMain::OnStartStopLiveCapturingMenu)
@@ -1980,10 +1979,6 @@ void cMain::OnExit(wxCommandEvent& evt)
 {
 	wxCloseEvent artificialExit(wxEVT_CLOSE_WINDOW);
 	ProcessEvent(artificialExit);
-}
-
-void cMain::OnSize(wxSizeEvent& evt)
-{
 }
 
 void cMain::EnableUsedAndDisableNonUsedMotors()

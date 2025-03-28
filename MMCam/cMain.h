@@ -328,7 +328,6 @@ private:
 
 	void OnExit(wxCloseEvent& evt);
 	void OnExit(wxCommandEvent& evt);
-	void OnSize(wxSizeEvent& evt);
 
 	/* Stepper Control Functions */
 	void OnEnterTextCtrlAbsPos(wxCommandEvent& evt, int index, int buttonID)
