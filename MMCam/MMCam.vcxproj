@@ -148,10 +148,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\Xeryon\inc\Axis.h" />
-    <ClInclude Include="..\include\Xeryon\inc\Distance.h" />
-    <ClInclude Include="..\include\Xeryon\inc\Stage.h" />
-    <ClInclude Include="..\include\Xeryon\inc\Xeryon.h" />
     <ClInclude Include="..\MaterialDesign\wxAwesomeBrandsArt.hpp" />
     <ClInclude Include="..\MaterialDesign\wxAwesomeRegularArt.hpp" />
     <ClInclude Include="..\MaterialDesign\wxAwesomeSolidArt.hpp" />
@@ -184,10 +180,6 @@
     <ClInclude Include="XimeaControl.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\include\Xeryon\src\Axis.cpp" />
-    <ClCompile Include="..\include\Xeryon\src\Distance.cpp" />
-    <ClCompile Include="..\include\Xeryon\src\Stage.cpp" />
-    <ClCompile Include="..\include\Xeryon\src\Xeryon.cpp" />
     <ClCompile Include="..\MaterialDesign\wxAwesomeBrandsArt.cpp" />
     <ClCompile Include="..\MaterialDesign\wxAwesomeRegularArt.cpp" />
     <ClCompile Include="..\MaterialDesign\wxAwesomeSolidArt.cpp" />
