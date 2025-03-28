@@ -318,6 +318,7 @@ private:
 
 	void OnOpenSettings(wxCommandEvent& evt);
 	auto InitializeSelectedCamera() -> void;
+	auto CoolDownTheCamera() -> void;
 	void EnableUsedAndDisableNonUsedMotors();
 
 	void OnValueDisplayingCheck(wxCommandEvent& evt);

@@ -107,6 +107,21 @@ auto MoravianInstrumentsControl::SetExposureTime(int exposure_us) -> void
 	m_CapturingParameters->exposure_sec = exposure_us / 1'000'000.0 ;
 }
 
+auto MoravianInstrumentsControl::SetSensorTemperature(const double requiredTemperature) -> void
+{
+	if (!m_CameraHandler) return;
+	gxetha::SetTemperature(m_CameraHandler, requiredTemperature);
+}
+
+auto MoravianInstrumentsControl::GetSensorTemperature() -> double 
+{
+	if (!m_CameraHandler) return 0.0;
+	gxetha::REAL sensorTemperature;
+	gxetha::GetValue(m_CameraHandler, gvChipTemperature, &sensorTemperature);
+	m_SensorTemperature = static_cast<double>(sensorTemperature);
+	return m_SensorTemperature;
+}
+
 auto MoravianInstrumentsControl::IsConnected() const -> bool 
 {
 	if (!m_CameraHandler) return false;

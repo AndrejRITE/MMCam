@@ -87,6 +87,8 @@ public:
 	auto StopAcquisition() -> bool override;
 	auto GetImage() -> unsigned short* override;
 	auto SetExposureTime(int exposure_us) -> void override;
+    auto SetSensorTemperature(const double requiredTemperature) -> void override;
+	auto GetSensorTemperature() -> double override;
 
 	auto GetWidth() const -> unsigned long override { return m_CameraHandler == nullptr || m_ActualCameraParameters == nullptr ? 0 : m_ActualCameraParameters->sensor_width; };
 	auto GetHeight() const -> unsigned long override { return m_CameraHandler == nullptr || m_ActualCameraParameters == nullptr ? 0 : m_ActualCameraParameters->sensor_height; };

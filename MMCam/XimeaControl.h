@@ -24,6 +24,8 @@ public:
 	auto StopAcquisition() -> bool override;
 	auto GetImage() -> unsigned short* override;
 	auto SetExposureTime(int exposure_us) -> void override;
+	auto SetSensorTemperature(const double requiredTemperature) -> void override { m_SensorTemperature = requiredTemperature; };
+	auto GetSensorTemperature() -> double override { return m_SensorTemperature; };
 
 	auto GetWidth() const -> unsigned long override;
 	auto GetHeight() const -> unsigned long override;

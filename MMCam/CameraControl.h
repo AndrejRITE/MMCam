@@ -31,10 +31,14 @@ public:
 
     virtual auto IsConnected() const -> bool = 0;
 
+    virtual auto SetSensorTemperature(const double requiredTemperature) -> void = 0;
+    virtual auto GetSensorTemperature() -> double = 0;
+
     auto GetCameraDataType() const -> CameraControlVariables::ImageDataTypes { return m_ImageDataType; };
 
 protected:
     CameraControlVariables::ImageDataTypes m_ImageDataType{ CameraControlVariables::ImageDataTypes::RAW_12BIT };
+    double m_SensorTemperature{};
 };
 
 #endif // CAMERA_CONTROL_H

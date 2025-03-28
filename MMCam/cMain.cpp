@@ -1788,6 +1788,8 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 #ifndef _DEBUG
 #endif // !_DEBUG
 
+	wxBusyCursor busy;
+
 	m_CamPreview->SetPixelSizeUM(m_Settings->GetPixelSizeUM());
 	m_CamPreview->SetCropSizeMM(m_Settings->GetCropSizeMM());
 	m_CamPreview->SetGridMeshStepPX(m_Settings->GetGridMeshStep());
@@ -1829,7 +1831,6 @@ auto cMain::InitializeSelectedCamera() -> void
 
 	m_CameraControl->Initialize();
 
-
 	if (!m_CameraControl->IsConnected())
 	{
 		m_SelectedCameraStaticTXT->SetLabel(defaultCameraName);
@@ -1845,7 +1846,8 @@ auto cMain::InitializeSelectedCamera() -> void
 	// Successful initialization of the camera
 	// Enabling controls
 	EnableControlsAfterSuccessfulCameraInitialization();
-	
+
+	CoolDownTheCamera();
 
 	//m_MenuBar->menu_edit->Check(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_FWHM_DISPLAYING, true);
 	//wxCommandEvent art_fwhm_displaying(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_FWHM_DISPLAYING);
@@ -1854,6 +1856,23 @@ auto cMain::InitializeSelectedCamera() -> void
 	m_StartStopLiveCapturingTglBtn->SetValue(true);
 	wxCommandEvent art_start_live_capturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	ProcessEvent(art_start_live_capturing);
+}
+
+auto cMain::CoolDownTheCamera() -> void
+{
+	if (!m_CameraControl) return;
+
+	auto requestedTemperature = m_Settings->GetRequiredSensorTemperature();
+	m_CameraControl->SetSensorTemperature(requestedTemperature);
+
+	auto currentTemperature = m_CameraControl->GetSensorTemperature();
+
+	auto thresholdDegC = 0.1;
+	while (currentTemperature > requestedTemperature + thresholdDegC || currentTemperature < requestedTemperature - thresholdDegC)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		currentTemperature = m_CameraControl->GetSensorTemperature();
+	}
 }
 
 void cMain::OnFullScreen(wxCommandEvent& evt)
@@ -1971,15 +1990,31 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 {
 	// Detector 
 	{
+		bool isAnyMotorActive{};
 		/* X */
-		if (m_Settings->MotorHasSerialNumber(SettingsVariables::DETECTOR_X)) m_Detector[0].EnableAllControls();
+		if (m_Settings->MotorHasSerialNumber(SettingsVariables::DETECTOR_X))
+		{
+			isAnyMotorActive = true;
+			m_Detector[0].EnableAllControls();
+		}
 		else m_Detector[0].DisableAllControls();
 		/* Y */
-		if (m_Settings->MotorHasSerialNumber(SettingsVariables::DETECTOR_Y)) m_Detector[1].EnableAllControls();
+		if (m_Settings->MotorHasSerialNumber(SettingsVariables::DETECTOR_Y))
+		{
+			isAnyMotorActive = true;
+			m_Detector[1].EnableAllControls();
+		}
 		else m_Detector[1].DisableAllControls();
 		/* Z */
-		if (m_Settings->MotorHasSerialNumber(SettingsVariables::DETECTOR_Z)) m_Detector[2].EnableAllControls();
+		if (m_Settings->MotorHasSerialNumber(SettingsVariables::DETECTOR_Z))
+		{
+			isAnyMotorActive = true;
+			m_Detector[2].EnableAllControls();
+		}
 		else m_Detector[2].DisableAllControls();
+
+		if (!isAnyMotorActive) m_MotorControlsNotebook->Hide();
+		else m_MotorControlsNotebook->Show();
 	}
 	// Optics
 	{
@@ -2012,8 +2047,9 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 		if (!isAnyMotorActive) m_MotorControlsNotebookSupport->Hide();
 		else m_MotorControlsNotebookSupport->Show();
 
-		Layout();
 	}
+
+	Layout();
 }
 
 void cMain::CreateVerticalToolBar()
