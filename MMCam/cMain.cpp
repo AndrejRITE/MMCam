@@ -1011,6 +1011,216 @@ auto cMain::CreateOpticsPage
 	return page;
 }
 
+auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
+{
+	wxPanel* page = new wxPanel(parent);
+	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+
+	//wxSizer* const cam_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, right_side_panel, "&Camera");
+	wxSizer* const first_row_sizer = new wxBoxSizer(wxHORIZONTAL);
+	{
+		wxSizer* const settings_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Settings");
+		{
+			wxSizer* const exposure_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Exposure [ms]");
+
+			wxIntegerValidator<int>	exposure_val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
+			exposure_val.SetMin(1);
+			exposure_val.SetMax(1000000);
+
+			wxSize exposure_size = { 64, 20 };
+
+			m_CamExposure = std::make_unique<wxTextCtrl>
+				(
+					page, 
+					MainFrameVariables::ID_RIGHT_CAM_EXPOSURE_TE_CTL, 
+#ifdef _DEBUG
+					wxT("10"), 
+#else
+					wxT("10"), 
+#endif // _DEBUG
+					wxDefaultPosition, 
+					exposure_size, 
+					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
+					exposure_val
+				);
+			m_CamExposure->Disable();
+
+			exposure_static_box_sizer->AddStretchSpacer();
+			exposure_static_box_sizer->Add(m_CamExposure.get(), 0, wxEXPAND);
+			exposure_static_box_sizer->AddStretchSpacer();
+
+			settings_static_box_sizer->Add(exposure_static_box_sizer, 0, wxEXPAND);
+		}
+		first_row_sizer->Add(settings_static_box_sizer, 0, wxEXPAND | wxLEFT, 2);
+
+		/* Preview And Start\Stop Live Capturing */
+		{
+			wxSizer* const ss_and_start_stop_box_sizer = new wxBoxSizer(wxVERTICAL);
+			
+			m_SingleShotBtn = std::make_unique<wxButton>(
+				page,
+				MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN,
+				wxT("Single Shot (S)"), 
+				wxDefaultPosition, 
+				wxDefaultSize);
+			m_SingleShotBtn->Disable();
+			ss_and_start_stop_box_sizer->Add(m_SingleShotBtn.get(), 0, wxEXPAND);
+
+			m_StartStopLiveCapturingTglBtn = std::make_unique<wxToggleButton>
+				(
+					page,
+					MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, 
+					wxT("Start Live (L)")
+				);
+			m_StartStopLiveCapturingTglBtn->Disable();
+			ss_and_start_stop_box_sizer->Add(m_StartStopLiveCapturingTglBtn.get(), 0, wxEXPAND | wxTOP, 5);
+
+			first_row_sizer->AddStretchSpacer();
+			first_row_sizer->Add(ss_and_start_stop_box_sizer, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT, 2);
+		}
+	}
+	sizerPage->Add(first_row_sizer, 0, wxEXPAND);
+
+	wxSizer* const second_row_sizer = new wxBoxSizer(wxHORIZONTAL);
+	{
+		wxSize txt_ctrl_size = { 64, 20 };
+		wxSize btn_size = { 36, 20 };
+		wxSizer* const cross_hair_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&CrossHair");
+		/* X Position */
+		{
+			wxSizer* const x_pos_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&X");
+			wxIntegerValidator<int>	x_pos_validator(NULL, wxNUM_VAL_ZERO_AS_BLANK);
+			x_pos_validator.SetMin(1);
+			x_pos_validator.SetMax(10000);
+
+			m_CrossHairPosXTxtCtrl = std::make_unique<wxTextCtrl>
+				(
+					page,
+					MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL,
+					wxT("1"), 
+					wxDefaultPosition, 
+					txt_ctrl_size, 
+					wxTE_CENTRE
+					);
+			m_CrossHairPosXTxtCtrl->Disable();
+			x_pos_sizer->Add(m_CrossHairPosXTxtCtrl.get(), 0, wxEXPAND);
+			cross_hair_sizer->Add(x_pos_sizer, 0, wxEXPAND | wxRIGHT, 2);
+		}
+
+		/* Y Position */
+		{
+			wxSizer* const y_pos_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Y");
+			wxIntegerValidator<int>	y_pos_validator(NULL, wxNUM_VAL_ZERO_AS_BLANK);
+			y_pos_validator.SetMin(1);
+			y_pos_validator.SetMax(10000);
+
+			m_CrossHairPosYTxtCtrl = std::make_unique<wxTextCtrl>
+				(
+					page,
+					MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL,
+					wxT("1"), 
+					wxDefaultPosition, 
+					txt_ctrl_size, 
+					wxTE_CENTRE
+					);
+			m_CrossHairPosYTxtCtrl->Disable();
+			y_pos_sizer->Add(m_CrossHairPosYTxtCtrl.get(), 0, wxEXPAND);
+			cross_hair_sizer->Add(y_pos_sizer, 0, wxEXPAND);
+		}
+
+		/* Set Postion */
+		//{
+		//	m_SetCrossHairPosTglBtn = std::make_unique<wxToggleButton>
+		//		(
+		//			right_side_panel,
+		//			MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_SET_POS_TGL_BTN,
+		//			wxT("Set"),
+		//			wxDefaultPosition,
+		//			btn_size
+		//		);
+		//	m_SetCrossHairPosTglBtn->Disable();
+
+		//	cross_hair_sizer->AddSpacer(5);
+		//	cross_hair_sizer->Add(m_SetCrossHairPosTglBtn.get(), 0, wxALIGN_CENTER);
+		//}
+		second_row_sizer->Add(cross_hair_sizer, 0, wxALIGN_CENTER);
+	}
+	sizerPage->Add(second_row_sizer, 0, wxALIGN_CENTER);
+
+	page->SetSizer(sizerPage);
+	return page;
+}
+
+auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
+{
+	wxPanel* page = new wxPanel(parent);
+	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+
+	m_CurrentCameraSettingsPropertyGrid = new wxPropertyGrid
+	(
+		page, 
+		MainFrameVariables::ID_RIGHT_CAM_ACTUAL_PARAMETERS_PROPERTY_GRID, 
+		wxDefaultPosition, 
+		wxDefaultSize, 
+		wxPG_DEFAULT_STYLE
+	);
+
+	m_CurrentCameraSettingsPropertyGrid->Append
+	(
+		new wxStringProperty
+		(
+			"ID", 
+			"ID", 
+			"None"
+		)
+	);
+
+	m_CurrentCameraSettingsPropertyGrid->Append
+	(
+		new wxFloatProperty
+		(
+			"Sensor Temperature [degC]", 
+			"Sensor Temperature [degC]", 
+			0.0
+		)
+	);
+
+	m_CurrentCameraSettingsPropertyGrid->Append
+	(
+		new wxIntProperty
+		(
+			"Sensor Width [px]", 
+			"Sensor Width [px]", 
+			0
+		)
+	);
+
+	m_CurrentCameraSettingsPropertyGrid->Append
+	(
+		new wxIntProperty
+		(
+			"Sensor Height [px]", 
+			"Sensor Height [px]", 
+			0
+		)
+	);
+
+
+	sizerPage->Add(m_CurrentCameraSettingsPropertyGrid, 0, wxEXPAND);
+
+	wxSizer* const selected_camera_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Selected Camera");
+	{
+		m_SelectedCameraStaticTXT = std::make_unique<wxStaticText>(page, wxID_ANY, wxT("None"));
+		selected_camera_box_sizer->AddStretchSpacer();
+		selected_camera_box_sizer->Add(m_SelectedCameraStaticTXT.get(), 0, wxCENTER);
+		selected_camera_box_sizer->AddStretchSpacer();
+	}
+	sizerPage->Add(selected_camera_box_sizer, 0, wxEXPAND);
+
+	page->SetSizer(sizerPage);
+	return page;
+}
+
 void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer)
 {
 	wxSizer* const sc_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, right_side_panel, "&Steppers Constrol");
@@ -1092,15 +1302,15 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 
 	int opticsImgIndexSupport = imageListSupport->Add(opticsBitmap);
 
-	m_MotorControlsNotebook = new wxNotebook(right_side_panel, wxID_ANY);
+	m_DetectorControlsNotebook = new wxNotebook(right_side_panel, wxID_ANY);
 
-	m_MotorControlsNotebook->AssignImageList(imageList);
+	m_DetectorControlsNotebook->AssignImageList(imageList);
 
-	m_MotorControlsNotebook->AddPage
+	m_DetectorControlsNotebook->AddPage
 	(
 		CreateDetectorPage
 		(
-			m_MotorControlsNotebook, 
+			m_DetectorControlsNotebook, 
 			absolute_text_ctrl_size, 
 			relative_text_ctrl_size,
 			set_btn_size,
@@ -1113,11 +1323,11 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 		detectorImgIndex
 	);
 
-	m_MotorControlsNotebookSupport = new wxNotebook(right_side_panel, wxID_ANY);
+	m_OpticsControlsNotebook = new wxNotebook(right_side_panel, wxID_ANY);
 
 	m_OpticsPage = CreateOpticsPage
 	(
-		m_MotorControlsNotebookSupport,
+		m_OpticsControlsNotebook,
 		absolute_text_ctrl_size,
 		relative_text_ctrl_size,
 		set_btn_size,
@@ -1126,9 +1336,9 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 		homeBitmap
 	);
 
-	m_MotorControlsNotebookSupport->AssignImageList(imageListSupport);
+	m_OpticsControlsNotebook->AssignImageList(imageListSupport);
 
-	m_MotorControlsNotebookSupport->AddPage
+	m_OpticsControlsNotebook->AddPage
 	(
 		m_OpticsPage,
 		"Optics",
@@ -1136,154 +1346,69 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 		opticsImgIndexSupport
 	);
 
-	right_side_panel_sizer->Add(m_MotorControlsNotebook, 0, wxEXPAND);
-	right_side_panel_sizer->Add(m_MotorControlsNotebookSupport, 0, wxEXPAND);
+	right_side_panel_sizer->Add(m_DetectorControlsNotebook, 0, wxEXPAND);
+	right_side_panel_sizer->Add(m_OpticsControlsNotebook, 0, wxEXPAND);
 	//right_side_panel_sizer->Add(sc_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
 }
 
 void cMain::CreateCameraControls(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer)
 {
-	wxSizer* const cam_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, right_side_panel, "&Camera");
-	wxSizer* const first_row_sizer = new wxBoxSizer(wxHORIZONTAL);
+	wxImageList* imageList = new wxImageList(16, 16, true);
+
+	wxBitmap cameraBitmap{};
 	{
-		wxSizer* const selected_camera_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, right_side_panel, "&Selected Camera");
-		{
-			m_SelectedCameraStaticTXT = std::make_unique<wxStaticText>(right_side_panel, wxID_ANY, wxT("None"));
-			selected_camera_box_sizer->AddStretchSpacer();
-			selected_camera_box_sizer->Add(m_SelectedCameraStaticTXT.get(), 0, wxCENTER);
-			selected_camera_box_sizer->AddStretchSpacer();
-		}
-		first_row_sizer->Add(selected_camera_box_sizer, 0, wxEXPAND);
-
-		wxSizer* const settings_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, right_side_panel, "&Settings");
-		{
-			wxSizer* const exposure_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, right_side_panel, "&Exposure [ms]");
-
-			wxIntegerValidator<int>	exposure_val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
-			exposure_val.SetMin(1);
-			exposure_val.SetMax(1000000);
-
-			wxSize exposure_size = { 64, 20 };
-
-			m_CamExposure = std::make_unique<wxTextCtrl>
-				(
-					right_side_panel, 
-					MainFrameVariables::ID_RIGHT_CAM_EXPOSURE_TE_CTL, 
-#ifdef _DEBUG
-					wxT("10"), 
-#else
-					wxT("10"), 
-#endif // _DEBUG
-					wxDefaultPosition, 
-					exposure_size, 
-					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
-					exposure_val
-				);
-			m_CamExposure->Disable();
-
-			exposure_static_box_sizer->AddStretchSpacer();
-			exposure_static_box_sizer->Add(m_CamExposure.get(), 0, wxEXPAND);
-			exposure_static_box_sizer->AddStretchSpacer();
-
-			settings_static_box_sizer->Add(exposure_static_box_sizer, 0, wxEXPAND);
-		}
-		first_row_sizer->Add(settings_static_box_sizer, 0, wxEXPAND | wxLEFT, 2);
-
-		/* Preview And Start\Stop Live Capturing */
-		{
-			wxSizer* const ss_and_start_stop_box_sizer = new wxBoxSizer(wxVERTICAL);
-			
-			m_SingleShotBtn = std::make_unique<wxButton>(
-				right_side_panel,
-				MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN,
-				wxT("Single Shot (S)"), 
-				wxDefaultPosition, 
-				wxDefaultSize);
-			m_SingleShotBtn->Disable();
-			ss_and_start_stop_box_sizer->Add(m_SingleShotBtn.get(), 0, wxEXPAND);
-
-			m_StartStopLiveCapturingTglBtn = std::make_unique<wxToggleButton>
-				(
-					right_side_panel,
-					MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, 
-					wxT("Start Live (L)")
-				);
-			m_StartStopLiveCapturingTglBtn->Disable();
-			ss_and_start_stop_box_sizer->Add(m_StartStopLiveCapturingTglBtn.get(), 0, wxEXPAND | wxTOP, 5);
-
-			first_row_sizer->AddStretchSpacer();
-			first_row_sizer->Add(ss_and_start_stop_box_sizer, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT, 2);
-		}
+		auto bitmap = wxART_CAMERA;
+		auto client = wxART_CLIENT_FLUENTUI_FILLED;
+		auto color = wxColour(255, 128, 0);
+		auto size = wxSize(16, 16);
+		cameraBitmap = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			size,
+			color
+		);
 	}
-	cam_static_box_sizer->Add(first_row_sizer, 0, wxEXPAND);
 
-	wxSizer* const second_row_sizer = new wxBoxSizer(wxHORIZONTAL);
+	wxBitmap cameraParametersBitmap{};
 	{
-		wxSize txt_ctrl_size = { 64, 20 };
-		wxSize btn_size = { 36, 20 };
-		wxSizer* const cross_hair_sizer = new wxStaticBoxSizer(wxHORIZONTAL, right_side_panel, "&CrossHair");
-		/* X Position */
-		{
-			wxSizer* const x_pos_sizer = new wxStaticBoxSizer(wxHORIZONTAL, right_side_panel, "&X");
-			wxIntegerValidator<int>	x_pos_validator(NULL, wxNUM_VAL_ZERO_AS_BLANK);
-			x_pos_validator.SetMin(1);
-			x_pos_validator.SetMax(10000);
-
-			m_CrossHairPosXTxtCtrl = std::make_unique<wxTextCtrl>
-				(
-					right_side_panel,
-					MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL,
-					wxT("1"), 
-					wxDefaultPosition, 
-					txt_ctrl_size, 
-					wxTE_CENTRE
-					);
-			m_CrossHairPosXTxtCtrl->Disable();
-			x_pos_sizer->Add(m_CrossHairPosXTxtCtrl.get(), 0, wxEXPAND);
-			cross_hair_sizer->Add(x_pos_sizer, 0, wxEXPAND | wxRIGHT, 2);
-		}
-
-		/* Y Position */
-		{
-			wxSizer* const y_pos_sizer = new wxStaticBoxSizer(wxHORIZONTAL, right_side_panel, "&Y");
-			wxIntegerValidator<int>	y_pos_validator(NULL, wxNUM_VAL_ZERO_AS_BLANK);
-			y_pos_validator.SetMin(1);
-			y_pos_validator.SetMax(10000);
-
-			m_CrossHairPosYTxtCtrl = std::make_unique<wxTextCtrl>
-				(
-					right_side_panel,
-					MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL,
-					wxT("1"), 
-					wxDefaultPosition, 
-					txt_ctrl_size, 
-					wxTE_CENTRE
-					);
-			m_CrossHairPosYTxtCtrl->Disable();
-			y_pos_sizer->Add(m_CrossHairPosYTxtCtrl.get(), 0, wxEXPAND);
-			cross_hair_sizer->Add(y_pos_sizer, 0, wxEXPAND);
-		}
-
-		/* Set Postion */
-		//{
-		//	m_SetCrossHairPosTglBtn = std::make_unique<wxToggleButton>
-		//		(
-		//			right_side_panel,
-		//			MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_SET_POS_TGL_BTN,
-		//			wxT("Set"),
-		//			wxDefaultPosition,
-		//			btn_size
-		//		);
-		//	m_SetCrossHairPosTglBtn->Disable();
-
-		//	cross_hair_sizer->AddSpacer(5);
-		//	cross_hair_sizer->Add(m_SetCrossHairPosTglBtn.get(), 0, wxALIGN_CENTER);
-		//}
-		second_row_sizer->Add(cross_hair_sizer, 0, wxALIGN_CENTER);
+		auto bitmap = wxART_TEXTBOX_SETTINGS;
+		auto client = wxART_CLIENT_FLUENTUI_FILLED;
+		auto color = wxColour(128, 255, 255);
+		auto size = wxSize(16, 16);
+		cameraParametersBitmap = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			size,
+			color
+		);
 	}
-	cam_static_box_sizer->Add(second_row_sizer, 0, wxALIGN_CENTER);
 
-	right_side_panel_sizer->Add(cam_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
+	auto imgIndexCamera = imageList->Add(cameraBitmap);
+	auto imgIndexCameraParameters = imageList->Add(cameraParametersBitmap);
+
+	m_CameraControlNotebook = new wxNotebook(right_side_panel, wxID_ANY);
+
+	m_CameraControlNotebook->AssignImageList(imageList);
+
+	m_CameraControlNotebook->AddPage
+	(
+		CreateCameraPage(m_CameraControlNotebook), 
+		"Camera",
+		true,
+		imgIndexCamera
+	);
+
+	m_CameraControlNotebook->AddPage
+	(
+		CreateCameraParametersPage(m_CameraControlNotebook), 
+		"Parameters",
+		false,
+		imgIndexCameraParameters
+	);
+
+	right_side_panel_sizer->Add(m_CameraControlNotebook, 0, wxEXPAND);
 }
 
 void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer)
@@ -1531,22 +1656,24 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 {
 	if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE))
 	{
-		m_CamPreview->SetBackgroundColor(m_BlackAppearenceColor);
+		m_CamPreview->SetBackgroundColor(m_BlackAppearanceColor);
 		wxColour normalized_black = wxColour(100, 100, 100);
 		m_VerticalToolBar->tool_bar->SetBackgroundColour(normalized_black);
 		wxColour nb_color = wxColour(normalized_black.Red() + 40, normalized_black.Green() + 40, normalized_black.Blue() + 40);
 		m_RightSidePanel->SetBackgroundColour(nb_color);
-		m_MotorControlsNotebook->SetBackgroundColour(nb_color);
-		m_MotorControlsNotebookSupport->SetBackgroundColour(nb_color);
+		m_DetectorControlsNotebook->SetBackgroundColour(nb_color);
+		m_OpticsControlsNotebook->SetBackgroundColour(nb_color);
+		m_CameraControlNotebook->SetBackgroundColour(nb_color);
 	}
 	else
 	{
-		m_CamPreview->SetBackgroundColor(m_DefaultAppearenceColor);
+		m_CamPreview->SetBackgroundColor(m_DefaultAppearanceColor);
 
-		m_VerticalToolBar->tool_bar->SetBackgroundColour(m_DefaultAppearenceColor);
-		m_RightSidePanel->SetBackgroundColour(m_DefaultAppearenceColor);
-		m_MotorControlsNotebook->SetBackgroundColour(m_DefaultAppearenceColor);
-		m_MotorControlsNotebookSupport->SetBackgroundColour(m_DefaultAppearenceColor);
+		m_VerticalToolBar->tool_bar->SetBackgroundColour(m_DefaultAppearanceColor);
+		m_RightSidePanel->SetBackgroundColour(m_DefaultAppearanceColor);
+		m_DetectorControlsNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
+		m_OpticsControlsNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
+		m_CameraControlNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
 	}
 	Refresh();
 }
@@ -2008,8 +2135,8 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 		}
 		else m_Detector[2].DisableAllControls();
 
-		if (!isAnyMotorActive) m_MotorControlsNotebook->Hide();
-		else m_MotorControlsNotebook->Show();
+		if (!isAnyMotorActive) m_DetectorControlsNotebook->Hide();
+		else m_DetectorControlsNotebook->Show();
 	}
 	// Optics
 	{
@@ -2039,8 +2166,8 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 		}
 		else m_Optics[2].DisableAllControls();
 
-		if (!isAnyMotorActive) m_MotorControlsNotebookSupport->Hide();
-		else m_MotorControlsNotebookSupport->Show();
+		if (!isAnyMotorActive) m_OpticsControlsNotebook->Hide();
+		else m_OpticsControlsNotebook->Show();
 
 	}
 

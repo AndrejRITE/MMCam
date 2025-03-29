@@ -11,6 +11,8 @@
 #include "wx/valnum.h"
 #include "wx/thread.h"
 #include "wx/appprogress.h"
+#include "wx/propgrid/propgrid.h"
+#include "wx/propgrid/advprops.h"
 #include "wxMaterialDesignArtProvider.hpp"
 
 #include <string>
@@ -106,6 +108,7 @@ namespace MainFrameVariables
 		ID_RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL,
 		ID_RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL,
 		ID_RIGHT_CAM_CROSS_HAIR_SET_POS_TGL_BTN,
+		ID_RIGHT_CAM_ACTUAL_PARAMETERS_PROPERTY_GRID,
 		/* Measurement */
 		ID_RIGHT_MT_OUT_FLD_TE_CTL,
 		ID_RIGHT_MT_OUT_FLD_BTN,
@@ -292,6 +295,17 @@ private:
 		const wxBitmap& centerBitmap,
 		const wxBitmap& homeBitmap
 	) -> wxWindow*;
+
+	auto CreateCameraPage
+	(
+		wxWindow* parent
+	) -> wxWindow*;
+
+	auto CreateCameraParametersPage
+	(
+		wxWindow* parent
+	) -> wxWindow*;
+
 
 	void CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
 	void CreateCameraControls(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
@@ -1128,16 +1142,19 @@ private:
 	//bool m_LiveCapturingEndedDrawingOnCamPreview{ true };
 
 	/* Appearance Colors */
-	wxColour m_DefaultAppearenceColor = wxColour(255, 255, 255);
-	wxColour m_BlackAppearenceColor = wxColour(30, 30, 30);
+	wxColour m_DefaultAppearanceColor = wxColour(255, 255, 255);
+	wxColour m_BlackAppearanceColor = wxColour(30, 30, 30);
 
 	std::unique_ptr<wxStatusBar> m_StatusBar{};
 
 	/* wxPanels */
 	wxScrolledWindow* m_RightSidePanel{};
 	//wxPanel* m_RightSidePanel{};
-	wxNotebook* m_MotorControlsNotebook{}, *m_MotorControlsNotebookSupport{};
+	wxNotebook* m_DetectorControlsNotebook{}, *m_OpticsControlsNotebook{};
 	wxWindow* m_OpticsPage{};
+
+	wxNotebook* m_CameraControlNotebook{};
+	wxPropertyGrid* m_CurrentCameraSettingsPropertyGrid{};
 
 	std::vector<std::pair<wxString, bool>> m_StartedThreads{};
 
