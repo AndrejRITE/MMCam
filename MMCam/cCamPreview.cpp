@@ -965,18 +965,36 @@ auto cCamPreview::AdjustImageParts
 	auto current_value{ data_ptr[0] };
 	unsigned char red{}, green{}, blue{};
 	unsigned long long position_in_data_pointer{};
+	double adjustedValue{};
+
+	int black{}, white{};
+	white = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
 
 	for (auto y{ start_y }; y < finish_y; ++y)
 	{
 		for (auto x{ start_x }; x < finish_x; ++x)
 		{
 			current_value = data_ptr[position_in_data_pointer];
-			/* Matlab implementation of JetColormap */
-			/* Because XIMEA camera can produce 12-bit per pixel maximum, we use RGB12bit converter */
-			if (m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT)
-				CalculateMatlabJetColormapPixelRGB12bit(current_value, red, green, blue);
-			else if (m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_16BIT)
-				CalculateMatlabJetColormapPixelRGB16bit(current_value, red, green, blue);
+			if (m_ColormapMode == CameraPreviewVariables::Colormaps::GRAYSCALE_COLORMAP)
+			{
+				// Adjust RED
+				{
+					adjustedValue = data_ptr[(y - start_y) * m_ImageSize.GetWidth() + x - start_x];
+					adjustedValue = std::max((double)black, std::min((double)white, adjustedValue));
+					adjustedValue -= black;
+					adjustedValue /= white - black;
+					adjustedValue *= UCHAR_MAX;
+					// Clamp the adjusted value to the valid range [0; 255] or [0; 65'535]
+					red = adjustedValue;
+				}
+			}
+			else if (m_ColormapMode == CameraPreviewVariables::Colormaps::JET_COLORMAP)
+			{
+				if (m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT)
+					CalculateMatlabJetColormapPixelRGB12bit(current_value, red, green, blue);
+				else if (m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_16BIT)
+					CalculateMatlabJetColormapPixelRGB16bit(current_value, red, green, blue);
+			}
 			m_Image.SetRGB(x, y, red, green, blue);
 			++position_in_data_pointer;
 		}
