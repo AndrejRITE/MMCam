@@ -126,7 +126,7 @@ auto cCamPreview::SetImageSize(const wxSize& img_size) -> void
 
 	m_Image.Create(img_size);
 
-	UpdateImageParameters();
+	UpdateImageParameters(true);
 }
 
 auto cCamPreview::GetDataPtr() const -> unsigned short*
@@ -144,7 +144,7 @@ auto cCamPreview::GetImageSize() const -> wxSize
 	return m_ImageSize;
 }
 
-void cCamPreview::UpdateImageParameters()
+void cCamPreview::UpdateImageParameters(bool centerCrossHair)
 {
 	LOG("Started: " + wxString(__FUNCSIG__))
 	/* 
@@ -172,15 +172,21 @@ void cCamPreview::UpdateImageParameters()
 		auto imageDataType = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? ToolsVariables::DATA_U12 : ToolsVariables::DATA_U16;
 		m_CrossHairTool->SetImageDataType(imageDataType);
 		m_CrossHairTool->SetImageDimensions(m_ImageSize);
-		m_CrossHairTool->SetXPosFromParent(m_ImageSize.GetWidth() / 2);
-		m_CrossHairTool->SetYPosFromParent(m_ImageSize.GetHeight() / 2);
+
 		m_CrossHairTool->SetZoomOfOriginalSizeImage(m_ZoomOnOriginalSizeImage);
 		m_CrossHairTool->UpdateZoomValue(m_Zoom);
+
 		m_CrossHairTool->SetImageStartDrawPos(wxRealPoint
 		(
 			m_StartDrawPos.x * m_Zoom / m_ZoomOnOriginalSizeImage,
 			m_StartDrawPos.y * m_Zoom / m_ZoomOnOriginalSizeImage
 		));
+
+		if (centerCrossHair)
+		{
+			m_CrossHairTool->SetXPosFromParent(m_ImageSize.GetWidth() / 2);
+			m_CrossHairTool->SetYPosFromParent(m_ImageSize.GetHeight() / 2);
+		}
 	}
 
 	// FWHM
@@ -220,6 +226,20 @@ auto cCamPreview::SetCameraCapturedImage
 	UpdateWXImage();
 
 	UpdateImageParameters();
+	
+	// Update Mouse position
+	{
+		wxMouseEvent event(wxEVT_MOTION);
+		event.SetEventObject(this);
+
+		// Set the last known mouse position
+		event.m_x = m_CursorPosOnCanvas.x / m_ZoomOnOriginalSizeImage;
+		event.m_y = m_CursorPosOnCanvas.y / m_ZoomOnOriginalSizeImage;
+
+		wxPostEvent(this, event); // Queue the event
+		ProcessEvent(event);
+	}
+
 	LOG("Image was updated: " + wxString(__FUNCSIG__))
 	m_ExecutionFinished = true;
 }
@@ -613,8 +633,81 @@ void cCamPreview::DrawCrossHair(wxGraphicsContext* graphics_context)
 {
 	graphics_context->SetPen(*wxRED_PEN);
 	m_CrossHairTool->DrawCrossHair(graphics_context, m_ImageData.get());
-	if (m_DisplayPixelValues)
-		m_CrossHairTool->DrawPixelValues(graphics_context, m_ImageData.get());
+}
+
+auto cCamPreview::DrawPixelValues(wxGraphicsContext* gc) -> void
+{
+	if (!m_DisplayPixelValues) return;
+
+	if (!m_ImageData) return;
+
+	if (m_Zoom / m_ZoomOnOriginalSizeImage < 64) return;
+
+	auto CheckIfPixelValueIsInsideTheImage = [&](const int& x, const int& y)
+		{
+			if (x < 0 || x >= m_ImageSize.GetWidth()) return false;
+			if (y < 0 || y >= m_ImageSize.GetHeight()) return false;
+			return true;
+		};
+
+	wxRealPoint m_ActualHalfPixelSize =
+	{
+		m_Zoom / m_ZoomOnOriginalSizeImage / 2.0,
+		m_Zoom / m_ZoomOnOriginalSizeImage / 2.0,
+	};
+	if (m_ActualHalfPixelSize.x < 32.0 || m_ActualHalfPixelSize.y < 32.0) return;
+
+	// Setting up the current font
+	wxColour fontColour(180, 20, 30, 200);
+	wxFont font = wxFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+	gc->SetFont(font, fontColour);
+
+	wxRealPoint drawPoint{};
+	wxSize window_disp_size
+	{
+		(int)(m_CanvasSize.GetWidth() / m_Zoom * m_ZoomOnOriginalSizeImage),
+		(int)(m_CanvasSize.GetHeight() / m_Zoom * m_ZoomOnOriginalSizeImage)
+		//(int)(m_ImageSize.GetWidth() / (m_Zoom * m_MinZoom) * m_ZoomOnOriginalSizeImage),
+		//(int)(m_ImageSize.GetHeight() / (m_Zoom * m_MinZoom) * m_ZoomOnOriginalSizeImage)
+	};
+	auto image_start_draw = wxRealPoint
+	(
+		m_StartDrawPos.x * m_Zoom / m_ZoomOnOriginalSizeImage,
+		m_StartDrawPos.y * m_Zoom / m_ZoomOnOriginalSizeImage
+	);
+	wxDouble widthText{}, heightText{};
+	wxString curr_value{};
+	wxPoint left_upper_pixel{};
+	/* Calculation of currently displayed window */
+	{
+		/* Checking X */
+		if (image_start_draw.x >= 0)
+			left_upper_pixel.x = 0;
+		else
+			left_upper_pixel.x = floor(fabs(image_start_draw.x / (m_ActualHalfPixelSize.x * 2.0)));
+
+		/* Checking Y */
+		if (image_start_draw.y >= 0)
+			left_upper_pixel.y = 0;
+		else
+			left_upper_pixel.y = floor(fabs(image_start_draw.y / (m_ActualHalfPixelSize.y * 2.0)));
+
+		/* Actual drawing */
+		for (auto y{ left_upper_pixel.y }; y < left_upper_pixel.y + window_disp_size.GetHeight() + 1; ++y)
+		{
+			for (auto x{ left_upper_pixel.x }; x < left_upper_pixel.x + window_disp_size.GetWidth() + 1; ++x)
+			{
+				if (!CheckIfPixelValueIsInsideTheImage(x, y)) continue;
+				curr_value = wxString::Format(wxT("%i"), m_ImageData[y * m_ImageSize.GetWidth() + x]);
+				gc->GetTextExtent(curr_value, &widthText, &heightText);
+				drawPoint.x = image_start_draw.x + x * m_ActualHalfPixelSize.x * 2.0;
+				drawPoint.x += m_ActualHalfPixelSize.x - widthText / 2.0;
+				drawPoint.y = image_start_draw.y + y * m_ActualHalfPixelSize.y * 2.0;
+				drawPoint.y += m_ActualHalfPixelSize.y - heightText / 2.0;
+				gc->DrawText(curr_value, drawPoint.x, drawPoint.y);
+			}
+		}
+	}
 }
 
 auto cCamPreview::OnKeyPressed(wxKeyEvent& evt) -> void
@@ -784,6 +877,7 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 		DrawScaleBar(gc);
 
 		DrawCrossHair(gc);
+		DrawPixelValues(gc);
 
 		DrawGridMesh(gc);
 		DrawCircleMesh(gc);

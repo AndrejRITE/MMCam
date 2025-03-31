@@ -197,6 +197,7 @@ namespace MainFrameVariables
 			home_btn->Enable();
 		}
 	};
+
 	struct MeasurementStage
 	{
 		wxChoice* stage{};
@@ -261,6 +262,133 @@ namespace MainFrameVariables
 		wxString formattedString = wxString::Format(wxT("%.") + std::to_string(decimalPlaces) + wxT("f"), value);
 		return formattedString;
 	};
+
+	static auto BinImageData
+	(
+		unsigned short* inDataPtr, 
+		unsigned short* outDataPtr, 
+		const unsigned short binning, 
+		const int originalImgWidth,
+		const wxSize outImgSize
+	) -> void
+	{
+		if (!inDataPtr || !outDataPtr) return;
+
+		if (binning == 1)
+		{
+			memcpy
+			(
+				outDataPtr, 
+				inDataPtr, 
+				sizeof(unsigned short) * outImgSize.GetWidth() * outImgSize.GetHeight()
+			);
+		}
+
+		auto binningMode = MainFrameVariables::BinningModes::BINNING_AVERAGE;
+
+		auto calculatePixelsInsideTheBinning = [&]
+		(
+			unsigned short* dataStart,
+			int currStartX = 0, // Remove after DUBUG
+			int currStartY = 0 // Remove after DUBUG
+			)
+			{
+				unsigned long long sum{};
+				unsigned long long position{};
+				for (auto y{ 0 }; y < binning; ++y)
+				{
+					for (auto x{ 0 }; x < binning; ++x)
+					{
+						position = y * originalImgWidth + x;
+						sum += static_cast<unsigned long long>(dataStart[position]);
+					}
+				}
+				auto value = binningMode == MainFrameVariables::BINNING_SUM
+					? sum
+					: static_cast<unsigned long long>(sum / pow(binning, 2));
+				auto valueInBounds = static_cast<unsigned short>(
+					std::max((unsigned long long)0,
+						std::min((unsigned long long)std::numeric_limits<unsigned short>::max(), value)
+					));
+
+				return valueInBounds;
+			};
+
+		auto calculateBinningPixelsOnTile = [&]
+		(
+			unsigned short* origDataStart,
+			unsigned short* outDataStart,
+			wxPoint start,
+			wxPoint finish
+			)
+			{
+				unsigned long long inPosition{};
+				unsigned long long outPosition{};
+
+				const auto width = finish.x - start.x;
+				const auto height = finish.y - start.y;
+				for (auto y{ 0 }; y < height; ++y)
+				{
+					for (auto x{ start.x }; x < finish.x; ++x)
+					{
+						inPosition = (y * originalImgWidth + x) * binning;
+						outPosition = y * width + x;
+						outDataStart[outPosition] = calculatePixelsInsideTheBinning(&origDataStart[inPosition], x, y);
+					}
+				}
+			};
+
+		auto applySoftwareBinningMultithread = [&]()
+			{
+				// Check number of threads on the current machine
+				auto numThreads = std::thread::hardware_concurrency();
+	#ifdef _DEBUG
+				numThreads = 1;
+	#endif // _DEBUG
+
+				std::vector<std::thread> threads;
+				threads.reserve(numThreads);
+
+				unsigned int tileSize{};
+				unsigned int outImgWidth = outImgSize.GetWidth();
+				unsigned int outImgHeight = outImgSize.GetHeight();
+
+				tileSize = outImgHeight % numThreads > 0 ? outImgHeight / numThreads + 1 : outImgHeight / numThreads;
+				tileSize = tileSize > 0 ? tileSize : 1;
+
+				for (auto i{ 0 }; i < (int)numThreads; ++i)
+				{
+					wxPoint start{}, finish{};
+					start.x = 0;
+					finish.x = outImgWidth;
+
+					start.y = i * tileSize;
+					finish.y = (i + 1) * tileSize > outImgHeight ? outImgHeight : (i + 1) * tileSize;
+
+					unsigned long long position = (start.y * originalImgWidth + start.x) * binning;
+					threads.emplace_back
+					(
+						std::thread
+						(
+							calculateBinningPixelsOnTile,
+							&inDataPtr[position],
+							&outDataPtr[start.y * outImgWidth + start.x],
+							start, finish
+						)
+					);
+				}
+				for (auto& thread : threads)
+				{
+					thread.join();
+				}
+
+				// Here we can deallocate input data pointer because it's not necessary to hold this huge amount of memory in buffer
+				inDataPtr = nullptr;
+			};
+
+		applySoftwareBinningMultithread();
+	}
+
 }
 
 class ProgressBar;
@@ -1210,7 +1338,7 @@ protected:
 		unsigned short* dataPtr
 	) -> bool;
 
-	auto BinImageData(unsigned short* inDataPtr, unsigned short* outDataPtr) -> void;
+	//auto BinImageData(unsigned short* inDataPtr, unsigned short* outDataPtr) -> void;
 
 protected:
 	cMain* m_MainFrame{};

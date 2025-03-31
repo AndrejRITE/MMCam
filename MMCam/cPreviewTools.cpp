@@ -245,57 +245,6 @@ void CrossHairTool::DrawCrossHair(wxGraphicsContext* graphics_context_, unsigned
 	DrawData(graphics_context_, data_);
 }
 
-void CrossHairTool::DrawPixelValues(wxGraphicsContext* graphics_context_, unsigned short* data_)
-{
-	if (m_ActualHalfPixelSize.x < 32.0 || m_ActualHalfPixelSize.y < 32.0) return;
-
-	// Setting up the current font
-	wxColour fontColour(0, 77, 53, 200);
-	wxFont font = wxFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
-	graphics_context_->SetFont(font, fontColour);
-
-	wxRealPoint drawPoint{};
-	wxSize window_disp_size
-	{ 
-		(int)(m_ImageSize.GetWidth() / m_Zoom * m_ZoomOriginalSizeImage),
-		(int)(m_ImageSize.GetHeight() / m_Zoom * m_ZoomOriginalSizeImage)
-	};
-
-	wxDouble widthText{}, heightText{};
-	wxString curr_value{};
-	wxPoint left_upper_pixel{};
-	/* Calculation of currently displayed window */
-	{
-		/* Checking X */
-		if (m_ImageStartDraw.x >= 0)
-			left_upper_pixel.x = 0;
-		else
-			left_upper_pixel.x = floor(fabs(m_ImageStartDraw.x / (m_ActualHalfPixelSize.x * 2.0)));
-
-		/* Checking Y */
-		if (m_ImageStartDraw.y >= 0)
-			left_upper_pixel.y = 0;
-		else
-			left_upper_pixel.y = floor(fabs(m_ImageStartDraw.y / (m_ActualHalfPixelSize.y * 2.0)));
-
-		/* Actual drawing */
-		for (auto y{ left_upper_pixel.y }; y < left_upper_pixel.y + window_disp_size.GetHeight() + 1; ++y)
-		{
-			for (auto x{ left_upper_pixel.x }; x < left_upper_pixel.x + window_disp_size.GetWidth() + 1; ++x)
-			{
-				if (!CheckIfPixelValueIsInsideTheImage(x, y)) continue;
-				curr_value = wxString::Format(wxT("%i"), data_[y * m_ImageSize.GetWidth() + x]);
-				graphics_context_->GetTextExtent(curr_value, &widthText, &heightText);
-				drawPoint.x = m_ImageStartDraw.x + x * m_ActualHalfPixelSize.x * 2.0;
-				drawPoint.x += m_ActualHalfPixelSize.x - widthText / 2.0;
-				drawPoint.y = m_ImageStartDraw.y + y * m_ActualHalfPixelSize.y * 2.0;
-				drawPoint.y += m_ActualHalfPixelSize.y - heightText / 2.0;
-				graphics_context_->DrawText(curr_value, drawPoint.x, drawPoint.y);
-			}
-		}
-	}
-}
-
 bool CrossHairTool::PositionCanBeChanged() const
 {
 	return (m_ShowHorizontalLine && m_CursorAboveHorizontalLine) || (m_ShowVerticalLine && m_CursorAboveVerticalLine);

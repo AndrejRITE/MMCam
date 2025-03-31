@@ -83,7 +83,7 @@ public:
 	//auto GetImagePtr() const->wxImage*;
 	auto GetImageSize() const->wxSize;
 	//auto InitializeSelectedCamera(const std::string& camera_sn) -> void;
-	auto UpdateImageParameters() -> void;
+	auto UpdateImageParameters(bool centerCrossHair = false) -> void;
 
 	auto SetCameraCapturedImage
 	(
@@ -216,6 +216,7 @@ private:
 
 	/* CrossHair */
 	void DrawCrossHair(wxGraphicsContext* graphics_context);
+	auto DrawPixelValues(wxGraphicsContext* gc) -> void;
 
 	/* Key Events */
 	auto OnKeyPressed(wxKeyEvent& evt) -> void;

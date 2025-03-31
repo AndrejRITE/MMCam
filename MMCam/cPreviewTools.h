@@ -89,7 +89,6 @@ public:
 	void UpdateParentCrossHairTextCtrls();
 	wxStockCursor UpdateCursor(const wxStockCursor& current_cursor) override;
 	void DrawCrossHair(wxGraphicsContext* graphics_context_, unsigned short* data_);
-	void DrawPixelValues(wxGraphicsContext* graphics_context_, unsigned short* data_);
 	bool PositionCanBeChanged() const;
 	bool CanProcessPanning() const;
 	void ProcessChangingCrossHairPos();

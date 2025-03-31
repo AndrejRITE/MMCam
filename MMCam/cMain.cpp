@@ -1084,9 +1084,9 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 					page, 
 					MainFrameVariables::ID_RIGHT_CAM_EXPOSURE_TXT_CTL, 
 #ifdef _DEBUG
-					wxT("10"), 
+					wxT("100"), 
 #else
-					wxT("10"), 
+					wxT("100"), 
 #endif // _DEBUG
 					wxDefaultPosition, 
 					txtCtrlSize, 
@@ -1938,7 +1938,11 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 		{
 			//m_XimeaControl->SetExposureTime(exposure_time);
 			m_CameraControl->SetExposureTime(exposure_time);
-			auto imageSize = wxSize{ (int)m_CameraControl->GetWidth(), (int)m_CameraControl->GetHeight() };
+
+			int binning{ 1 };
+			m_CamBinning->GetString(m_CamBinning->GetCurrentSelection()).ToInt(&binning);
+
+			auto imageSize = wxSize{ (int)m_CameraControl->GetWidth() / binning, (int)m_CameraControl->GetHeight() / binning };
 
 			auto dataPtr = std::make_unique<unsigned short[]>(imageSize.GetWidth() * imageSize.GetHeight());
 
@@ -1949,11 +1953,13 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 				return;
 			}
 
-			memcpy
+			MainFrameVariables::BinImageData
 			(
-				dataPtr.get(),
 				imgPtr, 
-				sizeof(unsigned short) * imageSize.GetWidth() * imageSize.GetHeight()
+				dataPtr.get(),
+				binning,
+				m_CameraControl->GetWidth(),
+				imageSize
 			);
 
 			cv::Mat cv_img
@@ -1967,7 +1973,7 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 
 			m_CamPreview->SetCameraCapturedImage
 			(
-				imgPtr
+				dataPtr.get()
 			);
 		}
 	}
@@ -2246,42 +2252,40 @@ void cMain::OnExit(wxCommandEvent& evt)
 void cMain::EnableUsedAndDisableNonUsedMotors()
 {
 	// Detector 
+	bool isAnyDetectorActive{}, isAnyOpticsActive{};
 	{
-		bool isAnyMotorActive{};
 		/* X */
 		if (m_Settings->MotorHasSerialNumber(SettingsVariables::DETECTOR_X))
 		{
-			isAnyMotorActive = true;
+			isAnyDetectorActive = true;
 			m_Detector[0].EnableAllControls();
 		}
 		else m_Detector[0].DisableAllControls();
 		/* Y */
 		if (m_Settings->MotorHasSerialNumber(SettingsVariables::DETECTOR_Y))
 		{
-			isAnyMotorActive = true;
+			isAnyDetectorActive = true;
 			m_Detector[1].EnableAllControls();
 		}
 		else m_Detector[1].DisableAllControls();
 		/* Z */
 		if (m_Settings->MotorHasSerialNumber(SettingsVariables::DETECTOR_Z))
 		{
-			isAnyMotorActive = true;
+			isAnyDetectorActive = true;
 			m_Detector[2].EnableAllControls();
 		}
 		else m_Detector[2].DisableAllControls();
 
-		if (!isAnyMotorActive) m_DetectorControlsNotebook->Hide();
+		if (!isAnyDetectorActive) m_DetectorControlsNotebook->Hide();
 		else m_DetectorControlsNotebook->Show();
 	}
 	// Optics
 	{
-		bool isAnyMotorActive{};
-
 		/* X */
 		if (m_Settings->MotorHasSerialNumber(SettingsVariables::OPTICS_X))
 		{
 			m_Optics[0].EnableAllControls();
-			isAnyMotorActive = true;
+			isAnyOpticsActive = true;
 		}
 		else m_Optics[0].DisableAllControls();
 
@@ -2289,7 +2293,7 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 		if (m_Settings->MotorHasSerialNumber(SettingsVariables::OPTICS_Y))
 		{
 			m_Optics[1].EnableAllControls();
-			isAnyMotorActive = true;
+			isAnyOpticsActive = true;
 		}
 		else m_Optics[1].DisableAllControls();
 
@@ -2297,14 +2301,20 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 		if (m_Settings->MotorHasSerialNumber(SettingsVariables::OPTICS_Z))
 		{
 			m_Optics[2].EnableAllControls();
-			isAnyMotorActive = true;
+			isAnyOpticsActive = true;
 		}
 		else m_Optics[2].DisableAllControls();
 
-		if (!isAnyMotorActive) m_OpticsControlsNotebook->Hide();
+		if (!isAnyOpticsActive) m_OpticsControlsNotebook->Hide();
 		else m_OpticsControlsNotebook->Show();
-
 	}
+
+#ifndef _DEBUG
+	if (!isAnyDetectorActive && !isAnyOpticsActive)
+		m_FirstStage->DisableAllControls();
+	else
+		m_FirstStage->EnableAllControls();
+#endif // !_DEBUG
 
 	Layout();
 }
@@ -4764,130 +4774,138 @@ auto LiveCapturing::CaptureImage
 	auto imgPtr = m_CameraControl->GetImage();
 	if (!imgPtr) return false;
 
-	BinImageData(imgPtr, dataPtr);
+	auto outImgSize = wxSize(m_CameraControl->GetWidth() / m_Binning, m_CameraControl->GetHeight() / m_Binning);
+	MainFrameVariables::BinImageData
+	(
+		imgPtr, 
+		dataPtr,
+		m_Binning,
+		m_CameraControl->GetWidth(),
+		outImgSize
+	);
 
 	return true;
 }
 
-auto LiveCapturing::BinImageData(unsigned short* inDataPtr, unsigned short* outDataPtr) -> void
-{
-	if (!inDataPtr || !outDataPtr) return;
-
-	if (m_Binning == 1)
-	{
-		memcpy
-		(
-			outDataPtr, 
-			inDataPtr, 
-			sizeof(unsigned short) * m_ImageSize.GetWidth() * m_ImageSize.GetHeight()
-		);
-	}
-
-	auto originalImgWidth = m_CameraControl->GetWidth();
-	auto binningMode = MainFrameVariables::BinningModes::BINNING_AVERAGE;
-
-	auto calculatePixelsInsideTheBinning = [&]
-	(
-		unsigned short* dataStart,
-		int currStartX = 0, // Remove after DUBUG
-		int currStartY = 0 // Remove after DUBUG
-		)
-		{
-			unsigned long long sum{};
-			unsigned long long position{};
-			for (auto y{ 0 }; y < m_Binning; ++y)
-			{
-				for (auto x{ 0 }; x < m_Binning; ++x)
-				{
-					position = y * originalImgWidth + x;
-					sum += static_cast<unsigned long long>(dataStart[position]);
-				}
-			}
-			auto value = binningMode == MainFrameVariables::BINNING_SUM
-				? sum
-				: static_cast<unsigned long long>(sum / pow(m_Binning, 2));
-			auto valueInBounds = static_cast<unsigned short>(
-				std::max((unsigned long long)0,
-					std::min((unsigned long long)std::numeric_limits<unsigned short>::max(), value)
-				));
-
-			return valueInBounds;
-		};
-
-	auto calculateBinningPixelsOnTile = [&]
-	(
-		unsigned short* origDataStart,
-		unsigned short* outDataStart,
-		wxPoint start,
-		wxPoint finish
-		)
-		{
-			unsigned long long inPosition{};
-			unsigned long long outPosition{};
-
-			const auto width = finish.x - start.x;
-			const auto height = finish.y - start.y;
-			for (auto y{ 0 }; y < height; ++y)
-			{
-				for (auto x{ start.x }; x < finish.x; ++x)
-				{
-					inPosition = (y * width * m_Binning + x) * m_Binning;
-					outPosition = y * width + x;
-					outDataStart[outPosition] = calculatePixelsInsideTheBinning(&origDataStart[inPosition], x, y);
-				}
-			}
-		};
-
-	auto applySoftwareBinningMultithread = [&]()
-		{
-			// Check number of threads on the current machine
-			auto numThreads = std::thread::hardware_concurrency();
-#ifdef _DEBUG
-			numThreads = 1;
-#endif // _DEBUG
-
-			std::vector<std::thread> threads;
-			threads.reserve(numThreads);
-
-			unsigned int tileSize{};
-			unsigned int outImgWidth = m_ImageSize.GetWidth();
-			unsigned int outImgHeight = m_ImageSize.GetHeight();
-
-			tileSize = outImgHeight % numThreads > 0 ? outImgHeight / numThreads + 1 : outImgHeight / numThreads;
-			tileSize = tileSize > 0 ? tileSize : 1;
-
-			for (auto i{ 0 }; i < (int)numThreads; ++i)
-			{
-				wxPoint start{}, finish{};
-				start.x = 0;
-				finish.x = outImgWidth;
-
-				start.y = i * tileSize;
-				finish.y = (i + 1) * tileSize > outImgHeight ? outImgHeight : (i + 1) * tileSize;
-
-				unsigned long long position = (start.y * originalImgWidth + start.x) * m_Binning;
-				threads.emplace_back
-				(
-					std::thread
-					(
-						calculateBinningPixelsOnTile,
-						&inDataPtr[position],
-						&outDataPtr[start.y * outImgWidth + start.x],
-						start, finish
-					)
-				);
-			}
-			for (auto& thread : threads)
-			{
-				thread.join();
-			}
-
-			// Here we can deallocate input data pointer because it's not necessary to hold this huge amount of memory in buffer
-			inDataPtr = nullptr;
-		};
-
-	applySoftwareBinningMultithread();
-}
+//auto LiveCapturing::BinImageData(unsigned short* inDataPtr, unsigned short* outDataPtr) -> void
+//{
+//	if (!inDataPtr || !outDataPtr) return;
+//
+//	if (m_Binning == 1)
+//	{
+//		memcpy
+//		(
+//			outDataPtr, 
+//			inDataPtr, 
+//			sizeof(unsigned short) * m_ImageSize.GetWidth() * m_ImageSize.GetHeight()
+//		);
+//	}
+//
+//	auto originalImgWidth = m_CameraControl->GetWidth();
+//	auto binningMode = MainFrameVariables::BinningModes::BINNING_AVERAGE;
+//
+//	auto calculatePixelsInsideTheBinning = [&]
+//	(
+//		unsigned short* dataStart,
+//		int currStartX = 0, // Remove after DUBUG
+//		int currStartY = 0 // Remove after DUBUG
+//		)
+//		{
+//			unsigned long long sum{};
+//			unsigned long long position{};
+//			for (auto y{ 0 }; y < m_Binning; ++y)
+//			{
+//				for (auto x{ 0 }; x < m_Binning; ++x)
+//				{
+//					position = y * originalImgWidth + x;
+//					sum += static_cast<unsigned long long>(dataStart[position]);
+//				}
+//			}
+//			auto value = binningMode == MainFrameVariables::BINNING_SUM
+//				? sum
+//				: static_cast<unsigned long long>(sum / pow(m_Binning, 2));
+//			auto valueInBounds = static_cast<unsigned short>(
+//				std::max((unsigned long long)0,
+//					std::min((unsigned long long)std::numeric_limits<unsigned short>::max(), value)
+//				));
+//
+//			return valueInBounds;
+//		};
+//
+//	auto calculateBinningPixelsOnTile = [&]
+//	(
+//		unsigned short* origDataStart,
+//		unsigned short* outDataStart,
+//		wxPoint start,
+//		wxPoint finish
+//		)
+//		{
+//			unsigned long long inPosition{};
+//			unsigned long long outPosition{};
+//
+//			const auto width = finish.x - start.x;
+//			const auto height = finish.y - start.y;
+//			for (auto y{ 0 }; y < height; ++y)
+//			{
+//				for (auto x{ start.x }; x < finish.x; ++x)
+//				{
+//					inPosition = (y * originalImgWidth + x) * m_Binning;
+//					outPosition = y * width + x;
+//					outDataStart[outPosition] = calculatePixelsInsideTheBinning(&origDataStart[inPosition], x, y);
+//				}
+//			}
+//		};
+//
+//	auto applySoftwareBinningMultithread = [&]()
+//		{
+//			// Check number of threads on the current machine
+//			auto numThreads = std::thread::hardware_concurrency();
+//#ifdef _DEBUG
+//			numThreads = 1;
+//#endif // _DEBUG
+//
+//			std::vector<std::thread> threads;
+//			threads.reserve(numThreads);
+//
+//			unsigned int tileSize{};
+//			unsigned int outImgWidth = m_ImageSize.GetWidth();
+//			unsigned int outImgHeight = m_ImageSize.GetHeight();
+//
+//			tileSize = outImgHeight % numThreads > 0 ? outImgHeight / numThreads + 1 : outImgHeight / numThreads;
+//			tileSize = tileSize > 0 ? tileSize : 1;
+//
+//			for (auto i{ 0 }; i < (int)numThreads; ++i)
+//			{
+//				wxPoint start{}, finish{};
+//				start.x = 0;
+//				finish.x = outImgWidth;
+//
+//				start.y = i * tileSize;
+//				finish.y = (i + 1) * tileSize > outImgHeight ? outImgHeight : (i + 1) * tileSize;
+//
+//				unsigned long long position = (start.y * originalImgWidth + start.x) * m_Binning;
+//				threads.emplace_back
+//				(
+//					std::thread
+//					(
+//						calculateBinningPixelsOnTile,
+//						&inDataPtr[position],
+//						&outDataPtr[start.y * outImgWidth + start.x],
+//						start, finish
+//					)
+//				);
+//			}
+//			for (auto& thread : threads)
+//			{
+//				thread.join();
+//			}
+//
+//			// Here we can deallocate input data pointer because it's not necessary to hold this huge amount of memory in buffer
+//			inDataPtr = nullptr;
+//		};
+//
+//	applySoftwareBinningMultithread();
+//}
 
 LiveCapturing::~LiveCapturing()
 {
@@ -4978,9 +4996,10 @@ wxThread::ExitCode WorkerThread::Entry()
 	auto measurementGraphFilePath = graphFileName + wxString(".bmp");
 	wxFileName measurementFileName(measurementGraphFilePath);
 	//m_MeasurementGraphTxtFilePath = graphFileName + wxString(".txt");
+	m_ImageSize.Set(m_CameraControl->GetWidth() / m_Binning, m_CameraControl->GetHeight() / m_Binning);
 
-	auto dataSize = m_CameraControl->GetWidth() * m_CameraControl->GetHeight();
-	dataSize /= pow(m_Binning, 2);
+	auto dataSize = m_ImageSize.GetWidth() * m_ImageSize.GetHeight();
+	//dataSize /= pow(m_Binning, 2);
 	//auto cam_preview_data_ptr = m_CameraPreview->GetDataPtr();
 	//auto cam_preview_image_ptr = m_CameraPreview->GetImagePtr();
 
