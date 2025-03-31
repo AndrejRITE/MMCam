@@ -23,6 +23,7 @@
 
 #include "json.hpp"
 
+#include "cStylishComboBox.h"
 #include "cCamPreview.h"
 #include "cSettings.h"
 #include "cGenerateReportDialog.h"
@@ -104,6 +105,7 @@ namespace MainFrameVariables
 		ID_RIGHT_CAM_TEMPERATURE_TXT_CTL,
 		ID_RIGHT_CAM_EXPOSURE_TXT_CTL,
 		ID_RIGHT_CAM_BINNING_CHOICE,
+		ID_RIGHT_CAM_COLORMAP_COMBOBOX,
 		ID_RIGHT_CAM_MANUFACTURER_CHOICE,
 		ID_RIGHT_CAM_SINGLE_SHOT_BTN,
 		ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN,
@@ -169,6 +171,22 @@ namespace MainFrameVariables
 	{
 		wxToolBar* tool_bar{};
 		ToolBar() {};
+	};
+
+	struct ImageColormapComboBox
+	{
+		std::unique_ptr<cStylishComboBox> stylish_combo_box{};
+		wxArrayString colormap_names{};
+		ImageColormapComboBox()
+		{
+			colormap_names.Add("Grayscale");
+			colormap_names.Add("Invert");
+			colormap_names.Add("Jet");
+			colormap_names.Add("Cool");
+			colormap_names.Add("Hot");
+			colormap_names.Add("Winter");
+			colormap_names.Add("Copper");
+		};
 	};
 
 	struct StepperControl
@@ -596,6 +614,7 @@ private:
 	void ExposureValueChanged(wxCommandEvent& evt);
 	auto OnSensorTemperatureChanged(wxCommandEvent& evt) -> void;
 	auto OnBinningChoice(wxCommandEvent& evt) -> void;
+	auto OnColormapComboBox(wxCommandEvent& evt) -> void;
 	/* Generate Report */
 	auto OnGenerateReportBtn(wxCommandEvent& evt) -> void;
 	auto IsPythonInstalledOnTheCurrentMachine() -> bool;
@@ -1249,6 +1268,9 @@ private:
 	/* Steppers Control */
 	std::unique_ptr<MainFrameVariables::StepperControl[]> m_Detector = std::make_unique<MainFrameVariables::StepperControl[]>(3);
 	std::unique_ptr<MainFrameVariables::StepperControl[]> m_Optics = std::make_unique<MainFrameVariables::StepperControl[]>(3);
+
+	// Colormap ComboBox
+	std::unique_ptr<MainFrameVariables::ImageColormapComboBox> m_ImageColormapComboBox{};
 
 	/* Camera */
 	std::unique_ptr<CameraControl> m_CameraControl{};

@@ -132,6 +132,9 @@
     <ClInclude Include="MoravianInstrumentsControl.h">
       <Filter>Header Files\Camera</Filter>
     </ClInclude>
+    <ClInclude Include="cStylishComboBox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cApp.cpp">
@@ -199,6 +202,9 @@
     </ClCompile>
     <ClCompile Include="MoravianInstrumentsControl.cpp">
       <Filter>Source Files\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="cStylishComboBox.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

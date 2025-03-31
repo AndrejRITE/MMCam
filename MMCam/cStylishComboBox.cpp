@@ -1,0 +1,412 @@
+#include "cStylishComboBox.h"
+
+void cStylishComboBox::OnDrawItem
+(
+    wxDC& dc,
+    const wxRect& rect,
+    int item,
+    int flags
+) const 
+{
+    if (item == wxNOT_FOUND) return;
+
+    wxRect r(rect);
+    r.Deflate(3);
+    r.height -= 2;
+
+    // Get text colour as pen colour
+    dc.SetPen(*wxBLACK_PEN);
+
+    const int num_of_colour_squares{ 7 };
+    wxBrush rect_fill{};
+    unsigned char red{}, green{}, blue{};
+    wxRect colorful_square{};
+    int start_x{}, step_x{};
+    start_x = r.x;
+    step_x = (int)(rect.width / (double)num_of_colour_squares);
+    if (!(flags & wxODCB_PAINTING_CONTROL))
+    {
+        dc.DrawText
+        (
+            GetString(item),
+            r.x + 3,
+            (r.y + 0) + ((r.height / 2) - dc.GetCharHeight()) / 2
+        );
+        if (GetString(item) == "Grayscale")
+        {
+            for (auto i{ 0 }; i < num_of_colour_squares; ++i)
+            {
+                red = (unsigned char)(i * 255.0 / (num_of_colour_squares - 1));
+                blue = green = red;
+				rect_fill = wxBrush(wxColour(red, green, blue));
+				dc.SetBrush(rect_fill);
+                colorful_square =
+                {
+                    start_x,
+                    (int)(r.y + .65 * r.height),
+                    step_x,
+                    (int)(.35 * r.height)
+                };
+				dc.DrawRectangle(colorful_square);
+                start_x += step_x - 1;
+            }
+        }
+        else if (GetString(item) == "Invert")
+        {
+            for (auto i{ 0 }; i < num_of_colour_squares; ++i)
+            {
+                red = (unsigned char)((num_of_colour_squares - 1 - i) * 255.0 / (num_of_colour_squares - 1));
+                blue = green = red;
+				rect_fill = wxBrush(wxColour(red, green, blue));
+				dc.SetBrush(rect_fill);
+                colorful_square =
+                {
+                    start_x,
+                    (int)(r.y + .65 * r.height),
+                    step_x,
+                    (int)(.35 * r.height)
+                };
+				dc.DrawRectangle(colorful_square);
+                start_x += step_x - 1;
+            }
+
+        }
+        else if (GetString(item) == "Jet")
+        {
+            for (auto i{ 0 }; i < num_of_colour_squares; ++i)
+            {
+                /* Colors are calculated on the basis of MatLab Jet Colormap implementation algorithm */
+                switch (i)
+                {
+                case 0:
+                    red = 0;
+                    green = 0;
+                    blue = 131;
+                    break;
+                case 1:
+                    red = 0;
+                    green = 46;
+                    blue = 255;
+                    break;
+                case 2:
+                    red = 0;
+                    green = 215;
+                    blue = 255;
+                    break; 
+                case 3:
+                    red = 128;
+                    green = 255;
+                    blue = 128;
+                    break;
+                case 4:
+                    red = 255;
+                    green = 211;
+                    blue = 0;
+                    break;
+                case 5:
+                    red = 255;
+                    green = 41;
+                    blue = 0;
+                    break;
+                case 6:
+                    red = 128;
+                    green = 0;
+                    blue = 0;
+                    break;
+                default:
+                    break;
+                }
+				rect_fill = wxBrush(wxColour(red, green, blue));
+				dc.SetBrush(rect_fill);
+                colorful_square =
+                {
+                    start_x,
+                    (int)(r.y + .65 * r.height),
+                    step_x,
+                    (int)(.35 * r.height)
+                };
+				dc.DrawRectangle(colorful_square);
+                start_x += step_x - 1;
+            }
+        }
+        else if (GetString(item) == "Cool")
+        {
+            for (auto i{ 0 }; i < num_of_colour_squares; ++i)
+            {
+                /* Colors are calculated on the basis of OpenCV colormap pictures */
+                switch (i)
+                {
+                case 0:
+                    red = 0;
+                    green = 255;
+                    blue = 255;
+                    break;
+                case 1:
+                    red = 43;
+                    green = 212;
+                    blue = 255;
+                    break;
+                case 2:
+                    red = 87;
+                    green = 169;
+                    blue = 255;
+                    break; 
+                case 3:
+                    red = 128;
+                    green = 127;
+                    blue = 255;
+                    break;
+                case 4:
+                    red = 171;
+                    green = 85;
+                    blue = 255;
+                    break;
+                case 5:
+                    red = 214;
+                    green = 41;
+                    blue = 255;
+                    break;
+                case 6:
+                    red = 255;
+                    green = 0;
+                    blue = 254;
+                    break;
+                default:
+                    break;
+                }
+				rect_fill = wxBrush(wxColour(red, green, blue));
+				dc.SetBrush(rect_fill);
+                colorful_square =
+                {
+                    start_x,
+                    (int)(r.y + .65 * r.height),
+                    step_x,
+                    (int)(.35 * r.height)
+                };
+				dc.DrawRectangle(colorful_square);
+                start_x += step_x - 1;
+            }
+        }
+        else if (GetString(item) == "Hot")
+        {
+            for (auto i{ 0 }; i < num_of_colour_squares; ++i)
+            {
+                /* Colors are calculated on the basis of OpenCV colormap pictures */
+                switch (i)
+                {
+                case 0:
+                    red = 0;
+                    green = 0;
+                    blue = 0;
+                    break;
+                case 1:
+                    red = 108;
+                    green = 0;
+                    blue = 0;
+                    break;
+                case 2:
+                    red = 214;
+                    green = 0;
+                    blue = 0;
+                    break; 
+                case 3:
+                    red = 254;
+                    green = 65;
+                    blue = 0;
+                    break;
+                case 4:
+                    red = 254;
+                    green = 172;
+                    blue = 0;
+                    break;
+                case 5:
+                    red = 255;
+                    green = 255;
+                    blue = 51;
+                    break;
+                case 6:
+                    red = 255;
+                    green = 255;
+                    blue = 251;
+                    break;
+                default:
+                    break;
+                }
+				rect_fill = wxBrush(wxColour(red, green, blue));
+				dc.SetBrush(rect_fill);
+                colorful_square =
+                {
+                    start_x,
+                    (int)(r.y + .65 * r.height),
+                    step_x,
+                    (int)(.35 * r.height)
+                };
+				dc.DrawRectangle(colorful_square);
+                start_x += step_x - 1;
+            }
+        } 
+        else if (GetString(item) == "Winter")
+        {
+            for (auto i{ 0 }; i < num_of_colour_squares; ++i)
+            { 
+                /* Colors are calculated on the basis of OpenCV colormap pictures */
+                switch (i)
+                {
+                case 0:
+                    red = 0;
+                    green = 0;
+                    blue = 255;
+                    break;
+                case 1:
+                    red = 0;
+                    green = 42;
+                    blue = 234;
+                    break;
+                case 2:
+                    red = 0;
+                    green = 84;
+                    blue = 213;
+                    break; 
+                case 3:
+                    red = 0;
+                    green = 128;
+                    blue = 191;
+                    break;
+                case 4:
+                    red = 0;
+                    green = 169;
+                    blue = 171;
+                    break;
+                case 5:
+                    red = 0;
+                    green = 211;
+                    blue = 150;
+                    break;
+                case 6:
+                    red = 0;
+                    green = 255;
+                    blue = 128;
+                    break;
+                default:
+                    break;
+                }
+				rect_fill = wxBrush(wxColour(red, green, blue));
+				dc.SetBrush(rect_fill);
+                colorful_square =
+                {
+                    start_x,
+                    (int)(r.y + .65 * r.height),
+                    step_x,
+                    (int)(.35 * r.height)
+                };
+				dc.DrawRectangle(colorful_square);
+                start_x += step_x - 1;
+            }
+        } 
+        else if (GetString(item) == "Copper")
+        {
+            for (auto i{ 0 }; i < num_of_colour_squares; ++i)
+            { 
+                /* Colors are calculated on the basis of OpenCV colormap pictures */
+                switch (i)
+                {
+                case 0:
+                    red = 0;
+                    green = 0;
+                    blue = 0;
+                    break;
+                case 1:
+                    red = 53;
+                    green = 33;
+                    blue = 21;
+                    break;
+                case 2:
+                    red = 105;
+                    green = 66;
+                    blue = 42;
+                    break; 
+                case 3:
+                    red = 160;
+                    green = 100;
+                    blue = 64;
+                    break;
+                case 4:
+                    red = 211;
+                    green = 132;
+                    blue = 84;
+                    break;
+                case 5:
+                    red = 255;
+                    green = 165;
+                    blue = 105;
+                    break;
+                case 6:
+                    red = 255;
+                    green = 199;
+                    blue = 127;
+                    break;
+                default:
+                    break;
+                }
+				rect_fill = wxBrush(wxColour(red, green, blue));
+				dc.SetBrush(rect_fill);
+                colorful_square =
+                {
+                    start_x,
+                    (int)(r.y + .65 * r.height),
+                    step_x,
+                    (int)(.35 * r.height)
+                };
+				dc.DrawRectangle(colorful_square);
+                start_x += step_x - 1;
+            }
+        }
+    }
+    else
+    {
+        wxSize text_size{};
+        dc.GetTextExtent(GetString(item), &text_size.x, &text_size.y);
+        dc.DrawText
+        (
+            GetString(item),
+            r.x + r.width / 2 - text_size.GetWidth() / 2,
+            r.y + r.height / 2 - text_size.GetHeight() / 2
+        );
+    }
+}
+
+void cStylishComboBox::OnDrawBackground
+(
+    wxDC& dc, 
+    const wxRect& rect,
+    int item, 
+    int flags
+) const 
+{
+
+    // If item is selected or even, or we are painting the
+    // combo control itself, use the default rendering.
+    if ((flags & (wxODCB_PAINTING_CONTROL | wxODCB_PAINTING_SELECTED)) ||
+        (item & 1) == 0)
+    {
+        wxOwnerDrawnComboBox::OnDrawBackground(dc, rect, item, flags);
+        return;
+    }
+
+    // Otherwise, draw every other background with different colour.
+    wxColour bgCol(240, 240, 250);
+    dc.SetBrush(wxBrush(bgCol));
+    dc.SetPen(wxPen(bgCol));
+    dc.DrawRectangle(rect);
+}
+
+wxCoord cStylishComboBox::OnMeasureItem(size_t item) const
+{
+    // Simply demonstrate the ability to have variable-height items
+    return FromDIP(36);
+}
+
+wxCoord cStylishComboBox::OnMeasureItemWidth(size_t WXUNUSED(item)) const
+{
+    return -1; // default - will be measured from text width
+}

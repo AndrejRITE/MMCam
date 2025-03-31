@@ -63,6 +63,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_CAM_TEMPERATURE_TXT_CTL, cMain::OnSensorTemperatureChanged)
 	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_CAM_EXPOSURE_TXT_CTL, cMain::ExposureValueChanged)
 	EVT_CHOICE(MainFrameVariables::ID_RIGHT_CAM_BINNING_CHOICE, cMain::OnBinningChoice)
+	EVT_COMBOBOX(MainFrameVariables::ID_RIGHT_CAM_COLORMAP_COMBOBOX, cMain::OnColormapComboBox)
 
 	EVT_BUTTON(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
 
@@ -1130,6 +1131,40 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			gridSizer->Add(m_CamBinning.get(), 0, wxALIGN_CENTER);
 		}
 
+		// Colormap
+		{
+			gridSizer->Add
+			(
+				new wxStaticText
+				(
+					page, 
+					wxID_ANY, 
+					wxT("Colormap:")
+				), 
+				0, 
+				wxALIGN_CENTER
+			);
+
+			m_ImageColormapComboBox = std::make_unique<MainFrameVariables::ImageColormapComboBox>();
+			m_ImageColormapComboBox->stylish_combo_box = std::make_unique<cStylishComboBox>();
+			m_ImageColormapComboBox->stylish_combo_box->Create
+			(
+				page,
+				MainFrameVariables::ID_RIGHT_CAM_COLORMAP_COMBOBOX,
+				wxEmptyString,
+				wxDefaultPosition,
+				wxSize(100, 30),
+				m_ImageColormapComboBox->colormap_names,
+				wxCB_READONLY
+			);
+
+			m_ImageColormapComboBox->stylish_combo_box->SetSelection(0);
+#ifndef _DEBUG
+			m_ImageColormapComboBox->stylish_combo_box->Disable();
+#endif // !_DEBUG
+
+			gridSizer->Add(m_ImageColormapComboBox->stylish_combo_box.get(), 0, wxALIGN_CENTER);
+		}
 	}
 	sizerPage->Add(gridSizer, 0, wxEXPAND | wxALL, 5);
 	sizerPage->AddStretchSpacer();
@@ -3706,6 +3741,25 @@ auto cMain::OnBinningChoice(wxCommandEvent& evt) -> void
 	
 	auto imageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
 	m_CamPreview->SetImageSize(imageSize);
+}
+
+auto cMain::OnColormapComboBox(wxCommandEvent& evt) -> void
+{
+	m_CamPreview->SetImageColormapMode
+	(
+		static_cast<CameraPreviewVariables::Colormaps>
+		(
+			m_ImageColormapComboBox->stylish_combo_box->GetSelection()
+			)
+	);
+
+	if (!m_CamPreview->IsImageSet()) return;
+	//if (!m_CameraParametersControls->startCapturing->GetValue())
+	//if (!m_CameraParametersControls->isStartToggled)
+	//{
+	//	wxCommandEvent artLeftBorderHostogramChanged(wxEVT_TEXT, MainFrameVariables::ID_HISTOGRAM_LEFT_BORDER_TXT_CTRL);
+	//	ProcessEvent(artLeftBorderHostogramChanged);
+	//}
 }
 
 auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void

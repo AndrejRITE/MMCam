@@ -22,6 +22,17 @@
 
 namespace CameraPreviewVariables
 {
+	enum Colormaps
+	{
+		GRAYSCALE_COLORMAP,
+		INVERT_COLORMAP,
+		JET_COLORMAP,
+		COOL_COLORMAP,
+		HOT_COLORMAP,
+		WINTER_COLORMAP,
+		COPPER_COLORMAP
+	};
+
 	enum 
 	{
 		MORAVIAN_INSTRUMENTS_CAM,
@@ -66,7 +77,15 @@ public:
 	);
 	auto SetBackgroundColor(wxColour bckg_colour) -> void;
 	auto SetValueDisplayingActive(bool activate = false) -> void;
+
+	auto SetImageColormapMode(const CameraPreviewVariables::Colormaps colormapMode) -> void
+	{
+		if (colormapMode < 0 || colormapMode > 6) return;
+		m_ColormapMode = colormapMode;
+	};
 	
+	auto IsImageSet() const -> bool { return m_ImageData != nullptr; }
+
 	auto ActivateCrossHairDisplaying(bool activate = false) -> void;
 	auto ActivateFWHMDisplaying(bool activate = false) -> void;
 	auto ActivateFocusCenterDisplaying(bool activate = false) -> void;
@@ -228,6 +247,8 @@ private:
 private:
 	/* Buttons on keyboard */
 	bool m_CTRLPressed{};
+
+	CameraPreviewVariables::Colormaps m_ColormapMode{ CameraPreviewVariables::Colormaps::GRAYSCALE_COLORMAP };
 
 	bool m_ExecutionFinished{ true };
 	int m_Width{}, m_Height{};

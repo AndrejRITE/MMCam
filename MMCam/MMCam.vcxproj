@@ -167,6 +167,7 @@
     <ClInclude Include="cMain.h" />
     <ClInclude Include="cPreviewTools.h" />
     <ClInclude Include="cSettings.h" />
+    <ClInclude Include="cStylishComboBox.h" />
     <ClInclude Include="MoravianInstrumentsControl.h" />
     <ClInclude Include="PostprocessingAlgorithms.h" />
     <ClInclude Include="IMotor.h" />
@@ -198,6 +199,7 @@
     <ClCompile Include="cMain.cpp" />
     <ClCompile Include="cPreviewTools.cpp" />
     <ClCompile Include="cSettings.cpp" />
+    <ClCompile Include="cStylishComboBox.cpp" />
     <ClCompile Include="MoravianInstrumentsControl.cpp" />
     <ClCompile Include="StandaMotor.cpp" />
     <ClCompile Include="XeryonMotor.cpp" />
