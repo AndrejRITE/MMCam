@@ -101,7 +101,9 @@ namespace MainFrameVariables
 		ID_RIGHT_SC_OPT_Z_CENTER_BTN,
 		ID_RIGHT_SC_OPT_Z_HOME_BTN,
 		/* Camera */
-		ID_RIGHT_CAM_EXPOSURE_TE_CTL,
+		ID_RIGHT_CAM_TEMPERATURE_TXT_CTL,
+		ID_RIGHT_CAM_EXPOSURE_TXT_CTL,
+		ID_RIGHT_CAM_BINNING_CHOICE,
 		ID_RIGHT_CAM_MANUFACTURER_CHOICE,
 		ID_RIGHT_CAM_SINGLE_SHOT_BTN,
 		ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN,
@@ -460,6 +462,8 @@ private:
 	void OnSecondStageChoice(wxCommandEvent& evt);
 	/* Changed Exposure value */
 	void ExposureValueChanged(wxCommandEvent& evt);
+	auto OnSensorTemperatureChanged(wxCommandEvent& evt) -> void;
+	auto OnBinningChoice(wxCommandEvent& evt) -> void;
 	/* Generate Report */
 	auto OnGenerateReportBtn(wxCommandEvent& evt) -> void;
 	auto IsPythonInstalledOnTheCurrentMachine() -> bool;
@@ -1117,7 +1121,8 @@ private:
 	/* Camera */
 	std::unique_ptr<CameraControl> m_CameraControl{};
 	//std::unique_ptr<XimeaControl> m_XimeaControl{};
-	std::unique_ptr<wxTextCtrl> m_CamExposure{};
+	std::unique_ptr<wxTextCtrl> m_CamSensorTemperature{}, m_CamExposure{};
+	std::unique_ptr<wxChoice> m_CamBinning{};
 	//std::unique_ptr<wxStaticText> m_SelectedCameraStaticTXT{};
 	std::unique_ptr<wxButton> m_SingleShotBtn{};
 	std::unique_ptr<wxToggleButton> m_StartStopLiveCapturingTglBtn{};

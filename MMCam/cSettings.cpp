@@ -471,64 +471,64 @@ auto cSettings::CreateCameraSection(wxPanel* panel, wxBoxSizer* panel_sizer) -> 
 	}
 
 	cameraStaticBoxSizer->AddStretchSpacer();
-	// Temperature
-	{
-		auto temperatureBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "&Temperature [degC]");
-		auto txtCtrlSize = wxSize(80, 24);
+	//// Temperature
+	//{
+	//	auto temperatureBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "&Temperature [degC]");
+	//	auto txtCtrlSize = wxSize(80, 24);
 
-		wxFloatingPointValidator<float>	val(1, NULL, wxNUM_VAL_ZERO_AS_BLANK);
-		val.SetRange(-20.0, 50.0);
+	//	wxFloatingPointValidator<float>	val(1, NULL, wxNUM_VAL_ZERO_AS_BLANK);
+	//	val.SetRange(-20.0, 50.0);
 
-		m_Camera->temperatureTxtCtrl = new wxTextCtrl
-		(
-			panel, 
-			SettingsVariables::ID_CAM_TEMPERATURE_TXT_CTRL, 
-			wxT("15.0"),
-			wxDefaultPosition, 
-			txtCtrlSize,
-			wxTE_CENTRE
-		);
+	//	m_Camera->temperatureTxtCtrl = new wxTextCtrl
+	//	(
+	//		panel, 
+	//		SettingsVariables::ID_CAM_TEMPERATURE_TXT_CTRL, 
+	//		wxT("15.0"),
+	//		wxDefaultPosition, 
+	//		txtCtrlSize,
+	//		wxTE_CENTRE
+	//	);
 
-		temperatureBoxSizer->AddStretchSpacer();
-		temperatureBoxSizer->Add(m_Camera->temperatureTxtCtrl, 0, wxEXPAND);
-		temperatureBoxSizer->AddStretchSpacer();
+	//	temperatureBoxSizer->AddStretchSpacer();
+	//	temperatureBoxSizer->Add(m_Camera->temperatureTxtCtrl, 0, wxEXPAND);
+	//	temperatureBoxSizer->AddStretchSpacer();
 
-		cameraStaticBoxSizer->Add(temperatureBoxSizer, 0, wxEXPAND);
-	}
-	cameraStaticBoxSizer->AddStretchSpacer();
+	//	cameraStaticBoxSizer->Add(temperatureBoxSizer, 0, wxEXPAND);
+	//}
+	//cameraStaticBoxSizer->AddStretchSpacer();
 
-	// Binning
-	{
-		auto binningBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "&Binning");
-		//auto txtCtrlSize = wxSize(80, 24);
+	//// Binning
+	//{
+	//	auto binningBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "&Binning");
+	//	//auto txtCtrlSize = wxSize(80, 24);
 
-		//wxFloatingPointValidator<float>	val(1, NULL, wxNUM_VAL_ZERO_AS_BLANK);
-		//val.SetRange(-20.0, 50.0);
+	//	//wxFloatingPointValidator<float>	val(1, NULL, wxNUM_VAL_ZERO_AS_BLANK);
+	//	//val.SetRange(-20.0, 50.0);
 
-		m_Camera->binningsArrayStr.Add("1");
-		m_Camera->binningsArrayStr.Add("2");
-		m_Camera->binningsArrayStr.Add("4");
-		m_Camera->binningsArrayStr.Add("8");
-		m_Camera->binningsArrayStr.Add("16");
+	//	m_Camera->binningsArrayStr.Add("1");
+	//	m_Camera->binningsArrayStr.Add("2");
+	//	m_Camera->binningsArrayStr.Add("4");
+	//	m_Camera->binningsArrayStr.Add("8");
+	//	m_Camera->binningsArrayStr.Add("16");
 
-		m_Camera->binningChoice = new wxChoice
-		(
-			panel, 
-			SettingsVariables::ID_CAM_BINNING_CHOICE, 
-			wxDefaultPosition, 
-			wxDefaultSize,
-			m_Camera->binningsArrayStr
-		);
+	//	m_Camera->binningChoice = new wxChoice
+	//	(
+	//		panel, 
+	//		SettingsVariables::ID_CAM_BINNING_CHOICE, 
+	//		wxDefaultPosition, 
+	//		wxDefaultSize,
+	//		m_Camera->binningsArrayStr
+	//	);
 
-		m_Camera->binningChoice->SetSelection(0);
+	//	m_Camera->binningChoice->SetSelection(0);
 
-		binningBoxSizer->AddStretchSpacer();
-		binningBoxSizer->Add(m_Camera->binningChoice, 0, wxEXPAND);
-		binningBoxSizer->AddStretchSpacer();
+	//	binningBoxSizer->AddStretchSpacer();
+	//	binningBoxSizer->Add(m_Camera->binningChoice, 0, wxEXPAND);
+	//	binningBoxSizer->AddStretchSpacer();
 
-		cameraStaticBoxSizer->Add(binningBoxSizer, 0, wxEXPAND);
-	}
-	cameraStaticBoxSizer->AddStretchSpacer();
+	//	cameraStaticBoxSizer->Add(binningBoxSizer, 0, wxEXPAND);
+	//}
+	//cameraStaticBoxSizer->AddStretchSpacer();
 
 	panel_sizer->Add(cameraStaticBoxSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
 

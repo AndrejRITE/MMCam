@@ -108,11 +108,10 @@ namespace SettingsVariables
 	struct Camera
 	{
 		wxTextCtrl* idTxtCtrl{};
-		wxTextCtrl* temperatureTxtCtrl{};
-		wxChoice* binningChoice{};
+		//wxTextCtrl* temperatureTxtCtrl{};
+		//wxChoice* binningChoice{};
 		wxString selectedCameraIDStr{};
-
-		wxArrayString binningsArrayStr{};
+		//wxArrayString binningsArrayStr{};
 	};
 
 	struct WorkStationData
@@ -265,13 +264,6 @@ public:
 		m_CircleMeshStepPXTxtCtrl->GetValue().ToInt(&step);
 		return (unsigned int)step;
 	};
-
-	auto GetRequiredSensorTemperature() const -> double
-	{
-		double requiredTemperature{};
-		m_Camera->temperatureTxtCtrl->GetValue().ToDouble(&requiredTemperature);
-		return requiredTemperature;
-	}
 
 	auto GetCameraManufacturer() const -> int { return m_CameraManufacturer; }
 	auto GetMotorManufacturer() const -> int { return m_MotorManufacturer; }
