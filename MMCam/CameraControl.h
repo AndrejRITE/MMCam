@@ -35,8 +35,10 @@ public:
     virtual auto GetSensorTemperature() -> double = 0;
 
     auto GetCameraDataType() const -> CameraControlVariables::ImageDataTypes { return m_ImageDataType; };
+    auto GetSerialNumber() const -> std::string { return m_CameraSerialNumber; };
 
 protected:
+    std::string m_CameraSerialNumber{};
     CameraControlVariables::ImageDataTypes m_ImageDataType{ CameraControlVariables::ImageDataTypes::RAW_12BIT };
     double m_SensorTemperature{};
 };

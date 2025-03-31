@@ -8,6 +8,8 @@ auto XimeaControl::Initialize() -> bool
 	if (!m_IsCameraOpen)
 		return false;
 
+	m_CameraSerialNumber = m_CameraSN;
+
 	memset(&m_Image, 0, sizeof(m_Image));
 	m_Image.size = sizeof(XI_IMG);
 

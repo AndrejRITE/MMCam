@@ -1156,66 +1156,89 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 	wxPanel* page = new wxPanel(parent);
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
 
+	m_PropertiesNames = std::make_unique<MainFrameVariables::PropertiesNames>();
+
 	m_CurrentCameraSettingsPropertyGrid = new wxPropertyGrid
 	(
 		page, 
 		MainFrameVariables::ID_RIGHT_CAM_ACTUAL_PARAMETERS_PROPERTY_GRID, 
 		wxDefaultPosition, 
 		wxDefaultSize, 
-		wxPG_DEFAULT_STYLE
+		wxPG_DEFAULT_STYLE | wxPG_SPLITTER_AUTO_CENTER
 	);
 
-	m_CurrentCameraSettingsPropertyGrid->Append
+	auto property = m_CurrentCameraSettingsPropertyGrid->Append
 	(
 		new wxStringProperty
 		(
-			"ID", 
-			"ID", 
+			m_PropertiesNames->id, 
+			m_PropertiesNames->id, 
 			"None"
 		)
 	);
 
-	m_CurrentCameraSettingsPropertyGrid->Append
+	property->ChangeFlag(wxPG_PROP_READONLY, true);
+
+	property = m_CurrentCameraSettingsPropertyGrid->Append
+	(
+		new wxStringProperty
+		(
+			m_PropertiesNames->depth, 
+			m_PropertiesNames->depth, 
+			"None"
+		)
+	);
+
+	property->ChangeFlag(wxPG_PROP_READONLY, true);
+
+	property = m_CurrentCameraSettingsPropertyGrid->Append
 	(
 		new wxFloatProperty
 		(
-			"Sensor Temperature [degC]", 
-			"Sensor Temperature [degC]", 
+			m_PropertiesNames->temperature, 
+			m_PropertiesNames->temperature, 
 			0.0
 		)
 	);
 
-	m_CurrentCameraSettingsPropertyGrid->Append
+	property->ChangeFlag(wxPG_PROP_READONLY, true);
+
+	property = m_CurrentCameraSettingsPropertyGrid->Append
 	(
 		new wxIntProperty
 		(
-			"Sensor Width [px]", 
-			"Sensor Width [px]", 
+			m_PropertiesNames->sensor_width, 
+			m_PropertiesNames->sensor_width, 
 			0
 		)
 	);
 
-	m_CurrentCameraSettingsPropertyGrid->Append
+	property->ChangeFlag(wxPG_PROP_READONLY, true);
+
+	property = m_CurrentCameraSettingsPropertyGrid->Append
 	(
 		new wxIntProperty
 		(
-			"Sensor Height [px]", 
-			"Sensor Height [px]", 
+			m_PropertiesNames->sensor_height, 
+			m_PropertiesNames->sensor_height, 
 			0
 		)
 	);
+
+	property->ChangeFlag(wxPG_PROP_READONLY, true);
+	//m_CurrentCameraSettingsPropertyGrid->SetColumnProportion(0, m_CurrentCameraSettingsPropertyGrid->GetColumnProportion(0));
 
 
 	sizerPage->Add(m_CurrentCameraSettingsPropertyGrid, 0, wxEXPAND);
 
-	wxSizer* const selected_camera_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Selected Camera");
-	{
-		m_SelectedCameraStaticTXT = std::make_unique<wxStaticText>(page, wxID_ANY, wxT("None"));
-		selected_camera_box_sizer->AddStretchSpacer();
-		selected_camera_box_sizer->Add(m_SelectedCameraStaticTXT.get(), 0, wxCENTER);
-		selected_camera_box_sizer->AddStretchSpacer();
-	}
-	sizerPage->Add(selected_camera_box_sizer, 0, wxEXPAND);
+	//wxSizer* const selected_camera_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Selected Camera");
+	//{
+	//	m_SelectedCameraStaticTXT = std::make_unique<wxStaticText>(page, wxID_ANY, wxT("None"));
+	//	selected_camera_box_sizer->AddStretchSpacer();
+	//	selected_camera_box_sizer->Add(m_SelectedCameraStaticTXT.get(), 0, wxCENTER);
+	//	selected_camera_box_sizer->AddStretchSpacer();
+	//}
+	//sizerPage->Add(selected_camera_box_sizer, 0, wxEXPAND);
 
 	page->SetSizer(sizerPage);
 	return page;
@@ -1959,12 +1982,12 @@ auto cMain::InitializeSelectedCamera() -> void
 
 	if (!m_CameraControl->IsConnected())
 	{
-		m_SelectedCameraStaticTXT->SetLabel(defaultCameraName);
+		//m_SelectedCameraStaticTXT->SetLabel(defaultCameraName);
 		DisableControlsAfterUnsuccessfulCameraInitialization();
 		return;
 	}
 
-	m_SelectedCameraStaticTXT->SetLabel(selectedCamera);	
+	//m_SelectedCameraStaticTXT->SetLabel(selectedCamera);	
 	
 	auto imageSize = wxSize(m_CameraControl->GetWidth(), m_CameraControl->GetHeight());
 	m_CamPreview->SetImageSize(imageSize);
@@ -1973,6 +1996,7 @@ auto cMain::InitializeSelectedCamera() -> void
 	// Enabling controls
 	EnableControlsAfterSuccessfulCameraInitialization();
 
+	UpdateCameraParameters();
 	CoolDownTheCamera();
 
 	//m_MenuBar->menu_edit->Check(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_FWHM_DISPLAYING, true);
@@ -1982,6 +2006,24 @@ auto cMain::InitializeSelectedCamera() -> void
 	m_StartStopLiveCapturingTglBtn->SetValue(true);
 	wxCommandEvent art_start_live_capturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	ProcessEvent(art_start_live_capturing);
+}
+
+auto cMain::UpdateCameraParameters() -> void
+{
+	auto cameraSN = wxString(m_CameraControl->GetSerialNumber());
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->id, cameraSN);
+
+	auto tempString = MainFrameVariables::CreateStringWithPrecision(m_CameraControl->GetSensorTemperature(), 1);
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->temperature, tempString);
+
+	auto depth = m_CameraControl->GetCameraDataType() == CameraControlVariables::ImageDataTypes::RAW_12BIT ? wxString("12") : wxString("16");
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->depth, depth);
+
+	auto width = (int)m_CameraControl->GetWidth();
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->sensor_width, width);
+
+	auto height = (int)m_CameraControl->GetHeight();
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->sensor_height, height);
 }
 
 auto cMain::CoolDownTheCamera() -> void
@@ -1999,6 +2041,9 @@ auto cMain::CoolDownTheCamera() -> void
 		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		currentTemperature = m_CameraControl->GetSensorTemperature();
 	}
+
+	auto tempString = MainFrameVariables::CreateStringWithPrecision(currentTemperature, 1);
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->temperature, tempString);
 }
 
 void cMain::OnFullScreen(wxCommandEvent& evt)

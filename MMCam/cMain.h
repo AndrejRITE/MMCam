@@ -237,12 +237,23 @@ namespace MainFrameVariables
 		wxArrayString xRayArray{};
 	};
 
+	struct PropertiesNames
+	{
+		wxString id{ "ID" };
+		wxString temperature{ "Sensor Temperature [degC]" };
+		wxString depth{ "Depth [bit]" };
+		wxString sensor_width{ "Sensor Width [px]" };
+		wxString sensor_height{ "Sensor Height [px]" };
+	};
+
 	static auto CreateStringWithPrecision(double value, int decimalPlaces) -> wxString
 	{
 		// Create a wxString with the specified number of decimal places
 		wxString formattedString = wxString::Format(wxT("%.") + std::to_string(decimalPlaces) + wxT("f"), value);
 		return formattedString;
 	};
+
+
 
 }
 
@@ -332,6 +343,7 @@ private:
 
 	void OnOpenSettings(wxCommandEvent& evt);
 	auto InitializeSelectedCamera() -> void;
+	auto UpdateCameraParameters() -> void;
 	auto CoolDownTheCamera() -> void;
 	void EnableUsedAndDisableNonUsedMotors();
 
@@ -1106,7 +1118,7 @@ private:
 	std::unique_ptr<CameraControl> m_CameraControl{};
 	//std::unique_ptr<XimeaControl> m_XimeaControl{};
 	std::unique_ptr<wxTextCtrl> m_CamExposure{};
-	std::unique_ptr<wxStaticText> m_SelectedCameraStaticTXT{};
+	//std::unique_ptr<wxStaticText> m_SelectedCameraStaticTXT{};
 	std::unique_ptr<wxButton> m_SingleShotBtn{};
 	std::unique_ptr<wxToggleButton> m_StartStopLiveCapturingTglBtn{};
 	std::unique_ptr<wxTextCtrl> m_CrossHairPosXTxtCtrl{}, m_CrossHairPosYTxtCtrl{};
@@ -1155,6 +1167,7 @@ private:
 
 	wxNotebook* m_CameraControlNotebook{};
 	wxPropertyGrid* m_CurrentCameraSettingsPropertyGrid{};
+	std::unique_ptr<MainFrameVariables::PropertiesNames> m_PropertiesNames{};
 
 	std::vector<std::pair<wxString, bool>> m_StartedThreads{};
 

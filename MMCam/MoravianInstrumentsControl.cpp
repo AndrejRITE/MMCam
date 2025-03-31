@@ -12,6 +12,8 @@ auto MoravianInstrumentsControl::Initialize() -> bool
 		return isConnected;
 	}
 
+	m_CameraSerialNumber = m_CameraSN;
+
 	GetCameraParameters(m_ActualCameraParameters.get());
 
 	return isConnected;
