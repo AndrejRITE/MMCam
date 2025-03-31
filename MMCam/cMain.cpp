@@ -2744,6 +2744,9 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 	auto currThreadTimeStamp = timePointToWxString();
 	m_StartedThreads.push_back(std::make_pair(currThreadTimeStamp, true));
 
+	int binning{ 1 };
+	m_CamBinning->GetString(m_CamBinning->GetCurrentSelection()).ToInt(&binning);
+
 	/* Worker and Progress Threads */
 	{
 		auto out_dir = m_OutDirTextCtrl->GetValue();
@@ -2760,6 +2763,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			this,
 			m_CameraControl.get(),
 			exposure_time,
+			binning,
 			&m_StartedThreads.back().first,
 			&m_StartedThreads.back().second,
 			isDrawExecutionFinished,
@@ -2830,11 +2834,15 @@ void cMain::StartLiveCapturing()
 	//auto curr_camera = m_Settings->GetSelectedCamera();
 	auto isDrawExecutionFinished = m_CamPreview->GetExecutionFinishedPtr();
 
+	int binning{ 1 };
+	m_CamBinning->GetString(m_CamBinning->GetCurrentSelection()).ToInt(&binning);
+
 	LiveCapturing* live_capturing = new LiveCapturing
 	(
 		this, 
 		m_CameraControl.get(),
 		exposure_time,
+		binning,
 		&m_StartedThreads.back().first,
 		&m_StartedThreads.back().second,
 		isDrawExecutionFinished
@@ -3676,11 +3684,18 @@ void cMain::ExposureValueChanged(wxCommandEvent& evt)
 
 auto cMain::OnSensorTemperatureChanged(wxCommandEvent& evt) -> void
 {
+	wxBusyCursor busy;
+
 	CoolDownTheCamera();
 }
 
 auto cMain::OnBinningChoice(wxCommandEvent& evt) -> void
 {
+	int binning{ 1 };
+	m_CamBinning->GetString(m_CamBinning->GetCurrentSelection()).ToInt(&binning);
+	
+	auto imageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
+	m_CamPreview->SetImageSize(imageSize);
 }
 
 auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
@@ -4487,6 +4502,8 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 {
 	auto enableWidget = true;
 	m_CamExposure->Enable();
+	m_CamSensorTemperature->Enable();
+	m_CamBinning->Enable();
 	m_StartStopLiveCapturingTglBtn->Enable();
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, enableWidget);
 	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, enableWidget);
@@ -4567,6 +4584,8 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 			return;
 		}
 
+		m_CamSensorTemperature->Disable();
+		m_CamBinning->Disable();
 		StartLiveCapturing();
 
 		m_StartStopLiveCapturingTglBtn->SetLabel(wxT("Stop Live (L)"));
@@ -4602,6 +4621,9 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 				m_SingleShotBtn->Enable();
 			}
 		}
+
+		m_CamSensorTemperature->Enable();
+		m_CamBinning->Enable();
 
 		m_StartStopLiveCapturingTglBtn->SetLabel(wxT("Start Live (L)"));
 		if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
@@ -4641,6 +4663,7 @@ LiveCapturing::LiveCapturing
 	cMain* main_frame,
 	CameraControl* cameraControl,
 	const int& exposure_us,
+	const unsigned short& binning,
 	wxString* uniqueThreadKey,
 	bool* aliveOrDeadThread,
 	bool* isDrawExecutionFinished
@@ -4648,6 +4671,7 @@ LiveCapturing::LiveCapturing
 	: m_MainFrame(main_frame), 
 	m_CameraControl(cameraControl),
 	m_ExposureUS(exposure_us),
+	m_Binning(binning),
 	m_UniqueThreadKey(uniqueThreadKey),
 	m_AliveOrDeadThread(aliveOrDeadThread),
 	m_IsDrawExecutionFinished(isDrawExecutionFinished)
@@ -4691,7 +4715,7 @@ wxThread::ExitCode LiveCapturing::Entry()
 	}
 
 	m_CameraControl->SetExposureTime(m_ExposureUS);
-	m_ImageSize.Set(m_CameraControl->GetWidth(), m_CameraControl->GetHeight());
+	m_ImageSize.Set(m_CameraControl->GetWidth() / m_Binning, m_CameraControl->GetHeight() / m_Binning);
 
 	//if (m_CamPreviewWindow->GetImageSize() != m_ImageSize)
 		//m_CamPreviewWindow->SetImageSize(m_ImageSize);
@@ -4740,14 +4764,129 @@ auto LiveCapturing::CaptureImage
 	auto imgPtr = m_CameraControl->GetImage();
 	if (!imgPtr) return false;
 
-	memcpy
-	(
-		dataPtr, 
-		imgPtr, 
-		sizeof(unsigned short) * m_ImageSize.GetWidth() * m_ImageSize.GetHeight()
-	);
+	BinImageData(imgPtr, dataPtr);
 
 	return true;
+}
+
+auto LiveCapturing::BinImageData(unsigned short* inDataPtr, unsigned short* outDataPtr) -> void
+{
+	if (!inDataPtr || !outDataPtr) return;
+
+	if (m_Binning == 1)
+	{
+		memcpy
+		(
+			outDataPtr, 
+			inDataPtr, 
+			sizeof(unsigned short) * m_ImageSize.GetWidth() * m_ImageSize.GetHeight()
+		);
+	}
+
+	auto originalImgWidth = m_CameraControl->GetWidth();
+	auto binningMode = MainFrameVariables::BinningModes::BINNING_AVERAGE;
+
+	auto calculatePixelsInsideTheBinning = [&]
+	(
+		unsigned short* dataStart,
+		int currStartX = 0, // Remove after DUBUG
+		int currStartY = 0 // Remove after DUBUG
+		)
+		{
+			unsigned long long sum{};
+			unsigned long long position{};
+			for (auto y{ 0 }; y < m_Binning; ++y)
+			{
+				for (auto x{ 0 }; x < m_Binning; ++x)
+				{
+					position = y * originalImgWidth + x;
+					sum += static_cast<unsigned long long>(dataStart[position]);
+				}
+			}
+			auto value = binningMode == MainFrameVariables::BINNING_SUM
+				? sum
+				: static_cast<unsigned long long>(sum / pow(m_Binning, 2));
+			auto valueInBounds = static_cast<unsigned short>(
+				std::max((unsigned long long)0,
+					std::min((unsigned long long)std::numeric_limits<unsigned short>::max(), value)
+				));
+
+			return valueInBounds;
+		};
+
+	auto calculateBinningPixelsOnTile = [&]
+	(
+		unsigned short* origDataStart,
+		unsigned short* outDataStart,
+		wxPoint start,
+		wxPoint finish
+		)
+		{
+			unsigned long long inPosition{};
+			unsigned long long outPosition{};
+
+			const auto width = finish.x - start.x;
+			const auto height = finish.y - start.y;
+			for (auto y{ 0 }; y < height; ++y)
+			{
+				for (auto x{ start.x }; x < finish.x; ++x)
+				{
+					inPosition = (y * width * m_Binning + x) * m_Binning;
+					outPosition = y * width + x;
+					outDataStart[outPosition] = calculatePixelsInsideTheBinning(&origDataStart[inPosition], x, y);
+				}
+			}
+		};
+
+	auto applySoftwareBinningMultithread = [&]()
+		{
+			// Check number of threads on the current machine
+			auto numThreads = std::thread::hardware_concurrency();
+#ifdef _DEBUG
+			numThreads = 1;
+#endif // _DEBUG
+
+			std::vector<std::thread> threads;
+			threads.reserve(numThreads);
+
+			unsigned int tileSize{};
+			unsigned int outImgWidth = m_ImageSize.GetWidth();
+			unsigned int outImgHeight = m_ImageSize.GetHeight();
+
+			tileSize = outImgHeight % numThreads > 0 ? outImgHeight / numThreads + 1 : outImgHeight / numThreads;
+			tileSize = tileSize > 0 ? tileSize : 1;
+
+			for (auto i{ 0 }; i < (int)numThreads; ++i)
+			{
+				wxPoint start{}, finish{};
+				start.x = 0;
+				finish.x = outImgWidth;
+
+				start.y = i * tileSize;
+				finish.y = (i + 1) * tileSize > outImgHeight ? outImgHeight : (i + 1) * tileSize;
+
+				unsigned long long position = (start.y * originalImgWidth + start.x) * m_Binning;
+				threads.emplace_back
+				(
+					std::thread
+					(
+						calculateBinningPixelsOnTile,
+						&inDataPtr[position],
+						&outDataPtr[start.y * outImgWidth + start.x],
+						start, finish
+					)
+				);
+			}
+			for (auto& thread : threads)
+			{
+				thread.join();
+			}
+
+			// Here we can deallocate input data pointer because it's not necessary to hold this huge amount of memory in buffer
+			inDataPtr = nullptr;
+		};
+
+	applySoftwareBinningMultithread();
 }
 
 LiveCapturing::~LiveCapturing()
@@ -4762,6 +4901,7 @@ WorkerThread::WorkerThread
 	cMain* main_frame,
 	CameraControl* cameraControl,
 	const int& exposure_us,
+	const unsigned short& binning,
 	wxString* uniqueThreadKey,
 	bool* aliveOrDeadThread,
 	bool* isDrawExecutionFinished,
@@ -4777,6 +4917,7 @@ WorkerThread::WorkerThread
 		main_frame, 
 		cameraControl, 
 		exposure_us,
+		binning,
 		uniqueThreadKey, 
 		aliveOrDeadThread, 
 		isDrawExecutionFinished
@@ -4839,6 +4980,7 @@ wxThread::ExitCode WorkerThread::Entry()
 	//m_MeasurementGraphTxtFilePath = graphFileName + wxString(".txt");
 
 	auto dataSize = m_CameraControl->GetWidth() * m_CameraControl->GetHeight();
+	dataSize /= pow(m_Binning, 2);
 	//auto cam_preview_data_ptr = m_CameraPreview->GetDataPtr();
 	//auto cam_preview_image_ptr = m_CameraPreview->GetImagePtr();
 
@@ -4892,15 +5034,15 @@ wxThread::ExitCode WorkerThread::Entry()
 			!SaveImage
 			(
 				dataPtr.get(), 
-				m_CameraControl->GetWidth(), 
-				m_CameraControl->GetHeight(), 
+				m_CameraControl->GetWidth() / m_Binning, 
+				m_CameraControl->GetHeight() / m_Binning, 
 				fileName
 			) ||
 			!CalculateFWHM
 			(
 				dataPtr.get(), 
-				m_CameraControl->GetWidth(), 
-				m_CameraControl->GetHeight(),
+				m_CameraControl->GetWidth() / m_Binning, 
+				m_CameraControl->GetHeight() / m_Binning,
 				i
 			)
 			)

@@ -129,6 +129,13 @@ namespace MainFrameVariables
 		/* Progress */
 		ID_THREAD_PROGRESS_CAPTURING,
 	};
+
+	enum BinningModes
+	{
+		BINNING_SUM,
+		BINNING_AVERAGE
+	};
+
 	struct MenuBar
 	{
 		wxMenuBar* menu_bar{};
@@ -254,9 +261,6 @@ namespace MainFrameVariables
 		wxString formattedString = wxString::Format(wxT("%.") + std::to_string(decimalPlaces) + wxT("f"), value);
 		return formattedString;
 	};
-
-
-
 }
 
 class ProgressBar;
@@ -1191,6 +1195,7 @@ public:
 		cMain* main_frame,
 		CameraControl* cameraControl,
 		const int& exposure_us,
+		const unsigned short& binning,
 		wxString* uniqueThreadKey,
 		bool* aliveOrDeadThread,
 		bool* isDrawExecutionFinished
@@ -1205,9 +1210,12 @@ protected:
 		unsigned short* dataPtr
 	) -> bool;
 
+	auto BinImageData(unsigned short* inDataPtr, unsigned short* outDataPtr) -> void;
+
 protected:
 	cMain* m_MainFrame{};
 	CameraControl* m_CameraControl{};
+	unsigned short m_Binning{ 1 };
 	int m_ExposureUS{};
 	wxSize m_ImageSize{};
 
@@ -1228,6 +1236,7 @@ public:
 		cMain* main_frame,
 		CameraControl* cameraControl,
 		const int& exposure_us,
+		const unsigned short& binning,
 		wxString* uniqueThreadKey,
 		bool* aliveOrDeadThread,
 		bool* isDrawExecutionFinished,
