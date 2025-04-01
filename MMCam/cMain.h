@@ -469,6 +469,11 @@ private:
 		wxWindow* parent
 	) -> wxWindow*;
 
+	auto CreateMeasurementPage
+	(
+		wxWindow* parent
+	) -> wxWindow*;
+
 
 	void CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
 	void CreateCameraControls(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
@@ -1282,8 +1287,10 @@ private:
 	std::unique_ptr<wxToggleButton> m_StartStopLiveCapturingTglBtn{};
 	std::unique_ptr<wxTextCtrl> m_CrossHairPosXTxtCtrl{}, m_CrossHairPosYTxtCtrl{};
 	//std::unique_ptr<wxToggleButton> m_SetCrossHairPosTglBtn{};
+	wxSize m_OutputImageSize{};
 
 	/* Measurement */
+
 	std::unique_ptr<wxTextCtrl> m_OutDirTextCtrl{};
 	std::unique_ptr<wxButton> m_OutDirBtn{};
 	std::unique_ptr<MainFrameVariables::MeasurementStage> m_FirstStage{};
@@ -1321,7 +1328,7 @@ private:
 	/* wxPanels */
 	wxScrolledWindow* m_RightSidePanel{};
 	//wxPanel* m_RightSidePanel{};
-	wxNotebook* m_DetectorControlsNotebook{}, *m_OpticsControlsNotebook{};
+	wxNotebook* m_DetectorControlsNotebook{}, * m_OpticsControlsNotebook{}, *m_MeasurementNotebook{};
 	wxWindow* m_OpticsPage{};
 
 	wxNotebook* m_CameraControlNotebook{};

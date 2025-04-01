@@ -113,21 +113,21 @@ auto cCamPreview::SettingCrossHairPosFromParentWindow(bool set) -> void
 	//m_SettingCrossHairPos = set;
 }
 
-auto cCamPreview::SetImageSize(const wxSize& img_size) -> void
-{
-	m_ImageSize = img_size;
-
-	m_IsImageSet = false;
-
-	m_ImageData = std::make_unique<unsigned short[]>(img_size.GetWidth() * img_size.GetHeight());
-
-	m_HorizontalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetWidth());
-	m_VerticalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetHeight());
-
-	m_Image.Create(img_size);
-
-	UpdateImageParameters(true);
-}
+//auto cCamPreview::SetImageSize(const wxSize& img_size) -> void
+//{
+//	m_ImageSize = img_size;
+//
+//	m_IsImageSet = false;
+//
+//	m_ImageData = std::make_unique<unsigned short[]>(img_size.GetWidth() * img_size.GetHeight());
+//
+//	m_HorizontalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetWidth());
+//	m_VerticalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetHeight());
+//
+//	m_Image.Create(img_size);
+//
+//	UpdateImageParameters(true);
+//}
 
 auto cCamPreview::GetDataPtr() const -> unsigned short*
 {
@@ -205,11 +205,19 @@ void cCamPreview::UpdateImageParameters(bool centerCrossHair)
 
 auto cCamPreview::SetCameraCapturedImage
 (
-	unsigned short* data_ptr
+	unsigned short* data_ptr,
+	const wxSize& imgSize
 ) -> void
 {
 	if (!data_ptr) return;
-	if (!m_ImageSize.GetWidth() || !m_ImageSize.GetHeight()) return;
+	if (!imgSize.GetWidth() || !imgSize.GetHeight()) return;
+	
+	m_ImageSize = imgSize;
+
+	m_IsImageSet = false;
+
+	m_HorizontalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetWidth());
+	m_VerticalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetHeight());
 
 	LOG("Started: " + wxString(__FUNCSIG__));
 

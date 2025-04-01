@@ -97,7 +97,7 @@ public:
 	void SetXCrossHairPosFromParentWindow(const int& x_pos);
 	void SetYCrossHairPosFromParentWindow(const int& y_pos);
 	auto SettingCrossHairPosFromParentWindow(bool set = false) -> void;
-	auto SetImageSize(const wxSize& img_size) -> void;
+	//auto SetImageSize(const wxSize& img_size) -> void;
 	auto GetDataPtr() const -> unsigned short*;
 	//auto GetImagePtr() const->wxImage*;
 	auto GetImageSize() const->wxSize;
@@ -106,7 +106,8 @@ public:
 
 	auto SetCameraCapturedImage
 	(
-		unsigned short* data_ptr
+		unsigned short* data_ptr,
+		const wxSize& imgSize
 	) -> void;
 
 	auto UpdateCursorPositionOnStatusBar() -> void;
