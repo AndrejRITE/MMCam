@@ -184,58 +184,246 @@ void cMain::CreateMenuBarOnFrame()
 	m_MenuBar = std::make_unique<MainFrameVariables::MenuBar>();
 	this->SetMenuBar(m_MenuBar->menu_bar);
 
+	auto initBitmapSize = wxSize(16, 16);
 	// File Menu
-	m_MenuBar->menu_file->Append(MainFrameVariables::ID_MENUBAR_FILE_QUIT, wxT("Quit\tCtrl+Q"));
+	{
+		// Quit
+		{
+			auto item = new wxMenuItem(m_MenuBar->menu_file, MainFrameVariables::ID_MENUBAR_FILE_QUIT, "Quit\tCtrl+Q");
+			// Setting a bitmap to the Close menu item
+			{
+				wxVector<wxBitmap> bitmaps;
+				auto bitmap = wxART_CLOSE;
+				auto client = wxART_CLIENT_MATERIAL_ROUND;
+				auto color = wxColour(0, 0, 0);
+				for (auto i{ 0 }; i < 3; ++i)
+					bitmaps.push_back
+					(
+						wxMaterialDesignArtProvider::GetBitmap
+						(
+							bitmap,
+							client,
+							wxSize(initBitmapSize.GetWidth() + i * initBitmapSize.GetWidth(), initBitmapSize.GetHeight() + i * initBitmapSize.GetHeight()),
+							color
+						)
+					);
+
+				item->SetBitmap(wxBitmapBundle::FromBitmaps(bitmaps));
+			}
+
+			m_MenuBar->menu_file->Append(item);
+		}
+		//m_MenuBar->menu_file->Append(MainFrameVariables::ID_MENUBAR_FILE_QUIT, wxT("Quit\tCtrl+Q"));
+	}
 	// Append File Menu to the Menu Bar
 	m_MenuBar->menu_bar->Append(m_MenuBar->menu_file, wxT("&File"));
 
 	// Edit Menu
-	m_MenuBar->menu_edit->Append(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, wxT("Single Shot\tS"));
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, false);
-	m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, wxT("Start Live\tL"));
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
-	m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE, wxT("Dark Mode"));
+	{
+		// Single Shot
+		{
+			auto item = new wxMenuItem(m_MenuBar->menu_edit, MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, "Single Shot\tS");
 
-	m_MenuBar->menu_edit->Append(MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, wxT("Settings\tCtrl+S"));
+			// Setting a bitmap to the Close menu item
+			{
+				wxVector<wxBitmap> bitmaps;
+				auto bitmap = wxART_CAMERA_SPARKLES;
+				auto client = wxART_CLIENT_FLUENTUI_FILLED;
+				auto color = wxColour(0, 0, 0);
+				for (auto i{ 0 }; i < 3; ++i)
+					bitmaps.push_back
+					(
+						wxMaterialDesignArtProvider::GetBitmap
+						(
+							bitmap,
+							client,
+							wxSize(initBitmapSize.GetWidth() + i * initBitmapSize.GetWidth(), initBitmapSize.GetHeight() + i * initBitmapSize.GetHeight()),
+							color
+						)
+					);
 
-	m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, wxT("Start Measurement\tM"));
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, false);
+				item->SetBitmap(wxBitmapBundle::FromBitmaps(bitmaps));
+			}
 
+			m_MenuBar->menu_edit->Append(item);
+		}
+
+		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, false);
+		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, wxT("Start Live\tL"));
+		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
+		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE, wxT("Dark Mode"));
+
+		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, wxT("Start Measurement\tM"));
+		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, false);
+
+		m_MenuBar->menu_edit->AppendSeparator();
+
+		// Settings
+		{
+			auto item = new wxMenuItem(m_MenuBar->menu_edit, MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, "Settings\tCtrl+S");
+
+			// Setting a bitmap to the Close menu item
+			{
+				wxVector<wxBitmap> bitmaps;
+				auto bitmap = wxART_SETTINGS;
+				auto client = wxART_CLIENT_FLUENTUI_FILLED;
+				auto color = wxColour(0, 0, 0);
+				for (auto i{ 0 }; i < 3; ++i)
+					bitmaps.push_back
+					(
+						wxMaterialDesignArtProvider::GetBitmap
+						(
+							bitmap,
+							client,
+							wxSize(initBitmapSize.GetWidth() + i * initBitmapSize.GetWidth(), initBitmapSize.GetHeight() + i * initBitmapSize.GetHeight()),
+							color
+						)
+					);
+
+				item->SetBitmap(wxBitmapBundle::FromBitmaps(bitmaps));
+			}
+
+			m_MenuBar->menu_edit->Append(item);
+		}
+	}
 	// Append Edit Menu to the Menu Bar
 	m_MenuBar->menu_bar->Append(m_MenuBar->menu_edit, wxT("&Edit"));
 
-	// Intensity Profile SubMenu
-	m_MenuBar->submenu_intensity_profile->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, wxT("Crosshair\tC"));
-	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, false);
-	// Append Submenu Selection Tools to the Tools Menu
-	m_MenuBar->menu_tools->Append(wxID_ANY, wxT("&Intensity Profile"), m_MenuBar->submenu_intensity_profile);
-	// Append Value Displaying Check
-	m_MenuBar->menu_tools->Append(MainFrameVariables::ID_MENUBAR_TOOLS_VALUE_DISPLAYING, wxT("Value Displaying\tV"), wxEmptyString, wxITEM_CHECK);
+	// Tools
+	{
+		// Intensity Profile SubMenu
+		{
+			m_MenuBar->submenu_intensity_profile->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, wxT("Crosshair\tC"));
+			m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, false);
+
+			wxMenuItem* item = new wxMenuItem
+			(
+				m_MenuBar->menu_tools,
+				wxID_ANY,
+				"Intensity Profile",
+				wxEmptyString,
+				wxITEM_NORMAL,
+				m_MenuBar->submenu_intensity_profile
+			);
+
+			// Setting a bitmap to the Flip menu item
+			{
+				wxVector<wxBitmap> bitmaps;
+				auto bitmap = wxART_TOOLBOX;
+				auto client = wxART_CLIENT_FLUENTUI_FILLED;
+				auto color = wxColour(0, 0, 0);
+				for (auto i{ 0 }; i < 3; ++i)
+					bitmaps.push_back
+					(
+						wxMaterialDesignArtProvider::GetBitmap
+						(
+							bitmap,
+							client,
+							wxSize(initBitmapSize.GetWidth() + i * initBitmapSize.GetWidth(), initBitmapSize.GetHeight() + i * initBitmapSize.GetHeight()),
+							color
+						)
+					);
+
+				item->SetBitmap(wxBitmapBundle::FromBitmaps(bitmaps));
+			}
+
+			m_MenuBar->menu_tools->Append(item);
+		}
+
+		// Append Value Displaying Check
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_VALUE_DISPLAYING, wxT("Value Displaying\tV"));
 
 
-	// Circle Mesh
-	m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, wxT("Circle Mesh Displaying\tCtrl+O"));
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, false);
-	// Focus Center
-	m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, wxT("Focus Center Displaying\tCtrl+F"));
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
-	// FWHM
-	m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, wxT("FWHM Displaying\tF"));
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, false);
-	// Grid Mesh
-	m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, wxT("Grid Mesh Displaying\tCtrl+G"));
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, false);
-	
+		// Circle Mesh
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, wxT("Circle Mesh Displaying\tCtrl+O"));
+		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, false);
+		// Focus Center
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, wxT("Focus Center Displaying\tCtrl+F"));
+		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
+		// FWHM
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, wxT("FWHM Displaying\tF"));
+		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, false);
+		// Grid Mesh
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, wxT("Grid Mesh Displaying\tCtrl+G"));
+		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, false);
+	}
 
 	// Append Tools Menu to the Menu Bar
 	m_MenuBar->menu_bar->Append(m_MenuBar->menu_tools, wxT("&Tools"));
+
 	// Window Menu
-	m_MenuBar->menu_window->Append(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN, wxT("Full screen mode\tF11"), wxEmptyString, wxITEM_CHECK);
+	{
+		auto item = new wxMenuItem
+		(
+			m_MenuBar->menu_window,
+			MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN,
+			"Full screen mode\tF11",
+			"Minimize/Maximize the main window."
+		);
+
+		// Setting a bitmap to the Binning menu item
+		{
+			wxVector<wxBitmap> bitmaps;
+			auto bitmap = wxART_MAXIMIZE;
+			auto client = wxART_CLIENT_FLUENTUI_FILLED;
+			auto color = wxColour(0, 0, 0);
+
+			for (auto i{ 0 }; i < 3; ++i)
+				bitmaps.push_back
+				(
+					wxMaterialDesignArtProvider::GetBitmap
+					(
+						bitmap,
+						client,
+						wxSize(initBitmapSize.GetWidth() + i * initBitmapSize.GetWidth(), initBitmapSize.GetHeight() + i * initBitmapSize.GetHeight()),
+						color
+					)
+				);
+
+			item->SetBitmap(wxBitmapBundle::FromBitmaps(bitmaps));
+		}
+
+		m_MenuBar->menu_window->Append(item);
+	}
+	//m_MenuBar->menu_window->Append(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN, wxT("Full screen mode\tF11"), wxEmptyString, wxITEM_CHECK);
 	// Append Window Menu to the Menu Bar
 	m_MenuBar->menu_bar->Append(m_MenuBar->menu_window, wxT("&Window"));
 
 	// Help Menu
-	m_MenuBar->menu_help->Append(MainFrameVariables::ID_MENUBAR_HELP_ABOUT, wxT("About MMCam\tF1"));
+	{
+		auto item = new wxMenuItem
+		(
+			m_MenuBar->menu_help,
+			MainFrameVariables::ID_MENUBAR_HELP_ABOUT,
+			"About MMCam\tF1",
+			"Open an HTML Help"
+		);
+
+		// Setting a bitmap to the Binning menu item
+		{
+			wxVector<wxBitmap> bitmaps;
+			auto bitmap = wxART_BOOK_QUESTION_MARK;
+			auto client = wxART_CLIENT_FLUENTUI_FILLED;
+			auto color = wxColour(0, 0, 0);
+
+			for (auto i{ 0 }; i < 3; ++i)
+				bitmaps.push_back
+				(
+					wxMaterialDesignArtProvider::GetBitmap
+					(
+						bitmap,
+						client,
+						wxSize(initBitmapSize.GetWidth() + i * initBitmapSize.GetWidth(), initBitmapSize.GetHeight() + i * initBitmapSize.GetHeight()),
+						color
+					)
+				);
+
+			item->SetBitmap(wxBitmapBundle::FromBitmaps(bitmaps));
+		}
+
+		m_MenuBar->menu_help->Append(item);
+	}
+	//m_MenuBar->menu_help->Append(MainFrameVariables::ID_MENUBAR_HELP_ABOUT, wxT("About MMCam\tF1"));
 	m_MenuBar->menu_bar->Append(m_MenuBar->menu_help, wxT("&Help"));
 }
 
@@ -2142,25 +2330,25 @@ void cMain::OnFullScreen(wxCommandEvent& evt)
 	if (!IsMaximized())
 	{
 		Maximize(true);
-		m_MenuBar->menu_window->Check(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN, true);
+		//m_MenuBar->menu_window->Check(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN, true);
 	}
 	else
 	{
 		Maximize(false);
-		m_MenuBar->menu_window->Check(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN, false);
+		//m_MenuBar->menu_window->Check(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN, false);
 	}
 }
 
 void cMain::OnMaximizeButton(wxMaximizeEvent& evt)
 {
-	if (m_MenuBar->menu_window->IsChecked(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN))
-	{
-		m_MenuBar->menu_window->Check(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN, false);
-	}
-	else
-	{
-		m_MenuBar->menu_window->Check(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN, true);
-	}
+	//if (m_MenuBar->menu_window->IsChecked(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN))
+	//{
+	//	m_MenuBar->menu_window->Check(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN, false);
+	//}
+	//else
+	//{
+	//	m_MenuBar->menu_window->Check(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN, true);
+	//}
 }
 
 void cMain::OnExit(wxCloseEvent& evt)
