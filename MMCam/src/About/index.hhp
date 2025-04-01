@@ -1,0 +1,10 @@
+[OPTIONS]
+Compatibility=1.1
+Contents file=index.hhc
+Index file=Index.hhk
+Display compile progress=No
+Title=MMCam
+Default topic=index.html
+
+[FILES]
+about_app.html

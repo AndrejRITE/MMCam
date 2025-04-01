@@ -1,0 +1,16 @@
+<!DOCTYPE html PUBLIC "-//IETF//DTD HTML//EN">
+<HTML>
+<HEAD>
+</HEAD>
+<body>
+<OBJECT type="text/site properties">
+    <param name="ImageType" value="Folder">
+</OBJECT>
+<UL>		 
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="About MMCam">
+        <param name="Local" value="about_app.html">
+		</OBJECT>
+</UL>
+</body>
+</html>

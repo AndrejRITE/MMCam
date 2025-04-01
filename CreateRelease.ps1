@@ -24,6 +24,13 @@ $operatingSystem = "win"
 	
 Write-Output "Finished building the ${repository_name} in Release mode [$(Get-Date)]" >> "${path_to_repository}\log.txt"
 
+$temp_folder = "${path_to_repository}\.temp"
+# Check if the temp folder exists, and create it if not
+if (-not (Test-Path -Path $temp_folder)) 
+{
+	New-Item -Path $temp_folder -ItemType Directory
+}
+
 # Define Inno Setup parameters
 $inno_setup_script = "${path_to_repository}\CreateInstaller.iss"
 # Copy Inno Setup script
@@ -45,12 +52,24 @@ Write-Host "MAJOR_VERSION: ${major_version}"
 Write-Host "MINOR_VERSION: ${minor_version}"
 
 # Define paths
+$about_folder = "${path_to_repository}\${repository_name}\src\About"
 $release_folder = "${path_to_repository}\bin\x64\Release"
 $opencv_folder = "$env:OPENCV_LATEST\bin"
 $libximc_folder = "$env:LIBXIMC_LATEST\win64"
 $ximea_folder = "$env:XIMEA_LATEST"
 $misdk_folder = "$env:MISDK_LATEST\x64"
 $other_files_folder = "${path_to_repository}\${repository_name}"
+
+# Create About.zip
+Copy-Item -Path "${about_folder}\*" -Destination "${temp_folder}" -Recurse
+# Replace placeholders in the about_app.html file
+$about_app_file = "${temp_folder}\about_app.html"
+$current_year = (Get-Date).Year
+(Get-Content $about_app_file) -replace "{#Major}", $major_version -replace "{#Minor}", $minor_version -replace "{#Year}", $current_year | Set-Content $about_app_file
+
+Write-Output "Creating About.zip [$(Get-Date)]" >> "${path_to_repository}\log.txt"
+$about_zip = "${release_folder}\About.zip"
+& "C:\Program Files\7-Zip\7z.exe" a -tzip $about_zip "${temp_folder}\*" -x!"CreateInstallerTemp.iss"
 
 # Remove all Installers and 7z archives (previous versions)
 # Get all .exe files except Project.exe
@@ -133,6 +152,9 @@ $commit_number = git rev-list --count HEAD  # Get the total number of commits in
 $build_version = "${major_version}.${minor_version}.${commit_number}"
 $archive_name = "${repository_name}_v${major_version}.${minor_version}.${commit_number}.7z"
 $archive_path = "${release_folder}\${archive_name}"
+
+# Remove all the files inside the temp folder
+Remove-Item -Path "$temp_folder" -Recurse
 
 # Specify files to include in the archive
 $files_to_archive = @(

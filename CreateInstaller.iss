@@ -16,6 +16,7 @@ DisableWelcomePage=no
 SetupIconFile={#IconFullPath}
 DisableDirPage=no
 UninstallDisplayIcon={app}\{#RepoName}.exe
+PrivilegesRequired=lowest
 
 [Dirs]
 Name: "{localappdata}\Programs"; Permissions: users-full

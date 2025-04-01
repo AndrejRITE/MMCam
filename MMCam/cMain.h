@@ -13,6 +13,8 @@
 #include "wx/appprogress.h"
 #include "wx/propgrid/propgrid.h"
 #include "wx/propgrid/advprops.h"
+#include "wx/fs_zip.h"
+#include "wx/html/helpctrl.h"
 #include "wxMaterialDesignArtProvider.hpp"
 
 #include <string>
@@ -428,6 +430,7 @@ public:
 private:
 	void CreateMainFrame();
 	void InitComponents();
+	auto InitializeAboutHTML() -> void;
 	void InitDefaultStateWidgets();
 	void CreateMenuBarOnFrame();
 	void CreateVerticalToolBar();
@@ -480,6 +483,7 @@ private:
 	void CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
 
 	auto OnEnableDarkMode(wxCommandEvent& evt) -> void;
+	auto OnAbout(wxCommandEvent& evt) -> void;
 
 	auto OnFWHMButton(wxCommandEvent& evt) -> void;
 	auto OnGridMeshButton(wxCommandEvent& evt) -> void;
@@ -1264,6 +1268,8 @@ private:
 private:
 	/* Settings Menu */
 	std::unique_ptr<cSettings> m_Settings{};
+	/* Help */
+	std::unique_ptr<wxHtmlHelpController> m_HelpController{};
 	/* Menu Bar */
 	std::unique_ptr<MainFrameVariables::MenuBar> m_MenuBar{};
 	/* Tool Bar */

@@ -22,6 +22,7 @@ dbg_fld/
 !main_app_window.png
 *.mat
 *.json
+*.cached
 ReportTemplate.*
 !ReportTemplate.tex
 

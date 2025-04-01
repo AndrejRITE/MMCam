@@ -15,6 +15,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_MENU(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, cMain::OnCircleMeshButton)
 	EVT_MENU(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN, cMain::OnFullScreen)
 	EVT_MENU(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, cMain::OnStartStopCapturingMenuButton)
+	EVT_MENU(MainFrameVariables::ID_MENUBAR_HELP_ABOUT, cMain::OnAbout)
 	EVT_MAXIMIZE(cMain::OnMaximizeButton)
 	/* Detector X */
 	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_SC_DET_X_ABS_TE_CTL, cMain::OnEnterTextCtrlDetectorXAbsPos)
@@ -107,9 +108,10 @@ cMain::cMain(const wxString& title_)
 	m_ProgressBar->SetIcon(logo_xpm);
 
 	CenterOnScreen();
+
 	// Maximize application's window
-#ifndef _DEBUG
 	Maximize();
+#ifndef _DEBUG
 #endif // !_DEBUG
 
 	Show();
@@ -158,6 +160,8 @@ void cMain::CreateMainFrame()
 	CreateVerticalToolBar();
 	CreateStatusBarOnFrame();
 	CreateLeftAndRightSide();
+
+	InitializeAboutHTML();
 }
 
 void cMain::InitComponents()
@@ -177,6 +181,65 @@ void cMain::InitComponents()
 
 	// Restore the previous DPI awareness
 	SetProcessDpiAwarenessContext(oldContext);
+}
+
+auto cMain::InitializeAboutHTML() -> void
+{
+	constexpr auto help_zip_not_found = [](wxString file_name)
+		{
+			wxString title = "Help file not found";
+			wxMessageBox
+			(
+				wxT("Can't find the " + file_name + " file inside the application's folder."),
+				title,
+				wxICON_ERROR
+			);
+		};
+
+	std::string help_filename = "About.zip";
+
+	std::filesystem::path currentPath = std::filesystem::current_path();
+
+	std::filesystem::path filePath = currentPath / help_filename;
+
+	m_HelpController = std::make_unique<wxHtmlHelpController>();
+
+#ifndef _DEBUG
+	// Check if help file exists
+	if (!std::filesystem::exists(filePath))
+	{
+		help_zip_not_found(wxString(help_filename));
+		return;
+	}
+#endif // !_DEBUG
+
+	wxFileSystem::AddHandler(new wxZipFSHandler);
+	m_HelpController->UseConfig(wxConfig::Get());
+	m_HelpController->SetTempDir(".");
+	bool result{};
+	wxString file_path_wxstr{};
+
+#ifdef _DEBUG
+	file_path_wxstr = wxString("D:\\Projects\\RIGAKU\\MMCam\\MMCam\\src\\About\\");
+	auto main_book = file_path_wxstr + "index.hhp";
+	auto file_name = wxFileName(main_book);
+	result = m_HelpController->AddBook(file_name);
+#else
+	file_path_wxstr = wxString(filePath);
+	auto file_name = wxFileName(file_path_wxstr);
+	result = m_HelpController->AddBook(file_name);
+#endif // _DEBUG
+	if (!result)
+	{
+#ifdef USE_LOGGER
+		if (!IsLoggingWindowBusy())
+			m_Logger->AppendLog("File " + wxString(help_filename) + " was not found in the application's directory.", LoggerVariables::RED_TEXT);
+#endif // USE_LOGGER
+		help_zip_not_found(wxString(help_filename));
+		return;
+	}
+
+	m_MenuBar->menu_help->Enable(MainFrameVariables::ID_MENUBAR_HELP_ABOUT, true);
 }
 
 void cMain::CreateMenuBarOnFrame()
@@ -420,6 +483,7 @@ void cMain::CreateMenuBarOnFrame()
 
 			item->SetBitmap(wxBitmapBundle::FromBitmaps(bitmaps));
 		}
+		item->Enable(false);
 
 		m_MenuBar->menu_help->Append(item);
 	}
@@ -1962,6 +2026,11 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 		m_MeasurementNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
 	}
 	Refresh();
+}
+
+auto cMain::OnAbout(wxCommandEvent& evt) -> void
+{
+	m_HelpController->DisplayContents();
 }
 
 auto cMain::OnFWHMButton(wxCommandEvent& evt) -> void
