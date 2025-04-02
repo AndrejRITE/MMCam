@@ -20,6 +20,8 @@ int cSettings::ShowModal()
 	auto result = wxDialog::ShowModal();  // Call the base class method
 
 	wxBusyCursor busy;
+	if (result == wxID_OK)
+		UpdateConfig();
 
 	switch (m_MotorManufacturer)
 	{
@@ -1030,37 +1032,36 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 
 auto cSettings::ReadInitializationFile() -> void
 {
-	auto xmlFile = std::make_unique<rapidxml::file<>>(m_InitializationFilePath.c_str());
-	auto document = std::make_unique<rapidxml::xml_document<>>();
-	document->parse<0>(xmlFile->data());
-	rapidxml::xml_node<>* app_node = document->first_node("MMCam");
+	std::ifstream file(m_InitializationFilePath.ToStdString());
+	if (!file.is_open()) 
+		return;
 
-	auto element = SettingsVariables::FindNode(app_node, "crop_size_mm");
-	if (element && element->first_node())
-		m_CropSizeMM = std::atof(element->first_node()->value());
+	nlohmann::json j;
+	file >> j;
+	file.close();
 
-	element = SettingsVariables::FindNode(app_node, "crop_size_circle_mm");
-	if (element && element->first_node())
-		m_CropCircleSizeMM = std::atof(element->first_node()->value());
+	try
+	{
+		m_Config = std::make_unique<SettingsVariables::InitializationFileStructure>(j.at("MMCam").get<SettingsVariables::InitializationFileStructure>());
+	}
+	catch (const nlohmann::json::exception& e)
+	{
+		return;
+	}
 
-	element = SettingsVariables::FindNode(app_node, "upload_report_folder");
-	if (element && element->first_node())
-		m_UploadReportFolder = element->first_node()->value();
+	//m_CropSizeMM = m_Config->crop_size_mm;
+	//m_CropCircleSizeMM = m_Config->crop_size_circle_mm;
+	//m_UploadReportFolder = m_Config->upload_report_folder;
 
 	m_XRayImagesCaptions.Clear();
 
 	for (auto i{ 0 }; i < 5; ++i)
 	{
 		m_XRayImagesCaptions.Add("");
-		std::string tag_name = "xrayImage" + std::to_string(i + 1) + "Caption";
-		element = SettingsVariables::FindNode(app_node, tag_name);
-		if (element && element->first_node())
-			m_XRayImagesCaptions[i] = element->first_node()->value();
+		m_XRayImagesCaptions[i] = m_Config->xrayImagesCaptions[i];
 	}
 
-	element = SettingsVariables::FindNode(app_node, "work_station");
-	if (element && element->first_node())
-		m_WorkStations->initialized_work_station = wxString(element->first_node()->value());
+	m_WorkStations->initialized_work_station = m_Config->work_station;
 }
 
 void cSettings::ReadXMLFile()
@@ -1267,35 +1268,24 @@ void cSettings::ResetAllMotorsAndRangesInXMLFile()
 	//document->clear();
 }
 
+auto cSettings::UpdateConfig() -> void
+{
+	//m_Config->crop_size_mm = m_CropSizeMM;
+	//m_Config->crop_size_circle_mm = m_CropCircleSizeMM;
+	m_Config->work_station = m_WorkStations->initialized_work_station.c_str();
+}
+
 auto cSettings::RewriteInitializationFile() -> void
 {
-	auto xmlFile = std::make_unique<rapidxml::file<>>(m_InitializationFilePath.c_str());
-	auto document = std::make_unique<rapidxml::xml_document<>>();
+	nlohmann::json j;
+	j["MMCam"] = *m_Config;
 
-	document->parse<0>(xmlFile->data());
-	rapidxml::xml_node<>* app_node = document->first_node("MMCam");
-
-	auto element = SettingsVariables::FindNode(app_node, "work_station");
-
-	rapidxml::xml_node<>* work_station_node{};
-	if (element && element->first_node())
-		work_station_node = element;
-	else
+	std::ofstream file(m_InitializationFilePath.ToStdString());
+	if (!file.is_open()) 
 		return;
 
-	work_station_node->first_node()->value(m_WorkStations->initialized_work_station.c_str());
-#ifndef _DEBUG
-#endif // !_DEBUG
-
-	// Save to file
-	std::ofstream out_file(m_InitializationFilePath.mb_str());
-	if (out_file.is_open())
-	{
-		out_file << "<?xml version=\"1.0\"?>\n";
-		out_file << *document;
-		out_file.close();
-	}
-	document->clear();
+	file << std::setw(4) << j << std::endl;  // Pretty-print the JSON with an indent of 4 spaces
+	file.close();
 }
 
 auto cSettings::InitializeXeryonAndCheckPython() -> void

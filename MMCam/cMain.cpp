@@ -2303,6 +2303,9 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 
 	UpdateStagePositions();
 	EnableUsedAndDisableNonUsedMotors();	
+
+	UpdateDefaultWidgetParameters();
+
 	Refresh();
 }
 
@@ -2359,6 +2362,46 @@ auto cMain::InitializeSelectedCamera() -> void
 	wxCommandEvent art_start_live_capturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	ProcessEvent(art_start_live_capturing);
 #endif // !_DEBUG
+}
+
+auto cMain::UpdateDefaultWidgetParameters() -> void
+{
+	auto exposure = m_Settings->GetDefaultExposure();
+	{
+		auto exposure_str = MainFrameVariables::CreateStringWithPrecision(exposure, 0);
+		m_CamExposure->SetLabel(exposure_str);
+	}
+
+	auto colormap = m_Settings->GetDefaultColormap();
+	{
+		if (colormap >= CameraPreviewVariables::Colormaps::GRAYSCALE_COLORMAP && colormap <= CameraPreviewVariables::Colormaps::COPPER_COLORMAP)
+			m_ImageColormapComboBox->stylish_combo_box->SetSelection(colormap);
+		wxCommandEvent artColormapPress(wxEVT_COMBOBOX, MainFrameVariables::ID_RIGHT_CAM_COLORMAP_COMBOBOX);
+		ProcessEvent(artColormapPress);
+	}
+
+	auto binning = m_Settings->GetDefaultBinning();
+	{
+		auto binArrStringChoice = m_CamBinning->GetStrings();
+		int i{};
+		for (const auto& bin : binArrStringChoice)
+		{
+			int binInt{};
+			bin.ToInt(&binInt);
+
+			if (binInt == binning)
+				m_CamBinning->SetSelection(i);
+			++i;
+		}
+		wxCommandEvent artBinPress(wxEVT_CHOICE, MainFrameVariables::ID_RIGHT_CAM_BINNING_CHOICE);
+		ProcessEvent(artBinPress);
+	}
+
+	auto sensor_temperature = m_Settings->GetDefaultTemperature();
+	{
+		auto sensor_temperature_str = MainFrameVariables::CreateStringWithPrecision(sensor_temperature, 1);
+		m_CamSensorTemperature->SetLabel(sensor_temperature_str);
+	}
 }
 
 auto cMain::UpdateCameraParameters() -> void
@@ -3966,6 +4009,10 @@ auto cMain::OnSensorTemperatureChanged(wxCommandEvent& evt) -> void
 {
 	wxBusyCursor busy;
 
+	double temperature{};
+	m_CamSensorTemperature->GetLabel().ToDouble(&temperature);
+	m_Settings->SetTemperature(temperature);
+
 	CoolDownTheCamera();
 }
 
@@ -3973,20 +4020,23 @@ auto cMain::OnBinningChoice(wxCommandEvent& evt) -> void
 {
 	int binning{ 1 };
 	m_CamBinning->GetString(m_CamBinning->GetCurrentSelection()).ToInt(&binning);
-	
+
+	m_Settings->SetBinning(binning);
+
 	m_OutputImageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
 	//m_CamPreview->SetImageSize(imageSize);
 }
 
 auto cMain::OnColormapComboBox(wxCommandEvent& evt) -> void
 {
+	auto colormap = m_ImageColormapComboBox->stylish_combo_box->GetSelection();
+
 	m_CamPreview->SetImageColormapMode
 	(
-		static_cast<CameraPreviewVariables::Colormaps>
-		(
-			m_ImageColormapComboBox->stylish_combo_box->GetSelection()
-			)
+		static_cast<CameraPreviewVariables::Colormaps>(colormap)
 	);
+
+	m_Settings->SetColormap(colormap);
 
 	if (!m_CamPreview->IsImageSet()) return;
 	//if (!m_CameraParametersControls->startCapturing->GetValue())

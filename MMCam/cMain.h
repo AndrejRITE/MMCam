@@ -276,10 +276,16 @@ namespace MainFrameVariables
 		wxString sensor_height{ "Sensor Height [px]" };
 	};
 
-	static auto CreateStringWithPrecision(double value, int decimalPlaces) -> wxString
+	static auto CreateStringWithPrecision(double value, int decimalPlaces = 0) -> wxString
 	{
 		// Create a wxString with the specified number of decimal places
-		wxString formattedString = wxString::Format(wxT("%.") + std::to_string(decimalPlaces) + wxT("f"), value);
+		wxString formattedString{}
+		;
+		if (decimalPlaces)
+			formattedString = wxString::Format(wxT("%.") + std::to_string(decimalPlaces) + wxT("f"), value);
+		else
+			formattedString = wxString::Format(wxT("%i"), (int)value);
+
 		return formattedString;
 	};
 
@@ -504,6 +510,7 @@ private:
 
 	void OnOpenSettings(wxCommandEvent& evt);
 	auto InitializeSelectedCamera() -> void;
+	auto UpdateDefaultWidgetParameters() -> void;
 	auto UpdateCameraParameters() -> void;
 	auto CoolDownTheCamera() -> void;
 	void EnableUsedAndDisableNonUsedMotors();

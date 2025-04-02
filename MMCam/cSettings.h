@@ -150,6 +150,34 @@ namespace SettingsVariables
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Stage, SerialNumber, COMPort, LastKnownPosition)
 	};
 
+	struct InitializationFileStructure 
+	{
+		double crop_size_mm = 0.0;
+		double crop_size_circle_mm = 0.0;
+		double default_sensor_temperature = 0.0;
+		int default_colormap = 0;
+		int default_binning = 0;
+		int default_exposure = 0;
+		std::string upload_report_folder;
+		std::string work_station;
+		std::vector<std::string> xrayImagesCaptions;
+
+		// Serialize/Deserialize using NLOHMANN_DEFINE_TYPE_INTRUSIVE
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE
+		(
+			InitializationFileStructure, 
+			crop_size_mm, 
+			crop_size_circle_mm, 
+			default_sensor_temperature,
+			default_colormap,
+			default_binning,
+			default_exposure,
+			upload_report_folder,
+			work_station, 
+			xrayImagesCaptions
+		)
+	};
+
 	static auto FindNode(rapidxml::xml_node<>* xmlNode, std::string nodeName) -> rapidxml::xml_node<>*
 	{
 		for (auto node = xmlNode->first_node(); node; node = node->next_sibling())
@@ -247,8 +275,18 @@ public:
 	auto GetSelectedCamera() const->wxString;
 
 	auto GetPixelSizeUM() const -> double { return m_PixelSizeUM; };
-	auto GetCropSizeMM() const -> double { return m_CropSizeMM; };
-	auto GetCropCircleSizeMM() const -> double { return m_CropCircleSizeMM; };
+	auto GetCropSizeMM() const -> double { return m_Config->crop_size_mm; };
+	auto GetCropCircleSizeMM() const -> double { return m_Config->crop_size_circle_mm; };
+	auto GetDefaultTemperature() const -> double { return m_Config->default_sensor_temperature; };
+	auto GetDefaultColormap() const -> int { return m_Config->default_colormap; };
+	auto GetDefaultBinning() const -> int { return m_Config->default_binning; };
+	auto GetDefaultExposure() const -> int { return m_Config->default_exposure; };
+
+	auto SetBinning(const int binning) -> void { m_Config->default_binning = binning; RewriteInitializationFile(); };
+	auto SetTemperature(const double temperature) -> void { m_Config->default_sensor_temperature = temperature; RewriteInitializationFile(); };
+	auto SetColormap(const int colormap) -> void { m_Config->default_colormap = colormap; RewriteInitializationFile(); };
+	auto SetExposure(const int exposure) -> void { m_Config->default_exposure = exposure; RewriteInitializationFile(); };
+
 	auto GetUploadReportFolder() const -> wxString { return m_UploadReportFolder; };
 	auto GetXRayImagesDefaultCaption() const -> wxArrayString { return m_XRayImagesCaptions; };
 
@@ -304,6 +342,7 @@ private:
 	void WriteActualSelectedMotorsAndRangesIntoXMLFile();
 	void ResetAllMotorsAndRangesInXMLFile();
 
+	auto UpdateConfig() -> void;
 	auto RewriteInitializationFile() -> void;
 
 	auto InitializeXeryonAndCheckPython() -> void;
@@ -400,9 +439,10 @@ private:
 
 private:
 	const wxString m_InitializationFilePath = "MMCam.ini";
+	std::unique_ptr<SettingsVariables::InitializationFileStructure> m_Config{};
 	const wxString work_stations_path = "src\\";
 	const std::string m_StagesPositionsFilename = "StagesPositions.json";
-	double m_CropSizeMM{}, m_CropCircleSizeMM{};
+
 	double m_PixelSizeUM{};
 	SettingsVariables::MotorManufacturers m_MotorManufacturer{};
 	SettingsVariables::CameraManufacturers m_CameraManufacturer{};
