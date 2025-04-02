@@ -659,6 +659,17 @@ private:
 	void OnYPosCrossHairTextCtrl(wxCommandEvent& evt);
 	//auto OnSetPosCrossHairTglBtn(wxCommandEvent& evt) -> void;
 
+	auto CalculateHistogram
+	(
+		unsigned short* data = nullptr,
+		const int imgWidth = 0,
+		const int imgHeight = 0,
+		const int minimumCount = 1,
+		unsigned long long* const histogramPtr = nullptr,
+		unsigned short* const minValue = nullptr,
+		unsigned short* const maxValue = nullptr
+	) -> bool;
+
 	auto CreateMetadataFile() -> void;
 
 	auto FindSpotCenterCoordinates

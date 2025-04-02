@@ -109,7 +109,9 @@ public:
 	auto SetCameraCapturedImage
 	(
 		unsigned short* data_ptr,
-		const wxSize& imgSize
+		const wxSize& imgSize,
+		unsigned short minValue,
+		unsigned short maxValue
 	) -> void;
 
 	auto UpdateCursorPositionOnStatusBar() -> void;
@@ -177,14 +179,16 @@ private:
 	void Render(wxBufferedPaintDC& dc);
 	void DrawImage(wxGraphicsContext* gc);
 	
-	auto UpdateWXImage() -> void;
+	auto UpdateWXImage(const int black, const int white) -> void;
 	auto AdjustImageParts
 	(
 		const unsigned short* data_ptr,
 		const unsigned int start_x,
 		const unsigned int start_y,
 		const unsigned int finish_x,
-		const unsigned int finish_y
+		const unsigned int finish_y,
+		const int black,
+		const int white
 	) -> void;
 
 

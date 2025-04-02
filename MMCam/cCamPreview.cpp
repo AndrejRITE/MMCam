@@ -227,7 +227,9 @@ auto cCamPreview::GetPixelColorFromImage(const wxImage& image, int x, int y) -> 
 auto cCamPreview::SetCameraCapturedImage
 (
 	unsigned short* data_ptr,
-	const wxSize& imgSize
+	const wxSize& imgSize,
+	unsigned short minValue,
+	unsigned short maxValue
 ) -> void
 {
 	if (!data_ptr) return;
@@ -255,7 +257,7 @@ auto cCamPreview::SetCameraCapturedImage
 
 	memcpy(m_ImageData.get(), data_ptr, sizeof(unsigned short) * readDataSize);
 
-	UpdateWXImage();
+	UpdateWXImage(minValue, maxValue);
 
 	UpdateImageParameters(oldImageSize);
 	
@@ -895,7 +897,7 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 	m_ExecutionFinished = true;
 }
 
-auto cCamPreview::UpdateWXImage() -> void
+auto cCamPreview::UpdateWXImage(int black, int white) -> void
 {
 	LOG("Started: " + wxString(__FUNCSIG__));
 
@@ -928,7 +930,8 @@ auto cCamPreview::UpdateWXImage() -> void
 				&cCamPreview::AdjustImageParts,
 				this,
 				&m_ImageData[start.y * m_ImageSize.GetWidth() + start.x],
-				start.x, start.y, finish.x, finish.y
+				start.x, start.y, finish.x, finish.y,
+				black, white
 			)
 		);
 	}
@@ -946,15 +949,16 @@ auto cCamPreview::AdjustImageParts
 	const unsigned int start_x, 
 	const unsigned int start_y, 
 	const unsigned int finish_x, 
-	const unsigned int finish_y
+	const unsigned int finish_y,
+	const int black,
+	const int white
 ) -> void
 {
 	if (!data_ptr) return;
 	auto current_value{ data_ptr[0] };
 	unsigned char red{}, green{}, blue{};
 
-	int black{}, white{};
-	white = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
+	//white = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
 	unsigned short max_value = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
 
 	const double black_d = static_cast<double>(black);

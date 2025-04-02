@@ -2216,6 +2216,23 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 				return;
 			}
 
+			auto minimumCount = 5;
+			unsigned short minValue{}, maxValue{};
+
+			auto histogram = std::make_unique<unsigned long long[]>(USHRT_MAX + 1);
+			if (!CalculateHistogram
+			(
+				(unsigned short*)imgPtr,
+				m_OutputImageSize.GetWidth(),
+				m_OutputImageSize.GetHeight(),
+				minimumCount,
+				histogram.get(),
+				&minValue,
+				&maxValue
+			))
+				return;
+
+
 			MainFrameVariables::BinImageData
 			(
 				imgPtr, 
@@ -2237,7 +2254,9 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 			m_CamPreview->SetCameraCapturedImage
 			(
 				dataPtr.get(),
-				m_OutputImageSize
+				m_OutputImageSize,
+				minValue,
+				maxValue
 			);
 		}
 	}
@@ -3219,6 +3238,13 @@ auto cMain::OnCrossHairButton(wxCommandEvent& evt) -> void
 
 auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 {
+	auto stopCapturing = [&]()
+		{
+			m_StartStopLiveCapturingTglBtn->SetValue(false);
+			wxCommandEvent live_capturing_evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+			ProcessEvent(live_capturing_evt);
+		};
+
 	auto curr_code = evt.GetInt();
 
 	// 0 == Camera is Connected and everything is fine
@@ -3228,21 +3254,44 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 		if (!imgPtr) return;
 		LOG("Set camera captured image");
 
+		auto minimumCount = 5;
+		unsigned short minValue{}, maxValue{};
+
+		auto histogram = std::make_unique<unsigned long long[]>(USHRT_MAX + 1);
+		if (!CalculateHistogram
+		(
+			(unsigned short*)imgPtr,
+			m_OutputImageSize.GetWidth(),
+			m_OutputImageSize.GetHeight(),
+			minimumCount,
+			histogram.get(),
+			&minValue,
+			&maxValue
+		))
+		{
+			stopCapturing();
+			delete[] imgPtr;
+			return;
+		}
+
 		if (*m_CamPreview->GetExecutionFinishedPtr())
+		{
 			m_CamPreview->SetCameraCapturedImage
 			(
 				imgPtr,
-				m_OutputImageSize
+				m_OutputImageSize,
+				minValue,
+				maxValue
 			);
+
+		}
 
 		delete[] imgPtr;
 	}
 	// -1 == Camera is disconnected
 	else if (curr_code == -1)
 	{
-		m_StartStopLiveCapturingTglBtn->SetValue(false);
-		wxCommandEvent live_capturing_evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
-		ProcessEvent(live_capturing_evt);
+		stopCapturing();
 	}
 }
 
@@ -3278,6 +3327,135 @@ void cMain::UpdateProgress(wxThreadEvent& evt)
 		//this->Enable();
 	}
 
+}
+
+auto cMain::CalculateHistogram
+(
+	unsigned short* data, 
+	const int imgWidth, 
+	const int imgHeight, 
+	const int minimumCount, 
+	unsigned long long* const histogramPtr, 
+	unsigned short* const minValue, 
+	unsigned short* const maxValue
+) -> bool
+{
+	if (!data || !histogramPtr || !imgWidth || !imgHeight) return false;
+
+	//#ifdef _DEBUG
+	//	auto lastValue = data[imgWidth * imgHeight - 1];
+	//
+	//#endif // _DEBUG
+
+	auto calculateHistogram = [](const unsigned short* data, const int dataSize, unsigned long long* histogram, std::mutex& mutex)
+		{
+			const auto numThreads = std::thread::hardware_concurrency(); // Get number of available threads
+
+			std::vector<std::thread> threads;
+			const int bins = USHRT_MAX;
+
+			// Split data among threads
+			const int chunkSize = dataSize / numThreads;
+			int start = 0;
+			int end = chunkSize;
+
+			for (int i = 0; i < (int)numThreads; ++i)
+			{
+				threads.emplace_back([&, start, end]()
+					{
+						for (int j = start; j < end; ++j)
+						{
+							mutex.lock();
+							++histogram[data[j]];
+							mutex.unlock();
+						}
+					}
+				);
+				start = end;
+				end = std::min(end + chunkSize, dataSize);
+			}
+
+			// Join threads
+			for (auto& thread : threads) {
+				thread.join();
+			}
+		};
+
+#ifdef _DEBUG
+	auto startCalculation = std::chrono::high_resolution_clock::now();
+#endif // _DEBUG
+
+
+	//std::mutex mutex; // Mutex to synchronize access to histogram
+	//calculateHistogram(data, (int)imgWidth * imgHeight, histogramPtr, mutex);
+
+
+	// Calculate histogram
+	for (int i = 0; i < imgWidth * imgHeight; ++i)
+		++histogramPtr[data[i]];
+
+#ifdef _DEBUG
+	auto finishCalculation = std::chrono::high_resolution_clock::now();
+	auto deltaTime = std::chrono::duration_cast<std::chrono::microseconds>
+		(finishCalculation - startCalculation).count();
+	LOGI("Calculation time: ", (int)deltaTime);
+#endif // _DEBUG
+
+	int firstGreaterThanMinimumCount = -1;
+	int lastGreaterThanMinimumCount = -1;
+
+	for (int i = 0; i <= USHRT_MAX; ++i)
+	{
+		if (histogramPtr[i] > minimumCount)
+		{
+			if (firstGreaterThanMinimumCount == -1)
+			{
+				firstGreaterThanMinimumCount = i;
+			}
+			lastGreaterThanMinimumCount = i;
+		}
+	}
+
+	// Checking if firstGreaterThanMinimumCount is a number from data array
+	if (firstGreaterThanMinimumCount == -1)
+	{
+		for (auto i = 0; i <= USHRT_MAX; ++i)
+		{
+			if (histogramPtr[i])
+			{
+				firstGreaterThanMinimumCount = i;
+				break;
+			}
+		}
+		firstGreaterThanMinimumCount = firstGreaterThanMinimumCount == USHRT_MAX ? 0 : firstGreaterThanMinimumCount;
+
+		for (auto i = USHRT_MAX; i >= 0; --i)
+		{
+			if (histogramPtr[i])
+			{
+				lastGreaterThanMinimumCount = i;
+				break;
+			}
+		}
+
+		lastGreaterThanMinimumCount = lastGreaterThanMinimumCount == 0 ? firstGreaterThanMinimumCount + 1 : lastGreaterThanMinimumCount;
+	}
+
+	firstGreaterThanMinimumCount = firstGreaterThanMinimumCount > lastGreaterThanMinimumCount ? lastGreaterThanMinimumCount : firstGreaterThanMinimumCount;
+	firstGreaterThanMinimumCount = firstGreaterThanMinimumCount == USHRT_MAX ? 0 : firstGreaterThanMinimumCount;
+	lastGreaterThanMinimumCount = lastGreaterThanMinimumCount == firstGreaterThanMinimumCount ? lastGreaterThanMinimumCount + 1 : lastGreaterThanMinimumCount;
+
+#ifdef _DEBUG
+	auto firstMessage = "First greater than " + wxString::Format(wxT("%i"), minimumCount) + ": ";
+	auto secondMessage = " Last greater than " + wxString::Format(wxT("%i"), minimumCount) + ": ";
+
+	LOG2I(firstMessage, firstGreaterThanMinimumCount, secondMessage, lastGreaterThanMinimumCount);
+#endif // _DEBUG
+
+	* minValue = firstGreaterThanMinimumCount;
+	*maxValue = lastGreaterThanMinimumCount;
+
+	return true;
 }
 
 auto cMain::CreateMetadataFile() -> void
