@@ -2536,11 +2536,6 @@ auto cMain::UpdateStagePositions() -> void
 
 	// Optics
 	{
-#ifndef _DEBUG
-		//auto currPos = m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X);
-		wxLogError(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X), m_DecimalDigits));
-#endif // _DEBUG
-
 		m_Optics[0].absolute_text_ctrl->SetValue(
 			MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X), m_DecimalDigits)
 		);
