@@ -23,6 +23,7 @@ Name: "{localappdata}\Programs"; Permissions: users-full
 
 [Files]
 Source: "{#OutputDir}\src\*"; DestDir: "{app}\src"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#OutputDir}\About.zip"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\bindy.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\keyfile.sqlite"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\libximc.dll"; DestDir: "{app}"; Flags: ignoreversion
