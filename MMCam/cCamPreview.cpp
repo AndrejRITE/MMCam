@@ -301,136 +301,7 @@ auto cCamPreview::UpdateCursorPositionOnStatusBar() -> void
 	m_ParentArguments->statusBar->SetStatusText(status_bar_text);
 }
 
-//void cCamPreview::CaptureAndSaveDataFromCamera
-//(
-//	const unsigned long& exposure_time_us, 
-//	const wxString& path, 
-//	const std::string& start_hours,
-//	const std::string& start_minutes,
-//	const std::string& start_seconds,
-//	const int& frame_number, 
-//	const float& first_axis_position, 
-//	const float& second_axis_position
-//)
-//{
-//	auto image_ptr = m_XimeaCameraControl->GetImage();
-//	if (!image_ptr) return;
-//
-//	/* Save Captured Image */
-//	{
-//		std::string first_axis_position_str = std::format("{:.3f}", first_axis_position);
-//		std::replace(first_axis_position_str.begin(), first_axis_position_str.end(), '.', '_');
-//
-//		std::string second_axis_position_str = std::format("{:.3f}", second_axis_position);
-//		std::replace(second_axis_position_str.begin(), second_axis_position_str.end(), '.', '_');
-//		
-//		const std::string file_name = std::string(path.mb_str()) + std::string("\\") +
-//			std::string("img_") + 
-//			std::to_string(frame_number) + std::string("_") + 
-//			start_hours + std::string("H_") + 
-//			start_minutes + std::string("M_") + 
-//			start_seconds + std::string("S_") + 
-//			std::to_string(exposure_time_us) + std::string("us") 
-//			+ std::string("_1A_") + first_axis_position_str 
-//			+ std::string("_2A_") + second_axis_position_str 
-//			+ std::string(".tif");
-//
-//		cv::Mat cv_img
-//		(
-//			cv::Size(m_XimeaCameraControl->GetImageWidth(), m_XimeaCameraControl->GetImageHeight()),
-//			CV_8UC1, 
-//			image_ptr, 
-//			cv::Mat::AUTO_STEP
-//		);
-//		cv::imwrite(file_name, cv_img);
-//	}
-//
-//	//SetCameraCapturedImage(image_ptr);
-//}
-
-void cCamPreview::CalculateMatlabJetColormapPixelRGB8bit
-(
-	const unsigned char& value, 
-	unsigned char& r, 
-	unsigned char& g, 
-	unsigned char& b
-)
-{
-	unsigned char x0_8bit{ 31 }, x1_8bit{ 95 }, x2_8bit{ 159 }, x3_8bit{ 223 }, x4_8bit{ 255 };
-	if (value < x0_8bit)
-	{
-		r = 0;
-		g = 0;
-		b = 255 * 0.51563f + (float)value * (255.0f - 255 * 0.51563f) / (float)x0_8bit;
-	}
-	else if (value >= x0_8bit && value <= x1_8bit)
-	{
-		r = 0;
-		g = (float)(value - x0_8bit) * 255.0f / (float)(x1_8bit - x0_8bit);
-		b = 255;
-	}
-	else if (value > x1_8bit && value < x2_8bit)
-	{
-		r = (float)(value - x1_8bit) * 255.0f / (float)(x2_8bit - x1_8bit);
-		g = 255;
-		b = (float)(x2_8bit - value) * 255.0f / (float)(x2_8bit - x1_8bit);
-	}
-	else if (value >= x2_8bit && value <= x3_8bit)
-	{
-		r = 255;
-		g = (float)(x3_8bit - value) * 255.0f / (float)(x3_8bit - x2_8bit);
-		b = 0;
-	}
-	else if (value > x3_8bit)
-	{
-		r = 255.0f * 0.5f + (float)(x4_8bit - value) * (255.0f - 255.0f * 0.5f) / (float)(x4_8bit - x3_8bit);
-		g = 0;
-		b = 0;
-	}
-}
-
-void cCamPreview::CalculateMatlabJetColormapPixelRGB12bit(const unsigned short& value, unsigned char& r, unsigned char& g, unsigned char& b)
-{
-	unsigned short x0_12bit{ 498 }, x1_12bit{ 1526 }, x2_12bit{ 2553 }, x3_12bit{ 3581 }, x4_12bit{ 4095 };
-	if (value < x0_12bit)
-	{
-		r = 0;
-		g = 0;
-		b = 255 * 0.51563f + (float)value * (255.0f - 255 * 0.51563f) / (float)x0_12bit;
-	}
-	else if (value >= x0_12bit && value <= x1_12bit)
-	{
-		r = 0;
-		g = (float)(value - x0_12bit) * 255.0f / (float)(x1_12bit - x0_12bit);
-		b = 255;
-	}
-	else if (value > x1_12bit && value < x2_12bit)
-	{
-		r = (float)(value - x1_12bit) * 255.0f / (float)(x2_12bit - x1_12bit);
-		g = 255;
-		b = (float)(x2_12bit - value) * 255.0f / (float)(x2_12bit - x1_12bit);
-	}
-	else if (value >= x2_12bit && value <= x3_12bit)
-	{
-		r = 255;
-		g = (float)(x3_12bit - value) * 255.0f / (float)(x3_12bit - x2_12bit);
-		b = 0;
-	}
-	else if (value > x3_12bit && value < x4_12bit)
-	{
-		r = 255.0f * 0.5f + (float)(x4_12bit - value) * (255.0f - 255.0f * 0.5f) / (float)(x4_12bit - x3_12bit);
-		g = 0;
-		b = 0;
-	}
-	else 
-	{
-		r = 255;
-		g = 255;
-		b = 255;
-	}
-}
-
-void cCamPreview::CalculateMatlabJetColormapPixelRGB16bit
+void cCamPreview::CalculateJetColormapPixelRGB
 (
 	const unsigned short& value, 
 	unsigned char& r, 
@@ -438,7 +309,13 @@ void cCamPreview::CalculateMatlabJetColormapPixelRGB16bit
 	unsigned char& b
 )
 {
-	unsigned short x0{ 7967 }, x1{ 24415 }, x2{ 40863 }, x3{ 57311 }, x4{ 65535 };
+	unsigned short 
+		x0{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 498U : 7'967U },
+		x1{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 1'526U : 24'415U },
+		x2{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 2'553U : 40'863U },
+		x3{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 3'581U : 57'311U },
+		x4{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4'095U : USHRT_MAX };
+
 	if (value < x0)
 	{
 		r = 0;
@@ -475,7 +352,81 @@ void cCamPreview::CalculateMatlabJetColormapPixelRGB16bit
 		g = 255;
 		b = 255;
 	}
+}
 
+auto cCamPreview::CalculateHotColormapPixelRGB
+(
+	const unsigned short& value, 
+	unsigned char& r, 
+	unsigned char& g, 
+	unsigned char& b
+) -> void
+{
+	unsigned short max_ushort{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4'095U : USHRT_MAX };
+	unsigned short
+		x1{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 1'536U : 24'575U },
+		x2{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 3'071U : 49'151U },
+		x3{ max_ushort };
+
+	unsigned short max_uchar{ UCHAR_MAX };
+	unsigned short t_red{}, t_green{}, t_blue{};
+
+	if (value < x1)
+	{
+		t_red = (float)value * (float)max_ushort / (float)x1;
+		t_green = 0;
+		t_blue = 0;
+	}
+	else if (value >= x1 && value < x2)
+	{
+		t_red = max_ushort;
+		t_green = (float)(value - x1) * (float)max_ushort / (float)(x2 - x1);
+		t_blue = 0;
+	}
+	else if (value >= x2 && value < x3)
+	{
+		t_red = max_ushort;
+		t_green = max_ushort;
+		t_blue = (float)(value - x2) * (float)max_ushort / (float)(x3 - x2);
+	}
+	else if (value == x3)
+	{
+		t_red = max_ushort;
+		t_green = max_ushort;
+		t_blue = max_ushort;
+	}
+
+	r = (unsigned char)(max_uchar * t_red / max_ushort);
+	g = (unsigned char)(max_uchar * t_green / max_ushort);
+	b = (unsigned char)(max_uchar * t_blue / max_ushort);
+}
+
+auto cCamPreview::CalculateCopperColormapPixelRGB
+(
+	const unsigned short& value, 
+	unsigned char& r, 
+	unsigned char& g, 
+	unsigned char& b
+) -> void
+{
+	unsigned short max_ushort{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4'095U : USHRT_MAX };
+	unsigned short
+		x1{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 3'276U : 52'428U },
+		x2{ max_ushort };
+
+	unsigned short max_uchar{ UCHAR_MAX };
+	unsigned short t_red{}, t_green{}, t_blue{};
+
+	if (value < x1)
+		t_red = (float)value * (float)max_ushort / (float)x1;
+	else
+		t_red = max_ushort;
+	t_green = (float)value * .7812f * (float)max_ushort / (float)x2;
+	t_blue = (float)value * .4975f * (float)max_ushort / (float)x2;
+
+	r = (unsigned char)(max_uchar * t_red / max_ushort);
+	g = (unsigned char)(max_uchar * t_green / max_ushort);
+	b = (unsigned char)(max_uchar * t_blue / max_ushort);
 }
 
 void cCamPreview::OnMouseMoved(wxMouseEvent& evt)
@@ -999,39 +950,85 @@ auto cCamPreview::AdjustImageParts
 	if (!data_ptr) return;
 	auto current_value{ data_ptr[0] };
 	unsigned char red{}, green{}, blue{};
-	unsigned long long position_in_data_pointer{};
-	double adjustedValue{};
 
 	int black{}, white{};
 	white = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
+	unsigned short max_value = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
+
+	const double black_d = static_cast<double>(black);
+	const double white_d = static_cast<double>(white);
+	const double range_d = white_d - black_d;
+
+	const double max_value_d = static_cast<double>(max_value);
+	const double max_minus_white = max_value_d - white_d;
+	const double max_minus_black = max_value_d - black_d;
+	const double max_range_d = max_minus_black - max_minus_white;
+	const unsigned char uchar_max = UCHAR_MAX;
+
+	double adjustedValue{};
 
 	for (auto y{ start_y }; y < finish_y; ++y)
 	{
+		auto row_offset = (y - start_y) * (finish_x - start_x);  // Precompute row offset
 		for (auto x{ start_x }; x < finish_x; ++x)
 		{
-			current_value = data_ptr[position_in_data_pointer];
-			if (m_ColormapMode == CameraPreviewVariables::Colormaps::GRAYSCALE_COLORMAP)
+			int index = row_offset + (x - start_x);  // Calculate index
+			current_value = data_ptr[index];
+			adjustedValue = static_cast<double>(current_value);
+
+			switch (m_ColormapMode)
 			{
-				// Adjust RED
-				{
-					adjustedValue = data_ptr[(y - start_y) * m_ImageSize.GetWidth() + x - start_x];
-					adjustedValue = std::max((double)black, std::min((double)white, adjustedValue));
-					adjustedValue -= black;
-					adjustedValue /= white - black;
-					adjustedValue *= UCHAR_MAX;
-					// Clamp the adjusted value to the valid range [0; 255] or [0; 65'535]
-					red = adjustedValue;
-				}
-			}
-			else if (m_ColormapMode == CameraPreviewVariables::Colormaps::JET_COLORMAP)
+			case CameraPreviewVariables::Colormaps::GRAYSCALE_COLORMAP:
 			{
-				if (m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT)
-					CalculateMatlabJetColormapPixelRGB12bit(current_value, red, green, blue);
-				else if (m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_16BIT)
-					CalculateMatlabJetColormapPixelRGB16bit(current_value, red, green, blue);
+				adjustedValue = std::clamp(adjustedValue, black_d, white_d);
+				adjustedValue = ((adjustedValue - black_d) / range_d) * uchar_max;
+				red = green = blue = static_cast<unsigned char>(adjustedValue);
+				break;
 			}
+
+			case CameraPreviewVariables::Colormaps::INVERT_COLORMAP:
+			{
+				adjustedValue = max_value_d - adjustedValue;
+				adjustedValue = std::clamp(adjustedValue, max_minus_white, max_minus_black);
+				adjustedValue = ((adjustedValue - max_minus_white) / max_range_d) * uchar_max;
+				red = green = blue = static_cast<unsigned char>(adjustedValue);
+				break;
+			}
+
+			case CameraPreviewVariables::Colormaps::JET_COLORMAP:
+				CalculateJetColormapPixelRGB(current_value, red, green, blue);
+				break;
+
+			case CameraPreviewVariables::Colormaps::COOL_COLORMAP:
+			{
+				red = (unsigned char)(uchar_max * adjustedValue / max_value_d);
+				green = (unsigned char)(uchar_max * (max_value_d - adjustedValue) / max_value_d);
+				blue = (unsigned char)uchar_max;
+				break;
+			}
+
+			case CameraPreviewVariables::Colormaps::HOT_COLORMAP:
+				CalculateHotColormapPixelRGB(current_value, red, green, blue);
+				break;
+
+			case CameraPreviewVariables::Colormaps::WINTER_COLORMAP:
+			{
+				red = 0;
+				green = (unsigned char)(uchar_max * adjustedValue / max_value_d);
+				auto t_blue = (float)max_value_d * (1.f - .5f * (float)adjustedValue / (float)max_value_d);
+				blue = (unsigned char)(uchar_max * t_blue / max_value_d);
+				break;
+			}
+
+			case CameraPreviewVariables::Colormaps::COPPER_COLORMAP:
+				CalculateCopperColormapPixelRGB(current_value, red, green, blue);
+				break;
+
+			default:
+				break;
+			}
+
 			m_Image.SetRGB(x, y, red, green, blue);
-			++position_in_data_pointer;
 		}
 	}
 

@@ -113,42 +113,33 @@ public:
 	) -> void;
 
 	auto UpdateCursorPositionOnStatusBar() -> void;
-	//void CaptureAndSaveDataFromCamera
-	//(
-	//	const unsigned long& exposure_time_us,
-	//	const wxString& path,
-	//	const std::string& start_hours,
-	//	const std::string& start_minutes,
-	//	const std::string& start_seconds,
-	//	const int& frame_number,
-	//	const float& first_axis_position,
-	//	const float& second_axis_position = 0.f
-	//);
-
-	void CalculateMatlabJetColormapPixelRGB8bit
-	(
-		const unsigned char& value,
-		unsigned char& r,
-		unsigned char& g,
-		unsigned char& b
-	);
-
-	void CalculateMatlabJetColormapPixelRGB12bit
+	
+	// Jet Colormaps
+	void CalculateJetColormapPixelRGB
 	(
 		const unsigned short& value,
 		unsigned char& r,
 		unsigned char& g,
 		unsigned char& b
 	);
-
-	void CalculateMatlabJetColormapPixelRGB16bit
+	
+	// Hot Colormaps
+	auto CalculateHotColormapPixelRGB
 	(
 		const unsigned short& value,
 		unsigned char& r,
 		unsigned char& g,
 		unsigned char& b
-	);
-
+	) -> void;
+	
+	// Copper Colormaps
+	auto CalculateCopperColormapPixelRGB
+	(
+		const unsigned short& value,
+		unsigned char& r,
+		unsigned char& g,
+		unsigned char& b
+	) -> void;
 
 	// FWHM
 	auto SetPixelSizeUM(const double pixel_sizeUM) 
