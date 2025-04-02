@@ -144,13 +144,14 @@ auto cCamPreview::GetImageSize() const -> wxSize
 	return m_ImageSize;
 }
 
-void cCamPreview::UpdateImageParameters(bool centerCrossHair)
+void cCamPreview::UpdateImageParameters(const wxSize oldImageSize)
 {
 	LOG("Started: " + wxString(__FUNCSIG__))
 	/* 
 	Saving previous values for correct displaying of the image in the same place, 
 	where it was before capturing.
 	*/
+	if (oldImageSize != m_ImageSize)
 	{
 		auto temp_zoom = m_Zoom;
 		auto temp_pan_offset = m_PanOffset;
@@ -182,7 +183,7 @@ void cCamPreview::UpdateImageParameters(bool centerCrossHair)
 			m_StartDrawPos.y * m_Zoom / m_ZoomOnOriginalSizeImage
 		));
 
-		if (centerCrossHair)
+		if (oldImageSize != m_ImageSize)
 		{
 			m_CrossHairTool->SetXPosFromParent(m_ImageSize.GetWidth() / 2);
 			m_CrossHairTool->SetYPosFromParent(m_ImageSize.GetHeight() / 2);
@@ -201,6 +202,24 @@ void cCamPreview::UpdateImageParameters(bool centerCrossHair)
 	Refresh();
 
 	LOG("Finished: " + wxString(__FUNCSIG__))
+}
+
+auto cCamPreview::GetPixelColorFromImage(const wxImage& image, int x, int y) -> wxColour
+{
+	if (!image.IsOk()) return wxColour(0, 0, 0);  // Return black if invalid
+
+	//wxImage image = bitmap.ConvertToImage();
+	if (!image.IsOk()) return wxColour(0, 0, 0);
+
+	if (x >= 0 && x < image.GetWidth() && y >= 0 && y < image.GetHeight()) 
+	{
+		unsigned char r = image.GetRed(x, y);
+		unsigned char g = image.GetGreen(x, y);
+		unsigned char b = image.GetBlue(x, y);
+		return wxColour(r, g, b);
+	}
+
+	return wxColour(0, 0, 0);  // Default to black if out of bounds
 }
 
 auto cCamPreview::SetCameraCapturedImage
@@ -236,7 +255,7 @@ auto cCamPreview::SetCameraCapturedImage
 
 	UpdateWXImage();
 
-	UpdateImageParameters();
+	UpdateImageParameters(oldImageSize);
 	
 	// Update Mouse position
 	{
@@ -709,6 +728,11 @@ auto cCamPreview::DrawPixelValues(wxGraphicsContext* gc) -> void
 			for (auto x{ left_upper_pixel.x }; x < left_upper_pixel.x + window_disp_size.GetWidth() + 1; ++x)
 			{
 				if (!CheckIfPixelValueIsInsideTheImage(x, y)) continue;
+				
+				auto bgColor = GetPixelColorFromImage(m_Image, x, y);
+				wxColour textColor(255 - bgColor.Red(), 255 - bgColor.Green(), 255 - bgColor.Blue());
+				gc->SetFont(font, textColor);
+
 				curr_value = wxString::Format(wxT("%i"), m_ImageData[y * m_ImageSize.GetWidth() + x]);
 				gc->GetTextExtent(curr_value, &widthText, &heightText);
 				drawPoint.x = image_start_draw.x + x * m_ActualHalfPixelSize.x * 2.0;

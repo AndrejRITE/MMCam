@@ -102,7 +102,9 @@ public:
 	//auto GetImagePtr() const->wxImage*;
 	auto GetImageSize() const->wxSize;
 	//auto InitializeSelectedCamera(const std::string& camera_sn) -> void;
-	auto UpdateImageParameters(bool centerCrossHair = false) -> void;
+	auto UpdateImageParameters(const wxSize oldImageSize) -> void;
+
+	auto GetPixelColorFromImage(const wxImage& image, int x, int y) -> wxColour;
 
 	auto SetCameraCapturedImage
 	(
