@@ -211,22 +211,25 @@ auto cCamPreview::SetCameraCapturedImage
 {
 	if (!data_ptr) return;
 	if (!imgSize.GetWidth() || !imgSize.GetHeight()) return;
+
+	auto oldImageSize = m_ImageSize;
 	
 	m_ImageSize = imgSize;
 
 	m_IsImageSet = false;
 
-	m_HorizontalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetWidth());
-	m_VerticalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetHeight());
-
 	LOG("Started: " + wxString(__FUNCSIG__));
 
 	m_ExecutionFinished = false;
+
 	unsigned long long readDataSize = m_ImageSize.GetWidth() * m_ImageSize.GetHeight();
-	if (!m_ImageData)
+
+	if (!m_ImageData || oldImageSize != m_ImageSize)
 	{
 		m_ImageData = std::make_unique<unsigned short[]>(readDataSize);
 		m_Image = wxImage(m_ImageSize.GetWidth(), m_ImageSize.GetHeight());
+		m_HorizontalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetWidth());
+		m_VerticalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetHeight());
 	}
 
 	memcpy(m_ImageData.get(), data_ptr, sizeof(unsigned short) * readDataSize);
