@@ -961,8 +961,8 @@ auto cCamPreview::AdjustImageParts
 	//white = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
 	unsigned short max_value = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
 
-	const double black_d = static_cast<double>(black);
-	const double white_d = static_cast<double>(white);
+	const double black_d = static_cast<double>(black == max_value ? max_value - 1 : black);
+	const double white_d = static_cast<double>(white > max_value ? max_value : white);
 	const double range_d = white_d - black_d;
 
 	const double max_value_d = static_cast<double>(max_value);
