@@ -159,6 +159,7 @@ Remove-Item -Path "$temp_folder" -Recurse
 # Specify files to include in the archive
 $files_to_archive = @(
     "${release_folder}\src",
+	"${release_folder}\About.zip",
     "${release_folder}\bindy.dll",
 	"${release_folder}\keyfile.sqlite",
 	"${release_folder}\libximc.dll",
