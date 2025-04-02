@@ -1750,12 +1750,12 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 		horizontal_sizer->Add(report_sizer);
 
 		/* Start/Stop Capturing */
-		wxSizer* const capturing_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Capturing");
+		wxSizer* const capturing_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Measurement");
 		m_StartStopMeasurementTglBtn = std::make_unique<wxToggleButton>
 			(
 				page,
 				MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT,
-				wxT("Start Capturing")					
+				wxT("Start Measurement (M)")					
 			);
 		horizontal_sizer->AddStretchSpacer();
 		horizontal_sizer->Add(capturing_sizer);
@@ -2987,7 +2987,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		//UpdateAllAxisGlobalPositions();
 
 		EnableControlsAfterCapturing();
-		m_StartStopMeasurementTglBtn->SetLabel("Start Capturing");
+		m_StartStopMeasurementTglBtn->SetLabel("Start Measurement (M)");
 		return;
 	}
 
@@ -2999,7 +2999,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 	}
 
 	DisableControlsBeforeCapturing();
-	m_StartStopMeasurementTglBtn->SetLabel("Stop Capturing");
+	m_StartStopMeasurementTglBtn->SetLabel("Stop Measurement (M)");
 
 	auto first_axis = std::make_unique<MainFrameVariables::AxisMeasurement>();
 	auto second_axis = std::make_unique<MainFrameVariables::AxisMeasurement>();
