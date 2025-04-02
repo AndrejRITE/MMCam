@@ -35,6 +35,8 @@ int cSettings::ShowModal()
 
 	SetMotorStepsPerMM();
 
+	RewriteInitializationFile();
+
 	return result;
 }
 
@@ -1281,8 +1283,8 @@ auto cSettings::RewriteInitializationFile() -> void
 	else
 		return;
 
-#ifndef _DEBUG
 	work_station_node->first_node()->value(m_WorkStations->initialized_work_station.c_str());
+#ifndef _DEBUG
 #endif // !_DEBUG
 
 	// Save to file

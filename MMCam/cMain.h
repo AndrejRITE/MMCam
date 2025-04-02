@@ -1339,6 +1339,7 @@ private:
 
 	wxNotebook* m_CameraControlNotebook{};
 	wxPropertyGrid* m_CurrentCameraSettingsPropertyGrid{};
+	wxColour m_DefaultCellColour = wxColour(150, 150, 150);
 	std::unique_ptr<MainFrameVariables::PropertiesNames> m_PropertiesNames{};
 
 	std::vector<std::pair<wxString, bool>> m_StartedThreads{};

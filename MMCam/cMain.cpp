@@ -1583,6 +1583,18 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 	);
 
 	property->ChangeFlag(wxPG_PROP_READONLY, true);
+
+	auto it = m_CurrentCameraSettingsPropertyGrid->GetIterator();
+	for (; !it.AtEnd(); it++)
+	{
+		wxPGProperty* prop = *it;
+		if (prop)
+		{
+			m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(prop, m_DefaultCellColour);
+		}
+	}
+
+	m_CurrentCameraSettingsPropertyGrid->Refresh();
 	//m_CurrentCameraSettingsPropertyGrid->SetColumnProportion(0, m_CurrentCameraSettingsPropertyGrid->GetColumnProportion(0));
 
 	sizerPage->Add(m_CurrentCameraSettingsPropertyGrid, 0, wxEXPAND);
@@ -2373,12 +2385,15 @@ auto cMain::CoolDownTheCamera() -> void
 
 	m_CameraControlNotebook->SetSelection(1);
 
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(m_PropertiesNames->temperature, wxColour(0, 162, 232));
+
 	{
 		double requestedTemperature{};
 		m_CamSensorTemperature->GetValue().ToDouble(&requestedTemperature);
 		m_CameraControl->SetSensorTemperature(requestedTemperature);
 
 		auto currentTemperature = m_CameraControl->GetSensorTemperature();
+
 
 		auto thresholdDegC = 0.1;
 		while (currentTemperature > requestedTemperature + thresholdDegC || currentTemperature < requestedTemperature - thresholdDegC)
@@ -2390,6 +2405,8 @@ auto cMain::CoolDownTheCamera() -> void
 			m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->temperature, tempString);
 		}
 	}
+
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(m_PropertiesNames->temperature, m_DefaultCellColour);
 
 	m_CameraControlNotebook->SetSelection(0);
 }
