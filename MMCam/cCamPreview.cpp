@@ -185,8 +185,10 @@ void cCamPreview::UpdateImageParameters(const wxSize oldImageSize)
 
 		if (oldImageSize != m_ImageSize)
 		{
-			m_CrossHairTool->SetXPosFromParent(m_ImageSize.GetWidth() / 2);
-			m_CrossHairTool->SetYPosFromParent(m_ImageSize.GetHeight() / 2);
+			m_CrossHairPos.x = m_ImageSize.GetWidth() / 2;
+			m_CrossHairPos.y = m_ImageSize.GetHeight() / 2;
+			m_CrossHairTool->SetXPosFromParent(m_CrossHairPos.x);
+			m_CrossHairTool->SetYPosFromParent(m_CrossHairPos.y);
 		}
 	}
 
@@ -1741,18 +1743,35 @@ void cCamPreview::ChangeSizeOfImageInDependenceOnCanvasSize()
 	wxSize current_image_size{ m_ImageSize };
 	wxSize canvas_size{ GetSize().GetWidth(), GetSize().GetHeight() };
 	m_ZoomOnOriginalSizeImage = 1.0;
-	while 
-		(
-			canvas_size.GetWidth() < current_image_size.GetWidth() 
-			|| canvas_size.GetHeight() < current_image_size.GetHeight()
-			)
+
+	if (!current_image_size.GetWidth() || !current_image_size.GetHeight()) return;
+
+	if (current_image_size.GetWidth() > canvas_size.GetWidth() || current_image_size.GetHeight() > canvas_size.GetHeight())
 	{
-		current_image_size.SetWidth(current_image_size.GetWidth() / m_ZoomStep);
-		current_image_size.SetHeight(current_image_size.GetHeight() / m_ZoomStep);
-		m_ZoomOnOriginalSizeImage *= m_ZoomStep;
+		// Zoom out the image if it is larger than the canvas size
+		while (canvas_size.GetWidth() < current_image_size.GetWidth()
+			|| canvas_size.GetHeight() < current_image_size.GetHeight())
+		{
+			current_image_size.SetWidth(current_image_size.GetWidth() / m_ZoomStep);
+			current_image_size.SetHeight(current_image_size.GetHeight() / m_ZoomStep);
+			m_ZoomOnOriginalSizeImage *= m_ZoomStep;
+		}
 	}
+	else
+	{
+		// Zoom in the image if it is smaller than the canvas size
+		while (canvas_size.GetWidth() > current_image_size.GetWidth() * m_ZoomStep
+			&& canvas_size.GetHeight() > current_image_size.GetHeight() * m_ZoomStep)
+		{
+			current_image_size.SetWidth(current_image_size.GetWidth() * m_ZoomStep);
+			current_image_size.SetHeight(current_image_size.GetHeight() * m_ZoomStep);
+			m_ZoomOnOriginalSizeImage /= m_ZoomStep;  // Decrease the zoom factor when zooming in
+		}
+	}
+
 	m_ImageOnCanvasSize.Set(current_image_size.GetWidth(), current_image_size.GetHeight());
 	m_CrossHairTool->SetImageOnCanvasSize(current_image_size);
+
 	m_NotZoomedGraphicsBitmapOffset.x = (canvas_size.GetWidth() - m_ImageOnCanvasSize.GetWidth()) / 2;
 	m_NotZoomedGraphicsBitmapOffset.y = (canvas_size.GetHeight() - m_ImageOnCanvasSize.GetHeight()) / 2;
 	m_NotZoomedGraphicsBitmapOffset.x *= m_ZoomOnOriginalSizeImage / m_Zoom;
