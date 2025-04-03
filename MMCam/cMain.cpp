@@ -628,8 +628,11 @@ void cMain::CreateRightSide(wxSizer* right_side_sizer)
 	wxBoxSizer* right_side_panel_sizer = new wxBoxSizer(wxVERTICAL);
 
 	CreateSteppersControl(m_RightSidePanel, right_side_panel_sizer);
+	
 	CreateCameraControls(m_RightSidePanel, right_side_panel_sizer);
+
 	right_side_panel_sizer->AddStretchSpacer();
+	
 	CreateMeasurement(m_RightSidePanel, right_side_panel_sizer);
 
 
@@ -1563,25 +1566,57 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 
 	property->ChangeFlag(wxPG_PROP_READONLY, true);
 
-	property = m_CurrentCameraSettingsPropertyGrid->Append
+	auto pixelGroup = m_CurrentCameraSettingsPropertyGrid->Append(new wxPropertyCategory("Sensor Size [px]", "SensorSizePixels"));
+
+	property = m_CurrentCameraSettingsPropertyGrid->AppendIn
 	(
+		pixelGroup,
 		new wxIntProperty
 		(
-			m_PropertiesNames->sensor_width, 
-			m_PropertiesNames->sensor_width, 
+			m_PropertiesNames->sensor_width_px, 
+			m_PropertiesNames->sensor_width_px, 
 			0
 		)
 	);
 
 	property->ChangeFlag(wxPG_PROP_READONLY, true);
 
-	property = m_CurrentCameraSettingsPropertyGrid->Append
+	property = m_CurrentCameraSettingsPropertyGrid->AppendIn
 	(
+		pixelGroup,
 		new wxIntProperty
 		(
-			m_PropertiesNames->sensor_height, 
-			m_PropertiesNames->sensor_height, 
+			m_PropertiesNames->sensor_height_px, 
+			m_PropertiesNames->sensor_height_px, 
 			0
+		)
+	);
+
+	property->ChangeFlag(wxPG_PROP_READONLY, true);
+
+	auto micronsGroup = m_CurrentCameraSettingsPropertyGrid->Append(new wxPropertyCategory("Sensor Size [um]", "SensorSizeMicrons"));
+
+	property = m_CurrentCameraSettingsPropertyGrid->AppendIn
+	(
+		micronsGroup,
+		new wxFloatProperty
+		(
+			m_PropertiesNames->sensor_width_um, 
+			m_PropertiesNames->sensor_width_um, 
+			0.0
+		)
+	);
+
+	property->ChangeFlag(wxPG_PROP_READONLY, true);
+
+	property = m_CurrentCameraSettingsPropertyGrid->AppendIn
+	(
+		micronsGroup,
+		new wxFloatProperty
+		(
+			m_PropertiesNames->sensor_height_um, 
+			m_PropertiesNames->sensor_height_um, 
+			0.0
 		)
 	);
 
@@ -1600,7 +1635,7 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 	m_CurrentCameraSettingsPropertyGrid->Refresh();
 	//m_CurrentCameraSettingsPropertyGrid->SetColumnProportion(0, m_CurrentCameraSettingsPropertyGrid->GetColumnProportion(0));
 
-	sizerPage->Add(m_CurrentCameraSettingsPropertyGrid, 0, wxEXPAND);
+	sizerPage->Add(m_CurrentCameraSettingsPropertyGrid, 1, wxEXPAND);
 
 	//wxSizer* const selected_camera_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Selected Camera");
 	//{
@@ -1775,8 +1810,6 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 
 void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer)
 {
-	wxSizer* const sc_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, right_side_panel, "&Steppers Constrol");
-
 	wxSize absolute_text_ctrl_size = { 54, 20 }, relative_text_ctrl_size = {absolute_text_ctrl_size};
 	wxSize set_btn_size = { 35, 20 };
 	wxSize inc_dec_size = { 20, 20 };
@@ -1902,8 +1935,8 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 
 	m_OpticsControlsNotebook->Hide();
 
-	right_side_panel_sizer->Add(m_DetectorControlsNotebook, 0, wxEXPAND);
-	right_side_panel_sizer->Add(m_OpticsControlsNotebook, 0, wxEXPAND);
+	right_side_panel_sizer->Add(m_DetectorControlsNotebook, 0, wxEXPAND | wxALL, 5);
+	right_side_panel_sizer->Add(m_OpticsControlsNotebook, 0, wxEXPAND | wxALL, 5);
 	//right_side_panel_sizer->Add(sc_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
 }
 
@@ -1973,7 +2006,7 @@ void cMain::CreateCameraControls(wxPanel* right_side_panel, wxBoxSizer* right_si
 		imgIndexCameraParameters
 	);
 
-	right_side_panel_sizer->Add(m_CameraControlNotebook, 0, wxEXPAND);
+	right_side_panel_sizer->Add(m_CameraControlNotebook, 0, wxEXPAND | wxALL, 5);
 }
 
 void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer)
@@ -2012,7 +2045,7 @@ void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_
 		imgIndexMeasurement
 	);
 
-	right_side_panel_sizer->Add(m_MeasurementNotebook, 0, wxEXPAND);
+	right_side_panel_sizer->Add(m_MeasurementNotebook, 0, wxEXPAND | wxALL, 5);
 }
 
 auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
@@ -2506,11 +2539,25 @@ auto cMain::UpdateCameraParameters() -> void
 	auto depth = m_CameraControl->GetCameraDataType() == CameraControlVariables::ImageDataTypes::RAW_12BIT ? wxString("12") : wxString("16");
 	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->depth, depth);
 
-	auto width = (int)m_CameraControl->GetWidth();
-	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->sensor_width, width);
+	// Sensor size [px]
+	{
+		auto width_px = (int)m_CameraControl->GetWidth();
+		m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->sensor_width_px, width_px);
 
-	auto height = (int)m_CameraControl->GetHeight();
-	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->sensor_height, height);
+		auto height_px = (int)m_CameraControl->GetHeight();
+		m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->sensor_height_px, height_px);
+	}
+
+	// Sensor size [um]
+	{
+		auto pixel_size_um = m_Settings->GetPixelSizeUM();
+		
+		auto width_um = m_CameraControl->GetWidth() * pixel_size_um;
+		m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->sensor_width_um, width_um);
+
+		auto height_um = m_CameraControl->GetHeight() * pixel_size_um;
+		m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->sensor_height_um, height_um);
+	}
 }
 
 auto cMain::CoolDownTheCamera() -> void

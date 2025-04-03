@@ -349,8 +349,10 @@ namespace MainFrameVariables
 		wxString id{ "ID" };
 		wxString temperature{ "Sensor Temperature [degC]" };
 		wxString depth{ "Depth [bit]" };
-		wxString sensor_width{ "Sensor Width [px]" };
-		wxString sensor_height{ "Sensor Height [px]" };
+		wxString sensor_width_px{ "Sensor Width [px]" };
+		wxString sensor_height_px{ "Sensor Height [px]" };
+		wxString sensor_width_um{ "Sensor Width [um]" };
+		wxString sensor_height_um{ "Sensor Height [um]" };
 	};
 
 	static auto CreateStringWithPrecision(double value, int decimalPlaces = 0) -> wxString
