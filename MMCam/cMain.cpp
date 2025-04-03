@@ -1412,9 +1412,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			);
 
 			m_ImageColormapComboBox->stylish_combo_box->SetSelection(0);
-#ifndef _DEBUG
 			m_ImageColormapComboBox->stylish_combo_box->Disable();
-#endif // !_DEBUG
 
 			gridSizer->Add(m_ImageColormapComboBox->stylish_combo_box.get(), 0, wxALIGN_CENTER);
 		}
@@ -2043,6 +2041,7 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 auto cMain::OnAbout(wxCommandEvent& evt) -> void
 {
 	m_HelpController->DisplayContents();
+	m_HelpController->GetFrame()->Maximize();
 }
 
 auto cMain::OnFWHMButton(wxCommandEvent& evt) -> void
@@ -5026,6 +5025,7 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 	m_CamExposure->Enable();
 	m_CamSensorTemperature->Enable();
 	m_CamBinning->Enable();
+	m_ImageColormapComboBox->stylish_combo_box->Enable();
 	m_StartStopLiveCapturingTglBtn->Enable();
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, enableWidget);
 	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, enableWidget);
