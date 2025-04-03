@@ -1623,12 +1623,18 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 	property->ChangeFlag(wxPG_PROP_READONLY, true);
 
 	auto it = m_CurrentCameraSettingsPropertyGrid->GetIterator();
+	int i = 0;
 	for (; !it.AtEnd(); it++)
 	{
-		wxPGProperty* prop = *it;
+		auto prop = *it;
 		if (prop)
 		{
-			m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(prop, m_DefaultCellColour);
+			if (!i)
+				m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(prop, wxColour(150, 150, 150));
+			else
+				m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(prop, m_DefaultCellColour);
+
+			++i;
 		}
 	}
 
@@ -2443,7 +2449,8 @@ auto cMain::InitializeSelectedCamera() -> void
 			wxCommandEvent artStopLive(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 			ProcessEvent(artStopLive);
 		}
-		m_CameraControl.release();
+
+		m_CameraControl.reset();
 	}
 
 	auto defaultCameraName = wxString("None");

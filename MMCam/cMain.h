@@ -1425,8 +1425,8 @@ private:
 	//bool m_LiveCapturingEndedDrawingOnCamPreview{ true };
 
 	/* Appearance Colors */
-	wxColour m_DefaultAppearanceColor = wxColour(255, 255, 255);
-	wxColour m_BlackAppearanceColor = wxColour(30, 30, 30);
+	const wxColour m_DefaultAppearanceColor = wxColour(255, 255, 255);
+	const wxColour m_BlackAppearanceColor = wxColour(30, 30, 30);
 
 	std::unique_ptr<wxStatusBar> m_StatusBar{};
 
@@ -1438,7 +1438,7 @@ private:
 
 	wxNotebook* m_CameraControlNotebook{};
 	wxPropertyGrid* m_CurrentCameraSettingsPropertyGrid{};
-	wxColour m_DefaultCellColour = wxColour(150, 150, 150);
+	const wxColour m_DefaultCellColour = wxColour(180, 180, 180);
 	std::unique_ptr<MainFrameVariables::PropertiesNames> m_PropertiesNames{};
 
 	std::vector<std::pair<wxString, bool>> m_StartedThreads{};
