@@ -20,8 +20,10 @@ int cSettings::ShowModal()
 	auto result = wxDialog::ShowModal();  // Call the base class method
 
 	wxBusyCursor busy;
-	if (result == wxID_OK)
-		UpdateConfig();
+	//if (result == wxID_OK)
+		//UpdateConfig();
+
+	//m_WorkStations->initialized_work_station = m_Config->work_station;
 
 	switch (m_MotorManufacturer)
 	{
@@ -37,7 +39,7 @@ int cSettings::ShowModal()
 
 	SetMotorStepsPerMM();
 
-	RewriteInitializationFile();
+	//RewriteInitializationFile();
 
 	return result;
 }
@@ -96,9 +98,8 @@ auto cSettings::GetSelectedCamera() const -> wxString
 void cSettings::CreateMainFrame()
 {
 	InitComponents();
-	ReadInitializationFile();
+	//ReadInitializationFile();
 	LoadWorkStationFiles();
-
 
 	//IterateOverConnectedCameras();
 	//ReadXMLFile();
@@ -1030,44 +1031,6 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 	}
 }
 
-auto cSettings::ReadInitializationFile() -> void
-{
-	std::ifstream file(m_InitializationFilePath.ToStdString());
-	if (!file.is_open()) 
-		return;
-
-	nlohmann::json j;
-	file >> j;
-	file.close();
-
-	try
-	{
-		m_Config = std::make_unique<SettingsVariables::InitializationFileStructure>(j.at("MMCam").get<SettingsVariables::InitializationFileStructure>());
-	}
-	catch (const nlohmann::json::exception& e)
-	{
-		return;
-	}
-
-	//m_CropSizeMM = m_Config->crop_size_mm;
-	//m_CropCircleSizeMM = m_Config->crop_size_circle_mm;
-	//m_UploadReportFolder = m_Config->upload_report_folder;
-
-	m_XRayImagesCaptions.Clear();
-
-	for (auto i{ 0 }; i < 5; ++i)
-	{
-		m_XRayImagesCaptions.Add("");
-		m_XRayImagesCaptions[i] = m_Config->xrayImagesCaptions[i];
-	}
-
-	m_WorkStations->initialized_work_station = m_Config->work_station;
-}
-
-void cSettings::ReadXMLFile()
-{
-}
-
 void cSettings::UpdateUniqueArray()
 {
 	m_Motors->unique_motors[0].Clear();
@@ -1266,26 +1229,6 @@ void cSettings::ResetAllMotorsAndRangesInXMLFile()
 	//	out_file.close();
 	//}
 	//document->clear();
-}
-
-auto cSettings::UpdateConfig() -> void
-{
-	//m_Config->crop_size_mm = m_CropSizeMM;
-	//m_Config->crop_size_circle_mm = m_CropCircleSizeMM;
-	m_Config->work_station = m_WorkStations->initialized_work_station.c_str();
-}
-
-auto cSettings::RewriteInitializationFile() -> void
-{
-	nlohmann::json j;
-	j["MMCam"] = *m_Config;
-
-	std::ofstream file(m_InitializationFilePath.ToStdString());
-	if (!file.is_open()) 
-		return;
-
-	file << std::setw(4) << j << std::endl;  // Pretty-print the JSON with an indent of 4 spaces
-	file.close();
 }
 
 auto cSettings::InitializeXeryonAndCheckPython() -> void

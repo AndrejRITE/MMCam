@@ -139,6 +139,42 @@ namespace MainFrameVariables
 		BINNING_SUM,
 		BINNING_AVERAGE
 	};
+	
+	struct InitializationFileStructure 
+	{
+		double crop_size_mm = 0.0;
+		double crop_size_circle_mm = 0.0;
+		double default_sensor_temperature_degC = 0.0;
+		double default_cooled_sensor_temperature_degC = 0.0;
+
+		int circle_mesh_step_px = 0;
+		int grid_mesh_step_px = 0;
+		int default_colormap = 0;
+		int default_binning = 0;
+		int default_exposure_ms = 0;
+		
+		std::string upload_report_folder;
+		std::string work_station;
+		std::vector<std::string> xrayImagesCaptions;
+
+		// Serialize/Deserialize using NLOHMANN_DEFINE_TYPE_INTRUSIVE
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE
+		(
+			InitializationFileStructure, 
+			crop_size_mm, 
+			crop_size_circle_mm, 
+			default_sensor_temperature_degC,
+			default_cooled_sensor_temperature_degC,
+			circle_mesh_step_px,
+			grid_mesh_step_px,
+			default_colormap,
+			default_binning,
+			default_exposure_ms,
+			upload_report_folder,
+			work_station, 
+			xrayImagesCaptions
+		)
+	};
 
 	struct MenuBar
 	{
@@ -507,6 +543,9 @@ private:
 	void ChangeCameraManufacturerChoice(wxCommandEvent& evt);
 	void OnSingleShotCameraImage(wxCommandEvent& evt);
 	void OnSetOutDirectoryBtn(wxCommandEvent& evt);
+
+	auto ReadInitializationFile() -> void;
+	auto RewriteInitializationFile() -> void;
 
 	void OnOpenSettings(wxCommandEvent& evt);
 	auto InitializeSelectedCamera() -> void;
@@ -1284,6 +1323,10 @@ private:
 
 
 private:
+	/* Initialization file */
+	const wxString m_InitializationFilePath = "MMCam.ini";
+	std::unique_ptr<MainFrameVariables::InitializationFileStructure> m_Config{};
+
 	/* Settings Menu */
 	std::unique_ptr<cSettings> m_Settings{};
 	/* Help */

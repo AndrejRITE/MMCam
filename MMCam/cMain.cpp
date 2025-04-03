@@ -156,6 +156,8 @@ cMain::cMain(const wxString& title_)
 void cMain::CreateMainFrame()
 {
 	InitComponents();
+	ReadInitializationFile();
+
 	CreateMenuBarOnFrame();
 	CreateVerticalToolBar();
 	CreateStatusBarOnFrame();
@@ -2298,6 +2300,50 @@ void cMain::OnSetOutDirectoryBtn(wxCommandEvent& evt)
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, true);
 }
 
+auto cMain::ReadInitializationFile() -> void
+{
+	std::ifstream file(m_InitializationFilePath.ToStdString());
+	if (!file.is_open()) 
+		return;
+
+	nlohmann::json j;
+	file >> j;
+	file.close();
+
+	try
+	{
+		m_Config = std::make_unique<MainFrameVariables::InitializationFileStructure>(j.at("MMCam").get<MainFrameVariables::InitializationFileStructure>());
+	}
+	catch (const nlohmann::json::exception& e)
+	{
+		return;
+	}
+
+	//m_XRayImagesCaptions.Clear();
+
+	//for (auto i{ 0 }; i < 5; ++i)
+	//{
+	//	m_XRayImagesCaptions.Add("");
+	//	m_XRayImagesCaptions[i] = m_Config->xrayImagesCaptions[i];
+	//}
+
+	m_Settings->SetLastInitializedWorkStation(m_Config->work_station);
+	//m_WorkStations->initialized_work_station = m_Config->work_station;
+}
+
+auto cMain::RewriteInitializationFile() -> void
+{
+	nlohmann::json j;
+	j["MMCam"] = *m_Config;
+
+	std::ofstream file(m_InitializationFilePath.ToStdString());
+	if (!file.is_open()) 
+		return;
+
+	file << std::setw(4) << j << std::endl;  // Pretty-print the JSON with an indent of 4 spaces
+	file.close();
+}
+
 void cMain::OnOpenSettings(wxCommandEvent& evt)
 {
 	m_CamPreview->SetFocus();
@@ -2308,10 +2354,14 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 
 	wxBusyCursor busy;
 
+	m_Config->work_station = m_Settings->GetInitializedWorkStation();
+	RewriteInitializationFile();
+
 	m_CamPreview->SetPixelSizeUM(m_Settings->GetPixelSizeUM());
-	m_CamPreview->SetCropSizeMM(m_Settings->GetCropSizeMM());
-	m_CamPreview->SetGridMeshStepPX(m_Settings->GetGridMeshStep());
-	m_CamPreview->SetCircleMeshStepPX(m_Settings->GetCircleMeshStep());
+
+	m_CamPreview->SetCropSizeMM(m_Config->crop_size_mm);
+	m_CamPreview->SetCircleMeshStepPX(m_Config->circle_mesh_step_px);
+	m_CamPreview->SetGridMeshStepPX(m_Config->grid_mesh_step_px);
 	InitializeSelectedCamera();
 
 	auto cameraDataType = m_CameraControl->GetCameraDataType();
@@ -2384,13 +2434,14 @@ auto cMain::InitializeSelectedCamera() -> void
 
 auto cMain::UpdateDefaultWidgetParameters() -> void
 {
-	auto exposure = m_Settings->GetDefaultExposure();
+	//auto exposure = m_Settings->GetDefaultExposure();
+	// Exposure
 	{
-		auto exposure_str = MainFrameVariables::CreateStringWithPrecision(exposure, 0);
+		auto exposure_str = MainFrameVariables::CreateStringWithPrecision(m_Config->default_exposure_ms, 0);
 		m_CamExposure->SetLabel(exposure_str);
 	}
 
-	auto colormap = m_Settings->GetDefaultColormap();
+	auto colormap = m_Config->default_colormap;
 	{
 		if (colormap >= CameraPreviewVariables::Colormaps::GRAYSCALE_COLORMAP && colormap <= CameraPreviewVariables::Colormaps::COPPER_COLORMAP)
 			m_ImageColormapComboBox->stylish_combo_box->SetSelection(colormap);
@@ -2398,7 +2449,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 		ProcessEvent(artColormapPress);
 	}
 
-	auto binning = m_Settings->GetDefaultBinning();
+	auto binning = m_Config->default_binning;
 	{
 		auto binArrStringChoice = m_CamBinning->GetStrings();
 		int i{};
@@ -2415,7 +2466,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 		ProcessEvent(artBinPress);
 	}
 
-	auto sensor_temperature = m_Settings->GetDefaultTemperature();
+	auto sensor_temperature = m_Config->default_cooled_sensor_temperature_degC;
 	{
 		auto sensor_temperature_str = MainFrameVariables::CreateStringWithPrecision(sensor_temperature, 1);
 		m_CamSensorTemperature->SetLabel(sensor_temperature_str);
@@ -2454,7 +2505,6 @@ auto cMain::CoolDownTheCamera() -> void
 		m_CameraControl->SetSensorTemperature(requestedTemperature);
 
 		auto currentTemperature = m_CameraControl->GetSensorTemperature();
-
 
 		auto thresholdDegC = 0.1;
 		while (currentTemperature > requestedTemperature + thresholdDegC || currentTemperature < requestedTemperature - thresholdDegC)
@@ -2523,11 +2573,12 @@ void cMain::OnExit(wxCloseEvent& evt)
 
 		if (m_StartStopMeasurementTglBtn->GetValue())
 		{
-
 			m_StartStopMeasurementTglBtn->SetValue(!m_StartStopMeasurementTglBtn->GetValue());
 			wxCommandEvent artStopMeasurement(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT);
 			ProcessEvent(artStopMeasurement);
 		}
+
+		m_CameraControl->SetSensorTemperature(m_Config->default_sensor_temperature_degC);
 	}
 
 	Destroy();  // you may also do:  event.Skip();
@@ -4165,6 +4216,12 @@ void cMain::UpdateAllAxisGlobalPositions()
 
 void cMain::ExposureValueChanged(wxCommandEvent& evt)
 {
+	int exposure_ms{ 1 };
+	m_CamExposure->GetValue().ToInt(&exposure_ms);
+
+	m_Config->default_exposure_ms = exposure_ms;
+	RewriteInitializationFile();
+
 	if (!m_StartStopLiveCapturingTglBtn->GetValue()) return;
 
 	// Stop acquisition
@@ -4182,8 +4239,11 @@ auto cMain::OnSensorTemperatureChanged(wxCommandEvent& evt) -> void
 	wxBusyCursor busy;
 
 	double temperature{};
-	m_CamSensorTemperature->GetLabel().ToDouble(&temperature);
-	m_Settings->SetTemperature(temperature);
+	m_CamSensorTemperature->GetValue().ToDouble(&temperature);
+
+	m_Config->default_cooled_sensor_temperature_degC = temperature;
+	RewriteInitializationFile();
+	//m_Settings->SetTemperature(temperature);
 
 	CoolDownTheCamera();
 }
@@ -4193,7 +4253,9 @@ auto cMain::OnBinningChoice(wxCommandEvent& evt) -> void
 	int binning{ 1 };
 	m_CamBinning->GetString(m_CamBinning->GetCurrentSelection()).ToInt(&binning);
 
-	m_Settings->SetBinning(binning);
+	m_Config->default_binning = binning;
+	RewriteInitializationFile();
+	//m_Settings->SetBinning(binning);
 
 	m_OutputImageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
 	//m_CamPreview->SetImageSize(imageSize);
@@ -4208,7 +4270,9 @@ auto cMain::OnColormapComboBox(wxCommandEvent& evt) -> void
 		static_cast<CameraPreviewVariables::Colormaps>(colormap)
 	);
 
-	m_Settings->SetColormap(colormap);
+	m_Config->default_colormap = colormap;
+	RewriteInitializationFile();
+	//m_Settings->SetColormap(colormap);
 
 	if (!m_CamPreview->IsImageSet()) return;
 	//if (!m_CameraParametersControls->startCapturing->GetValue())
@@ -4268,8 +4332,8 @@ auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 
 	auto inputParameters = GenerateReportVariables::InputParameters();
 	inputParameters.pixelSizeUM = m_Settings->GetPixelSizeUM();
-	inputParameters.widthROIMM = m_Settings->GetCropSizeMM();
-	inputParameters.widthCircleROIMM = m_Settings->GetCropCircleSizeMM();
+	inputParameters.widthROIMM = m_Config->crop_size_mm;
+	inputParameters.widthCircleROIMM = m_Config->crop_size_circle_mm;
 	inputParameters.xRayImagesDefaultCaption = m_Settings->GetXRayImagesDefaultCaption();
 	auto uploadReportFolder = m_Settings->GetUploadReportFolder();
 
@@ -5023,12 +5087,21 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 {
 	auto enableWidget = true;
 	m_CamExposure->Enable();
+
 	m_CamSensorTemperature->Enable();
+
 	m_CamBinning->Enable();
+
 	m_ImageColormapComboBox->stylish_combo_box->Enable();
-	m_StartStopLiveCapturingTglBtn->Enable();
+
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, enableWidget);
+	m_StartStopLiveCapturingTglBtn->Enable();
+
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, enableWidget);
+	m_SingleShotBtn->Enable();
+
 	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, enableWidget);
+
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, enableWidget);
 	//m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, enableWidget);
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, enableWidget);
@@ -5043,6 +5116,7 @@ auto cMain::DisableControlsAfterUnsuccessfulCameraInitialization() -> void
 {
 	auto enableWidget = false;
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, enableWidget);
+
 	m_StartStopMeasurementTglBtn->Disable();
 	DisableControlsBeforeCapturing();
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, !enableWidget);
@@ -5057,6 +5131,11 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 	}
 
 	m_CamExposure->Disable();
+
+	m_CamBinning->Disable();
+	m_CamSensorTemperature->Disable();
+	m_ImageColormapComboBox->stylish_combo_box->Disable();
+
 	m_SingleShotBtn->Disable();
 	m_StartStopLiveCapturingTglBtn->Disable();
 
@@ -5108,6 +5187,11 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 
 		m_CamSensorTemperature->Disable();
 		m_CamBinning->Disable();
+		m_CamExposure->Disable();
+		m_ImageColormapComboBox->stylish_combo_box->Disable();
+		m_SingleShotBtn->Disable();
+		m_StartStopMeasurementTglBtn->Disable();
+
 		StartLiveCapturing();
 
 		m_StartStopLiveCapturingTglBtn->SetLabel(wxT("Stop Live (L)"));
@@ -5146,6 +5230,10 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 
 		m_CamSensorTemperature->Enable();
 		m_CamBinning->Enable();
+		m_CamExposure->Enable();
+		m_ImageColormapComboBox->stylish_combo_box->Enable();
+		m_SingleShotBtn->Enable();
+		m_StartStopMeasurementTglBtn->Enable();
 
 		m_StartStopLiveCapturingTglBtn->SetLabel(wxT("Start Live (L)"));
 		if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
