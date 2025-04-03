@@ -97,6 +97,7 @@ cMain::cMain(const wxString& title_)
 #ifndef _DEBUG
 	wxBusyCursor busy;
 #endif // !_DEBUG
+	static py::scoped_interpreter guard{};  // Start Python interpreter
 
 	wxArtProvider::Push(new wxMaterialDesignArtProvider);
 	CreateMainFrame();
@@ -105,7 +106,7 @@ cMain::cMain(const wxString& title_)
 
 	/* Creating, but not showing ProgressBar */
 	CreateProgressBar();
-	m_ProgressBar->SetIcon(logo_xpm);
+	//m_ProgressBar->SetIcon(logo_xpm);
 
 	CenterOnScreen();
 
@@ -174,7 +175,7 @@ void cMain::InitComponents()
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_UNAWARE);
 	{
 		/* Settings Frame */
-		m_Settings = std::make_unique<cSettings>(this);
+		m_Settings = std::make_shared<cSettings>(this);
 		m_Settings->SetIcon(logo_xpm);
 		/* Measurement */
 		m_FirstStage = std::make_unique<MainFrameVariables::MeasurementStage>();
@@ -1778,6 +1779,23 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 		}
 	}
 	sizerPage->Add(directions_static_box_sizer, 0, wxEXPAND);
+	
+	// ProgressBar
+	{
+		m_ProgressBar = std::make_unique<wxGauge>
+			(
+				page,
+				wxID_ANY, 
+				100
+			);
+
+		// Optionally hide the panel in debug mode
+		m_ProgressBar->Hide();
+#ifndef _DEBUG
+#endif
+
+		sizerPage->Add(m_ProgressBar.get(), 0, wxEXPAND | wxALL, 5);
+	}
 
 	auto horizontal_sizer = new wxBoxSizer(wxHORIZONTAL);
 	{
@@ -2181,7 +2199,7 @@ void cMain::CreateProgressBar()
 		//this->GetPosition().x + this->GetSize().x - size_of_progress_bar.x, 
 		//this->GetPosition().y + this->GetSize().y - size_of_progress_bar.y 
 	};
-	m_ProgressBar = std::make_unique<ProgressBar>(this, start_point_progress_bar, size_of_progress_bar);
+	//m_ProgressBar = std::make_unique<ProgressBar>(this, start_point_progress_bar, size_of_progress_bar);
 
 #ifdef _DEBUG
 	//m_ProgressBar->Show();
@@ -3122,15 +3140,20 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			}
 		}
 
+		m_ProgressBar->SetValue(0);
 		m_ProgressBar->Hide();
-		m_ProgressBar->UpdateProgressWithMessage("", 0);
-		m_ProgressBar->UpdateElapsedTime(0);
-		m_ProgressBar->UpdateEstimatedTime(0, 0);
+
+		//m_MeasurementNotebook->Refresh();
+		//m_ProgressBar->UpdateElapsedTime(0);
+		//m_ProgressBar->UpdateEstimatedTime(0, 0);
 		//if (m_AppProgressIndicator) m_AppProgressIndicator->~wxAppProgressIndicator();
 		//UpdateAllAxisGlobalPositions();
 
 		EnableControlsAfterCapturing();
 		m_StartStopMeasurementTglBtn->SetLabel("Start Measurement (M)");
+
+		Layout();
+
 		return;
 	}
 
@@ -3149,6 +3172,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 	double start_first_stage_value{}, step_first_stage_value{}, finish_first_stage_value{};
 	double start_second_stage_value{}, step_second_stage_value{}, finish_second_stage_value{};
 	int first_stage_step_count{}, second_stage_step_count{};
+
 	/* Checking if user selected None as a stage */
 	{
 		/* Checking first stage */
@@ -3156,6 +3180,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			if (m_FirstStage->stage->GetCurrentSelection() == 0) return;
 			else first_axis->axis_number = m_FirstStage->stage->GetCurrentSelection() - 1;
 		}
+
 		/* Checking Start, Step and Finish values */
 		{
 			if (!m_FirstStage->start->GetValue().ToDouble(&start_first_stage_value)) return;
@@ -3173,6 +3198,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 				(int)(start_first_stage_value * 1000.0)) / 
 				(int)(step_first_stage_value * 1000.0) + 1;
 		}
+		
 		/* Checking second stage */
 		//if (m_SecondStage->stage->GetCurrentSelection() - 1 == first_axis->axis_number) return;
 		/* 
@@ -3180,6 +3206,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		else selected_second_stage = m_SecondStage->stage->GetCurrentSelection() - 1;		
 		*/
 	}
+
 	{
 		CreateMetadataFile();
 		m_StartCalculationTime = std::chrono::steady_clock::now();
@@ -3190,9 +3217,15 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			//this->GetPosition().x + this->GetSize().x - m_ProgressBar->GetSize().x, 
 			//this->GetPosition().y + this->GetSize().y - m_ProgressBar->GetSize().y 
 		};
-		m_ProgressBar->SetPosition(start_point_progress_bar);
+		//m_ProgressBar->SetPosition(start_point_progress_bar);
 		m_Settings->ResetCapturing();
+
 		m_ProgressBar->Show();
+		m_ProgressBar->SetValue(0);
+
+		Layout();
+		//m_MeasurementNotebook->Refresh();
+
 		SetFocus();
 
 		//m_AppProgressIndicator = std::make_unique<wxAppProgressIndicator>(this, 100);
@@ -3240,7 +3273,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			m_Settings->GetPixelSizeUM(),
 			m_DecimalDigits
 		);
-		ProgressThread* progress_thread = new ProgressThread(m_Settings.get(), this);
+		//ProgressThread* progress_thread = new ProgressThread(m_Settings.get(), this);
 
 		if (worker_thread->CreateThread() != wxTHREAD_NO_ERROR)
 		{
@@ -3248,22 +3281,22 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			worker_thread = nullptr;
 			return;
 		}
-		if (progress_thread->CreateThread() != wxTHREAD_NO_ERROR)
-		{
-			delete progress_thread;
-			progress_thread = nullptr;
-			return;
-		}
-		if (progress_thread->GetThread()->Run() != wxTHREAD_NO_ERROR)
-		{
-			delete progress_thread;
-			progress_thread = nullptr;
-			return;
-		}
+		//if (progress_thread->CreateThread() != wxTHREAD_NO_ERROR)
+		//{
+		//	delete progress_thread;
+		//	progress_thread = nullptr;
+		//	return;
+		//}
+		//if (progress_thread->GetThread()->Run() != wxTHREAD_NO_ERROR)
+		//{
+		//	delete progress_thread;
+		//	progress_thread = nullptr;
+		//	return;
+		//}
 		if (worker_thread->GetThread()->Run() != wxTHREAD_NO_ERROR)
 		{
-			delete progress_thread;
-			progress_thread = nullptr;
+			//delete progress_thread;
+			//progress_thread = nullptr;
 			delete worker_thread;
 			worker_thread = nullptr;
 			return;
@@ -3370,12 +3403,22 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 {
 	auto stopCapturing = [&]()
 		{
-			m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
-			wxCommandEvent live_capturing_evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
-			ProcessEvent(live_capturing_evt);
+			if (m_StartStopMeasurementTglBtn->GetValue())
+			{
+				m_StartStopMeasurementTglBtn->SetValue(false);
+				wxCommandEvent evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT);
+				ProcessEvent(evt);
+			}
+			else
+			{
+				m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
+				wxCommandEvent evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+				ProcessEvent(evt);
+			}
 		};
 
 	auto curr_code = evt.GetInt();
+	auto progress = evt.GetExtraLong();
 
 	// 0 == Camera is Connected and everything is fine
 	if (curr_code == 0)
@@ -3416,6 +3459,9 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 
 		}
 
+		if (m_StartStopMeasurementTglBtn->GetValue())
+			m_ProgressBar->SetValue(progress);
+		
 		delete[] imgPtr;
 	}
 	// -1 == Camera is disconnected
@@ -3423,6 +3469,7 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 	{
 		stopCapturing();
 	}
+
 }
 
 void cMain::UpdateProgress(wxThreadEvent& evt)
@@ -3435,11 +3482,11 @@ void cMain::UpdateProgress(wxThreadEvent& evt)
 	{
 		auto current_time = std::chrono::steady_clock::now();
 		elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - m_StartCalculationTime).count();
-		m_ProgressBar->UpdateProgressWithMessage(msg, progress);
+		m_ProgressBar->SetValue(progress);
 		LOGI("Progress: ", progress);
 		//m_AppProgressIndicator->SetValue(progress <= 100 ? progress : 100);
-		m_ProgressBar->UpdateElapsedTime(elapsed_seconds);
-		m_ProgressBar->UpdateEstimatedTime(progress, elapsed_seconds);
+		//m_ProgressBar->UpdateElapsedTime(elapsed_seconds);
+		//m_ProgressBar->UpdateEstimatedTime(progress, elapsed_seconds);
 	}
 	// Finished
 	else if (progress == -1)
@@ -5623,6 +5670,8 @@ WorkerThread::~WorkerThread()
 
 wxThread::ExitCode WorkerThread::Entry()
 {
+	wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID_THREAD_LIVE_CAPTURING);
+	
 	constexpr auto raise_exception_msg = [](wxString camera_name) 
 	{
 		wxString title = "Connection error";
@@ -5635,13 +5684,15 @@ wxThread::ExitCode WorkerThread::Entry()
 			title,
 			wxICON_ERROR);
 	};
+
 	auto exit_thread = [&]()
 	{
 		*m_UniqueThreadKey = "";
-		m_Settings->SetCurrentProgress(1, 1);
+		//m_Settings->SetCurrentProgress(1, 1);
+		evt.SetInt(-1);
+		wxQueueEvent(m_MainFrame, evt.Clone());
 	};
 
-	wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID_THREAD_LIVE_CAPTURING);
 
 	m_MainFrame->WorkerThreadFinished(false);
 	m_Settings->SetCurrentProgress(0, m_FirstAxis->step_number);
@@ -5689,7 +5740,7 @@ wxThread::ExitCode WorkerThread::Entry()
 			return (wxThread::ExitCode)0;
 		}
 
-		m_Settings->SetCurrentProgress(i, m_FirstAxis->step_number);
+		//m_Settings->SetCurrentProgress(i, m_FirstAxis->step_number);
 		/* Here we need to round values, for the correct positioning of motors */
 		auto correctedStart = static_cast<int>(m_FirstAxis->start * 1000.f + .5f);
 		auto correctedStep = static_cast<int>(m_FirstAxis->step * 1000.f + .5f);
@@ -5728,8 +5779,6 @@ wxThread::ExitCode WorkerThread::Entry()
 			)
 			)
 		{
-			evt.SetInt(-1);
-			wxQueueEvent(m_MainFrame, evt.Clone());
 			exit_thread();
 			return (wxThread::ExitCode)0;
 		}
@@ -5741,7 +5790,10 @@ wxThread::ExitCode WorkerThread::Entry()
 			std::this_thread::sleep_for(interval);
 		}
 
+		auto progress = (double)(i + 1) / m_FirstAxis->step_number * 100.0;
+
 		evt.SetInt(0);
+		evt.SetExtraLong((long)progress);
 		evt.SetPayload(dataPtr.release());
 		wxQueueEvent(m_MainFrame, evt.Clone());
 

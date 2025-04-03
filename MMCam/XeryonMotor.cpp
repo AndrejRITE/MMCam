@@ -1,8 +1,7 @@
-#include "XeryonMotor.h"
+﻿#include "XeryonMotor.h"
 
 XeryonMotor::XeryonMotor()
 {
-	static py::scoped_interpreter guard{};  // Start Python interpreter
 	m_MotorSettings = std::make_unique<MotorVariables::Settings>();
 }
 
@@ -14,6 +13,7 @@ bool XeryonMotor::GoCenter()
 	{
 		try
 		{
+			py::gil_scoped_acquire gil;  // 🔹 Acquire GIL in the new thread
 			py::module importlib = py::module::import("importlib");
 			py::module script_goCenter = importlib.attr("reload")(py::module::import("xeryon_goCenter"));
 
@@ -39,12 +39,14 @@ bool XeryonMotor::GoToAbsolutePosition(float stagePosition)
 {
 	auto attempt = 0;
 
+	static py::module script_setAbsolutePosition = py::module::import("xeryon_setAbsolutePosition");
+
 	while (attempt < m_MaxAttemptsToCallPythonFunction)
 	{
 		try
 		{
-			py::module importlib = py::module::import("importlib");
-			py::module script_setAbsolutePosition = importlib.attr("reload")(py::module::import("xeryon_setAbsolutePosition"));
+			// Ensure GIL is acquired only when needed
+			py::gil_scoped_acquire gil;
 
 			auto currentPosition = script_setAbsolutePosition.attr("move_to_position")
 				(m_MotorCOMPort.c_str(), (double)stagePosition).cast<double>();
@@ -67,38 +69,53 @@ bool XeryonMotor::GoToAbsolutePosition(float stagePosition)
 // XeryonMotorArray Start
 float XeryonMotorArray::GetActualStagePos(const std::string& motor_sn) const
 {
-	if (motor_sn.empty() || motor_sn == "None") return 0.f;
+	if (motor_sn.empty() || motor_sn == "None") return error_position;
 
-	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
-	{
-		if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
-			return m_MotorsArray[motor].GetDeviceActualStagePos();
-	}
-	return error_position;
+	auto it = std::find_if(m_MotorsArray.begin(), m_MotorsArray.end(),
+		[&](const XeryonMotor& motor) { return motor.GetDeviceSerNum() == motor_sn; });
+
+	return (it != m_MotorsArray.end()) ? it->GetDeviceActualStagePos() : error_position;
+
+	//for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
+	//{
+	//	if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
+	//		return m_MotorsArray[motor].GetDeviceActualStagePos();
+	//}
+	//return error_position;
 }
 
 std::string XeryonMotorArray::GetMotorCOMPort(const std::string& motor_sn) const
 {
 	if (motor_sn.empty() || motor_sn == "None") return "";
 
-	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
-	{
-		if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
-			return m_MotorsArray[motor].GetDeviceCOMPort();
-	}
-	return "";
+	auto it = std::find_if(m_MotorsArray.begin(), m_MotorsArray.end(),
+		[&](const XeryonMotor& motor) { return motor.GetDeviceSerNum() == motor_sn; });
+
+	return (it != m_MotorsArray.end()) ? it->GetDeviceCOMPort() : "";
+
+	//for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
+	//{
+	//	if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
+	//		return m_MotorsArray[motor].GetDeviceCOMPort();
+	//}
+	//return "";
 }
 
 bool XeryonMotorArray::IsMotorConnected(const std::string& motor_sn) const
 {
-	if (motor_sn.empty() || motor_sn == "None") return 0.f;
+	if (motor_sn.empty() || motor_sn == "None") return error_position;
 
-	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
-	{
-		if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
-			return true;
-	}
-	return false;
+	auto it = std::find_if(m_MotorsArray.begin(), m_MotorsArray.end(),
+		[&](const XeryonMotor& motor) { return motor.GetDeviceSerNum() == motor_sn; });
+
+	return (it != m_MotorsArray.end()) ? true : false;
+
+	//for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
+	//{
+	//	if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
+	//		return true;
+	//}
+	//return false;
 }
 
 void XeryonMotorArray::SetStepsPerMMForTheMotor(const std::string motor_sn, const int stepsPerMM)
@@ -107,28 +124,40 @@ void XeryonMotorArray::SetStepsPerMMForTheMotor(const std::string motor_sn, cons
 
 	if (stepsPerMM <= 0) return;
 
-	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
-	{
-		if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
-		{
-			m_MotorsArray[motor].SetStepsPerMMRatio((float)stepsPerMM);
-			break;
-		}
-	}
+	auto it = std::find_if(m_MotorsArray.begin(), m_MotorsArray.end(),
+		[&](const XeryonMotor& motor) { return motor.GetDeviceSerNum() == motor_sn; });
+
+	if (it != m_MotorsArray.end())
+		it->SetStepsPerMMRatio((float)stepsPerMM);
+
+	//for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
+	//{
+	//	if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
+	//	{
+	//		m_MotorsArray[motor].SetStepsPerMMRatio((float)stepsPerMM);
+	//		break;
+	//	}
+	//}
 }
 
 void XeryonMotorArray::SetCurrentPositionForTheMotor(const std::string motor_sn, const float currentPosition)
 {
 	if (motor_sn.empty() || motor_sn == "None") return;
 
-	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
-	{
-		if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
-		{
-			m_MotorsArray[motor].SetCurrentMotorPosition((float)currentPosition);
-			break;
-		}
-	}
+	auto it = std::find_if(m_MotorsArray.begin(), m_MotorsArray.end(),
+		[&](const XeryonMotor& motor) { return motor.GetDeviceSerNum() == motor_sn; });
+
+	if (it != m_MotorsArray.end())
+		it->SetCurrentMotorPosition((float)currentPosition);
+
+	//for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
+	//{
+	//	if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
+	//	{
+	//		m_MotorsArray[motor].SetCurrentMotorPosition((float)currentPosition);
+	//		break;
+	//	}
+	//}
 }
 
 auto XeryonMotorArray::InitAllMotors() -> bool
@@ -207,7 +236,7 @@ auto XeryonMotorArray::GoMotor
 	float pos
 ) -> float
 {
-	if (motor_sn.empty() || motor_sn == "None") return 0.f;
+	if (motor_sn.empty() || motor_sn == "None") return error_position;
 
 	for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
 	{

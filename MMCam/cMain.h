@@ -15,6 +15,9 @@
 #include "wx/propgrid/advprops.h"
 #include "wx/fs_zip.h"
 #include "wx/html/helpctrl.h"
+#include "wx/progdlg.h"
+#include "wx/gauge.h"
+
 #include "wxMaterialDesignArtProvider.hpp"
 
 #include <string>
@@ -1371,7 +1374,8 @@ private:
 	std::unique_ptr<MainFrameVariables::InitializationFileStructure> m_Config{};
 
 	/* Settings Menu */
-	std::unique_ptr<cSettings> m_Settings{};
+	std::shared_ptr<cSettings> m_Settings{};
+
 	/* Help */
 	std::unique_ptr<wxHtmlHelpController> m_HelpController{};
 	/* Menu Bar */
@@ -1407,7 +1411,7 @@ private:
 	/* Progress */
 	bool m_Cancelled{}, m_DataCalculatedInThisApp{};
 	wxCriticalSection m_CSCancelled{};
-	std::unique_ptr<ProgressBar> m_ProgressBar{};
+	//std::unique_ptr<ProgressBar> m_ProgressBar{};
 	std::chrono::steady_clock::time_point m_StartCalculationTime;
 	std::unique_ptr<wxAppProgressIndicator> m_AppProgressIndicator{};
 
@@ -1429,6 +1433,8 @@ private:
 	const wxColour m_BlackAppearanceColor = wxColour(30, 30, 30);
 
 	std::unique_ptr<wxStatusBar> m_StatusBar{};
+	std::unique_ptr<wxPanel> m_ProgressPanel{};
+	std::unique_ptr<wxGauge> m_ProgressBar{};
 
 	/* wxPanels */
 	wxScrolledWindow* m_RightSidePanel{};
