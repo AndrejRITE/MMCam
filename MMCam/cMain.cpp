@@ -142,7 +142,7 @@ cMain::cMain(const wxString& title_)
 	}
 #endif // _DEBUG
 	{
-		//m_StartStopLiveCapturingTglBtn->SetValue(true);
+		//m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(true);
 		//wxCommandEvent art_start_live_capturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 		//ProcessEvent(art_start_live_capturing);
 	}
@@ -600,8 +600,8 @@ void cMain::CreateLeftSide(wxSizer* left_side_sizer)
 	left_side_sizer->Add(m_VerticalToolBar->tool_bar, 0, wxEXPAND);
 	auto input_args = std::make_unique<CameraPreviewVariables::InputPreviewPanelArgs>
 		(
-			m_CrossHairPosXTxtCtrl.get(),
-			m_CrossHairPosYTxtCtrl.get(),
+			m_CameraTabControls->crossHairPosXTxtCtrl.get(),
+			m_CameraTabControls->crossHairPosYTxtCtrl.get(),
 			m_StatusBar.get()
 			//m_SetCrossHairPosTglBtn.get()
 			);
@@ -1275,6 +1275,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
 
 	//wxSizer* const cam_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, right_side_panel, "&Camera");
+	m_CameraTabControls = std::make_unique<MainFrameVariables::CameraTabControls>();
 
 	//wxSizer* const first_row_sizer = new wxBoxSizer(wxHORIZONTAL);
 	auto gridSizer = new wxGridSizer(2); 
@@ -1299,7 +1300,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			temp_val.SetMin(-50.f);
 			temp_val.SetMax(50.f);
 
-			m_CamSensorTemperature = std::make_unique<wxTextCtrl>
+			m_CameraTabControls->camSensorTemperature = std::make_unique<wxTextCtrl>
 				(
 					page, 
 					MainFrameVariables::ID_RIGHT_CAM_TEMPERATURE_TXT_CTL, 
@@ -1313,8 +1314,8 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
 					temp_val
 				);
-			m_CamSensorTemperature->Disable();
-			gridSizer->Add(m_CamSensorTemperature.get(), 0, wxALIGN_CENTER);
+			m_CameraTabControls->camSensorTemperature->Disable();
+			gridSizer->Add(m_CameraTabControls->camSensorTemperature.get(), 0, wxALIGN_CENTER);
 		}
 
 		// Exposure
@@ -1335,7 +1336,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			exposure_val.SetMin(1);
 			exposure_val.SetMax(1'000'000);
 
-			m_CamExposure = std::make_unique<wxTextCtrl>
+			m_CameraTabControls->camExposure = std::make_unique<wxTextCtrl>
 				(
 					page, 
 					MainFrameVariables::ID_RIGHT_CAM_EXPOSURE_TXT_CTL, 
@@ -1349,8 +1350,8 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
 					exposure_val
 				);
-			m_CamExposure->Disable();
-			gridSizer->Add(m_CamExposure.get(), 0, wxALIGN_CENTER);
+			m_CameraTabControls->camExposure->Disable();
+			gridSizer->Add(m_CameraTabControls->camExposure.get(), 0, wxALIGN_CENTER);
 		}
 
 		// Binning
@@ -1373,17 +1374,17 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			choices.Add("4");
 			choices.Add("8");
 
-			m_CamBinning = std::make_unique<wxChoice>
+			m_CameraTabControls->camBinning = std::make_unique<wxChoice>
 				(
 					page, 
 					MainFrameVariables::ID_RIGHT_CAM_BINNING_CHOICE
 				);
-			m_CamBinning->SetExtraStyle(wxCB_READONLY);
-			m_CamBinning->Set(choices);
-			m_CamBinning->SetSelection(0);
-			m_CamBinning->Disable();
+			m_CameraTabControls->camBinning->SetExtraStyle(wxCB_READONLY);
+			m_CameraTabControls->camBinning->Set(choices);
+			m_CameraTabControls->camBinning->SetSelection(0);
+			m_CameraTabControls->camBinning->Disable();
 
-			gridSizer->Add(m_CamBinning.get(), 0, wxALIGN_CENTER);
+			gridSizer->Add(m_CameraTabControls->camBinning.get(), 0, wxALIGN_CENTER);
 		}
 
 		// Colormap
@@ -1426,25 +1427,25 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 	{
 		auto hor_sizer = new wxBoxSizer(wxHORIZONTAL);
 		
-		m_SingleShotBtn = std::make_unique<wxButton>(
+		m_CameraTabControls->singleShotBtn = std::make_unique<wxButton>(
 			page,
 			MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN,
 			wxT("Single Shot (S)"), 
 			wxDefaultPosition, 
 			wxDefaultSize);
-		m_SingleShotBtn->Disable();
+		m_CameraTabControls->singleShotBtn->Disable();
 
-		hor_sizer->Add(m_SingleShotBtn.get(), 0, wxEXPAND);
+		hor_sizer->Add(m_CameraTabControls->singleShotBtn.get(), 0, wxEXPAND);
 		hor_sizer->AddStretchSpacer();
 
-		m_StartStopLiveCapturingTglBtn = std::make_unique<wxToggleButton>
+		m_CameraTabControls->startStopLiveCapturingTglBtn = std::make_unique<wxToggleButton>
 			(
 				page,
 				MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, 
 				wxT("Start Live (L)")
 			);
-		m_StartStopLiveCapturingTglBtn->Disable();
-		hor_sizer->Add(m_StartStopLiveCapturingTglBtn.get(), 0, wxEXPAND | wxTOP, 5);
+		m_CameraTabControls->startStopLiveCapturingTglBtn->Disable();
+		hor_sizer->Add(m_CameraTabControls->startStopLiveCapturingTglBtn.get(), 0, wxEXPAND | wxTOP, 5);
 
 		sizerPage->Add(hor_sizer, 0, wxEXPAND | wxALL, 5);
 	}
@@ -1460,7 +1461,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			//x_pos_validator.SetMin(1);
 			//x_pos_validator.SetMax(10000);
 
-			m_CrossHairPosXTxtCtrl = std::make_unique<wxTextCtrl>
+			m_CameraTabControls->crossHairPosXTxtCtrl = std::make_unique<wxTextCtrl>
 				(
 					page,
 					MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL,
@@ -1469,9 +1470,10 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 					txt_ctrl_size, 
 					wxTE_CENTRE
 					);
-			m_CrossHairPosXTxtCtrl->Disable();
-			m_CrossHairPosXTxtCtrl->Hide();
-			//x_pos_sizer->Add(m_CrossHairPosXTxtCtrl.get(), 0, wxEXPAND);
+
+			m_CameraTabControls->crossHairPosXTxtCtrl->Disable();
+			m_CameraTabControls->crossHairPosXTxtCtrl->Hide();
+			//x_pos_sizer->Add(m_CameraTabControls->crossHairPosXTxtCtrl.get(), 0, wxEXPAND);
 			//cross_hair_sizer->Add(x_pos_sizer, 0, wxEXPAND | wxRIGHT, 2);
 		}
 
@@ -1482,7 +1484,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			//y_pos_validator.SetMin(1);
 			//y_pos_validator.SetMax(10000);
 
-			m_CrossHairPosYTxtCtrl = std::make_unique<wxTextCtrl>
+			m_CameraTabControls->crossHairPosYTxtCtrl = std::make_unique<wxTextCtrl>
 				(
 					page,
 					MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL,
@@ -1491,9 +1493,10 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 					txt_ctrl_size, 
 					wxTE_CENTRE
 					);
-			m_CrossHairPosYTxtCtrl->Disable();
-			m_CrossHairPosYTxtCtrl->Hide();
-			//y_pos_sizer->Add(m_CrossHairPosYTxtCtrl.get(), 0, wxEXPAND);
+
+			m_CameraTabControls->crossHairPosYTxtCtrl->Disable();
+			m_CameraTabControls->crossHairPosYTxtCtrl->Hide();
+			//y_pos_sizer->Add(m_CameraTabControls->crossHairPosYTxtCtrl.get(), 0, wxEXPAND);
 			//cross_hair_sizer->Add(y_pos_sizer, 0, wxEXPAND);
 		}
 	}
@@ -2167,17 +2170,26 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 	LOG("Started: " + wxString(__FUNCSIG__));
 
 	wxBusyCursor busy_cursor{};
-	wxString exposure_time_str = m_CamExposure->GetValue().IsEmpty() 
+
+	auto out_dir = m_OutDirTextCtrl->GetValue();
+	while (!wxDir::Exists(out_dir))
+	{
+		wxCommandEvent artSetOutDir(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_MT_OUT_FLD_BTN);
+		ProcessEvent(artSetOutDir);
+		out_dir = m_OutDirTextCtrl->GetValue();
+	}
+
+	wxString exposure_time_str = m_CameraTabControls->camExposure->GetValue().IsEmpty() 
 		? wxString("1") 
-		: m_CamExposure->GetValue();
+		: m_CameraTabControls->camExposure->GetValue();
 	int exposure_time = abs(wxAtoi(exposure_time_str)) * 1000; // Because user input is in [ms], we need to recalculate exposure time to [us]
 
-	auto start_live_capturing_after_ss = m_StartStopLiveCapturingTglBtn->GetValue();
+	auto start_live_capturing_after_ss = m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue();
 
 	wxCommandEvent artStartStopLiveCapturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	if (start_live_capturing_after_ss)
 	{
-		m_StartStopLiveCapturingTglBtn->SetValue(!m_StartStopLiveCapturingTglBtn->GetValue());
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
 		// Start/Stop the acquisition
 		ProcessEvent(artStartStopLiveCapturing);
 	}
@@ -2204,7 +2216,7 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 			m_CameraControl->SetExposureTime(exposure_time);
 
 			int binning{ 1 };
-			m_CamBinning->GetString(m_CamBinning->GetCurrentSelection()).ToInt(&binning);
+			m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 
 			auto imageSize = wxSize{ (int)m_CameraControl->GetWidth() / binning, (int)m_CameraControl->GetHeight() / binning };
 
@@ -2250,7 +2262,9 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 				dataPtr.get(),
 				cv::Mat::AUTO_STEP
 			);
-			cv::imwrite(file_name, cv_img);
+
+			if (wxDir::Exists(out_dir))
+				cv::imwrite(file_name, cv_img);
 
 			m_CamPreview->SetCameraCapturedImage
 			(
@@ -2266,7 +2280,7 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 	if (start_live_capturing_after_ss)
 	{
 		LOG("Start Live Capturing");
-		m_StartStopLiveCapturingTglBtn->SetValue(!m_StartStopLiveCapturingTglBtn->GetValue());
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
 		// Start/Stop the acquisition
 		ProcessEvent(artStartStopLiveCapturing);
 	}
@@ -2295,7 +2309,8 @@ void cMain::OnSetOutDirectoryBtn(wxCommandEvent& evt)
 	m_FirstStage->EnableAllControls();
 	//m_SecondStage->EnableAllControls();
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, true);
-	m_SingleShotBtn->Enable();
+
+	m_CameraTabControls->singleShotBtn->Enable();
 	m_StartStopMeasurementTglBtn->Enable();
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, true);
 }
@@ -2357,17 +2372,24 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 	m_Config->work_station = m_Settings->GetInitializedWorkStation();
 	RewriteInitializationFile();
 
-	m_CamPreview->SetPixelSizeUM(m_Settings->GetPixelSizeUM());
+	// Updating Preview panel variables
+	{
+		m_CamPreview->SetPixelSizeUM(m_Settings->GetPixelSizeUM());
 
-	m_CamPreview->SetCropSizeMM(m_Config->crop_size_mm);
-	m_CamPreview->SetCircleMeshStepPX(m_Config->circle_mesh_step_px);
-	m_CamPreview->SetGridMeshStepPX(m_Config->grid_mesh_step_px);
+		m_CamPreview->SetCropSizeMM(m_Config->crop_size_mm);
+		m_CamPreview->SetCircleMeshStepPX(m_Config->circle_mesh_step_px);
+		m_CamPreview->SetGridMeshStepPX(m_Config->grid_mesh_step_px);
+	}
+
 	InitializeSelectedCamera();
 
-	auto cameraDataType = m_CameraControl->GetCameraDataType();
-	auto imagePanelDataType = cameraDataType == CameraControlVariables::ImageDataTypes::RAW_12BIT ? CameraPreviewVariables::ImageDataTypes::RAW_12BIT : CameraPreviewVariables::ImageDataTypes::RAW_16BIT;
+	// Data Type
+	{
+		auto cameraDataType = m_CameraControl->GetCameraDataType();
+		auto imagePanelDataType = cameraDataType == CameraControlVariables::ImageDataTypes::RAW_12BIT ? CameraPreviewVariables::ImageDataTypes::RAW_12BIT : CameraPreviewVariables::ImageDataTypes::RAW_16BIT;
 
-	m_CamPreview->SetCameraDataType(imagePanelDataType);
+		m_CamPreview->SetCameraDataType(imagePanelDataType);
+	}
 
 	UpdateStagePositions();
 	EnableUsedAndDisableNonUsedMotors();	
@@ -2382,9 +2404,9 @@ auto cMain::InitializeSelectedCamera() -> void
 	// We don't need to initialize camera twice!
 	if (m_CameraControl && m_CameraControl->IsConnected())
 	{
-		if (m_StartStopLiveCapturingTglBtn->GetValue())
+		if (m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
 		{
-			m_StartStopLiveCapturingTglBtn->SetValue(false);
+			m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
 			wxCommandEvent artStopLive(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 			ProcessEvent(artStopLive);
 		}
@@ -2426,7 +2448,7 @@ auto cMain::InitializeSelectedCamera() -> void
 	//ProcessEvent(art_fwhm_displaying);
 
 #ifndef _DEBUG
-	m_StartStopLiveCapturingTglBtn->SetValue(true);
+	m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(true);
 	wxCommandEvent art_start_live_capturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	ProcessEvent(art_start_live_capturing);
 #endif // !_DEBUG
@@ -2438,7 +2460,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 	// Exposure
 	{
 		auto exposure_str = MainFrameVariables::CreateStringWithPrecision(m_Config->default_exposure_ms, 0);
-		m_CamExposure->SetLabel(exposure_str);
+		m_CameraTabControls->camExposure->SetLabel(exposure_str);
 	}
 
 	auto colormap = m_Config->default_colormap;
@@ -2451,7 +2473,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 
 	auto binning = m_Config->default_binning;
 	{
-		auto binArrStringChoice = m_CamBinning->GetStrings();
+		auto binArrStringChoice = m_CameraTabControls->camBinning->GetStrings();
 		int i{};
 		for (const auto& bin : binArrStringChoice)
 		{
@@ -2459,7 +2481,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 			bin.ToInt(&binInt);
 
 			if (binInt == binning)
-				m_CamBinning->SetSelection(i);
+				m_CameraTabControls->camBinning->SetSelection(i);
 			++i;
 		}
 		wxCommandEvent artBinPress(wxEVT_CHOICE, MainFrameVariables::ID_RIGHT_CAM_BINNING_CHOICE);
@@ -2469,7 +2491,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 	auto sensor_temperature = m_Config->default_cooled_sensor_temperature_degC;
 	{
 		auto sensor_temperature_str = MainFrameVariables::CreateStringWithPrecision(sensor_temperature, 1);
-		m_CamSensorTemperature->SetLabel(sensor_temperature_str);
+		m_CameraTabControls->camSensorTemperature->SetLabel(sensor_temperature_str);
 	}
 }
 
@@ -2501,7 +2523,7 @@ auto cMain::CoolDownTheCamera() -> void
 
 	{
 		double requestedTemperature{};
-		m_CamSensorTemperature->GetValue().ToDouble(&requestedTemperature);
+		m_CameraTabControls->camSensorTemperature->GetValue().ToDouble(&requestedTemperature);
 		m_CameraControl->SetSensorTemperature(requestedTemperature);
 
 		auto currentTemperature = m_CameraControl->GetSensorTemperature();
@@ -2564,9 +2586,9 @@ void cMain::OnExit(wxCloseEvent& evt)
 #endif // !_DEBUG
 	if (m_CameraControl && m_CameraControl->IsConnected())
 	{
-		if (m_StartStopLiveCapturingTglBtn->GetValue())
+		if (m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
 		{
-			m_StartStopLiveCapturingTglBtn->SetValue(!m_StartStopLiveCapturingTglBtn->GetValue());
+			m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
 			wxCommandEvent artStopLiveCapturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 			ProcessEvent(artStopLiveCapturing);
 		}
@@ -2888,15 +2910,15 @@ void cMain::UnCheckAllTools()
 	m_VerticalToolBar->tool_bar->ToggleTool(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, false);
 	m_MenuBar->menu_tools->Check(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, false);
 	m_CamPreview->ActivateCrossHairDisplaying(false);
-	m_CrossHairPosXTxtCtrl->Disable();
-	m_CrossHairPosYTxtCtrl->Disable();
+	m_CameraTabControls->crossHairPosXTxtCtrl->Disable();
+	m_CameraTabControls->crossHairPosYTxtCtrl->Disable();
 	//m_SetCrossHairPosTglBtn->Disable();
 
 	m_VerticalToolBar->tool_bar->ToggleTool(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 	m_MenuBar->menu_tools->Check(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 	//m_CamPreview->SetCrossHairButtonActive(false);
-	//m_CrossHairPosXTxtCtrl->Disable();
-	//m_CrossHairPosYTxtCtrl->Disable();
+	//m_CameraTabControls->crossHairPosXTxtCtrl->Disable();
+	//m_CameraTabControls->crossHairPosYTxtCtrl->Disable();
 
 }
 
@@ -3026,11 +3048,10 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			LOG("StartedThreads.back(): " + m_StartedThreads.back().first);
 
 			{
-				m_StartStopLiveCapturingTglBtn->Disable();
-				m_StartStopMeasurementTglBtn->Disable();
 				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, false);
-				m_CamExposure->Disable();
-				m_SingleShotBtn->Disable();
+				m_StartStopMeasurementTglBtn->Disable();
+
+				m_CameraTabControls->DisableAllControls();
 			}
 
 			while (!m_StartedThreads.back().first.empty())
@@ -3039,12 +3060,11 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			m_StartedThreads.pop_back();
 
 			{
-				m_StartStopLiveCapturingTglBtn->Enable();
 				m_StartStopMeasurementTglBtn->Enable();
 				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, true);
 				m_MenuBar->menu_edit->Check(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, false);
-				m_CamExposure->Enable();
-				m_SingleShotBtn->Enable();
+
+				m_CameraTabControls->EnableAllControls();
 			}
 		}
 
@@ -3060,9 +3080,9 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		return;
 	}
 
-	if (m_StartStopLiveCapturingTglBtn->GetValue())
+	if (m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
 	{
-		m_StartStopLiveCapturingTglBtn->SetValue(false);
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
 		wxCommandEvent untoggleLiveCapturingBtn(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 		ProcessEvent(untoggleLiveCapturingBtn);
 	}
@@ -3131,15 +3151,21 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 	m_StartedThreads.push_back(std::make_pair(currThreadTimeStamp, true));
 
 	int binning{ 1 };
-	m_CamBinning->GetString(m_CamBinning->GetCurrentSelection()).ToInt(&binning);
+	m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 
 	/* Worker and Progress Threads */
 	{
 		auto out_dir = m_OutDirTextCtrl->GetValue();
+		while (!wxDir::Exists(out_dir))
+		{
+			wxCommandEvent artSetOutDir(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_MT_OUT_FLD_BTN);
+			ProcessEvent(artSetOutDir);
+			out_dir = m_OutDirTextCtrl->GetValue();
+		}
 
-		wxString exposure_time_str = m_CamExposure->GetValue().IsEmpty() 
+		wxString exposure_time_str = m_CameraTabControls->camExposure->GetValue().IsEmpty() 
 			? wxString("0") 
-			: m_CamExposure->GetValue();
+			: m_CameraTabControls->camExposure->GetValue();
 		unsigned long exposure_time = abs(wxAtoi(exposure_time_str)) * 1000; // Because user input is in [ms], we need to recalculate the value to [us]
 
 		auto isDrawExecutionFinished = m_CamPreview->GetExecutionFinishedPtr();
@@ -3208,9 +3234,9 @@ void cMain::StartLiveCapturing()
 			return formattedTime;
 		};
 
-	wxString exposure_time_str = m_CamExposure->GetValue().IsEmpty() 
+	wxString exposure_time_str = m_CameraTabControls->camExposure->GetValue().IsEmpty() 
 		? wxString("0") 
-		: m_CamExposure->GetValue();
+		: m_CameraTabControls->camExposure->GetValue();
 	unsigned long exposure_time = abs(wxAtoi(exposure_time_str)) * 1000; // Because user input is in [ms], we need to recalculate the value to [us]
 
 	auto currThreadTimeStamp = timePointToWxString();
@@ -3221,7 +3247,7 @@ void cMain::StartLiveCapturing()
 	auto isDrawExecutionFinished = m_CamPreview->GetExecutionFinishedPtr();
 
 	int binning{ 1 };
-	m_CamBinning->GetString(m_CamBinning->GetCurrentSelection()).ToInt(&binning);
+	m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 
 	LiveCapturing* live_capturing = new LiveCapturing
 	(
@@ -3269,19 +3295,19 @@ auto cMain::OnCrossHairButton(wxCommandEvent& evt) -> void
 		currState
 	);
 
-	m_CrossHairPosXTxtCtrl->Enable(currState);
-	m_CrossHairPosYTxtCtrl->Enable(currState);
+	m_CameraTabControls->crossHairPosXTxtCtrl->Enable(currState);
+	m_CameraTabControls->crossHairPosYTxtCtrl->Enable(currState);
 
 	if (currState)
 	{
 		auto xPos = 1, yPos = 1;
-		m_CrossHairPosXTxtCtrl->GetValue().ToInt(&xPos);
-		m_CrossHairPosYTxtCtrl->GetValue().ToInt(&yPos);
+		m_CameraTabControls->crossHairPosXTxtCtrl->GetValue().ToInt(&xPos);
+		m_CameraTabControls->crossHairPosYTxtCtrl->GetValue().ToInt(&yPos);
 		if (xPos == 1 && yPos == 1)
 		{
 			auto img_size = m_CamPreview->GetImageSize();
-			m_CrossHairPosXTxtCtrl->SetValue(wxString::Format(wxT("%i"), img_size.GetWidth() / 2));
-			m_CrossHairPosYTxtCtrl->SetValue(wxString::Format(wxT("%i"), img_size.GetHeight() / 2));
+			m_CameraTabControls->crossHairPosXTxtCtrl->SetValue(wxString::Format(wxT("%i"), img_size.GetWidth() / 2));
+			m_CameraTabControls->crossHairPosYTxtCtrl->SetValue(wxString::Format(wxT("%i"), img_size.GetHeight() / 2));
 		}
 	}
 }
@@ -3290,7 +3316,7 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 {
 	auto stopCapturing = [&]()
 		{
-			m_StartStopLiveCapturingTglBtn->SetValue(false);
+			m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
 			wxCommandEvent live_capturing_evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 			ProcessEvent(live_capturing_evt);
 		};
@@ -3510,9 +3536,9 @@ auto cMain::CalculateHistogram
 
 auto cMain::CreateMetadataFile() -> void
 {
-	wxString exposure_time_str = m_CamExposure->GetValue().IsEmpty() 
+	wxString exposure_time_str = m_CameraTabControls->camExposure->GetValue().IsEmpty() 
 		? wxString("0") 
-		: m_CamExposure->GetValue();
+		: m_CameraTabControls->camExposure->GetValue();
 	unsigned long exposure_time = abs(wxAtoi(exposure_time_str)) * 1000; // Because user input is in [ms], we need to recalculate the value to [us]
 
 	double det_x_pos{}, det_y_pos{}, det_z_pos{};
@@ -4217,20 +4243,20 @@ void cMain::UpdateAllAxisGlobalPositions()
 void cMain::ExposureValueChanged(wxCommandEvent& evt)
 {
 	int exposure_ms{ 1 };
-	m_CamExposure->GetValue().ToInt(&exposure_ms);
+	m_CameraTabControls->camExposure->GetValue().ToInt(&exposure_ms);
 
 	m_Config->default_exposure_ms = exposure_ms;
 	RewriteInitializationFile();
 
-	if (!m_StartStopLiveCapturingTglBtn->GetValue()) return;
+	if (!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue()) return;
 
 	// Stop acquisition
-	m_StartStopLiveCapturingTglBtn->SetValue(!m_StartStopLiveCapturingTglBtn->GetValue());
+	m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
 	wxCommandEvent artStartStopLiveCapturingPressed(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	ProcessEvent(artStartStopLiveCapturingPressed);
 
 	// Start acquisition
-	m_StartStopLiveCapturingTglBtn->SetValue(!m_StartStopLiveCapturingTglBtn->GetValue());
+	m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
 	ProcessEvent(artStartStopLiveCapturingPressed);
 }
 
@@ -4239,7 +4265,7 @@ auto cMain::OnSensorTemperatureChanged(wxCommandEvent& evt) -> void
 	wxBusyCursor busy;
 
 	double temperature{};
-	m_CamSensorTemperature->GetValue().ToDouble(&temperature);
+	m_CameraTabControls->camSensorTemperature->GetValue().ToDouble(&temperature);
 
 	m_Config->default_cooled_sensor_temperature_degC = temperature;
 	RewriteInitializationFile();
@@ -4251,7 +4277,7 @@ auto cMain::OnSensorTemperatureChanged(wxCommandEvent& evt) -> void
 auto cMain::OnBinningChoice(wxCommandEvent& evt) -> void
 {
 	int binning{ 1 };
-	m_CamBinning->GetString(m_CamBinning->GetCurrentSelection()).ToInt(&binning);
+	m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 
 	m_Config->default_binning = binning;
 	RewriteInitializationFile();
@@ -4297,10 +4323,10 @@ auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 				wxICON_ERROR);
 		};
 
-	if (m_StartStopLiveCapturingTglBtn->GetValue())
+	if (m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
 	{
 		// Stop acquisition
-		m_StartStopLiveCapturingTglBtn->SetValue(!m_StartStopLiveCapturingTglBtn->GetValue());
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
 		wxCommandEvent artStartStopLiveCapturingPressed(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 		ProcessEvent(artStartStopLiveCapturingPressed);
 	}
@@ -5056,17 +5082,17 @@ auto cMain::EnableControlsAfterCapturing() -> void
 	//	m_Optics[i].EnableAllControls();
 	//}
 
-	m_CamExposure->Enable();
+	m_CameraTabControls->camExposure->Enable();
 	if (m_OutDirTextCtrl->GetValue() != "Save directory...")
-		m_SingleShotBtn->Enable();
-	m_StartStopLiveCapturingTglBtn->Enable();
+		m_CameraTabControls->singleShotBtn->Enable();
+	m_CameraTabControls->startStopLiveCapturingTglBtn->Enable();
 
 	m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, true);
 	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, true);
 	if (m_MenuBar->submenu_intensity_profile->IsChecked(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR))
 	{
-		m_CrossHairPosXTxtCtrl->Enable();
-		m_CrossHairPosYTxtCtrl->Enable();
+		m_CameraTabControls->crossHairPosXTxtCtrl->Enable();
+		m_CameraTabControls->crossHairPosYTxtCtrl->Enable();
 	}
 	//m_SetCrossHairPosTglBtn->Enable();
 
@@ -5086,19 +5112,13 @@ auto cMain::EnableControlsAfterCapturing() -> void
 auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 {
 	auto enableWidget = true;
-	m_CamExposure->Enable();
-
-	m_CamSensorTemperature->Enable();
-
-	m_CamBinning->Enable();
-
-	m_ImageColormapComboBox->stylish_combo_box->Enable();
 
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, enableWidget);
-	m_StartStopLiveCapturingTglBtn->Enable();
-
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, enableWidget);
-	m_SingleShotBtn->Enable();
+
+	m_CameraTabControls->EnableAllControls();
+
+	m_ImageColormapComboBox->stylish_combo_box->Enable();
 
 	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, enableWidget);
 
@@ -5108,6 +5128,8 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, enableWidget);
 	m_VerticalToolBar->tool_bar->Enable();
 
+	m_OutDirBtn->Enable();
+	
 	if (!m_VerticalToolBar->tool_bar->GetToolState(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING))
 		m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 }
@@ -5130,22 +5152,12 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 		m_Optics[i].DisableAllControls();
 	}
 
-	m_CamExposure->Disable();
-
-	m_CamBinning->Disable();
-	m_CamSensorTemperature->Disable();
 	m_ImageColormapComboBox->stylish_combo_box->Disable();
-
-	m_SingleShotBtn->Disable();
-	m_StartStopLiveCapturingTglBtn->Disable();
-
-	//m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, false);
-	m_CrossHairPosXTxtCtrl->Disable();
-	m_CrossHairPosYTxtCtrl->Disable();
-	//m_SetCrossHairPosTglBtn->Disable();
-
+	m_CameraTabControls->DisableAllControls();
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, false);
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
+
+
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE, false);
 	//m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, false);
 	//m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
@@ -5162,11 +5174,11 @@ void cMain::OnStartStopLiveCapturingMenu(wxCommandEvent& evt)
 {
 	if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
 	{
-		m_StartStopLiveCapturingTglBtn->SetValue(true);
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(true);
 	}
 	else
 	{
-		m_StartStopLiveCapturingTglBtn->SetValue(false);
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
 	}
 	wxCommandEvent art_start_live_pressed(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	ProcessEvent(art_start_live_pressed);
@@ -5174,27 +5186,25 @@ void cMain::OnStartStopLiveCapturingMenu(wxCommandEvent& evt)
 
 void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 {
-	if (m_StartStopLiveCapturingTglBtn->GetValue())
+	if (m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
 	{
 		if (!m_CameraControl || !m_CameraControl->IsConnected())
 		{
-			m_StartStopLiveCapturingTglBtn->SetValue(false);
-			m_StartStopLiveCapturingTglBtn->SetLabel(wxT("Start Live (L)"));
+			m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
+			m_CameraTabControls->startStopLiveCapturingTglBtn->SetLabel(wxT("Start Live (L)"));
 			if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
 				m_MenuBar->menu_edit->Check(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
 			return;
 		}
 
-		m_CamSensorTemperature->Disable();
-		m_CamBinning->Disable();
-		m_CamExposure->Disable();
+		m_CameraTabControls->DisableAllControls(true);
 		m_ImageColormapComboBox->stylish_combo_box->Disable();
-		m_SingleShotBtn->Disable();
+		
 		m_StartStopMeasurementTglBtn->Disable();
 
 		StartLiveCapturing();
 
-		m_StartStopLiveCapturingTglBtn->SetLabel(wxT("Stop Live (L)"));
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetLabel(wxT("Stop Live (L)"));
 		if (!m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
 			m_MenuBar->menu_edit->Check(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, true);
 	}
@@ -5206,12 +5216,12 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 			m_StartedThreads.back().second = false;
 			LOG("StartedThreads.back(): " + m_StartedThreads.back().first);
 
+			// Disabling controls
 			{
-				m_StartStopLiveCapturingTglBtn->Disable();
+				m_CameraTabControls->DisableAllControls();
+			
 				m_StartStopMeasurementTglBtn->Disable();
 				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, false);
-				m_CamExposure->Disable();
-				m_SingleShotBtn->Disable();
 			}
 
 			while (!m_StartedThreads.back().first.empty())
@@ -5219,23 +5229,21 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 
 			m_StartedThreads.pop_back();
 
+			// Enabling controls
 			{
-				m_StartStopLiveCapturingTglBtn->Enable();
+				m_CameraTabControls->EnableAllControls();
+				
 				m_StartStopMeasurementTglBtn->Enable();
 				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, true);
-				m_CamExposure->Enable();
-				m_SingleShotBtn->Enable();
 			}
 		}
 
-		m_CamSensorTemperature->Enable();
-		m_CamBinning->Enable();
-		m_CamExposure->Enable();
+		m_CameraTabControls->EnableAllControls();
 		m_ImageColormapComboBox->stylish_combo_box->Enable();
-		m_SingleShotBtn->Enable();
+
 		m_StartStopMeasurementTglBtn->Enable();
 
-		m_StartStopLiveCapturingTglBtn->SetLabel(wxT("Start Live (L)"));
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetLabel(wxT("Start Live (L)"));
 		if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
 			m_MenuBar->menu_edit->Check(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
 	}
@@ -5243,14 +5251,14 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 
 void cMain::OnXPosCrossHairTextCtrl(wxCommandEvent& evt)
 {
-	wxString str_x_pos = m_CrossHairPosXTxtCtrl->IsEmpty() ? wxString("1") : m_CrossHairPosXTxtCtrl->GetValue();
+	wxString str_x_pos = m_CameraTabControls->crossHairPosXTxtCtrl->IsEmpty() ? wxString("1") : m_CameraTabControls->crossHairPosXTxtCtrl->GetValue();
 	int x_pos = wxAtoi(str_x_pos);
 	m_CamPreview->SetXCrossHairPosFromParentWindow(x_pos);
 }
 
 void cMain::OnYPosCrossHairTextCtrl(wxCommandEvent& evt)
 {
-	wxString str_y_pos = m_CrossHairPosYTxtCtrl->IsEmpty() ? wxString("1") : m_CrossHairPosYTxtCtrl->GetValue();
+	wxString str_y_pos = m_CameraTabControls->crossHairPosYTxtCtrl->IsEmpty() ? wxString("1") : m_CameraTabControls->crossHairPosYTxtCtrl->GetValue();
 	int y_pos = wxAtoi(str_y_pos);
 	m_CamPreview->SetYCrossHairPosFromParentWindow(y_pos);
 }

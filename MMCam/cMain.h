@@ -227,6 +227,47 @@ namespace MainFrameVariables
 		};
 	};
 
+	struct CameraTabControls
+	{
+		std::unique_ptr<wxTextCtrl> camSensorTemperature{}, camExposure{};
+		std::unique_ptr<wxChoice> camBinning{};
+		std::unique_ptr<wxButton> singleShotBtn{};
+		std::unique_ptr<wxToggleButton> startStopLiveCapturingTglBtn{};
+		std::unique_ptr<wxTextCtrl> crossHairPosXTxtCtrl{}, crossHairPosYTxtCtrl{};
+
+		auto EnableAllControls() -> void
+		{
+			camSensorTemperature->Enable();
+			camExposure->Enable();
+
+			camBinning->Enable();
+
+			singleShotBtn->Enable();
+
+			startStopLiveCapturingTglBtn->Enable();
+
+			crossHairPosXTxtCtrl->Enable();
+			crossHairPosYTxtCtrl->Enable();
+		};
+
+		auto DisableAllControls(const bool liveCapturing = false) -> void
+		{
+			camSensorTemperature->Disable();
+			camExposure->Disable();
+
+			camBinning->Disable();
+
+			singleShotBtn->Disable();
+			
+			if (!liveCapturing)
+				startStopLiveCapturingTglBtn->Disable();
+			
+			crossHairPosXTxtCtrl->Disable();
+			crossHairPosYTxtCtrl->Disable();
+		}
+
+	};
+
 	struct StepperControl
 	{
 		wxTextCtrl* absolute_text_ctrl{}, *relative_text_ctrl{};
@@ -1346,14 +1387,9 @@ private:
 
 	/* Camera */
 	std::unique_ptr<CameraControl> m_CameraControl{};
+	std::unique_ptr<MainFrameVariables::CameraTabControls> m_CameraTabControls{};
 	//std::unique_ptr<XimeaControl> m_XimeaControl{};
-	std::unique_ptr<wxTextCtrl> m_CamSensorTemperature{}, m_CamExposure{};
-	std::unique_ptr<wxChoice> m_CamBinning{};
-	//std::unique_ptr<wxStaticText> m_SelectedCameraStaticTXT{};
-	std::unique_ptr<wxButton> m_SingleShotBtn{};
-	std::unique_ptr<wxToggleButton> m_StartStopLiveCapturingTglBtn{};
-	std::unique_ptr<wxTextCtrl> m_CrossHairPosXTxtCtrl{}, m_CrossHairPosYTxtCtrl{};
-	//std::unique_ptr<wxToggleButton> m_SetCrossHairPosTglBtn{};
+
 	wxSize m_OutputImageSize{};
 
 	/* Measurement */
