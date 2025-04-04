@@ -412,6 +412,16 @@ private:
 	void WriteJson(const std::string& filename, const std::vector<SettingsVariables::Stage>& stages) 
 	{
 		using json = nlohmann::json;
+
+		namespace fs = std::filesystem;
+
+		// Ensure the parent directory exists
+		fs::path filePath(filename);
+		fs::path dirPath = filePath.parent_path();
+
+		if (!dirPath.empty() && !fs::exists(dirPath)) 
+			fs::create_directories(dirPath);  // Create the directory if it doesn't exist
+
 		json j;
 
 		// Serialize stages to JSON
@@ -429,7 +439,7 @@ private:
 
 private:
 	const wxString work_stations_path = "src\\";
-	const std::string m_StagesPositionsFilename = "StagesPositions.json";
+	const std::string m_StagesPositionsFilename = "temp\\StagesPositions.json";
 
 	double m_PixelSizeUM{};
 

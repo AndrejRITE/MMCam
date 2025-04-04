@@ -515,6 +515,9 @@ public:
 	auto LiveCapturingFinishedCapturingAndDrawing(bool is_finished) -> void;
 	auto WorkerThreadFinished(bool is_finished) -> void;
 	auto UpdateStagePositions() -> void;
+
+	auto GoStageToAbsPos(SettingsVariables::MotorsNames motorName, float position) -> float;
+
 private:
 	void CreateMainFrame();
 	void InitComponents();
@@ -1374,7 +1377,7 @@ private:
 	std::unique_ptr<MainFrameVariables::InitializationFileStructure> m_Config{};
 
 	/* Settings Menu */
-	std::shared_ptr<cSettings> m_Settings{};
+	std::unique_ptr<cSettings> m_Settings{};
 
 	/* Help */
 	std::unique_ptr<wxHtmlHelpController> m_HelpController{};
@@ -1509,7 +1512,6 @@ public:
 		wxString* uniqueThreadKey,
 		bool* aliveOrDeadThread,
 		bool* isDrawExecutionFinished,
-		cSettings* settings, 
 		const wxString& path, 
 		MainFrameVariables::AxisMeasurement* first_axis, 
 		MainFrameVariables::AxisMeasurement* second_axis,
@@ -1618,7 +1620,7 @@ private:
 	};
 
 private:
-	cSettings* m_Settings{};
+	//cSettings* m_Settings{};
 	wxString m_ImagePath{};
 	MainFrameVariables::AxisMeasurement* m_FirstAxis{}, * m_SecondAxis{};
 	int m_DecimalDigits{ 3 };

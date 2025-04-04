@@ -97,7 +97,6 @@ cMain::cMain(const wxString& title_)
 #ifndef _DEBUG
 	wxBusyCursor busy;
 #endif // !_DEBUG
-	static py::scoped_interpreter guard{};  // Start Python interpreter
 
 	wxArtProvider::Push(new wxMaterialDesignArtProvider);
 	CreateMainFrame();
@@ -175,7 +174,7 @@ void cMain::InitComponents()
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_UNAWARE);
 	{
 		/* Settings Frame */
-		m_Settings = std::make_shared<cSettings>(this);
+		m_Settings = std::make_unique<cSettings>(this);
 		m_Settings->SetIcon(logo_xpm);
 		/* Measurement */
 		m_FirstStage = std::make_unique<MainFrameVariables::MeasurementStage>();
@@ -1319,6 +1318,8 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 					temp_val
 				);
 			m_CameraTabControls->camSensorTemperature->Disable();
+			m_CameraTabControls->camSensorTemperature->SetToolTip("Set desired temperature in [degC] and press Enter");
+
 			gridSizer->Add(m_CameraTabControls->camSensorTemperature.get(), 0, wxALIGN_CENTER);
 		}
 
@@ -1355,6 +1356,8 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 					exposure_val
 				);
 			m_CameraTabControls->camExposure->Disable();
+			m_CameraTabControls->camExposure->SetToolTip("Set desired exposure in [ms] and press Enter");
+
 			gridSizer->Add(m_CameraTabControls->camExposure.get(), 0, wxALIGN_CENTER);
 		}
 
@@ -1438,6 +1441,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			wxDefaultPosition, 
 			wxDefaultSize);
 		m_CameraTabControls->singleShotBtn->Disable();
+		m_CameraTabControls->singleShotBtn->SetToolTip("Capture one image and save it on disk");
 
 		hor_sizer->Add(m_CameraTabControls->singleShotBtn.get(), 0, wxEXPAND);
 		hor_sizer->AddStretchSpacer();
@@ -1449,6 +1453,8 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 				wxT("Start Live (L)")
 			);
 		m_CameraTabControls->startStopLiveCapturingTglBtn->Disable();
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetToolTip("Start/Stop live sequence of capturing images");
+
 		hor_sizer->Add(m_CameraTabControls->startStopLiveCapturingTglBtn.get(), 0, wxEXPAND | wxTOP, 5);
 
 		sizerPage->Add(hor_sizer, 0, wxEXPAND | wxALL, 5);
@@ -1808,7 +1814,10 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 				MainFrameVariables::ID_RIGHT_MY_GENERATE_REPORT_BTN,
 				wxT("Generate")					
 			);
+		m_GenerateReportBtn->SetToolTip("Generate a verbose report");
+		
 		report_sizer->Add(m_GenerateReportBtn.get());
+
 		horizontal_sizer->Add(report_sizer);
 
 		/* Start/Stop Capturing */
@@ -1819,6 +1828,8 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 				MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT,
 				wxT("Start Measurement (M)")					
 			);
+		m_StartStopMeasurementTglBtn->SetToolTip("Repeatedly move the stage, capture, and save images to disk.");
+
 		horizontal_sizer->AddStretchSpacer();
 		horizontal_sizer->Add(capturing_sizer);
 		capturing_sizer->Add(m_StartStopMeasurementTglBtn.get());
@@ -2713,6 +2724,11 @@ auto cMain::UpdateStagePositions() -> void
 	}
 }
 
+auto cMain::GoStageToAbsPos(SettingsVariables::MotorsNames motorName, float position) -> float
+{
+	return m_Settings->GoToAbsPos(motorName, position);
+}
+
 void cMain::OnExit(wxCommandEvent& evt)
 {
 	wxCloseEvent artificialExit(wxEVT_CLOSE_WINDOW);
@@ -2996,44 +3012,62 @@ void cMain::UnCheckAllTools()
 
 void cMain::OnFirstStageChoice(wxCommandEvent& evt)
 {
-	auto first_stage_selection = m_FirstStage->stage->GetCurrentSelection() - 1;
-	double start_stage_value{}, step_stage_value{}, finish_stage_value{};
-	switch (first_stage_selection)
+	auto motorType = m_FirstStage->stage->GetCurrentSelection();
+	if (!motorType) return;
+	
+	--motorType;
+	
+	if (!m_Settings->MotorHasSerialNumber(static_cast<SettingsVariables::MotorsNames>(motorType)))
 	{
-	/* Detector */
-	case 0:
-		if (!m_Detector[0].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
-		break;
-	case 1:
-		if (!m_Detector[1].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
-		break;
-	case 2:
-		if (!m_Detector[2].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
-		break;
-	/* Optics */
-	case 3:
-		if (!m_Optics[0].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
-		break;
-	case 4:
-		if (!m_Optics[1].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
-		break;
-	case 5:
-		if (!m_Optics[2].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
-		break;
-	default:
-		break;
+		m_FirstStage->stage->SetSelection(0);
+		return;
 	}
+
+	double startStageValue{}, stepStageValue{}, finishStageValue{};
+
+	auto& controlArray = (motorType <= SettingsVariables::DETECTOR_Z) ? m_Detector : m_Optics;
+	if (!controlArray[motorType % 3].absolute_text_ctrl->GetValue().ToDouble(&startStageValue)) return;
+
+	//switch (motorType)
+	//{
+	///* Detector */
+	//case 0:
+	//	if (!m_Detector[0].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
+	//	break;
+	//case 1:
+	//	if (!m_Detector[1].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
+	//	break;
+	//case 2:
+	//	if (!m_Detector[2].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
+	//	break;
+	///* Optics */
+	//case 3:
+	//	if (!m_Optics[0].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
+	//	break;
+	//case 4:
+	//	if (!m_Optics[1].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
+	//	break;
+	//case 5:
+	//	if (!m_Optics[2].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
+	//	break;
+	//default:
+	//	break;
+	//}
+
 	/* Set Start To Current position of motor */
 	m_FirstStage->start->SetValue
 	(
-		MainFrameVariables::CreateStringWithPrecision(start_stage_value, m_DecimalDigits)
+		MainFrameVariables::CreateStringWithPrecision(startStageValue, m_DecimalDigits)
 	);
+
+	if (!m_FirstStage->step->GetValue().ToDouble(&stepStageValue)) return;
+
 	/* Set Finish To Current position of motor + Step */
-	if (!m_FirstStage->step->GetValue().ToDouble(&step_stage_value)) return;
-	finish_stage_value = start_stage_value + 1.0;
+	finishStageValue = stepStageValue + 1.0;
+
 	m_FirstStage->finish->SetValue
 	(
-		MainFrameVariables::CreateStringWithPrecision(finish_stage_value, m_DecimalDigits)
+		MainFrameVariables::CreateStringWithPrecision(finishStageValue, m_DecimalDigits)
 	);
 }
 
@@ -3266,7 +3300,6 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			&m_StartedThreads.back().first,
 			&m_StartedThreads.back().second,
 			isDrawExecutionFinished,
-			m_Settings.get(),
 			out_dir,
 			first_axis.release(), 
 			second_axis.release(),
@@ -5632,7 +5665,6 @@ WorkerThread::WorkerThread
 	wxString* uniqueThreadKey,
 	bool* aliveOrDeadThread,
 	bool* isDrawExecutionFinished,
-	cSettings* settings, 
 	const wxString& path, 
 	MainFrameVariables::AxisMeasurement* first_axis, 
 	MainFrameVariables::AxisMeasurement* second_axis,
@@ -5649,7 +5681,6 @@ WorkerThread::WorkerThread
 		aliveOrDeadThread, 
 		isDrawExecutionFinished
 	),
-	m_Settings(settings), 
 	m_ImagePath(path), 
 	m_FirstAxis(first_axis), 
 	m_SecondAxis(second_axis),
@@ -5660,7 +5691,6 @@ WorkerThread::WorkerThread
 WorkerThread::~WorkerThread()
 {
 	m_MainFrame = nullptr;
-	m_Settings = nullptr;
 	m_CameraControl = nullptr;
 	delete m_FirstAxis;
 	m_FirstAxis = nullptr;
@@ -5695,7 +5725,7 @@ wxThread::ExitCode WorkerThread::Entry()
 
 
 	m_MainFrame->WorkerThreadFinished(false);
-	m_Settings->SetCurrentProgress(0, m_FirstAxis->step_number);
+	//m_Settings->SetCurrentProgress(0, m_FirstAxis->step_number);
 
 	auto now = std::chrono::system_clock::now();
 	auto cur_time = std::chrono::system_clock::to_time_t(now);
@@ -5927,31 +5957,38 @@ wxThread::ExitCode WorkerThread::Entry()
 auto WorkerThread::MoveFirstStage(const float position) -> float
 {
 	float firstAxisPos{};
-	switch (m_FirstAxis->axis_number)
-	{
-		/* Detector */
-	case 0:
-		firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::DETECTOR_X, position);
-		break;
-	case 1:
-		firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::DETECTOR_Y, position);
-		break;
-	case 2:
-		firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::DETECTOR_Z, position);
-		break;
-		/* Optics */
-	case 3:
-		firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::OPTICS_X, position);
-		break;
-	case 4:
-		firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::OPTICS_Y, position);
-		break;
-	case 5:
-		firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::OPTICS_Z, position);
-		break;
-	default:
-		break;
-	}
+
+	firstAxisPos = m_MainFrame->GoStageToAbsPos
+	(
+		static_cast<SettingsVariables::MotorsNames>(m_FirstAxis->axis_number), 
+		position
+	);
+
+	//switch (m_FirstAxis->axis_number)
+	//{
+	//	/* Detector */
+	//case 0:
+	//	firstAxisPos = m_MainFrame->GoStageToAbsPos(SettingsVariables::DETECTOR_X, position);
+	//	break;
+	//case 1:
+	//	firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::DETECTOR_Y, position);
+	//	break;
+	//case 2:
+	//	firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::DETECTOR_Z, position);
+	//	break;
+	//	/* Optics */
+	//case 3:
+	//	firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::OPTICS_X, position);
+	//	break;
+	//case 4:
+	//	firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::OPTICS_Y, position);
+	//	break;
+	//case 5:
+	//	firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::OPTICS_Z, position);
+	//	break;
+	//default:
+	//	break;
+	//}
 
 	return firstAxisPos;
 }

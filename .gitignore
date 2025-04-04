@@ -23,6 +23,7 @@ dbg_fld/
 *.mat
 *.json
 *.cached
+*.temp
 ReportTemplate.*
 !ReportTemplate.tex
 

@@ -13,11 +13,12 @@
 #include <filesystem>
 #include <iostream>
 #include <cstdio>
+#include <cstdlib>
 #include <stdexcept>
+#include <fstream>
 
-#include <Python.h>
-#include <pybind11/embed.h> 
-#include <cstdlib> 
+//#include <Python.h>
+//#include <pybind11/embed.h> 
 #include "SerialPortCommunication.h"
 
 #include "IMotor.h"
@@ -36,7 +37,7 @@ namespace XeryonMotorVariables
 	};
 }
 
-namespace py = pybind11;
+//namespace py = pybind11;
 
 class XeryonMotor final : public IMotor
 {
@@ -113,6 +114,11 @@ private:
 	std::string m_MotorCOMPort{};
 	std::string m_MotorSerialNumber{};
 	std::unique_ptr<MotorVariables::Settings> m_MotorSettings{};
+	
+	std::string m_AbsolutePositionScriptName{ "xeryon_setAbsolutePosition.py" };
+	std::string m_CenterScriptName{ "xeryon_goCenter.py" };
+
+	std::string m_AxisPositionTempFileName{ "temp\\axisPosition.temp" };
 
 	int m_MaxAttemptsToCallPythonFunction{ 5 };
 	const long long m_WaitAfterMovementMilliseconds{ 500 };

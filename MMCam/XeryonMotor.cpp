@@ -2,6 +2,7 @@
 
 XeryonMotor::XeryonMotor()
 {
+	//static py::scoped_interpreter guard{};  // Start Python interpreter
 	m_MotorSettings = std::make_unique<MotorVariables::Settings>();
 }
 
@@ -13,20 +14,31 @@ bool XeryonMotor::GoCenter()
 	{
 		try
 		{
-			py::gil_scoped_acquire gil;  // 🔹 Acquire GIL in the new thread
-			py::module importlib = py::module::import("importlib");
-			py::module script_goCenter = importlib.attr("reload")(py::module::import("xeryon_goCenter"));
+			std::string command = "py.exe " + m_CenterScriptName + " " + m_MotorCOMPort + " " + m_AxisPositionTempFileName;
+			//system("python my_script.py COM3 10.5");
+			system(command.c_str());
 
-			auto currentPosition = script_goCenter.attr("move_to_position")
-				(m_MotorCOMPort.c_str()).cast<double>();
+			double currentPosition{};
+			std::ifstream file(m_AxisPositionTempFileName);  // Open the file
+			file >> currentPosition;  // Read the double value
+			file.close();
 
-			m_MotorSettings->motorPos = currentPosition;
+			SetCurrentMotorPosition(currentPosition);
+
+			//py::gil_scoped_acquire gil;  // 🔹 Acquire GIL in the new thread
+			//py::module importlib = py::module::import("importlib");
+			//py::module script_goCenter = importlib.attr("reload")(py::module::import("xeryon_goCenter"));
+
+			//auto currentPosition = script_goCenter.attr("move_to_position")
+			//	(m_MotorCOMPort.c_str()).cast<double>();
+
+			//m_MotorSettings->motorPos = currentPosition;
 			return true;  // Success
 		}
-		catch (const py::error_already_set& e)
+		catch (...)
 		{
-			auto error = std::string("Python Exception on attempt ") + std::to_string(attempt + 1) 
-				+ ": " + e.what();
+			//auto error = std::string("Python Exception on attempt ") + std::to_string(attempt + 1) 
+				//+ ": " + e.what();
 			std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));  // Wait before retrying
 			attempt++;
 		}
@@ -39,25 +51,35 @@ bool XeryonMotor::GoToAbsolutePosition(float stagePosition)
 {
 	auto attempt = 0;
 
-	static py::module script_setAbsolutePosition = py::module::import("xeryon_setAbsolutePosition");
+	//static py::module script_setAbsolutePosition = py::module::import("xeryon_setAbsolutePosition");
 
 	while (attempt < m_MaxAttemptsToCallPythonFunction)
 	{
 		try
 		{
-			// Ensure GIL is acquired only when needed
-			py::gil_scoped_acquire gil;
+			std::string command = "start /B py.exe " + m_AbsolutePositionScriptName + " " + m_MotorCOMPort + " " + std::to_string(stagePosition) + " " + m_AxisPositionTempFileName;
+			//system("python my_script.py COM3 10.5");
+			system(command.c_str());
 
-			auto currentPosition = script_setAbsolutePosition.attr("move_to_position")
-				(m_MotorCOMPort.c_str(), (double)stagePosition).cast<double>();
+			double currentPosition{};
+			std::ifstream file(m_AxisPositionTempFileName);  // Open the file
+			file >> currentPosition;  // Read the double value
+			file.close();
 
 			SetCurrentMotorPosition(currentPosition);
+			// Ensure GIL is acquired only when needed
+			//py::gil_scoped_acquire gil;
+
+			//auto currentPosition = script_setAbsolutePosition.attr("move_to_position")
+			//	(m_MotorCOMPort.c_str(), (double)stagePosition).cast<double>();
+
+			//SetCurrentMotorPosition(currentPosition);
 			return true;  // Success
 		}
-		catch (const py::error_already_set& e)
+		catch (...)
 		{
-			auto error = std::string("Python Exception on attempt ") + std::to_string(attempt + 1) 
-				+ ": " + e.what();
+			//auto error = std::string("Python Exception on attempt ") + std::to_string(attempt + 1) 
+				//+ ": " + e.what();
 			std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));  // Wait before retrying
 			attempt++;
 		}
