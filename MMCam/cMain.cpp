@@ -499,7 +499,9 @@ void cMain::InitDefaultStateWidgets()
 	m_CamPreview->SetValueDisplayingActive(true);
 	m_IsValueDisplayingChecked = true;
 
-	wxString defaultAbsoluteValueStr{ MainFrameVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) }, defaultRelativeValueStr{ MainFrameVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) };
+	wxString 
+		defaultAbsoluteValueStr{ MainFrameVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) }, 
+		defaultRelativeValueStr{ MainFrameVariables::CreateStringWithPrecision(m_Config->default_motors_step_first_tab, m_DecimalDigits) };
 	//float default_absolute_value{ 0.0f }, default_relative_value{ 1.0f };
 	/* Disabling Detector Widgets */
 	{
@@ -522,8 +524,9 @@ void cMain::InitDefaultStateWidgets()
 			//m_Z_Detector->DisableAllControls();
 		}
 	}
-	//default_relative_value = 0.1f;
-	defaultRelativeValueStr = MainFrameVariables::CreateStringWithPrecision(0.1, m_DecimalDigits);
+	
+	defaultRelativeValueStr = MainFrameVariables::CreateStringWithPrecision(m_Config->default_motors_step_second_tab, m_DecimalDigits);
+	
 	/* Disabling Optics Widgets */
 	{
 		/* X */
@@ -1943,7 +1946,9 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 		detectorImgIndex
 	);
 
+#ifndef _DEBUG
 	m_DetectorControlsNotebook->Hide();
+#endif // !_DEBUG
 
 	m_OpticsControlsNotebook = new wxNotebook(right_side_panel, wxID_ANY);
 
@@ -1968,7 +1973,9 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 		opticsImgIndexSupport
 	);
 
+#ifndef _DEBUG
 	m_OpticsControlsNotebook->Hide();
+#endif // !_DEBUG
 
 	right_side_panel_sizer->Add(m_DetectorControlsNotebook, 0, wxEXPAND | wxALL, 5);
 	right_side_panel_sizer->Add(m_OpticsControlsNotebook, 0, wxEXPAND | wxALL, 5);
@@ -2525,23 +2532,31 @@ auto cMain::InitializeSelectedCamera() -> void
 
 auto cMain::UpdateDefaultWidgetParameters() -> void
 {
-	//auto exposure = m_Settings->GetDefaultExposure();
+	// Motor Tabs
+	{
+		m_DetectorControlsNotebook->SetPageText(0, m_Config->default_motors_name_first_tab);
+		m_OpticsControlsNotebook->SetPageText(0, m_Config->default_motors_name_second_tab);
+	}
+
 	// Exposure
 	{
 		auto exposure_str = MainFrameVariables::CreateStringWithPrecision(m_Config->default_exposure_ms, 0);
 		m_CameraTabControls->camExposure->SetLabel(exposure_str);
 	}
 
-	auto colormap = m_Config->default_colormap;
+	// Colormap
 	{
+		auto colormap = m_Config->default_colormap;
+
 		if (colormap >= CameraPreviewVariables::Colormaps::GRAYSCALE_COLORMAP && colormap <= CameraPreviewVariables::Colormaps::COPPER_COLORMAP)
 			m_ImageColormapComboBox->stylish_combo_box->SetSelection(colormap);
 		wxCommandEvent artColormapPress(wxEVT_COMBOBOX, MainFrameVariables::ID_RIGHT_CAM_COLORMAP_COMBOBOX);
 		ProcessEvent(artColormapPress);
 	}
 
-	auto binning = m_Config->default_binning;
+	// Binning
 	{
+		auto binning = m_Config->default_binning;
 		auto binArrStringChoice = m_CameraTabControls->camBinning->GetStrings();
 		int i{};
 		for (const auto& bin : binArrStringChoice)
@@ -2557,8 +2572,9 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 		ProcessEvent(artBinPress);
 	}
 
-	auto sensor_temperature = m_Config->default_cooled_sensor_temperature_degC;
+	// Sensor Temperature
 	{
+		auto sensor_temperature = m_Config->default_cooled_sensor_temperature_degC;
 		auto sensor_temperature_str = MainFrameVariables::CreateStringWithPrecision(sensor_temperature, 1);
 		m_CameraTabControls->camSensorTemperature->SetLabel(sensor_temperature_str);
 	}
@@ -2762,8 +2778,11 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 		}
 		else m_Detector[2].DisableAllControls();
 
+#ifndef _DEBUG
 		if (!isAnyDetectorActive) m_DetectorControlsNotebook->Hide();
 		else m_DetectorControlsNotebook->Show();
+#endif // !_DEBUG
+
 	}
 	// Optics
 	{
@@ -2791,8 +2810,11 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 		}
 		else m_Optics[2].DisableAllControls();
 
+#ifndef _DEBUG
 		if (!isAnyOpticsActive) m_OpticsControlsNotebook->Hide();
 		else m_OpticsControlsNotebook->Show();
+#endif // !_DEBUG
+
 	}
 
 #ifndef _DEBUG

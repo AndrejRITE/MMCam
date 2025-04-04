@@ -150,15 +150,21 @@ namespace MainFrameVariables
 		double default_sensor_temperature_degC = 0.0;
 		double default_cooled_sensor_temperature_degC = 0.0;
 
+		double default_motors_step_first_tab = 1.0;
+		double default_motors_step_second_tab = 1.0;
+
 		int circle_mesh_step_px = 0;
 		int grid_mesh_step_px = 0;
 		int default_colormap = 0;
 		int default_binning = 0;
 		int default_exposure_ms = 0;
 		
-		std::string upload_report_folder;
-		std::string work_station;
-		std::vector<std::string> xrayImagesCaptions;
+		std::string default_motors_name_first_tab {};
+		std::string default_motors_name_second_tab {};
+
+		std::string upload_report_folder {};
+		std::string work_station {};
+		std::vector<std::string> xrayImagesCaptions {};
 
 		// Serialize/Deserialize using NLOHMANN_DEFINE_TYPE_INTRUSIVE
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE
@@ -168,11 +174,19 @@ namespace MainFrameVariables
 			crop_size_circle_mm, 
 			default_sensor_temperature_degC,
 			default_cooled_sensor_temperature_degC,
+
+			default_motors_step_first_tab,
+			default_motors_step_second_tab,
+
 			circle_mesh_step_px,
 			grid_mesh_step_px,
 			default_colormap,
 			default_binning,
 			default_exposure_ms,
+
+			default_motors_name_first_tab,
+			default_motors_name_second_tab,
+
 			upload_report_folder,
 			work_station, 
 			xrayImagesCaptions
