@@ -157,7 +157,7 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 	main_panel_sizer->Add(work_station_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
 
 	/* Motors */
-	auto motor_txt_ctrl_size = wxSize(80, 24);
+	auto motor_txt_ctrl_size = wxSize(150, 24);
 	wxSizer* const motors_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, main_panel, "&Motors");
 	{
 		int top_offset_static_text{ 5 };
