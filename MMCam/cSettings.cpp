@@ -116,7 +116,7 @@ void cSettings::CreateSettings()
 	
 	CreateMotorsSelection(ms_sizer);
 
-	CreateOtherSettings(ms_sizer);
+	//CreateOtherSettings(ms_sizer);
 
 	main_sizer->Add(ms_sizer, 1, wxEXPAND);
 
@@ -161,7 +161,8 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 	wxSizer* const motors_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, main_panel, "&Motors");
 	{
 		int top_offset_static_text{ 5 };
-		wxSizer* const detector_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Detector");
+		wxSizer* const detector_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, main_panel, "&Detector");
+		
 		{
 			/* X */
 			wxSizer* const det_x_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&X");
@@ -199,9 +200,9 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 					wxALIGN_CENTRE_HORIZONTAL);
 				range_static_box_sizer->Add(m_Motors->m_Detector[0].steps_per_mm, 1, wxEXPAND | wxTOP, top_offset_static_text);
 
-				det_x_static_box_sizer->Add(range_static_box_sizer, 1, wxEXPAND);
+				det_x_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 			}
-			detector_static_box_sizer->Add(det_x_static_box_sizer, 0, wxEXPAND);
+			detector_static_box_sizer->Add(det_x_static_box_sizer, 0, wxCENTRE);
 
 			detector_static_box_sizer->AddSpacer(2);
 			detector_static_box_sizer->AddStretchSpacer();
@@ -243,9 +244,9 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 					wxALIGN_CENTRE_HORIZONTAL);
 				range_static_box_sizer->Add(m_Motors->m_Detector[1].steps_per_mm, 1, wxEXPAND | wxTOP, top_offset_static_text);
 
-				det_y_static_box_sizer->Add(range_static_box_sizer, 1, wxEXPAND);
+				det_y_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 			}
-			detector_static_box_sizer->Add(det_y_static_box_sizer, 0, wxEXPAND);
+			detector_static_box_sizer->Add(det_y_static_box_sizer, 0, wxCENTRE);
 			detector_static_box_sizer->AddSpacer(2);
 			detector_static_box_sizer->AddStretchSpacer();
 
@@ -286,13 +287,13 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 					wxALIGN_CENTRE_HORIZONTAL);
 				range_static_box_sizer->Add(m_Motors->m_Detector[2].steps_per_mm, 1, wxEXPAND | wxTOP, top_offset_static_text);
 
-				det_z_static_box_sizer->Add(range_static_box_sizer, 1, wxEXPAND);
+				det_z_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 			}
-			detector_static_box_sizer->Add(det_z_static_box_sizer, 0, wxEXPAND);
+			detector_static_box_sizer->Add(det_z_static_box_sizer, 0, wxCENTRE);
 		}
-		motors_static_box_sizer->Add(detector_static_box_sizer, 0, wxEXPAND);
+		motors_static_box_sizer->Add(detector_static_box_sizer, 0, wxCENTRE);
 
-		wxSizer* const optics_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Optics");
+		wxSizer* const optics_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, main_panel, "&Optics");
 		{
 			/* X */
 			wxSizer* const opt_x_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&X");
@@ -331,9 +332,9 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 					wxALIGN_CENTRE_HORIZONTAL);
 				range_static_box_sizer->Add(m_Motors->m_Optics[0].steps_per_mm, 1, wxEXPAND | wxTOP, top_offset_static_text);
 
-				opt_x_static_box_sizer->Add(range_static_box_sizer, 1, wxEXPAND);
+				opt_x_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 			}
-			optics_static_box_sizer->Add(opt_x_static_box_sizer, 0, wxEXPAND);
+			optics_static_box_sizer->Add(opt_x_static_box_sizer, 0, wxCENTRE);
 			optics_static_box_sizer->AddSpacer(2);
 			optics_static_box_sizer->AddStretchSpacer();
 
@@ -374,9 +375,9 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 					wxALIGN_CENTRE_HORIZONTAL);
 				range_static_box_sizer->Add(m_Motors->m_Optics[1].steps_per_mm, 1, wxEXPAND | wxTOP, top_offset_static_text);
 
-				opt_y_static_box_sizer->Add(range_static_box_sizer, 1, wxEXPAND);
+				opt_y_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 			}
-			optics_static_box_sizer->Add(opt_y_static_box_sizer, 0, wxEXPAND);
+			optics_static_box_sizer->Add(opt_y_static_box_sizer, 0, wxCENTRE);
 			optics_static_box_sizer->AddSpacer(2);
 			optics_static_box_sizer->AddStretchSpacer();
 
@@ -417,11 +418,11 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 					wxALIGN_CENTRE_HORIZONTAL);
 				range_static_box_sizer->Add(m_Motors->m_Optics[2].steps_per_mm, 1, wxEXPAND | wxTOP, top_offset_static_text);
 
-				opt_z_static_box_sizer->Add(range_static_box_sizer, 1, wxEXPAND);
+				opt_z_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 			}
-			optics_static_box_sizer->Add(opt_z_static_box_sizer, 0, wxEXPAND);
+			optics_static_box_sizer->Add(opt_z_static_box_sizer, 0, wxCENTRE);
 		}
-		motors_static_box_sizer->Add(optics_static_box_sizer, 0, wxEXPAND);
+		motors_static_box_sizer->Add(optics_static_box_sizer, 0, wxCENTRE);
 
 	}
 	main_panel_sizer->Add(motors_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
@@ -549,112 +550,112 @@ auto cSettings::CreateOtherSettings(wxBoxSizer* panel_sizer) -> void
 #endif // _DEBUG
 	wxBoxSizer* main_panel_sizer = new wxBoxSizer(wxVERTICAL);
 
-	wxSizer* const settings_grid_sizer = new wxGridSizer(2);
+	//wxSizer* const settings_grid_sizer = new wxGridSizer(2);
 
-	// Grid Mesh Step
-	{
-		wxBoxSizer* horSizer = new wxBoxSizer(wxHORIZONTAL);
+	//// Grid Mesh Step
+	//{
+	//	wxBoxSizer* horSizer = new wxBoxSizer(wxHORIZONTAL);
 
-		settings_grid_sizer->Add
-		(
-			new wxStaticText
-			(
-				main_panel,
-				wxID_ANY,
-				"&Grid Mesh Step:"
-			),
-			0, wxALL | wxALIGN_CENTER_VERTICAL, 5
-		);
+	//	settings_grid_sizer->Add
+	//	(
+	//		new wxStaticText
+	//		(
+	//			main_panel,
+	//			wxID_ANY,
+	//			"&Grid Mesh Step:"
+	//		),
+	//		0, wxALL | wxALIGN_CENTER_VERTICAL, 5
+	//	);
 
-		wxIntegerValidator<unsigned int> val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
-		//val.SetMin(1);
-		m_GridMeshStepPXTxtCtrl = std::make_unique<wxTextCtrl>
-			(
-				main_panel,
-				SettingsVariables::ID_GRID_MESH_STEP_TXT_CTRL,
-				wxString("100"),
-				wxDefaultPosition,
-				wxDefaultSize,
-				wxTE_CENTRE
-			);
-		m_GridMeshStepPXTxtCtrl->SetValidator(val);
+	//	wxIntegerValidator<unsigned int> val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
+	//	//val.SetMin(1);
+	//	m_GridMeshStepPXTxtCtrl = std::make_unique<wxTextCtrl>
+	//		(
+	//			main_panel,
+	//			SettingsVariables::ID_GRID_MESH_STEP_TXT_CTRL,
+	//			wxString("100"),
+	//			wxDefaultPosition,
+	//			wxDefaultSize,
+	//			wxTE_CENTRE
+	//		);
+	//	m_GridMeshStepPXTxtCtrl->SetValidator(val);
 
-		horSizer->Add(m_GridMeshStepPXTxtCtrl.get(), 0, wxALIGN_CENTER_VERTICAL);
-		horSizer->Add
-		(
-			new wxStaticText
-			(
-				main_panel,
-				wxID_ANY,
-				"[px]"
-			),
-			0, wxLEFT | wxALIGN_CENTER_VERTICAL, 5
-		);
-		settings_grid_sizer->Add(horSizer, 0, wxEXPAND);
-	}
+	//	horSizer->Add(m_GridMeshStepPXTxtCtrl.get(), 0, wxALIGN_CENTER_VERTICAL);
+	//	horSizer->Add
+	//	(
+	//		new wxStaticText
+	//		(
+	//			main_panel,
+	//			wxID_ANY,
+	//			"[px]"
+	//		),
+	//		0, wxLEFT | wxALIGN_CENTER_VERTICAL, 5
+	//	);
+	//	settings_grid_sizer->Add(horSizer, 0, wxEXPAND);
+	//}
 
-	// Circle Mesh Step
-	{
-		wxBoxSizer* horSizer = new wxBoxSizer(wxHORIZONTAL);
+	//// Circle Mesh Step
+	//{
+	//	wxBoxSizer* horSizer = new wxBoxSizer(wxHORIZONTAL);
 
-		settings_grid_sizer->Add
-		(
-			new wxStaticText
-			(
-				main_panel,
-				wxID_ANY,
-				"&Circle Mesh Step:"
-			),
-			0, wxALL | wxALIGN_CENTER_VERTICAL, 5
-		);
+	//	settings_grid_sizer->Add
+	//	(
+	//		new wxStaticText
+	//		(
+	//			main_panel,
+	//			wxID_ANY,
+	//			"&Circle Mesh Step:"
+	//		),
+	//		0, wxALL | wxALIGN_CENTER_VERTICAL, 5
+	//	);
 
-		wxIntegerValidator<unsigned int> val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
-		//val.SetMin(1);
-		m_CircleMeshStepPXTxtCtrl = std::make_unique<wxTextCtrl>
-			(
-				main_panel,
-				SettingsVariables::ID_CIRCLE_MESH_STEP_TXT_CTRL,
-				wxString("120"),
-				wxDefaultPosition,
-				wxDefaultSize,
-				wxTE_CENTRE
-			);
-		m_CircleMeshStepPXTxtCtrl->SetValidator(val);
+	//	wxIntegerValidator<unsigned int> val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
+	//	//val.SetMin(1);
+	//	m_CircleMeshStepPXTxtCtrl = std::make_unique<wxTextCtrl>
+	//		(
+	//			main_panel,
+	//			SettingsVariables::ID_CIRCLE_MESH_STEP_TXT_CTRL,
+	//			wxString("120"),
+	//			wxDefaultPosition,
+	//			wxDefaultSize,
+	//			wxTE_CENTRE
+	//		);
+	//	m_CircleMeshStepPXTxtCtrl->SetValidator(val);
 
-		horSizer->Add(m_CircleMeshStepPXTxtCtrl.get(), 0, wxALIGN_CENTER_VERTICAL);
-		horSizer->Add
-		(
-			new wxStaticText
-			(
-				main_panel,
-				wxID_ANY,
-				"[px]"
-			),
-			0, wxLEFT | wxALIGN_CENTER_VERTICAL, 5
-		);
-		settings_grid_sizer->Add(horSizer, 0, wxEXPAND);
-	}
+	//	horSizer->Add(m_CircleMeshStepPXTxtCtrl.get(), 0, wxALIGN_CENTER_VERTICAL);
+	//	horSizer->Add
+	//	(
+	//		new wxStaticText
+	//		(
+	//			main_panel,
+	//			wxID_ANY,
+	//			"[px]"
+	//		),
+	//		0, wxLEFT | wxALIGN_CENTER_VERTICAL, 5
+	//	);
+	//	settings_grid_sizer->Add(horSizer, 0, wxEXPAND);
+	//}
 
-	main_panel_sizer->Add(settings_grid_sizer, 0, wxCENTER | wxALL, 5);
+	//main_panel_sizer->Add(settings_grid_sizer, 0, wxCENTER | wxALL, 5);
 
 
-	/* Control Buttons */
-	{
-		//m_RefreshBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("Refresh"));
+	///* Control Buttons */
+	//{
+	//	//m_RefreshBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("Refresh"));
 
-		//m_OkBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("OK"));
-		//m_OkBtn->SetFocus();
+	//	//m_OkBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("OK"));
+	//	//m_OkBtn->SetFocus();
 
-		//m_CancelBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("Cancel"));
+	//	//m_CancelBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("Cancel"));
 
-		//wxBoxSizer* btns_sizer = new wxBoxSizer(wxHORIZONTAL);
-		//btns_sizer->Add(m_RefreshBtn.get());
-		//btns_sizer->AddStretchSpacer();
-		//btns_sizer->Add(m_OkBtn.get(), 0, wxRIGHT, 2);
-		//btns_sizer->Add(m_CancelBtn.get());
+	//	//wxBoxSizer* btns_sizer = new wxBoxSizer(wxHORIZONTAL);
+	//	//btns_sizer->Add(m_RefreshBtn.get());
+	//	//btns_sizer->AddStretchSpacer();
+	//	//btns_sizer->Add(m_OkBtn.get(), 0, wxRIGHT, 2);
+	//	//btns_sizer->Add(m_CancelBtn.get());
 
-		//main_panel_sizer->Add(btns_sizer, 0, wxEXPAND | wxALL, 2);
-	}
+	//	//main_panel_sizer->Add(btns_sizer, 0, wxEXPAND | wxALL, 2);
+	//}
 
 	main_panel->SetSizer(main_panel_sizer);
 	panel_sizer->Add(main_panel, 0, wxEXPAND);

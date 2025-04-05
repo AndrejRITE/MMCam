@@ -282,18 +282,18 @@ public:
 	auto GetUploadReportFolder() const -> wxString { return m_UploadReportFolder; };
 	auto GetXRayImagesDefaultCaption() const -> wxArrayString { return m_XRayImagesCaptions; };
 
-	auto GetGridMeshStep() const -> unsigned int
-	{
-		int step = 1;
-		m_GridMeshStepPXTxtCtrl->GetValue().ToInt(&step);
-		return (unsigned int)step;
-	};
-	auto GetCircleMeshStep() const -> unsigned int
-	{
-		int step = 1;
-		m_CircleMeshStepPXTxtCtrl->GetValue().ToInt(&step);
-		return (unsigned int)step;
-	};
+	//auto GetGridMeshStep() const -> unsigned int
+	//{
+	//	int step = 1;
+	//	m_GridMeshStepPXTxtCtrl->GetValue().ToInt(&step);
+	//	return (unsigned int)step;
+	//};
+	//auto GetCircleMeshStep() const -> unsigned int
+	//{
+	//	int step = 1;
+	//	m_CircleMeshStepPXTxtCtrl->GetValue().ToInt(&step);
+	//	return (unsigned int)step;
+	//};
 
 	auto GetCameraManufacturer() const -> int { return m_CameraManufacturer; }
 	auto GetMotorManufacturer() const -> int { return m_MotorManufacturer; }
@@ -458,7 +458,7 @@ private:
 	std::unique_ptr<SettingsVariables::Camera> m_Camera{};
 	const int m_MotorsCount{ 6 };
 	std::unique_ptr<SettingsVariables::ProgressValues> m_Progress = std::make_unique<SettingsVariables::ProgressValues>();
-	std::unique_ptr<wxTextCtrl> m_GridMeshStepPXTxtCtrl{}, m_CircleMeshStepPXTxtCtrl{};
+	//std::unique_ptr<wxTextCtrl> m_GridMeshStepPXTxtCtrl{}, m_CircleMeshStepPXTxtCtrl{};
 
 	wxColour m_BlackAppearenceColor = wxColour(90, 90, 90);
 };
