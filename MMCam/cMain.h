@@ -577,6 +577,16 @@ private:
 		wxWindow* parent
 	) -> wxWindow*;
 
+	auto CreateGridMeshPage
+	(
+		wxWindow* parent
+	) -> wxWindow*;
+
+	auto CreateCircleMeshPage
+	(
+		wxWindow* parent
+	) -> wxWindow*;
+
 	auto CreateMeasurementPage
 	(
 		wxWindow* parent
@@ -585,6 +595,7 @@ private:
 
 	void CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
 	void CreateCameraControls(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
+	void CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
 	void CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
 
 	auto OnEnableDarkMode(wxCommandEvent& evt) -> void;
@@ -1456,10 +1467,14 @@ private:
 	/* wxPanels */
 	wxScrolledWindow* m_RightSidePanel{};
 	//wxPanel* m_RightSidePanel{};
-	wxNotebook* m_DetectorControlsNotebook{}, * m_OpticsControlsNotebook{}, *m_MeasurementNotebook{};
-	wxWindow* m_OpticsPage{};
-
+	wxNotebook* m_DetectorControlsNotebook{}, * m_OpticsControlsNotebook{};
+	
 	wxNotebook* m_CameraControlNotebook{};
+	
+	wxNotebook* m_ToolsControlsNotebook{};
+
+	wxNotebook* m_MeasurementNotebook{};
+
 	wxPropertyGrid* m_CurrentCameraSettingsPropertyGrid{};
 	const wxColour m_DefaultCellColour = wxColour(180, 180, 180);
 	std::unique_ptr<MainFrameVariables::PropertiesNames> m_PropertiesNames{};

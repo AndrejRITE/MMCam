@@ -633,6 +633,8 @@ void cMain::CreateRightSide(wxSizer* right_side_sizer)
 	CreateSteppersControl(m_RightSidePanel, right_side_panel_sizer);
 	
 	CreateCameraControls(m_RightSidePanel, right_side_panel_sizer);
+	
+	CreateTools(m_RightSidePanel, right_side_panel_sizer);
 
 	right_side_panel_sizer->AddStretchSpacer();
 	
@@ -1666,6 +1668,24 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 	return page;
 }
 
+auto cMain::CreateGridMeshPage(wxWindow* parent) -> wxWindow*
+{
+	wxPanel* page = new wxPanel(parent);
+	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+	
+	page->SetSizer(sizerPage);
+	return page;
+}
+
+auto cMain::CreateCircleMeshPage(wxWindow* parent) -> wxWindow*
+{
+	wxPanel* page = new wxPanel(parent);
+	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+
+	page->SetSizer(sizerPage);
+	return page;
+}
+
 auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 {
 	wxPanel* page = new wxPanel(parent);
@@ -1852,13 +1872,16 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 	wxSize set_btn_size = { 35, 20 };
 	wxSize inc_dec_size = { 20, 20 };
 
+	auto size = wxSize(16, 16);
+	wxImageList* imageListDetector = new wxImageList(size.GetWidth(), size.GetHeight(), true);
+	wxImageList* imageListOptics = new wxImageList(size.GetWidth(), size.GetHeight(), true);
+
 	/* Center bitmap */
 	wxBitmap centerBitmap{};
 	{
 		auto bitmap = wxART_CENTER_HORIZONTAL;
 		auto client = wxART_CLIENT_FLUENTUI_FILLED;
 		auto color = wxColour(255, 128, 0);
-		auto size = wxSize(16, 16);
 		centerBitmap = wxMaterialDesignArtProvider::GetBitmap
 		(
 			bitmap,
@@ -1874,7 +1897,6 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 		auto bitmap = wxART_HOME;
 		auto client = wxART_CLIENT_MATERIAL_FILLED;
 		auto color = wxColour(0, 255, 128);
-		auto size = wxSize(16, 16);
 		homeBitmap = wxMaterialDesignArtProvider::GetBitmap
 		(
 			bitmap,
@@ -1884,17 +1906,12 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 		);
 	}
 
-	// Create an image list (16x16 pixels per icon)
-	wxImageList* imageList = new wxImageList(16, 16, true);
-	wxImageList* imageListSupport = new wxImageList(16, 16, true);
-
 	/* Detector bitmap */
 	wxBitmap detectorBitmap{};
 	{
 		auto bitmap = wxART_CAMERA;
 		auto client = wxART_CLIENT_MATERIAL_FILLED;
 		auto color = wxColour(128, 0, 255);
-		auto size = wxSize(16, 16);
 		detectorBitmap = wxMaterialDesignArtProvider::GetBitmap
 		(
 			bitmap,
@@ -1910,7 +1927,6 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 		auto bitmap = wxART_CIRCLE_HINT;
 		auto client = wxART_CLIENT_FLUENTUI_FILLED;
 		auto color = wxColour(255, 128, 128);
-		auto size = wxSize(16, 16);
 		opticsBitmap = wxMaterialDesignArtProvider::GetBitmap
 		(
 			bitmap,
@@ -1920,14 +1936,14 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 		);
 	}
 
-	int detectorImgIndex = imageList->Add(detectorBitmap);
+	int detectorImgIndex = imageListDetector->Add(detectorBitmap);
 	//int opticsImgIndex = imageList->Add(opticsBitmap);
 
-	int opticsImgIndexSupport = imageListSupport->Add(opticsBitmap);
+	int opticsImgIndexSupport = imageListOptics->Add(opticsBitmap);
 
 	m_DetectorControlsNotebook = new wxNotebook(right_side_panel, wxID_ANY);
 
-	m_DetectorControlsNotebook->AssignImageList(imageList);
+	m_DetectorControlsNotebook->AssignImageList(imageListDetector);
 
 	m_DetectorControlsNotebook->AddPage
 	(
@@ -1952,22 +1968,20 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 
 	m_OpticsControlsNotebook = new wxNotebook(right_side_panel, wxID_ANY);
 
-	m_OpticsPage = CreateOpticsPage
-	(
-		m_OpticsControlsNotebook,
-		absolute_text_ctrl_size,
-		relative_text_ctrl_size,
-		set_btn_size,
-		inc_dec_size,
-		centerBitmap,
-		homeBitmap
-	);
-
-	m_OpticsControlsNotebook->AssignImageList(imageListSupport);
+	m_OpticsControlsNotebook->AssignImageList(imageListOptics);
 
 	m_OpticsControlsNotebook->AddPage
 	(
-		m_OpticsPage,
+		CreateOpticsPage
+		(
+			m_OpticsControlsNotebook,
+			absolute_text_ctrl_size,
+			relative_text_ctrl_size,
+			set_btn_size,
+			inc_dec_size,
+			centerBitmap,
+			homeBitmap
+		),
 		"Optics",
 		false,
 		opticsImgIndexSupport
@@ -1984,7 +1998,8 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 
 void cMain::CreateCameraControls(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer)
 {
-	wxImageList* imageList = new wxImageList(16, 16, true);
+	auto size = wxSize(16, 16);
+	wxImageList* imageList = new wxImageList(size.GetWidth(), size.GetHeight(), true);
 
 	wxBitmap cameraBitmap{};
 	{
@@ -2051,16 +2066,87 @@ void cMain::CreateCameraControls(wxPanel* right_side_panel, wxBoxSizer* right_si
 	right_side_panel_sizer->Add(m_CameraControlNotebook, 0, wxEXPAND | wxALL, 5);
 }
 
+void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer)
+{
+	auto size = wxSize(16, 16);
+	wxImageList* imageList = new wxImageList(size.GetWidth(), size.GetHeight(), true);
+	
+	wxBitmap gridMeshBitmap{};
+	{
+		auto bitmap = wxART_GRID_4X4;
+		auto client = wxART_CLIENT_MATERIAL_FILLED;
+		auto color = wxColour(192, 192, 192);
+		gridMeshBitmap = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			size,
+			color
+		);
+	}
+		
+	wxBitmap circleMeshBitmap{};
+	{
+		auto bitmap = wxART_TARGET;
+		auto client = wxART_CLIENT_FLUENTUI_FILLED;
+		auto color = wxColour(255, 128, 64);
+		circleMeshBitmap = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			size,
+			color
+		);
+	}
+	
+	auto imgIndexGridMesh = imageList->Add(gridMeshBitmap);
+	auto imgIndexCircleMesh = imageList->Add(circleMeshBitmap);
+	
+	m_ToolsControlsNotebook = new wxNotebook(right_side_panel, wxID_ANY);
+
+	m_ToolsControlsNotebook->AssignImageList(imageList);
+
+	m_ToolsControlsNotebook->AddPage
+	(
+		CreateGridMeshPage(m_ToolsControlsNotebook), 
+		"Grid Mesh",
+#ifdef _DEBUG
+		true,
+#else
+		true,
+#endif // _DEBUG
+		imgIndexGridMesh
+	);
+
+	m_ToolsControlsNotebook->AddPage
+	(
+		CreateCircleMeshPage(m_ToolsControlsNotebook), 
+		"Circle Mesh",
+#ifdef _DEBUG
+		false,
+#else
+		false,
+#endif // _DEBUG
+		imgIndexCircleMesh
+	);
+
+#ifndef _DEBUG
+	m_ToolsControlsNotebook->Hide();
+#endif // !_DEBUG
+
+	right_side_panel_sizer->Add(m_ToolsControlsNotebook, 0, wxEXPAND | wxALL, 5);
+}
+
 void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer)
 {
-	wxImageList* imageList = new wxImageList(16, 16, true);
+	auto size = wxSize(16, 16);
+	wxImageList* imageList = new wxImageList(size.GetWidth(), size.GetHeight(), true);
 
 	wxBitmap measurementBitmap{};
 	{
 		auto bitmap = wxART_RULER;
 		auto client = wxART_CLIENT_FLUENTUI_FILLED;
 		auto color = wxColour(128, 0, 64);
-		auto size = wxSize(16, 16);
 		measurementBitmap = wxMaterialDesignArtProvider::GetBitmap
 		(
 			bitmap,
@@ -2099,9 +2185,15 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 		m_VerticalToolBar->tool_bar->SetBackgroundColour(normalized_black);
 		wxColour nb_color = wxColour(normalized_black.Red() + 40, normalized_black.Green() + 40, normalized_black.Blue() + 40);
 		m_RightSidePanel->SetBackgroundColour(nb_color);
+		
 		m_DetectorControlsNotebook->SetBackgroundColour(nb_color);
+		
 		m_OpticsControlsNotebook->SetBackgroundColour(nb_color);
+		
 		m_CameraControlNotebook->SetBackgroundColour(nb_color);
+		
+		m_ToolsControlsNotebook->SetBackgroundColour(nb_color);
+		
 		m_MeasurementNotebook->SetBackgroundColour(nb_color);
 	}
 	else
@@ -2110,9 +2202,15 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 
 		m_VerticalToolBar->tool_bar->SetBackgroundColour(m_DefaultAppearanceColor);
 		m_RightSidePanel->SetBackgroundColour(m_DefaultAppearanceColor);
+		
 		m_DetectorControlsNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
+		
 		m_OpticsControlsNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
+		
 		m_CameraControlNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
+		
+		m_ToolsControlsNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
+		
 		m_MeasurementNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
 	}
 	Refresh();
