@@ -6170,6 +6170,7 @@ wxThread::ExitCode WorkerThread::Entry()
 
 		first_axis_position = MoveFirstStage(first_axis_rounded_go_to);
 		m_FirstAxisPositionsData[i] = first_axis_rounded_go_to;
+		m_MainFrame->UpdateStagePositions();
 
 		auto fileName = PrepareFileName
 		(
