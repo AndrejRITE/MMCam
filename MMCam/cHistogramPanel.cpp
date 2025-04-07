@@ -82,6 +82,8 @@ auto cHistogramPanel::SetHistogram
 			Refresh();
 		};
 
+	if (!m_CanvasSize.GetWidth() || !m_CanvasSize.GetHeight()) return std::optional<int>(1);
+
 	m_DataType = data_type;
 	m_HistogramData.reset(data);
 	MedianBlur1D(m_HistogramData.get(), m_DataType == HistogramPanelVariables::ImageDataTypes::RAW_12BIT ? 4'095 : USHRT_MAX, 5);
@@ -131,6 +133,8 @@ void cHistogramPanel::Render(wxBufferedPaintDC& dc)
 {	
 	dc.Clear();
 	//wxGraphicsContext* gc_image{};
+
+	if (!m_Image.IsOk()) return;
 
 	// Image
 	{

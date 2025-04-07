@@ -95,7 +95,7 @@ std::string XeryonMotorArray::GetMotorCOMPort(const std::string& motor_sn) const
 
 bool XeryonMotorArray::IsMotorConnected(const std::string& motor_sn) const
 {
-	if (motor_sn.empty() || motor_sn == "None") return error_position;
+	if (motor_sn.empty() || motor_sn == "None") return false;
 
 	auto it = std::find_if(m_MotorsArray.begin(), m_MotorsArray.end(),
 		[&](const XeryonMotor& motor) { return motor.GetDeviceSerNum() == motor_sn; });

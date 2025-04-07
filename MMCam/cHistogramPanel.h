@@ -75,6 +75,15 @@ public:
 	auto GetWasHistogramRangeChanged() const -> bool { return m_WasRangeChanged; };
 	auto GetLeftBorderValue() const -> int { return m_LeftBorder.x; };
 	auto GetRightBorderValue() const -> int { return m_RightBorder.x; };
+	auto ResetHistogramRange() -> void 
+	{
+		wxMouseEvent event(wxEVT_LEFT_DCLICK);
+		
+		event.SetEventObject(this);
+
+		wxPostEvent(this, event);
+		ProcessEvent(event);
+	};
 
 private:
 	void InitDefaultComponents();

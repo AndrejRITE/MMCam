@@ -164,6 +164,7 @@ void cMain::CreateMainFrame()
 	CreateLeftAndRightSide();
 
 	InitializeAboutHTML();
+	UpdateDefaultWidgetParameters();
 }
 
 void cMain::InitComponents()
@@ -2567,6 +2568,8 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 		}
 	}
 
+	EnableControlsAfterCapturing();
+
 	/* Only if user has already started Live Capturing, continue Live Capturing */
 	if (start_live_capturing_after_ss)
 	{
@@ -2767,10 +2770,12 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 		m_CamPreview->SetCameraDataType(imagePanelDataType);
 	}
 
+	m_HistogramPanel->ResetHistogramRange();
+	m_HistogramPanel->Disable();
+
 	UpdateStagePositions();
 	EnableUsedAndDisableNonUsedMotors();	
 
-	UpdateDefaultWidgetParameters();
 
 	Refresh();
 }
@@ -2879,6 +2884,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 
 		if (colormap >= CameraPreviewVariables::Colormaps::GRAYSCALE_COLORMAP && colormap <= CameraPreviewVariables::Colormaps::COPPER_COLORMAP)
 			m_ImageColormapComboBox->stylish_combo_box->SetSelection(colormap);
+
 		wxCommandEvent artColormapPress(wxEVT_COMBOBOX, MainFrameVariables::ID_RIGHT_CAM_COLORMAP_COMBOBOX);
 		ProcessEvent(artColormapPress);
 	}
@@ -3728,6 +3734,7 @@ void cMain::StartLiveCapturing()
 
 	int binning{ 1 };
 	m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
+	
 
 	LiveCapturing* live_capturing = new LiveCapturing
 	(
@@ -4789,7 +4796,8 @@ auto cMain::OnBinningChoice(wxCommandEvent& evt) -> void
 	RewriteInitializationFile();
 	//m_Settings->SetBinning(binning);
 
-	m_OutputImageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
+	if (m_CameraControl)
+		m_OutputImageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
 	//m_CamPreview->SetImageSize(imageSize);
 }
 
@@ -4807,12 +4815,11 @@ auto cMain::OnColormapComboBox(wxCommandEvent& evt) -> void
 	//m_Settings->SetColormap(colormap);
 
 	if (!m_CamPreview->IsImageSet()) return;
+
 	//if (!m_CameraParametersControls->startCapturing->GetValue())
-	//if (!m_CameraParametersControls->isStartToggled)
-	//{
-	//	wxCommandEvent artLeftBorderHostogramChanged(wxEVT_TEXT, MainFrameVariables::ID_HISTOGRAM_LEFT_BORDER_TXT_CTRL);
-	//	ProcessEvent(artLeftBorderHostogramChanged);
-	//}
+
+	wxCommandEvent artLeftBorderHostogramChanged(wxEVT_TEXT, MainFrameVariables::ID_HISTOGRAM_LEFT_BORDER_TXT_CTRL);
+	ProcessEvent(artLeftBorderHostogramChanged);
 }
 
 auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
