@@ -114,6 +114,8 @@ public:
 		unsigned short maxValue
 	) -> void;
 
+	auto UpdateBlackAndWhiteRange(const int black, const int white) -> std::optional<int>;
+
 	auto UpdateCursorPositionOnStatusBar() -> void;
 	
 	// Jet Colormaps
@@ -215,6 +217,7 @@ private:
 	auto UpdateCrossHairOnSize() -> void;
 	void OnMouseMoved(wxMouseEvent& evt);
 	auto OnEnterPanel(wxMouseEvent& evt) -> void;
+	auto OnLeavePanel(wxMouseEvent& evt) -> void;
 	/* Zooming */
 	void OnMouseWheelMoved(wxMouseEvent& evt);
 	void AddZoom(const double& zoom, bool zoom_in_center_of_window = false);

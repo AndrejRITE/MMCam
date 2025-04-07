@@ -10,6 +10,7 @@ BEGIN_EVENT_TABLE(cCamPreview, wxPanel)
 	EVT_KEY_DOWN(cCamPreview::OnKeyPressed)
 	EVT_KEY_UP(cCamPreview::OnKeyReleased)
 	EVT_ENTER_WINDOW(cCamPreview::OnEnterPanel)
+	EVT_LEAVE_WINDOW(cCamPreview::OnLeavePanel)
 END_EVENT_TABLE()
 
 cCamPreview::cCamPreview
@@ -278,6 +279,20 @@ auto cCamPreview::SetCameraCapturedImage
 	m_ExecutionFinished = true;
 }
 
+auto cCamPreview::UpdateBlackAndWhiteRange(const int black, const int white) -> std::optional<int>
+{
+	if (!m_ImageData) return std::optional<int>(1);
+
+	UpdateWXImage(black, white);
+
+	m_IsImageSet = true;
+	m_IsGraphicsBitmapSet = false;
+
+	Refresh();
+
+	return std::optional<int>();
+}
+
 auto cCamPreview::UpdateCursorPositionOnStatusBar() -> void
 {
 	if (!m_Image.IsOk()) return;
@@ -464,35 +479,36 @@ auto cCamPreview::OnEnterPanel(wxMouseEvent& evt) -> void
 	SetFocus();
 }
 
+auto cCamPreview::OnLeavePanel(wxMouseEvent& evt) -> void
+{
+	OnPreviewMouseLeftReleased(evt);
+}
+
 void cCamPreview::OnMouseWheelMoved(wxMouseEvent& evt)
 {
 	if (m_Zoom <= 1.0 && evt.GetWheelRotation() < 0)
-	{
+		return;
 
-	}
-	else
+	if (evt.GetWheelRotation() > 0 && m_Zoom / m_ZoomOnOriginalSizeImage < 64.0)
 	{
-		//m_CursorPosOnCanvas = evt.GetPosition();
-		if (evt.GetWheelRotation() > 0 && m_Zoom / m_ZoomOnOriginalSizeImage < 64.0)
-		{
-			AddZoom(m_ZoomStep);
-		}
-		else if (evt.GetWheelRotation() < 0)
-		{
-			if (m_Zoom > 1.0)
-			{
-				AddZoom(1 / m_ZoomStep);
-			}
-		}
-		/* CrossHair Tool */
-		m_CrossHairTool->UpdateZoomValue(m_Zoom);
-		m_CrossHairTool->CalculateCrossHairPositionOnCanvas();
-		m_CrossHairTool->SetImageStartDrawPos(wxRealPoint
-		(
-			m_StartDrawPos.x * m_Zoom / m_ZoomOnOriginalSizeImage,
-			m_StartDrawPos.y * m_Zoom / m_ZoomOnOriginalSizeImage
-		));
+		AddZoom(m_ZoomStep);
 	}
+	else if (evt.GetWheelRotation() < 0)
+	{
+		if (m_Zoom > 1.0)
+		{
+			AddZoom(1 / m_ZoomStep);
+		}
+	}
+
+	/* CrossHair Tool */
+	m_CrossHairTool->UpdateZoomValue(m_Zoom);
+	m_CrossHairTool->CalculateCrossHairPositionOnCanvas();
+	m_CrossHairTool->SetImageStartDrawPos(wxRealPoint
+	(
+		m_StartDrawPos.x * m_Zoom / m_ZoomOnOriginalSizeImage,
+		m_StartDrawPos.y * m_Zoom / m_ZoomOnOriginalSizeImage
+	));
 }
 
 void cCamPreview::AddZoom(const double& zoom, bool zoom_in_center_of_window)

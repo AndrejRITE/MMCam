@@ -68,6 +68,10 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 
 	EVT_BUTTON(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
 
+	/* Histogram */
+	EVT_TEXT(MainFrameVariables::ID_HISTOGRAM_LEFT_BORDER_TXT_CTRL, cMain::OnHistogramLeftBorderPosChanged)
+	EVT_TEXT(MainFrameVariables::ID_HISTOGRAM_RIGHT_BORDER_TXT_CTRL, cMain::OnHistogramRightBorderPosChanged)
+
 	/* Tools */
 	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL, cMain::OnGridMeshTxtCtrl)
 	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL, cMain::OnCircleMeshTxtCtrl)
@@ -575,21 +579,33 @@ void cMain::InitDefaultStateWidgets()
 
 void cMain::CreateLeftAndRightSide()
 {
-	wxBoxSizer* main_sizer = new wxBoxSizer(wxHORIZONTAL);
+	auto borderSize = 2;
+
+	wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
 
 	int height_left_and_right_panels{ 600 };
+	wxBoxSizer* leftAndRightPanelSizer = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* right_sizer = new wxBoxSizer(wxVERTICAL);
 	wxSize sizeOfRightSide = { 350, height_left_and_right_panels };
 	right_sizer->SetMinSize(sizeOfRightSide);
 	CreateRightSide(right_sizer);
 
+	// Creating Histogram Panel
+	wxBoxSizer* bottomSizer = new wxBoxSizer(wxVERTICAL);
+	CreateBottomPanel(bottomSizer, borderSize);
+
 	wxBoxSizer* left_sizer = new wxBoxSizer(wxHORIZONTAL);
 	wxSize sizeOfPreviewWindow = { 600, height_left_and_right_panels };
 	left_sizer->SetMinSize(sizeOfPreviewWindow);
 	CreateLeftSide(left_sizer);
-
-	main_sizer->Add(left_sizer, 1, wxEXPAND);
-	main_sizer->Add(right_sizer, 0, wxEXPAND);
+	
+	leftAndRightPanelSizer->Add(left_sizer, 1, wxEXPAND | wxALL, borderSize);
+	leftAndRightPanelSizer->Add(right_sizer, 0, wxEXPAND | wxRIGHT | wxTOP | wxBOTTOM, borderSize);
+	
+	main_sizer->Add(leftAndRightPanelSizer, 1, wxEXPAND);
+	//main_sizer->Add(left_sizer, 1, wxEXPAND);
+	//main_sizer->Add(right_sizer, 0, wxEXPAND);
+	main_sizer->Add(bottomSizer, 0, wxEXPAND);
 
 	SetSizerAndFit(main_sizer);
 }
@@ -642,6 +658,24 @@ void cMain::CreateRightSide(wxSizer* right_side_sizer)
 	//m_RightSidePanel->Layout();
 
 	right_side_sizer->Add(m_RightSidePanel, 1, wxEXPAND);
+}
+
+auto cMain::CreateBottomPanel(wxSizer* sizer, const int borderSize) -> void
+{
+	m_LeftHistogramRange = std::make_unique<wxTextCtrl>(this, MainFrameVariables::ID_HISTOGRAM_LEFT_BORDER_TXT_CTRL);
+	m_LeftHistogramRange->Hide();
+	m_RightHistogramRange = std::make_unique<wxTextCtrl>(this, MainFrameVariables::ID_HISTOGRAM_RIGHT_BORDER_TXT_CTRL);
+	m_RightHistogramRange->Hide();
+
+	// Histogram Panel
+	m_HistogramPanel = std::make_unique<cHistogramPanel>
+		(
+			this,
+			sizer,
+			m_LeftHistogramRange.get(),
+			m_RightHistogramRange.get(),
+			borderSize
+		);
 }
 
 auto cMain::CreateStatusBarOnFrame() -> void
@@ -1788,7 +1822,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 	{
 		m_OutDirTextCtrl = std::make_unique<wxTextCtrl>(
 			page, 
-			MainFrameVariables::ID_RIGHT_MT_OUT_FLD_TE_CTL, 
+			MainFrameVariables::ID_RIGHT_MT_OUT_FLD_TEXT_CTRL, 
 			wxT("Save directory..."), 
 			wxDefaultPosition, 
 			wxDefaultSize, 
@@ -2276,26 +2310,19 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 	m_Config->dark_mode_on = currState;
 	RewriteInitializationFile();
 
-	auto bckgColour = wxColour();
+	auto bckgColour = m_DefaultAppearanceColor;
 
+	m_CamPreview->SetBackgroundColor(m_DefaultAppearanceColor);
+	
 	if (currState)
 	{
 		m_CamPreview->SetBackgroundColor(m_BlackAppearanceColor);
 
-		wxColour normalized_black = wxColour(100, 100, 100);
-		m_VerticalToolBar->tool_bar->SetBackgroundColour(normalized_black);
-	
-		bckgColour = wxColour(normalized_black.Red() + 40, normalized_black.Green() + 40, normalized_black.Blue() + 40);
-	}
-	else
-	{
-		m_CamPreview->SetBackgroundColor(m_DefaultAppearanceColor);
-
-		m_VerticalToolBar->tool_bar->SetBackgroundColour(m_DefaultAppearanceColor);
-
-		bckgColour = m_DefaultAppearanceColor;
+		bckgColour = wxColour(m_BlackAppearanceColor.GetRed() + 100, m_BlackAppearanceColor.GetGreen() + 100, m_BlackAppearanceColor.GetBlue() + 100);
 	}
 	
+	m_VerticalToolBar->tool_bar->SetBackgroundColour(bckgColour);
+
 	m_RightSidePanel->SetBackgroundColour(bckgColour);
 	
 	m_DetectorControlsNotebook->SetBackgroundColour(bckgColour);
@@ -2307,6 +2334,8 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 	m_ToolsControlsNotebook->SetBackgroundColour(bckgColour);
 	
 	m_MeasurementNotebook->SetBackgroundColour(bckgColour);
+
+	m_HistogramPanel->SetBackgroundColor(bckgColour);
 	
 	Refresh();
 }
@@ -2512,13 +2541,11 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 		{
 			//m_XimeaControl->SetExposureTime(exposure_time);
 			m_CameraControl->SetExposureTime(exposure_time);
+			
+			auto cameraDataType = m_CameraControl->GetCameraDataType();
 
 			int binning{ 1 };
 			m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
-
-			auto imageSize = wxSize{ (int)m_CameraControl->GetWidth() / binning, (int)m_CameraControl->GetHeight() / binning };
-
-			auto dataPtr = std::make_unique<unsigned short[]>(imageSize.GetWidth() * imageSize.GetHeight());
 
 			auto imgPtr = m_CameraControl->GetImage();
 			if (!imgPtr)
@@ -2527,49 +2554,13 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 				return;
 			}
 
-			auto minimumCount = 5;
-			unsigned short minValue{}, maxValue{};
-
-			auto histogram = std::make_unique<unsigned long long[]>(USHRT_MAX + 1);
-			if (!CalculateHistogram
-			(
-				(unsigned short*)imgPtr,
-				m_OutputImageSize.GetWidth(),
-				m_OutputImageSize.GetHeight(),
-				minimumCount,
-				histogram.get(),
-				&minValue,
-				&maxValue
-			))
-				return;
-
-
-			MainFrameVariables::BinImageData
+			DisplayAndSaveImageFromTheCamera
 			(
 				imgPtr, 
-				dataPtr.get(),
+				wxSize(m_CameraControl->GetWidth(), m_CameraControl->GetHeight()),
 				binning,
-				m_CameraControl->GetWidth(),
-				imageSize
-			);
-
-			cv::Mat cv_img
-			(
-				cv::Size(imageSize.GetWidth(), imageSize.GetHeight()),
-				CV_16U,
-				dataPtr.get(),
-				cv::Mat::AUTO_STEP
-			);
-
-			if (wxDir::Exists(out_dir))
-				cv::imwrite(file_name, cv_img);
-
-			m_CamPreview->SetCameraCapturedImage
-			(
-				dataPtr.get(),
-				m_OutputImageSize,
-				minValue,
-				maxValue
+				cameraDataType,
+				file_name
 			);
 		}
 	}
@@ -2584,6 +2575,89 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 	}
 
 	LOG("Finished: " + wxString(__FUNCSIG__));
+}
+
+auto cMain::DisplayAndSaveImageFromTheCamera
+(
+	unsigned short* const imgPtr, 
+	const wxSize& originalImgSize, 
+	const int& binning,
+	const CameraControlVariables::ImageDataTypes dataType,
+	const std::string outFilePath
+) -> void
+{
+	auto imageSize = wxSize{ (int)originalImgSize.GetWidth() / binning, (int)originalImgSize.GetHeight() / binning };
+
+	auto dataPtr = std::make_unique<unsigned short[]>(imageSize.GetWidth() * imageSize.GetHeight());
+
+	MainFrameVariables::BinImageData
+	(
+		imgPtr, 
+		dataPtr.get(),
+		binning,
+		originalImgSize.GetWidth(),
+		imageSize
+	);
+	
+	auto minimumCount = 5;
+	unsigned short minValue{}, maxValue{};
+	
+	auto histogram = std::make_unique<unsigned long long[]>(USHRT_MAX + 1);
+	
+	if (!CalculateHistogram
+	(
+		(unsigned short*)dataPtr.get(),
+		imageSize.GetWidth(),
+		imageSize.GetHeight(),
+		minimumCount,
+		histogram.get(),
+		&minValue,
+		&maxValue
+	))
+		return;
+
+	auto wasHistogramRangeChanged = m_HistogramPanel->GetWasHistogramRangeChanged();
+	auto actLeftBorder = m_HistogramPanel->GetLeftBorderValue();
+	auto actRightBorder = m_HistogramPanel->GetRightBorderValue();
+
+	m_HistogramPanel->SetHistogram
+	(
+		dataType == CameraControlVariables::ImageDataTypes::RAW_12BIT ? HistogramPanelVariables::ImageDataTypes::RAW_12BIT : HistogramPanelVariables::ImageDataTypes::RAW_16BIT,
+		std::move(histogram.release()),
+		minValue,
+		maxValue
+	);
+
+	m_LeftHistogramRange->ChangeValue(wxString::Format(wxT("%i"), wasHistogramRangeChanged ? (int)actLeftBorder : (int)minValue));
+	m_RightHistogramRange->SetValue(wxString::Format(wxT("%i"), wasHistogramRangeChanged ? (int)actRightBorder : (int)maxValue));
+
+	m_HistogramPanel->SetAutoBordersPos(minValue, maxValue);
+
+	if (!outFilePath.empty())
+	{
+		cv::Mat cv_img
+		(
+			cv::Size(imageSize.GetWidth(), imageSize.GetHeight()),
+			CV_16U,
+			dataPtr.get(),
+			cv::Mat::AUTO_STEP
+		);
+
+		wxFileName file(outFilePath);
+		//file.SetName(wxString("Report_") + timeStamp);
+		//destinationFilePath = file.GetFullPath();
+
+		if (wxDir::Exists(file.GetPath()))
+			cv::imwrite(file.GetFullPath().ToStdString(), cv_img);
+	}
+
+	m_CamPreview->SetCameraCapturedImage
+	(
+		dataPtr.get(),
+		m_OutputImageSize,
+		wasHistogramRangeChanged ? m_HistogramPanel->GetLeftBorderValue() : minValue,
+		wasHistogramRangeChanged ? m_HistogramPanel->GetRightBorderValue() : maxValue
+	);
 }
 
 void cMain::OnSetOutDirectoryBtn(wxCommandEvent& evt)
@@ -3725,41 +3799,53 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 		if (!imgPtr) return;
 		LOG("Set camera captured image");
 
-		auto minimumCount = 5;
-		unsigned short minValue{}, maxValue{};
+		//auto minimumCount = 5;
+		//unsigned short minValue{}, maxValue{};
 
-		auto histogram = std::make_unique<unsigned long long[]>(USHRT_MAX + 1);
-		if (!CalculateHistogram
-		(
-			(unsigned short*)imgPtr,
-			m_OutputImageSize.GetWidth(),
-			m_OutputImageSize.GetHeight(),
-			minimumCount,
-			histogram.get(),
-			&minValue,
-			&maxValue
-		))
-		{
-			stopCapturing();
-			delete[] imgPtr;
-			return;
-		}
+		//auto histogram = std::make_unique<unsigned long long[]>(USHRT_MAX + 1);
+		//if (!CalculateHistogram
+		//(
+		//	(unsigned short*)imgPtr,
+		//	m_OutputImageSize.GetWidth(),
+		//	m_OutputImageSize.GetHeight(),
+		//	minimumCount,
+		//	histogram.get(),
+		//	&minValue,
+		//	&maxValue
+		//))
+		//{
+		//	stopCapturing();
+		//	delete[] imgPtr;
+		//	return;
+		//}
 
-		if (*m_CamPreview->GetExecutionFinishedPtr())
-		{
-			m_CamPreview->SetCameraCapturedImage
-			(
-				imgPtr,
-				m_OutputImageSize,
-				minValue,
-				maxValue
-			);
+		//if (*m_CamPreview->GetExecutionFinishedPtr())
+		//{
+		//	m_CamPreview->SetCameraCapturedImage
+		//	(
+		//		imgPtr,
+		//		m_OutputImageSize,
+		//		minValue,
+		//		maxValue
+		//	);
 
-		}
+		//}
 
 		if (m_StartStopMeasurementTglBtn->GetValue())
 			m_ProgressBar->SetValue(progress);
 		
+		int binning{ 1 };
+		m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
+		
+		if (*m_CamPreview->GetExecutionFinishedPtr())
+			DisplayAndSaveImageFromTheCamera
+			(
+				imgPtr, 
+				wxSize(m_CameraControl->GetWidth(), m_CameraControl->GetHeight()),
+				binning,
+				m_CameraControl->GetCameraDataType()
+			);
+
 		delete[] imgPtr;
 	}
 	// -1 == Camera is disconnected
@@ -5475,11 +5561,6 @@ auto cMain::CreateVirtualEnvironment(wxString pathToVenv, wxString pathToRequire
 auto cMain::EnableControlsAfterCapturing() -> void
 {
 	EnableUsedAndDisableNonUsedMotors();
-	//for (auto i = 0; i < 3; ++i)
-	//{
-	//	m_Detector[i].EnableAllControls();
-	//	m_Optics[i].EnableAllControls();
-	//}
 
 	m_CameraTabControls->camExposure->Enable();
 	if (m_OutDirTextCtrl->GetValue() != "Save directory...")
@@ -5493,19 +5574,17 @@ auto cMain::EnableControlsAfterCapturing() -> void
 		m_CameraTabControls->crossHairPosXTxtCtrl->Enable();
 		m_CameraTabControls->crossHairPosYTxtCtrl->Enable();
 	}
-	//m_SetCrossHairPosTglBtn->Enable();
 
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, true);
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, true);
-	//m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE, true);
-	//m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, true);
-	//m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, true);
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, true);
 
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_VALUE_DISPLAYING, true);
 
 	m_OutDirBtn->Enable();
 	m_FirstStage->EnableAllControls();
+
+	m_HistogramPanel->Enable();
 }
 
 auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
@@ -5522,9 +5601,9 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, enableWidget);
 
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, enableWidget);
-	//m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, enableWidget);
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, enableWidget);
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, enableWidget);
+
 	m_VerticalToolBar->tool_bar->Enable();
 
 	m_OutDirBtn->Enable();
@@ -5556,10 +5635,6 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, false);
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
 
-
-	//m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE, false);
-	//m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, false);
-	//m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, false);
 	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, false);
 
@@ -5567,6 +5642,8 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 
 	m_OutDirBtn->Disable();
 	m_FirstStage->DisableAllControls();
+
+	m_HistogramPanel->Disable();
 }
 
 void cMain::OnStartStopLiveCapturingMenu(wxCommandEvent& evt)
@@ -5662,17 +5739,38 @@ void cMain::OnYPosCrossHairTextCtrl(wxCommandEvent& evt)
 	m_CamPreview->SetYCrossHairPosFromParentWindow(y_pos);
 }
 
-//auto cMain::OnSetPosCrossHairTglBtn(wxCommandEvent& evt) -> void
-//{
-//	if (m_SetCrossHairPosTglBtn->GetValue())
-//	{
-//		m_CamPreview->SettingCrossHairPosFromParentWindow(true);
-//	}
-//	else
-//	{	
-//		m_CamPreview->SettingCrossHairPosFromParentWindow(false);
-//	}
-//}
+auto cMain::OnHistogramLeftBorderPosChanged(wxCommandEvent& evt) -> void
+{
+	if (!m_CamPreview->IsImageSet()) return;
+	UpdateUIHistogram();
+}
+
+auto cMain::OnHistogramRightBorderPosChanged(wxCommandEvent& evt) -> void
+{
+	if (!m_CamPreview->IsImageSet()) return;
+	UpdateUIHistogram();
+}
+
+auto cMain::UpdateUIHistogram() -> void
+{
+	int left_border{};
+	if (!m_LeftHistogramRange->GetValue().ToInt(&left_border)) return;
+	int right_border{};
+	if (!m_RightHistogramRange->GetValue().ToInt(&right_border)) return;
+
+	if (left_border > right_border)
+	{
+		auto temp = right_border;
+		right_border = left_border;
+		left_border = temp;
+	}
+
+	left_border = left_border > USHRT_MAX - 1 ? USHRT_MAX - 1 : left_border;
+	right_border = right_border > USHRT_MAX ? USHRT_MAX : right_border;
+
+	m_CamPreview->UpdateBlackAndWhiteRange(left_border, right_border);
+	m_HistogramPanel->SetBordersPos(left_border, right_border);
+}
 
 /* ___ Start Live Capturing Thread ___ */
 LiveCapturing::LiveCapturing

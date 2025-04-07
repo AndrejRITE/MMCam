@@ -164,6 +164,7 @@
     <ClInclude Include="cApp.h" />
     <ClInclude Include="cCamPreview.h" />
     <ClInclude Include="cGenerateReportDialog.h" />
+    <ClInclude Include="cHistogramPanel.h" />
     <ClInclude Include="cMain.h" />
     <ClInclude Include="cPreviewTools.h" />
     <ClInclude Include="cSettings.h" />
@@ -196,6 +197,7 @@
     <ClCompile Include="cApp.cpp" />
     <ClCompile Include="cCamPreview.cpp" />
     <ClCompile Include="cGenerateReportDialog.cpp" />
+    <ClCompile Include="cHistogramPanel.cpp" />
     <ClCompile Include="cMain.cpp" />
     <ClCompile Include="cPreviewTools.cpp" />
     <ClCompile Include="cSettings.cpp" />

@@ -29,6 +29,7 @@
 #include "json.hpp"
 
 #include "cStylishComboBox.h"
+#include "cHistogramPanel.h"
 #include "cCamPreview.h"
 #include "cSettings.h"
 #include "cGenerateReportDialog.h"
@@ -121,8 +122,11 @@ namespace MainFrameVariables
 		ID_RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL,
 		ID_RIGHT_CAM_CROSS_HAIR_SET_POS_TGL_BTN,
 		ID_RIGHT_CAM_ACTUAL_PARAMETERS_PROPERTY_GRID,
+		/* Histogram */
+		ID_HISTOGRAM_LEFT_BORDER_TXT_CTRL,
+		ID_HISTOGRAM_RIGHT_BORDER_TXT_CTRL,
 		/* Measurement */
-		ID_RIGHT_MT_OUT_FLD_TE_CTL,
+		ID_RIGHT_MT_OUT_FLD_TEXT_CTRL,
 		ID_RIGHT_MT_OUT_FLD_BTN,
 		ID_RIGHT_MT_FIRST_STAGE_CHOICE,
 		ID_RIGHT_MT_FIRST_STAGE_START,
@@ -555,6 +559,8 @@ private:
 	void CreateLeftSide(wxSizer* left_side_sizer);
 	void CreateRightSide(wxSizer* right_side_sizer);
 
+	auto CreateBottomPanel(wxSizer* sizer, const int borderSize) -> void;
+
 	auto CreateStatusBarOnFrame() -> void;
 
 	auto CreateDetectorPage
@@ -632,6 +638,16 @@ private:
 
 	void ChangeCameraManufacturerChoice(wxCommandEvent& evt);
 	void OnSingleShotCameraImage(wxCommandEvent& evt);
+
+	auto DisplayAndSaveImageFromTheCamera
+	(
+		unsigned short* const imgPtr, 
+		const wxSize& originalImgSize, 
+		const int& binning,
+		const CameraControlVariables::ImageDataTypes dataType,
+		const std::string outFilePath = ""
+	) -> void;
+
 	void OnSetOutDirectoryBtn(wxCommandEvent& evt);
 
 	auto ReadInitializationFile() -> void;
@@ -753,18 +769,22 @@ private:
 
 	/* First Stage */
 	void OnFirstStageChoice(wxCommandEvent& evt);
+	
 	/* Second Stage */
 	void OnSecondStageChoice(wxCommandEvent& evt);
+	
 	/* Changed Exposure value */
 	void ExposureValueChanged(wxCommandEvent& evt);
 	auto OnSensorTemperatureChanged(wxCommandEvent& evt) -> void;
 	auto OnBinningChoice(wxCommandEvent& evt) -> void;
 	auto OnColormapComboBox(wxCommandEvent& evt) -> void;
+
 	/* Generate Report */
 	auto OnGenerateReportBtn(wxCommandEvent& evt) -> void;
 	auto IsPythonInstalledOnTheCurrentMachine() -> bool;
 	auto IsVirtualEnvironmentAlreadyCreated(wxString pathToVenv) -> bool;
 	auto CreateVirtualEnvironment(wxString pathToVenv, wxString pathToRequirements) -> bool;
+
 	/* Start Capturing */
 	void OnStartStopCapturingTglButton(wxCommandEvent& evt);
 	auto OnStartStopCapturingMenuButton(wxCommandEvent& evt) -> void;
@@ -787,6 +807,10 @@ private:
 	void OnXPosCrossHairTextCtrl(wxCommandEvent& evt);
 	void OnYPosCrossHairTextCtrl(wxCommandEvent& evt);
 	//auto OnSetPosCrossHairTglBtn(wxCommandEvent& evt) -> void;
+
+	auto OnHistogramLeftBorderPosChanged(wxCommandEvent& evt) -> void;
+	auto OnHistogramRightBorderPosChanged(wxCommandEvent& evt) -> void;
+	auto UpdateUIHistogram() -> void;
 
 	auto CalculateHistogram
 	(
@@ -1477,8 +1501,11 @@ private:
 	const wxColour m_BlackAppearanceColor = wxColour(30, 30, 30);
 
 	std::unique_ptr<wxStatusBar> m_StatusBar{};
-	std::unique_ptr<wxPanel> m_ProgressPanel{};
 	std::unique_ptr<wxGauge> m_ProgressBar{};
+
+	// Histogram Variables
+	std::unique_ptr<cHistogramPanel> m_HistogramPanel{};
+	std::unique_ptr<wxTextCtrl> m_LeftHistogramRange{}, m_RightHistogramRange{};
 
 	/* wxPanels */
 	wxScrolledWindow* m_RightSidePanel{};
