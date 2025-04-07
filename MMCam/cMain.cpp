@@ -2616,8 +2616,15 @@ void cMain::OnSetOutDirectoryBtn(wxCommandEvent& evt)
 auto cMain::ReadInitializationFile() -> void
 {
 	std::ifstream file(m_InitializationFilePath.ToStdString());
-	if (!file.is_open()) 
+	if (!file.is_open())
+	{
+		// Log or handle the error if needed
+		wxLogWarning("Failed to load 'MMCam' from config file: %s", m_InitializationFilePath);
+
+		// Fallback to default values
+		m_Config = std::make_unique<MainFrameVariables::InitializationFileStructure>();
 		return;
+	}
 
 	nlohmann::json j;
 	file >> j;
@@ -2629,19 +2636,14 @@ auto cMain::ReadInitializationFile() -> void
 	}
 	catch (const nlohmann::json::exception& e)
 	{
-		return;
+		// Log or handle the error if needed
+		wxLogWarning("Failed to load 'MMCam' from config file: %s", e.what());
+
+		// Fallback to default values
+		m_Config = std::make_unique<MainFrameVariables::InitializationFileStructure>();
 	}
-
-	//m_XRayImagesCaptions.Clear();
-
-	//for (auto i{ 0 }; i < 5; ++i)
-	//{
-	//	m_XRayImagesCaptions.Add("");
-	//	m_XRayImagesCaptions[i] = m_Config->xrayImagesCaptions[i];
-	//}
-
+	
 	m_Settings->SetLastInitializedWorkStation(m_Config->work_station);
-	//m_WorkStations->initialized_work_station = m_Config->work_station;
 }
 
 auto cMain::RewriteInitializationFile() -> void
@@ -3176,6 +3178,7 @@ void cMain::CreateVerticalToolBar()
 		);
 	}
 
+	m_VerticalToolBar->tool_bar->AddSeparator();
 
 	/* Grid Mesh */
 	{

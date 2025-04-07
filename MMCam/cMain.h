@@ -150,22 +150,22 @@ namespace MainFrameVariables
 	{
 		bool dark_mode_on{};
 
-		double crop_size_mm = 0.0;
-		double crop_size_circle_mm = 0.0;
-		double default_sensor_temperature_degC = 0.0;
-		double default_cooled_sensor_temperature_degC = 0.0;
+		double crop_size_mm = 0.5;
+		double crop_size_circle_mm = 1.5;
+		double default_sensor_temperature_degC = 25.0;
+		double default_cooled_sensor_temperature_degC = 15.0;
 
 		double default_motors_step_first_tab = 1.0;
-		double default_motors_step_second_tab = 1.0;
+		double default_motors_step_second_tab = 0.1;
 
-		int circle_mesh_step_px = 0;
-		int grid_mesh_step_px = 0;
+		int circle_mesh_step_px = 100;
+		int grid_mesh_step_px = 150;
 		int default_colormap = 0;
-		int default_binning = 0;
-		int default_exposure_ms = 0;
+		int default_binning = 1;
+		int default_exposure_ms = 100;
 		
-		std::string default_motors_name_first_tab{};
-		std::string default_motors_name_second_tab{};
+		std::string default_motors_name_first_tab{ "Detector" };
+		std::string default_motors_name_second_tab{ "Optics" };
 
 		std::string upload_report_folder{};
 		std::string work_station{};
