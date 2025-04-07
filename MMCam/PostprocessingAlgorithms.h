@@ -225,7 +225,7 @@ namespace PostprocessingAlgorithms
 			int startOf1DDataCut{};
 			{
 				// Find the maximum value
-				auto minmaxElementIter = std::minmax_element(horizontalSumPtr, &horizontalSumPtr[imgWidth - 1]);
+				auto minmaxElementIter = std::minmax_element(horizontalSumPtr, &horizontalSumPtr[imgWidth]);
 				auto minElementIter = minmaxElementIter.first;
 				auto maxElementIter = minmaxElementIter.second;
 
@@ -245,7 +245,7 @@ namespace PostprocessingAlgorithms
 			for (auto i{ 0 }; i < imgHeight; ++i)
 				verticalDataSlice[i] = dataPtr[imgWidth * i + startOf1DDataCut];
 
-			auto minmaxElementIter = std::minmax_element(verticalDataSlice.get(), &verticalDataSlice[imgHeight - 1]);
+			auto minmaxElementIter = std::minmax_element(verticalDataSlice.get(), &verticalDataSlice[imgHeight]);
 			auto maxValue = *minmaxElementIter.second;
 
 			// Average Min value
@@ -321,7 +321,7 @@ namespace PostprocessingAlgorithms
 			int startOf1DDataCut{};
 			{
 				// Find the maximum value
-				auto minmaxElementIter = std::minmax_element(verticalSumPtr, &verticalSumPtr[imgHeight - 1]);
+				auto minmaxElementIter = std::minmax_element(verticalSumPtr, &verticalSumPtr[imgHeight]);
 				auto minElementIter = minmaxElementIter.first;
 				auto maxElementIter = minmaxElementIter.second;
 
@@ -343,7 +343,7 @@ namespace PostprocessingAlgorithms
 			//for (auto i{ 0 }; i < imgWidth; ++i)
 			//	horizontalDataSlice[i] = dataPtr[imgWidth * i + startOf1DDataCut];
 
-			auto minmaxElementIter = std::minmax_element(horizontalDataSlice.get(), &horizontalDataSlice[imgWidth - 1]);
+			auto minmaxElementIter = std::minmax_element(horizontalDataSlice.get(), &horizontalDataSlice[imgWidth]);
 			auto maxValue = *minmaxElementIter.second;
 
 			// Average Min value

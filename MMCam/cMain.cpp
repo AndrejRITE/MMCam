@@ -2659,7 +2659,7 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 	m_CamPreview->SetCameraCapturedImage
 	(
 		dataPtr.get(),
-		m_OutputImageSize,
+		imageSize,
 		wasHistogramRangeChanged ? m_HistogramPanel->GetLeftBorderValue() : minValue,
 		wasHistogramRangeChanged ? m_HistogramPanel->GetRightBorderValue() : maxValue
 	);
@@ -2903,6 +2903,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 				m_CameraTabControls->camBinning->SetSelection(i);
 			++i;
 		}
+
 		wxCommandEvent artBinPress(wxEVT_CHOICE, MainFrameVariables::ID_RIGHT_CAM_BINNING_CHOICE);
 		ProcessEvent(artBinPress);
 	}
@@ -3640,6 +3641,8 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 	int binning{ 1 };
 	m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 
+	m_OutputImageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
+
 	/* Worker and Progress Threads */
 	{
 		auto out_dir = m_OutDirTextCtrl->GetValue();
@@ -3719,6 +3722,7 @@ void cMain::StartLiveCapturing()
 			wxString formattedTime = wxString::Format(wxT("%lld"), now);
 			return formattedTime;
 		};
+	
 
 	wxString exposure_time_str = m_CameraTabControls->camExposure->GetValue().IsEmpty() 
 		? wxString("0") 
@@ -3735,6 +3739,7 @@ void cMain::StartLiveCapturing()
 	int binning{ 1 };
 	m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 	
+	m_OutputImageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
 
 	LiveCapturing* live_capturing = new LiveCapturing
 	(
@@ -3862,15 +3867,15 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 		if (m_StartStopMeasurementTglBtn->GetValue())
 			m_ProgressBar->SetValue(progress);
 		
-		int binning{ 1 };
-		m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
+		//int binning{ 1 };
+		//m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 		
 		if (*m_CamPreview->GetExecutionFinishedPtr())
 			DisplayAndSaveImageFromTheCamera
 			(
 				imgPtr, 
-				wxSize(m_CameraControl->GetWidth(), m_CameraControl->GetHeight()),
-				binning,
+				m_OutputImageSize,
+				1,
 				m_CameraControl->GetCameraDataType()
 			);
 
@@ -5612,6 +5617,8 @@ auto cMain::EnableControlsAfterCapturing() -> void
 	m_OutDirBtn->Enable();
 	m_FirstStage->EnableAllControls();
 
+	m_ImageColormapComboBox->stylish_combo_box->Enable();
+
 	m_HistogramPanel->Enable();
 }
 
@@ -5907,13 +5914,15 @@ auto LiveCapturing::CaptureImage
 	auto imgPtr = m_CameraControl->GetImage();
 	if (!imgPtr) return false;
 
-	auto outImgSize = wxSize(m_CameraControl->GetWidth() / m_Binning, m_CameraControl->GetHeight() / m_Binning);
+	auto imgWidth = m_CameraControl->GetWidth();
+	auto outImgSize = wxSize(imgWidth / m_Binning, m_CameraControl->GetHeight() / m_Binning);
+	
 	MainFrameVariables::BinImageData
 	(
 		imgPtr, 
 		dataPtr,
 		m_Binning,
-		m_CameraControl->GetWidth(),
+		imgWidth,
 		outImgSize
 	);
 

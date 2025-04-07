@@ -1525,7 +1525,7 @@ auto cCamPreview::DrawHorizontalSumLine(wxGraphicsContext* gc_) -> void
 	auto start_draw = wxRealPoint
 	(
 		(m_StartDrawPos.x + 0.5) * m_Zoom / m_ZoomOnOriginalSizeImage,
-		(m_StartDrawPos.y + m_ImageSize.GetHeight()) * m_Zoom / m_ZoomOnOriginalSizeImage 
+		(m_StartDrawPos.y + m_ImageSize.GetHeight() - 0.5) * m_Zoom / m_ZoomOnOriginalSizeImage 
 	);
 
 	wxDouble offset_x{ m_Zoom / m_ZoomOnOriginalSizeImage }, max_height{ (wxDouble)m_ImageOnCanvasSize.GetHeight() / 4 };
