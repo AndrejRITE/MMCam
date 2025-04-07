@@ -1577,6 +1577,11 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 		// Draw Value of the Bottom side of the image
 		{
 			curr_value = wxString::Format(wxT("%i"), m_ImageSize.GetWidth());
+			curr_value += " [px]; ";
+
+			curr_value += wxString::Format(wxT("%.1f"), m_PixelSizeUM * m_ImageSize.GetWidth());
+			curr_value += " [um]";
+
 			gc_->GetTextExtent(curr_value, &widthText, &heightText);
 			wxRealPoint draw_point =
 			{
@@ -1613,6 +1618,11 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 		// Draw Value on the Left side of the image
 		{
 			curr_value = wxString::Format(wxT("%i"), m_ImageSize.GetHeight());
+			curr_value += " [px]; ";
+
+			curr_value += wxString::Format(wxT("%.1f"), m_PixelSizeUM * m_ImageSize.GetHeight());
+			curr_value += " [um]";
+
 			gc_->GetTextExtent(curr_value, &widthText, &heightText);
 			wxRealPoint draw_point =
 			{
