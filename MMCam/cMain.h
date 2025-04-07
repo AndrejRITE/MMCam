@@ -41,7 +41,7 @@
 #include <wx/msw/window.h>
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 17
+#define MINOR_VERSION 18
 
 namespace MainFrameVariables
 {
@@ -153,6 +153,8 @@ namespace MainFrameVariables
 	struct InitializationFileStructure 
 	{
 		bool dark_mode_on{};
+		bool display_histogram{ true };
+		bool disable_report_generator{};
 
 		double crop_size_mm = 0.5;
 		double crop_size_circle_mm = 1.5;
@@ -180,6 +182,8 @@ namespace MainFrameVariables
 		(
 			InitializationFileStructure, 
 			dark_mode_on,
+			display_histogram,
+			disable_report_generator,
 
 			crop_size_mm, 
 			crop_size_circle_mm, 

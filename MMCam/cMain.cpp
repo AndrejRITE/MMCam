@@ -676,6 +676,8 @@ auto cMain::CreateBottomPanel(wxSizer* sizer, const int borderSize) -> void
 			m_RightHistogramRange.get(),
 			borderSize
 		);
+
+	m_HistogramPanel->Hide();
 }
 
 auto cMain::CreateStatusBarOnFrame() -> void
@@ -2839,7 +2841,26 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE);
 		ProcessEvent(artEvt);
 	}
+
+	// Display Histogram
+	{
+		auto displayHistogram = m_Config->display_histogram;
+
+		if (displayHistogram)
+			m_HistogramPanel->Show();
+		else
+			m_HistogramPanel->Hide();
+
+		Layout();
+	}
 	
+	// Disable Report Generator
+	{
+		auto disableReportGenerator = m_Config->disable_report_generator;
+
+		m_GenerateReportBtn->Enable(!disableReportGenerator);
+	}
+
 	// Motor Tabs
 	{
 		m_DetectorControlsNotebook->SetPageText(0, m_Config->default_motors_name_first_tab);
