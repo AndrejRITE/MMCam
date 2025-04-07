@@ -3024,10 +3024,8 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 		}
 		else m_Detector[2].DisableAllControls();
 
-#ifndef _DEBUG
 		if (!isAnyDetectorActive) m_DetectorControlsNotebook->Hide();
 		else m_DetectorControlsNotebook->Show();
-#endif // !_DEBUG
 
 	}
 	// Optics
@@ -3056,10 +3054,8 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 		}
 		else m_Optics[2].DisableAllControls();
 
-#ifndef _DEBUG
 		if (!isAnyOpticsActive) m_OpticsControlsNotebook->Hide();
 		else m_OpticsControlsNotebook->Show();
-#endif // !_DEBUG
 
 	}
 

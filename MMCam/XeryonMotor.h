@@ -2,6 +2,7 @@
 #ifndef XERYONMOTOR_H
 #define XERYONMOTOR_H
 
+#include <windows.h>
 
 #include <memory>
 #include <algorithm>
@@ -17,8 +18,6 @@
 #include <stdexcept>
 #include <fstream>
 
-//#include <Python.h>
-//#include <pybind11/embed.h> 
 #include "SerialPortCommunication.h"
 
 #include "IMotor.h"
@@ -36,8 +35,6 @@ namespace XeryonMotorVariables
 		OFFSET
 	};
 }
-
-//namespace py = pybind11;
 
 class XeryonMotor final : public IMotor
 {
@@ -108,6 +105,43 @@ private:
 		}
 
 		return result;
+	}
+
+	bool RunPowerShellCommandSilently(const std::string& command)
+	{
+		std::wstring fullCommand = L"powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"" + std::wstring(command.begin(), command.end()) + L"\"";
+
+		STARTUPINFOW si = { sizeof(si) };
+		PROCESS_INFORMATION pi = {};
+		si.dwFlags = STARTF_USESHOWWINDOW;
+		si.wShowWindow = SW_HIDE;  // Hide the window
+
+		// Create the process silently
+		BOOL success = CreateProcessW(
+			nullptr,
+			&fullCommand[0],  // Command line must be writable
+			nullptr,
+			nullptr,
+			FALSE,
+			CREATE_NO_WINDOW,  // Important flag to hide window
+			nullptr,
+			nullptr,
+			&si,
+			&pi
+		);
+
+		if (success)
+		{
+			// Wait until the process exits
+			WaitForSingleObject(pi.hProcess, INFINITE);
+			CloseHandle(pi.hProcess);
+			CloseHandle(pi.hThread);
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 
 private:

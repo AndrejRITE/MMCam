@@ -256,6 +256,8 @@ private:
 	wxImage m_Image{};
 	std::unique_ptr<unsigned short[]> m_ImageData{};
 	
+	wxImage m_LastBufferImage{};
+
 	wxSize m_ImageSize{}, m_ImageOnCanvasSize{}, m_CanvasSize{};
 	wxRealPoint m_NotCheckedCursorPosOnImage{}, m_CheckedCursorPosOnImage{}, m_CursorPosOnCanvas{};
 	wxRealPoint m_NotZoomedGraphicsBitmapOffset{}, m_StartDrawPos{};

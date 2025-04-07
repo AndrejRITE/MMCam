@@ -2,7 +2,6 @@
 
 XeryonMotor::XeryonMotor()
 {
-	//static py::scoped_interpreter guard{};  // Start Python interpreter
 	m_MotorSettings = std::make_unique<MotorVariables::Settings>();
 }
 
@@ -14,31 +13,23 @@ bool XeryonMotor::GoCenter()
 	{
 		try
 		{
-			std::string command = "py.exe " + m_CenterScriptName + " " + m_MotorCOMPort + " " + m_AxisPositionTempFileName;
-			//system("python my_script.py COM3 10.5");
-			system(command.c_str());
+			std::string command = "py.exe \"" 
+				+ m_CenterScriptName + "\" \"" 
+				+ m_MotorCOMPort + "\" \"" 
+				+ m_AxisPositionTempFileName + "\"";
+			RunPowerShellCommandSilently(command);
 
 			double currentPosition{};
 			std::ifstream file(m_AxisPositionTempFileName);  // Open the file
 			file >> currentPosition;  // Read the double value
 			file.close();
 
-			SetCurrentMotorPosition(currentPosition);
+			m_MotorSettings->motorPos = currentPosition;
 
-			//py::gil_scoped_acquire gil;  // 🔹 Acquire GIL in the new thread
-			//py::module importlib = py::module::import("importlib");
-			//py::module script_goCenter = importlib.attr("reload")(py::module::import("xeryon_goCenter"));
-
-			//auto currentPosition = script_goCenter.attr("move_to_position")
-			//	(m_MotorCOMPort.c_str()).cast<double>();
-
-			//m_MotorSettings->motorPos = currentPosition;
 			return true;  // Success
 		}
 		catch (...)
 		{
-			//auto error = std::string("Python Exception on attempt ") + std::to_string(attempt + 1) 
-				//+ ": " + e.what();
 			std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));  // Wait before retrying
 			attempt++;
 		}
@@ -51,15 +42,16 @@ bool XeryonMotor::GoToAbsolutePosition(float stagePosition)
 {
 	auto attempt = 0;
 
-	//static py::module script_setAbsolutePosition = py::module::import("xeryon_setAbsolutePosition");
-
 	while (attempt < m_MaxAttemptsToCallPythonFunction)
 	{
 		try
 		{
-			std::string command = "start /B py.exe " + m_AbsolutePositionScriptName + " " + m_MotorCOMPort + " " + std::to_string(stagePosition) + " " + m_AxisPositionTempFileName;
-			//system("python my_script.py COM3 10.5");
-			system(command.c_str());
+			std::string command = "py.exe \"" 
+				+ m_AbsolutePositionScriptName + "\" \"" 
+				+ m_MotorCOMPort + "\" \"" 
+				+ std::to_string(stagePosition) + "\" \"" 
+				+ m_AxisPositionTempFileName + "\"";
+			RunPowerShellCommandSilently(command);
 
 			double currentPosition{};
 			std::ifstream file(m_AxisPositionTempFileName);  // Open the file
@@ -67,19 +59,11 @@ bool XeryonMotor::GoToAbsolutePosition(float stagePosition)
 			file.close();
 
 			SetCurrentMotorPosition(currentPosition);
-			// Ensure GIL is acquired only when needed
-			//py::gil_scoped_acquire gil;
-
-			//auto currentPosition = script_setAbsolutePosition.attr("move_to_position")
-			//	(m_MotorCOMPort.c_str(), (double)stagePosition).cast<double>();
-
-			//SetCurrentMotorPosition(currentPosition);
+			
 			return true;  // Success
 		}
 		catch (...)
 		{
-			//auto error = std::string("Python Exception on attempt ") + std::to_string(attempt + 1) 
-				//+ ": " + e.what();
 			std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));  // Wait before retrying
 			attempt++;
 		}
@@ -97,13 +81,6 @@ float XeryonMotorArray::GetActualStagePos(const std::string& motor_sn) const
 		[&](const XeryonMotor& motor) { return motor.GetDeviceSerNum() == motor_sn; });
 
 	return (it != m_MotorsArray.end()) ? it->GetDeviceActualStagePos() : error_position;
-
-	//for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
-	//{
-	//	if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
-	//		return m_MotorsArray[motor].GetDeviceActualStagePos();
-	//}
-	//return error_position;
 }
 
 std::string XeryonMotorArray::GetMotorCOMPort(const std::string& motor_sn) const
@@ -114,13 +91,6 @@ std::string XeryonMotorArray::GetMotorCOMPort(const std::string& motor_sn) const
 		[&](const XeryonMotor& motor) { return motor.GetDeviceSerNum() == motor_sn; });
 
 	return (it != m_MotorsArray.end()) ? it->GetDeviceCOMPort() : "";
-
-	//for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
-	//{
-	//	if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
-	//		return m_MotorsArray[motor].GetDeviceCOMPort();
-	//}
-	//return "";
 }
 
 bool XeryonMotorArray::IsMotorConnected(const std::string& motor_sn) const
@@ -131,13 +101,6 @@ bool XeryonMotorArray::IsMotorConnected(const std::string& motor_sn) const
 		[&](const XeryonMotor& motor) { return motor.GetDeviceSerNum() == motor_sn; });
 
 	return (it != m_MotorsArray.end()) ? true : false;
-
-	//for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
-	//{
-	//	if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
-	//		return true;
-	//}
-	//return false;
 }
 
 void XeryonMotorArray::SetStepsPerMMForTheMotor(const std::string motor_sn, const int stepsPerMM)
@@ -151,15 +114,6 @@ void XeryonMotorArray::SetStepsPerMMForTheMotor(const std::string motor_sn, cons
 
 	if (it != m_MotorsArray.end())
 		it->SetStepsPerMMRatio((float)stepsPerMM);
-
-	//for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
-	//{
-	//	if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
-	//	{
-	//		m_MotorsArray[motor].SetStepsPerMMRatio((float)stepsPerMM);
-	//		break;
-	//	}
-	//}
 }
 
 void XeryonMotorArray::SetCurrentPositionForTheMotor(const std::string motor_sn, const float currentPosition)
@@ -171,15 +125,6 @@ void XeryonMotorArray::SetCurrentPositionForTheMotor(const std::string motor_sn,
 
 	if (it != m_MotorsArray.end())
 		it->SetCurrentMotorPosition((float)currentPosition);
-
-	//for (auto motor{ 0 }; motor < m_MotorsArray.size(); ++motor)
-	//{
-	//	if (m_MotorsArray[motor].GetDeviceSerNum() == motor_sn)
-	//	{
-	//		m_MotorsArray[motor].SetCurrentMotorPosition((float)currentPosition);
-	//		break;
-	//	}
-	//}
 }
 
 auto XeryonMotorArray::InitAllMotors() -> bool

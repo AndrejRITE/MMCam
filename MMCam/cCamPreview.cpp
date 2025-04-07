@@ -863,6 +863,15 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 			return;
 		}
 
+		// Retrieve Canvas
+		{
+			wxBitmap buffer(m_CanvasSize.GetWidth(), m_CanvasSize.GetHeight());
+			wxMemoryDC memDC;
+			memDC.SelectObject(buffer);
+			memDC.Blit(0, 0, m_CanvasSize.GetWidth(), m_CanvasSize.GetHeight(), &dc, 0, 0);
+			m_LastBufferImage = buffer.ConvertToImage();
+		}
+
 		DrawActualZoomedPositionOverImage(gc);
 		DrawScaleBar(gc);
 
@@ -1325,8 +1334,6 @@ auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 	);
 	// Set line color and thickness
 	auto pen_thickness = 4;
-	wxColour fontColour(255, 255, 0, 180);
-	gc_->SetPen(wxPen(fontColour, pen_thickness));
 
 	auto scale_bar_scale_size{ 10 };
 	auto scale_bar_um_array = std::make_unique<unsigned int[]>(scale_bar_scale_size);
@@ -1341,6 +1348,11 @@ auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 		length_horizontal_line = m_Zoom / m_ZoomOnOriginalSizeImage * scale_bar_um_array[selected_scale] / m_PixelSizeUM;
 	}
 
+	auto bgColor = GetPixelColorFromImage(m_LastBufferImage, scale_bar_start_draw.x - length_horizontal_line / 2, scale_bar_start_draw.y);
+	wxColour widgetColour(255 - bgColor.Red(), 255 - bgColor.Green(), 255 - bgColor.Blue());
+	
+	gc_->SetPen(wxPen(widgetColour, pen_thickness));
+
 	// Draw the first horizntal line from (x1, y1) to (x2, y2)
 	gc_->StrokeLine
 	(
@@ -1354,7 +1366,8 @@ auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 	{
 		wxRealPoint drawPoint{};
 		wxFont font = wxFont(16, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
-		gc_->SetFont(font, fontColour);
+		gc_->SetFont(font, widgetColour);
+
 		wxDouble widthText{}, heightText{};
 		wxString curr_value{};
 		auto currentScaleValue = scale_bar_um_array[selected_scale];
@@ -1677,7 +1690,11 @@ auto cCamPreview::DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> v
 		m_Image.GetWidth() >= m_Image.GetHeight() ? max_width : max_height * m_Image.GetWidth() / (wxDouble)m_Image.GetHeight(),
 		m_Image.GetHeight() >= m_Image.GetWidth() ? max_height : max_width * m_Image.GetHeight() / (wxDouble)m_Image.GetWidth()
 	);
-	gc_->SetPen(wxPen(wxColour("gold"), 1, wxPENSTYLE_SOLID));
+
+	auto bgColor = GetPixelColorFromImage(m_LastBufferImage, image_minuature.GetCentre().m_x, image_minuature.GetCentre().m_y);
+	wxColour widgetColour(255 - bgColor.Red(), 255 - bgColor.Green(), 255 - bgColor.Blue());
+
+	gc_->SetPen(wxPen(widgetColour, 1, wxPENSTYLE_SOLID));
 	gc_->DrawRectangle
 	(
 		image_minuature.m_x,
@@ -1696,7 +1713,9 @@ auto cCamPreview::DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> v
 		GetSize().GetHeight() * m_ZoomOnOriginalSizeImage / m_Zoom / m_Image.GetHeight() * image_minuature.m_height
 	);
 	//LOG2F("Width: ", actual_view.m_width, " Height: ", actual_view.m_height);
-	gc_->SetPen(wxPen(wxColour("gold"), 2, wxPENSTYLE_SOLID));
+
+
+	gc_->SetPen(wxPen(widgetColour, 2, wxPENSTYLE_SOLID));
 	if (actual_view.m_width < 7.0 || actual_view.m_height < 7.0)
 	{
 		wxPoint2DDouble start_draw_cross =
