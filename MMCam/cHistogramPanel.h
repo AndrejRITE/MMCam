@@ -115,6 +115,8 @@ private:
 	bool m_IsGraphicsBitmapSet{}, m_IsImageSet{};
 	wxGraphicsBitmap m_GraphicsBitmapImage{};
 
+	wxColour m_BackgroundColour = wxColour(95, 95, 95);
+
 	wxImage m_Image{};
 	//std::shared_ptr<unsigned short[]> m_ImageData{};
 

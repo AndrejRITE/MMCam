@@ -27,9 +27,9 @@ cHistogramPanel::cHistogramPanel
 {
 	SetDoubleBuffered(true);
 #ifdef _DEBUG
-	SetBackgroundColour(wxColor(95, 95, 95));
+	SetBackgroundColour(m_BackgroundColour);
 #else
-	SetBackgroundColour(wxColor(95, 95, 95));
+	SetBackgroundColour(m_BackgroundColour);
 #endif // _DEBUG
 	parent_sizer->Add(this, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, borderSize);
 
@@ -50,7 +50,8 @@ auto cHistogramPanel::SetHistogram
 		{
 			m_Image = wxImage(m_CanvasSize);
 			m_ImageSize = m_CanvasSize;
-			m_Image.Clear(95);
+			//m_Image.InitAlpha();
+			m_Image.Clear(m_BackgroundColour.GetRed());
 
 			//CalculateAutoModeValues();
 			unsigned char hist_red{ 180 }, hist_green{ 29 }, hist_blue{ 47 };
@@ -117,6 +118,7 @@ auto cHistogramPanel::SetHistogram
 auto cHistogramPanel::SetBackgroundColor(wxColour bckg_colour) -> void
 {
 	SetBackgroundColour(bckg_colour);
+	m_BackgroundColour = bckg_colour;
 }
 
 void cHistogramPanel::InitDefaultComponents()
@@ -131,6 +133,7 @@ void cHistogramPanel::PaintEvent(wxPaintEvent& evt)
 
 void cHistogramPanel::Render(wxBufferedPaintDC& dc)
 {	
+	dc.SetBackground(wxBrush(m_BackgroundColour));
 	dc.Clear();
 	//wxGraphicsContext* gc_image{};
 
