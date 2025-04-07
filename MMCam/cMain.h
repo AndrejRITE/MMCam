@@ -148,6 +148,8 @@ namespace MainFrameVariables
 	
 	struct InitializationFileStructure 
 	{
+		bool dark_mode_on{};
+
 		double crop_size_mm = 0.0;
 		double crop_size_circle_mm = 0.0;
 		double default_sensor_temperature_degC = 0.0;
@@ -162,17 +164,19 @@ namespace MainFrameVariables
 		int default_binning = 0;
 		int default_exposure_ms = 0;
 		
-		std::string default_motors_name_first_tab {};
-		std::string default_motors_name_second_tab {};
+		std::string default_motors_name_first_tab{};
+		std::string default_motors_name_second_tab{};
 
-		std::string upload_report_folder {};
-		std::string work_station {};
-		std::vector<std::string> xrayImagesCaptions {};
+		std::string upload_report_folder{};
+		std::string work_station{};
+		std::vector<std::string> xrayImagesCaptions{};
 
 		// Serialize/Deserialize using NLOHMANN_DEFINE_TYPE_INTRUSIVE
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE
 		(
 			InitializationFileStructure, 
+			dark_mode_on,
+
 			crop_size_mm, 
 			crop_size_circle_mm, 
 			default_sensor_temperature_degC,

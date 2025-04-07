@@ -119,13 +119,6 @@ cMain::cMain(const wxString& title_)
 
 	Show();
 
-	// Enable Dark Mode
-	{
-		m_MenuBar->menu_edit->Check(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE, true);
-		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE);
-		ProcessEvent(artEvt);
-	}
-
 	// Open Settings Menu
 	{
 		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS);
@@ -2277,41 +2270,44 @@ void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_
 
 auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 {
-	if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE))
+	auto currID = MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE;
+	auto currState = m_MenuBar->menu_edit->IsChecked(currID);
+	
+	m_Config->dark_mode_on = currState;
+	RewriteInitializationFile();
+
+	auto bckgColour = wxColour();
+
+	if (currState)
 	{
 		m_CamPreview->SetBackgroundColor(m_BlackAppearanceColor);
+
 		wxColour normalized_black = wxColour(100, 100, 100);
 		m_VerticalToolBar->tool_bar->SetBackgroundColour(normalized_black);
-		wxColour nb_color = wxColour(normalized_black.Red() + 40, normalized_black.Green() + 40, normalized_black.Blue() + 40);
-		m_RightSidePanel->SetBackgroundColour(nb_color);
-		
-		m_DetectorControlsNotebook->SetBackgroundColour(nb_color);
-		
-		m_OpticsControlsNotebook->SetBackgroundColour(nb_color);
-		
-		m_CameraControlNotebook->SetBackgroundColour(nb_color);
-		
-		m_ToolsControlsNotebook->SetBackgroundColour(nb_color);
-		
-		m_MeasurementNotebook->SetBackgroundColour(nb_color);
+	
+		bckgColour = wxColour(normalized_black.Red() + 40, normalized_black.Green() + 40, normalized_black.Blue() + 40);
 	}
 	else
 	{
 		m_CamPreview->SetBackgroundColor(m_DefaultAppearanceColor);
 
 		m_VerticalToolBar->tool_bar->SetBackgroundColour(m_DefaultAppearanceColor);
-		m_RightSidePanel->SetBackgroundColour(m_DefaultAppearanceColor);
-		
-		m_DetectorControlsNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
-		
-		m_OpticsControlsNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
-		
-		m_CameraControlNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
-		
-		m_ToolsControlsNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
-		
-		m_MeasurementNotebook->SetBackgroundColour(m_DefaultAppearanceColor);
+
+		bckgColour = m_DefaultAppearanceColor;
 	}
+	
+	m_RightSidePanel->SetBackgroundColour(bckgColour);
+	
+	m_DetectorControlsNotebook->SetBackgroundColour(bckgColour);
+	
+	m_OpticsControlsNotebook->SetBackgroundColour(bckgColour);
+	
+	m_CameraControlNotebook->SetBackgroundColour(bckgColour);
+	
+	m_ToolsControlsNotebook->SetBackgroundColour(bckgColour);
+	
+	m_MeasurementNotebook->SetBackgroundColour(bckgColour);
+	
 	Refresh();
 }
 
@@ -2759,6 +2755,15 @@ auto cMain::InitializeSelectedCamera() -> void
 
 auto cMain::UpdateDefaultWidgetParameters() -> void
 {
+	// Enable Dark Mode
+	{
+		auto darkMode = m_Config->dark_mode_on;
+
+		m_MenuBar->menu_edit->Check(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE, darkMode);
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE);
+		ProcessEvent(artEvt);
+	}
+	
 	// Motor Tabs
 	{
 		m_DetectorControlsNotebook->SetPageText(0, m_Config->default_motors_name_first_tab);
