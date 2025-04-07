@@ -68,9 +68,12 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 
 	EVT_BUTTON(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
 
+	/* Tools */
+	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL, cMain::OnGridMeshTxtCtrl)
+	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL, cMain::OnCircleMeshTxtCtrl)
 	EVT_TEXT(MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL, cMain::OnXPosCrossHairTextCtrl)
 	EVT_TEXT(MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL, cMain::OnYPosCrossHairTextCtrl)
-	//EVT_TOGGLEBUTTON(MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_SET_POS_TGL_BTN, cMain::OnSetPosCrossHairTglBtn)
+
 	/* Set Out Folder */
 	EVT_BUTTON(MainFrameVariables::ID_RIGHT_MT_OUT_FLD_BTN, cMain::OnSetOutDirectoryBtn)
 	/* First Stage */
@@ -1670,17 +1673,111 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 
 auto cMain::CreateGridMeshPage(wxWindow* parent) -> wxWindow*
 {
+	if (!m_ToolsControls) return nullptr;
+
 	wxPanel* page = new wxPanel(parent);
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
 	
+	auto gridSizer = new wxGridSizer(2); 
+	gridSizer->SetVGap(5);
+
+	wxSize txtCtrlSize = { 64, 20 };
+
+	// Grid Mesh
+	{
+		gridSizer->Add
+		(
+			new wxStaticText
+			(
+				page, 
+				wxID_ANY, 
+				wxT("Step [px]:")
+			), 
+			0, 
+			wxALIGN_CENTER
+		);
+
+		wxIntegerValidator<int>	val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
+		val.SetMin(1);
+		val.SetMax(1'000'000);
+
+		m_ToolsControls->gridMeshStepTxtCtrl = std::make_unique<wxTextCtrl>
+			(
+				page, 
+				MainFrameVariables::ID_RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL, 
+#ifdef _DEBUG
+				wxT("100"), 
+#else
+				wxT("100"), 
+#endif // _DEBUG
+				wxDefaultPosition, 
+				txtCtrlSize, 
+				wxTE_CENTRE | wxTE_PROCESS_ENTER, 
+				val
+			);
+		
+		//m_ToolsControls->gridMeshStepTxtCtrl->Disable();
+		m_ToolsControls->gridMeshStepTxtCtrl->SetToolTip("Set desired step in [px] and press Enter");
+
+		gridSizer->Add(m_ToolsControls->gridMeshStepTxtCtrl.get(), 0, wxALIGN_CENTER);
+	}
+	sizerPage->Add(gridSizer, 0, wxEXPAND | wxALL, 5);
+
 	page->SetSizer(sizerPage);
 	return page;
 }
 
 auto cMain::CreateCircleMeshPage(wxWindow* parent) -> wxWindow*
 {
+	if (!m_ToolsControls) return nullptr;
+
 	wxPanel* page = new wxPanel(parent);
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+	
+	auto gridSizer = new wxGridSizer(2); 
+	gridSizer->SetVGap(5);
+
+	wxSize txtCtrlSize = { 64, 20 };
+
+	// Circle Mesh
+	{
+		gridSizer->Add
+		(
+			new wxStaticText
+			(
+				page, 
+				wxID_ANY, 
+				wxT("Step [px]:")
+			), 
+			0, 
+			wxALIGN_CENTER
+		);
+
+		wxIntegerValidator<int>	val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
+		val.SetMin(1);
+		val.SetMax(1'000'000);
+
+		m_ToolsControls->circleMeshStepTxtCtrl = std::make_unique<wxTextCtrl>
+			(
+				page, 
+				MainFrameVariables::ID_RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL, 
+#ifdef _DEBUG
+				wxT("200"), 
+#else
+				wxT("200"), 
+#endif // _DEBUG
+				wxDefaultPosition, 
+				txtCtrlSize, 
+				wxTE_CENTRE | wxTE_PROCESS_ENTER, 
+				val
+			);
+		
+		//m_ToolsControls->circleMeshStepTxtCtrl->Disable();
+		m_ToolsControls->circleMeshStepTxtCtrl->SetToolTip("Set desired step in [px] and press Enter");
+
+		gridSizer->Add(m_ToolsControls->circleMeshStepTxtCtrl.get(), 0, wxALIGN_CENTER);
+	}
+	sizerPage->Add(gridSizer, 0, wxEXPAND | wxALL, 5);
 
 	page->SetSizer(sizerPage);
 	return page;
@@ -2106,6 +2203,8 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 
 	m_ToolsControlsNotebook->AssignImageList(imageList);
 
+	m_ToolsControls = std::make_unique<MainFrameVariables::ToolsTabControls>();
+
 	m_ToolsControlsNotebook->AddPage
 	(
 		CreateGridMeshPage(m_ToolsControlsNotebook), 
@@ -2130,8 +2229,8 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 		imgIndexCircleMesh
 	);
 
-#ifndef _DEBUG
 	m_ToolsControlsNotebook->Hide();
+#ifndef _DEBUG
 #endif // !_DEBUG
 
 	right_side_panel_sizer->Add(m_ToolsControlsNotebook, 0, wxEXPAND | wxALL, 5);
@@ -2272,6 +2371,21 @@ auto cMain::OnGridMeshButton(wxCommandEvent& evt) -> void
 	(
 		currState
 	);
+
+	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked);
+	Layout();
+}
+
+auto cMain::OnGridMeshTxtCtrl(wxCommandEvent& evt) -> void
+{
+	int textInt{ 1 };
+	m_ToolsControls->gridMeshStepTxtCtrl->GetValue().ToInt(&textInt);
+
+	m_Config->grid_mesh_step_px = textInt;
+	RewriteInitializationFile();
+
+	m_CamPreview->SetGridMeshStepPX(m_Config->grid_mesh_step_px);
+	Refresh();
 }
 
 auto cMain::OnFocusCenterButton(wxCommandEvent& evt) -> void
@@ -2304,6 +2418,21 @@ auto cMain::OnCircleMeshButton(wxCommandEvent& evt) -> void
 	(
 		currState
 	);
+	
+	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked);
+	Layout();
+}
+
+auto cMain::OnCircleMeshTxtCtrl(wxCommandEvent& evt) -> void
+{
+	int textInt{ 1 };
+	m_ToolsControls->circleMeshStepTxtCtrl->GetValue().ToInt(&textInt);
+
+	m_Config->circle_mesh_step_px = textInt;
+	RewriteInitializationFile();
+
+	m_CamPreview->SetCircleMeshStepPX(m_Config->circle_mesh_step_px);
+	Refresh();
 }
 
 void cMain::CreateProgressBar()
@@ -2675,6 +2804,18 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 		auto sensor_temperature = m_Config->default_cooled_sensor_temperature_degC;
 		auto sensor_temperature_str = MainFrameVariables::CreateStringWithPrecision(sensor_temperature, 1);
 		m_CameraTabControls->camSensorTemperature->SetLabel(sensor_temperature_str);
+	}
+
+	// Grid Mesh Step
+	{
+		auto step_str = MainFrameVariables::CreateStringWithPrecision(m_Config->grid_mesh_step_px, 0);
+		m_ToolsControls->gridMeshStepTxtCtrl->SetLabel(step_str);
+	}
+
+	// Circle Mesh Step
+	{
+		auto step_str = MainFrameVariables::CreateStringWithPrecision(m_Config->circle_mesh_step_px, 0);
+		m_ToolsControls->circleMeshStepTxtCtrl->SetLabel(step_str);
 	}
 }
 

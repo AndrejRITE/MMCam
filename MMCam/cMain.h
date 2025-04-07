@@ -106,6 +106,9 @@ namespace MainFrameVariables
 		ID_RIGHT_SC_OPT_Z_INC_BTN,
 		ID_RIGHT_SC_OPT_Z_CENTER_BTN,
 		ID_RIGHT_SC_OPT_Z_HOME_BTN,
+		/* Tools */
+		ID_RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL,
+		ID_RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL,
 		/* Camera */
 		ID_RIGHT_CAM_TEMPERATURE_TXT_CTL,
 		ID_RIGHT_CAM_EXPOSURE_TXT_CTL,
@@ -283,6 +286,11 @@ namespace MainFrameVariables
 			crossHairPosYTxtCtrl->Disable();
 		}
 
+	};
+
+	struct ToolsTabControls
+	{
+		std::unique_ptr<wxTextCtrl> gridMeshStepTxtCtrl{}, circleMeshStepTxtCtrl{};
 	};
 
 	struct StepperControl
@@ -603,8 +611,12 @@ private:
 
 	auto OnFWHMButton(wxCommandEvent& evt) -> void;
 	auto OnGridMeshButton(wxCommandEvent& evt) -> void;
-	auto OnFocusCenterButton(wxCommandEvent& evt) -> void;
+	auto OnGridMeshTxtCtrl(wxCommandEvent& evt) -> void;
+	
 	auto OnCircleMeshButton(wxCommandEvent& evt) -> void;
+	auto OnCircleMeshTxtCtrl(wxCommandEvent& evt) -> void;
+	
+	auto OnFocusCenterButton(wxCommandEvent& evt) -> void;
 	auto OnCrossHairButton(wxCommandEvent& evt) -> void;
 
 	void UnCheckAllTools();
@@ -1472,6 +1484,7 @@ private:
 	wxNotebook* m_CameraControlNotebook{};
 	
 	wxNotebook* m_ToolsControlsNotebook{};
+	std::unique_ptr<MainFrameVariables::ToolsTabControls> m_ToolsControls{};
 
 	wxNotebook* m_MeasurementNotebook{};
 
