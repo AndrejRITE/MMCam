@@ -46,48 +46,16 @@ auto cHistogramPanel::SetHistogram
 	unsigned long long max_value
 ) -> std::optional<int>
 {
-	auto set_wxImage = [&]() 
-		{
-			m_Image = wxImage(m_CanvasSize);
-			m_ImageSize = m_CanvasSize;
-			//m_Image.InitAlpha();
-			m_Image.Clear(m_BackgroundColour.GetRed());
-
-			//CalculateAutoModeValues();
-			unsigned char hist_red{ 180 }, hist_green{ 29 }, hist_blue{ 47 };
-			int curr_x{}, curr_y{};
-			unsigned int curr_max_height{};
-			for (auto i{ 0 }; i <= (int)m_MaxHistogramValue; ++i)
-			{
-				curr_x = (m_CanvasSize.GetWidth() - 1) * i / (double)m_MaxHistogramValue;
-				curr_y = (m_CanvasSize.GetHeight() - 1) * m_HistogramData[i] / (double)m_GlobalMax;
-				if (curr_y > 0)
-				{
-					m_Image.SetRGB
-					(
-						wxRect
-						(
-							wxPoint(curr_x, m_CanvasSize.GetHeight() - curr_y),
-							wxSize(1, curr_y)
-						),
-						hist_red,
-						hist_green,
-						hist_blue
-					);
-				}
-			}
-
-			m_IsImageSet = true;
-			m_IsGraphicsBitmapSet = false;
-
-			Refresh();
-		};
-
 	if (!m_CanvasSize.GetWidth() || !m_CanvasSize.GetHeight()) return std::optional<int>(1);
 
 	m_DataType = data_type;
 	m_HistogramData.reset(data);
-	MedianBlur1D(m_HistogramData.get(), m_DataType == HistogramPanelVariables::ImageDataTypes::RAW_12BIT ? 4'095 : USHRT_MAX, 5);
+	MedianBlur1D
+	(
+		m_HistogramData.get(), 
+		m_DataType == HistogramPanelVariables::ImageDataTypes::RAW_12BIT ? 4'095 : USHRT_MAX, 
+		5
+	);
 
 	// Find Global Minimum and Maximum values inside the Histogram values
 	auto minMaxElement = std::minmax_element(m_HistogramData.get(), m_HistogramData.get() + USHRT_MAX + 1);
@@ -100,14 +68,8 @@ auto cHistogramPanel::SetHistogram
 
 	m_MaxHistogramValue = m_DataType == HistogramPanelVariables::ImageDataTypes::RAW_12BIT ? 4'095UL : 65'535UL;
 
-	set_wxImage();
+	SetWXImage();
 
-	// Set Left and Right borders positions
-	//if (!m_WasRangeChanged)
-	//{
-	//	m_LeftBorder = m_AutoLeftBorder;
-	//	m_RightBorder = m_AutoRightBorder;
-	//}
 	m_LeftBorder = m_AutoLeftBorder;
 	m_RightBorder = m_AutoRightBorder;
 	m_WasRangeChanged = false;
@@ -119,6 +81,50 @@ auto cHistogramPanel::SetBackgroundColor(wxColour bckg_colour) -> void
 {
 	SetBackgroundColour(bckg_colour);
 	m_BackgroundColour = bckg_colour;
+	SetWXImage();
+}
+
+auto cHistogramPanel::SetWXImage() -> void
+{
+	if (!m_HistogramData) return;
+
+	m_Image = wxImage(m_CanvasSize);
+	m_ImageSize = m_CanvasSize;
+	
+	//m_Image.InitAlpha();
+	
+	m_Image.Clear(m_BackgroundColour.GetRed());
+
+	auto histColour = wxColour(180, 29, 47);
+	int curr_x{}, curr_y{};
+
+	auto maxHistogramValue = static_cast<double>(m_MaxHistogramValue);
+	auto globalMax = static_cast<double>(m_GlobalMax);
+
+	for (auto i{ 0 }; i <= (int)m_MaxHistogramValue; ++i)
+	{
+		curr_y = (m_CanvasSize.GetHeight() - 1) * m_HistogramData[i] / globalMax;
+		if (curr_y <= 0) continue;
+		
+		curr_x = (m_CanvasSize.GetWidth() - 1) * i / maxHistogramValue;
+		
+		m_Image.SetRGB
+		(
+			wxRect
+			(
+				wxPoint(curr_x, m_CanvasSize.GetHeight() - curr_y),
+				wxSize(1, curr_y)
+			),
+			histColour.GetRed(),
+			histColour.GetGreen(),
+			histColour.GetBlue()
+		);
+	}
+
+	m_IsImageSet = true;
+	m_IsGraphicsBitmapSet = false;
+
+	Refresh();
 }
 
 void cHistogramPanel::InitDefaultComponents()
@@ -328,7 +334,9 @@ void cHistogramPanel::ChangeSizeOfImageInDependenceOnCanvasSize()
 void cHistogramPanel::OnMouseMoved(wxMouseEvent& evt)
 {
 	m_CursorPosOnCanvas = evt.GetPosition();
+	
 	//LOGF("Cursor: ", m_CursorPosOnCanvas.x);
+
 	if (!m_ChangingLeftBorder && !m_ChangingRightBorder)
 	{
 		m_IsCursorAboveLeftBorder = false;
@@ -361,17 +369,8 @@ void cHistogramPanel::OnMouseMoved(wxMouseEvent& evt)
 		{
 			m_LeftBorderOnCanvas.x = m_CursorPosOnCanvas.x;
 			m_LeftBorder.x = m_LeftBorderOnCanvas.x * (wxDouble)m_MaxHistogramValue / (wxDouble)m_CanvasSize.GetWidth();
-			//actualBlackValueInTextCtrl = (float(maxWhiteValue - minBlackValue) / float(m_Width - 1)) * float(currentCursorX);
-			//parentBlackTextControl->SetValue(wxString::Format(wxT("%i"), actualBlackValueInTextCtrl));
-			//leftBorderPosX = currentCursorX;
 			Refresh();
 		}
-		//if (parentRadioBox->GetSelection() != parentManualModeRadioBox)
-		//{
-		//	parentRadioBox->SetSelection(parentManualModeRadioBox);
-		//	parentBlackTextControl->Enable();
-		//	parentWhiteTextControl->Enable();
-		//}
 	}
 	else if (m_ChangingRightBorder)
 	{
@@ -383,18 +382,8 @@ void cHistogramPanel::OnMouseMoved(wxMouseEvent& evt)
 		{
 			m_RightBorderOnCanvas.x = m_CursorPosOnCanvas.x;
 			m_RightBorder.x = m_RightBorderOnCanvas.x * m_MaxHistogramValue / m_CanvasSize.GetWidth();
-			//wxLogDebug(wxString::Format(wxT("%i"), width) + " " + wxString::Format(wxT("%i"), currentCursorX));
-			//actualWhiteValueInTextCtrl = (float(maxWhiteValue - minBlackValue) / float(m_Width - 1)) * float(currentCursorX);
-			//parentWhiteTextControl->SetValue(wxString::Format(wxT("%i"), actualWhiteValueInTextCtrl));
-			//rightBorderPosX = currentCursorX;
 			Refresh();
 		}
-		//if (parentRadioBox->GetSelection() != parentManualModeRadioBox)
-		//{
-		//	parentRadioBox->SetSelection(parentManualModeRadioBox);
-		//	parentBlackTextControl->Enable();
-		//	parentWhiteTextControl->Enable();
-		//}
 	}
 }
 
@@ -427,6 +416,7 @@ void cHistogramPanel::OnPreviewMouseLeftPressed(wxMouseEvent& evt)
 auto cHistogramPanel::OnPreviewMouseLeftDoubleClick(wxMouseEvent& evt) -> void
 {
 	if (!m_WasRangeChanged) return;
+
 	m_LeftBorder = m_AutoLeftBorder;
 	m_RightBorder = m_AutoRightBorder;
 	m_LeftBorderOnCanvas.x = m_CanvasSize.GetWidth() * m_LeftBorder.x / (wxDouble)m_MaxHistogramValue;
@@ -434,19 +424,19 @@ auto cHistogramPanel::OnPreviewMouseLeftDoubleClick(wxMouseEvent& evt) -> void
 	m_ParentLeftBorder->ChangeValue(wxString::Format(wxT("%i"), m_LeftBorder.x));
 	m_ParentRightBorder->SetValue(wxString::Format(wxT("%i"), m_RightBorder.x));
 	m_WasRangeChanged = false;
+
 	Refresh();
 }
 
 void cHistogramPanel::OnPreviewMouseLeftReleased(wxMouseEvent& evt)
 {
-	if (m_ChangingLeftBorder || m_ChangingRightBorder)
-	{
-		m_ParentLeftBorder->ChangeValue(wxString::Format(wxT("%i"), m_LeftBorder.x));
-		m_ParentRightBorder->SetValue(wxString::Format(wxT("%i"), m_RightBorder.x));
-		m_ChangingLeftBorder = false;
-		m_ChangingRightBorder = false;
-		SetCursor(wxCURSOR_DEFAULT);
-	}
+	if (!m_ChangingLeftBorder && !m_ChangingRightBorder) return;
+
+	m_ParentLeftBorder->ChangeValue(wxString::Format(wxT("%i"), m_LeftBorder.x));
+	m_ParentRightBorder->SetValue(wxString::Format(wxT("%i"), m_RightBorder.x));
+	m_ChangingLeftBorder = false;
+	m_ChangingRightBorder = false;
+	SetCursor(wxCURSOR_DEFAULT);
 }
 
 auto cHistogramPanel::OnPreviewMouseEnteredWindow(wxMouseEvent& evt) -> void

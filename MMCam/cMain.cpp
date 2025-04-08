@@ -3543,13 +3543,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 
 		m_ProgressBar->SetValue(0);
 		m_ProgressBar->Hide();
-
-		//m_MeasurementNotebook->Refresh();
-		//m_ProgressBar->UpdateElapsedTime(0);
-		//m_ProgressBar->UpdateEstimatedTime(0, 0);
-		//if (m_AppProgressIndicator) m_AppProgressIndicator->~wxAppProgressIndicator();
-		//UpdateAllAxisGlobalPositions();
-
+		
 		EnableControlsAfterCapturing();
 		m_StartStopMeasurementTglBtn->SetLabel("Start Measurement (M)");
 
@@ -5751,6 +5745,8 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 
 		m_CameraTabControls->EnableAllControls();
 		m_ImageColormapComboBox->stylish_combo_box->Enable();
+
+		m_HistogramPanel->Enable();
 
 		m_StartStopMeasurementTglBtn->Enable();
 

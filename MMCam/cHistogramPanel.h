@@ -86,6 +86,8 @@ public:
 	};
 
 private:
+	auto SetWXImage() -> void;
+
 	void InitDefaultComponents();
 	void PaintEvent(wxPaintEvent& evt);
 	void Render(wxBufferedPaintDC& dc);
