@@ -288,7 +288,8 @@ void cMain::CreateMenuBarOnFrame()
 	{
 		// Single Shot
 		{
-			auto item = new wxMenuItem(m_MenuBar->menu_edit, MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, "Single Shot\tS");
+			auto itemID = MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN;
+			auto item = new wxMenuItem(m_MenuBar->menu_edit, itemID, "Single Shot\tS");
 
 			// Setting a bitmap to the Close menu item
 			{
@@ -312,16 +313,20 @@ void cMain::CreateMenuBarOnFrame()
 			}
 
 			m_MenuBar->menu_edit->Append(item);
+			m_MenuBar->menu_edit->Enable(itemID, false);
 		}
 
-		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, false);
 		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, wxT("Start Live\tL"));
 		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
-		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE, wxT("Dark Mode"));
+
 
 		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, wxT("Start Measurement\tM"));
 		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, false);
 
+		m_MenuBar->menu_edit->AppendSeparator();
+		
+		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE, wxT("Dark Mode"));
+		
 		m_MenuBar->menu_edit->AppendSeparator();
 
 		// Settings
@@ -396,8 +401,6 @@ void cMain::CreateMenuBarOnFrame()
 			m_MenuBar->menu_tools->Append(item);
 		}
 
-		// Append Value Displaying Check
-		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_VALUE_DISPLAYING, wxT("Value Displaying\tV"));
 
 
 		// Circle Mesh
@@ -412,6 +415,11 @@ void cMain::CreateMenuBarOnFrame()
 		// Grid Mesh
 		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, wxT("Grid Mesh Displaying\tCtrl+G"));
 		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, false);
+
+		m_MenuBar->menu_tools->AppendSeparator();
+
+		// Append Value Displaying Check
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_VALUE_DISPLAYING, wxT("Value Displaying\tV"));
 	}
 
 	// Append Tools Menu to the Menu Bar
