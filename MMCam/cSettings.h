@@ -251,14 +251,6 @@ public:
 		m_WorkStations->work_station_choice->SetSelection(workStationPosition);
 		wxCommandEvent event(wxEVT_CHOICE, SettingsVariables::ID_WORK_STATION_CHOICE);
 		OnWorkStationChoice(event);
-		//m_WorkStations->work_station_choice->SendEvent(wxEVT_CHOICE);
-		//event.SetInt(workStationPosition); // Index of the selected choice (adjust as needed)
-		//event.SetEventObject(m_WorkStations->work_station_choice);
-		//ProcessEvent(event); // Send event to the appropriate handler
-		//wxCommandEvent artChoice(wxEVT_CHOICE, SettingsVariables::ID_WORK_STATION_CHOICE);
-		//ProcessEvent(artChoice);
-
-		//UpdateMotorsAndCameraTXTCtrls(workStationPosition);
 	};
 
 	/* Camera */
@@ -266,37 +258,14 @@ public:
 
 	auto GetPixelSizeUM() const -> double { return m_PixelSizeUM; };
 	auto GetInitializedWorkStation() const -> wxString { return m_WorkStations->initialized_work_station; };
-
-	//auto GetCropSizeMM() const -> double { return m_Config->crop_size_mm; };
-	//auto GetCropCircleSizeMM() const -> double { return m_Config->crop_size_circle_mm; };
-	//auto GetDefaultTemperature() const -> double { return m_Config->default_sensor_temperature; };
-	//auto GetDefaultColormap() const -> int { return m_Config->default_colormap; };
-	//auto GetDefaultBinning() const -> int { return m_Config->default_binning; };
-	//auto GetDefaultExposure() const -> int { return m_Config->default_exposure; };
-
-	//auto SetBinning(const int binning) -> void { m_Config->default_binning = binning; RewriteInitializationFile(); };
-	//auto SetTemperature(const double temperature) -> void { m_Config->default_sensor_temperature = temperature; RewriteInitializationFile(); };
-	//auto SetColormap(const int colormap) -> void { m_Config->default_colormap = colormap; RewriteInitializationFile(); };
-	//auto SetExposure(const int exposure) -> void { m_Config->default_exposure = exposure; RewriteInitializationFile(); };
-
 	auto GetUploadReportFolder() const -> wxString { return m_UploadReportFolder; };
 	auto GetXRayImagesDefaultCaption() const -> wxArrayString { return m_XRayImagesCaptions; };
-
-	//auto GetGridMeshStep() const -> unsigned int
-	//{
-	//	int step = 1;
-	//	m_GridMeshStepPXTxtCtrl->GetValue().ToInt(&step);
-	//	return (unsigned int)step;
-	//};
-	//auto GetCircleMeshStep() const -> unsigned int
-	//{
-	//	int step = 1;
-	//	m_CircleMeshStepPXTxtCtrl->GetValue().ToInt(&step);
-	//	return (unsigned int)step;
-	//};
-
+	
 	auto GetCameraManufacturer() const -> int { return m_CameraManufacturer; }
 	auto GetMotorManufacturer() const -> int { return m_MotorManufacturer; }
+
+
+	bool SetBackgroundColour(const wxColour& colour) override;
 
 private:
 	void CreateMainFrame();
@@ -443,6 +412,7 @@ private:
 
 	double m_PixelSizeUM{};
 
+	std::unique_ptr<wxPanel> m_MainPanel{};
 	SettingsVariables::MotorManufacturers m_MotorManufacturer{};
 	SettingsVariables::CameraManufacturers m_CameraManufacturer{};
 	wxArrayString m_XRayImagesCaptions{};
@@ -460,7 +430,7 @@ private:
 	std::unique_ptr<SettingsVariables::ProgressValues> m_Progress = std::make_unique<SettingsVariables::ProgressValues>();
 	//std::unique_ptr<wxTextCtrl> m_GridMeshStepPXTxtCtrl{}, m_CircleMeshStepPXTxtCtrl{};
 
-	wxColour m_BlackAppearenceColor = wxColour(90, 90, 90);
+	wxColour m_BackgroundColour = wxColour(90, 90, 90);
 };
 
 #endif // !CSETTINGS_H

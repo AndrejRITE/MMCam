@@ -95,18 +95,23 @@ auto cSettings::GetSelectedCamera() const -> wxString
 	return m_Camera->selectedCameraIDStr;
 }
 
+bool cSettings::SetBackgroundColour(const wxColour& colour)
+{
+	m_BackgroundColour = colour;
+	
+	m_MainPanel->SetBackgroundColour(m_BackgroundColour);
+
+	return true;
+}
+
 void cSettings::CreateMainFrame()
 {
 	InitComponents();
-	//ReadInitializationFile();
 	LoadWorkStationFiles();
 
-	//IterateOverConnectedCameras();
-	//ReadXMLFile();
 	CreateSettings();
 	BindControls();
 	UpdateMotorsAndCameraTXTCtrls();
-	//SelectMotorsAndRangesOnWXChoice();
 }
 
 void cSettings::CreateSettings()
@@ -127,21 +132,23 @@ void cSettings::CreateSettings()
 
 void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 {	
-	wxPanel* main_panel = new wxPanel(this);
+	m_MainPanel = std::make_unique<wxPanel>(this);
+
 #ifdef _DEBUG
-	main_panel->SetBackgroundColour(m_BlackAppearenceColor);
+	m_MainPanel->SetBackgroundColour(m_BackgroundColour);
 #else
-	main_panel->SetBackgroundColour(m_BlackAppearenceColor);
+	m_MainPanel->SetBackgroundColour(m_BackgroundColour);
 #endif // _DEBUG
+
 	wxBoxSizer* main_panel_sizer = new wxBoxSizer(wxVERTICAL);
 
 	/* Work Station */
-	wxSizer* const work_station_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Work Station");
+	wxSizer* const work_station_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&Work Station");
 	{
 		auto work_station_txt_ctrl_size = wxSize(120, 24);
 		m_WorkStations->work_station_choice = new wxChoice
 		(
-			main_panel, 
+			m_MainPanel.get(), 
 			SettingsVariables::ID_WORK_STATION_CHOICE, 
 			wxDefaultPosition, 
 			work_station_txt_ctrl_size,
@@ -158,20 +165,20 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 
 	/* Motors */
 	auto motor_txt_ctrl_size = wxSize(150, 24);
-	wxSizer* const motors_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, main_panel, "&Motors");
+	wxSizer* const motors_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, m_MainPanel.get(), "&Motors");
 	{
 		int top_offset_static_text{ 5 };
-		wxSizer* const detector_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, main_panel, "&Detector");
+		wxSizer* const detector_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, m_MainPanel.get(), "&Detector");
 		
 		{
 			/* X */
-			wxSizer* const det_x_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&X");
+			wxSizer* const det_x_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&X");
 			/* Serial Number */
 			{
-				wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&S/N");
+				wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&S/N");
 
 				m_Motors->m_Detector[0].motor = new wxTextCtrl(
-					main_panel, 
+					m_MainPanel.get(), 
 					SettingsVariables::ID_MOT_DET_X_MOTOR_TXT_CTRL, 
 					wxT("None"),
 					wxDefaultPosition, 
@@ -189,10 +196,10 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 			/* Steps/mm */
 			det_x_static_box_sizer->AddSpacer(2);
 			{
-				wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Steps/mm");
+				wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&Steps/mm");
 
 				m_Motors->m_Detector[0].steps_per_mm = new wxStaticText(
-					main_panel,
+					m_MainPanel.get(),
 					SettingsVariables::ID_MOT_DET_X_STEPS_PER_MM_ST_TEXT,
 					wxT("None"), 
 					wxDefaultPosition, 
@@ -208,13 +215,13 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 			detector_static_box_sizer->AddStretchSpacer();
 
 			/* Y */
-			wxSizer* const det_y_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Y");
+			wxSizer* const det_y_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&Y");
 			/* Serial Number */
 			{
-				wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&S/N");
+				wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&S/N");
 
 				m_Motors->m_Detector[1].motor = new wxTextCtrl(
-					main_panel, 
+					m_MainPanel.get(), 
 					SettingsVariables::ID_MOT_DET_Y_MOTOR_TXT_CTRL, 
 					wxT("None"),
 					wxDefaultPosition, 
@@ -233,10 +240,10 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 			/* Steps/mm */
 			det_y_static_box_sizer->AddSpacer(2);
 			{
-				wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Steps/mm");
+				wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&Steps/mm");
 
 				m_Motors->m_Detector[1].steps_per_mm = new wxStaticText(
-					main_panel, 
+					m_MainPanel.get(), 
 					SettingsVariables::ID_MOT_DET_Y_STEPS_PER_MM_ST_TEXT, 	
 					wxT("None"), 
 					wxDefaultPosition, 
@@ -251,13 +258,13 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 			detector_static_box_sizer->AddStretchSpacer();
 
 			/* Z */
-			wxSizer* const det_z_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Z");
+			wxSizer* const det_z_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&Z");
 			/* Serial Number */
 			{
-				wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&S/N");
+				wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&S/N");
 
 				m_Motors->m_Detector[2].motor = new wxTextCtrl(
-					main_panel, 
+					m_MainPanel.get(), 
 					SettingsVariables::ID_MOT_DET_Z_MOTOR_TXT_CTRL, 
 					wxT("None"),
 					wxDefaultPosition, 
@@ -276,10 +283,10 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 			/* Steps/mm */
 			det_z_static_box_sizer->AddSpacer(2);
 			{
-				wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Steps/mm");
+				wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&Steps/mm");
 
 				m_Motors->m_Detector[2].steps_per_mm = new wxStaticText(
-					main_panel, 
+					m_MainPanel.get(), 
 					SettingsVariables::ID_MOT_DET_Z_STEPS_PER_MM_ST_TEXT, 	
 					wxT("None"), 
 					wxDefaultPosition, 
@@ -293,16 +300,16 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 		}
 		motors_static_box_sizer->Add(detector_static_box_sizer, 0, wxCENTRE);
 
-		wxSizer* const optics_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, main_panel, "&Optics");
+		wxSizer* const optics_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, m_MainPanel.get(), "&Optics");
 		{
 			/* X */
-			wxSizer* const opt_x_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&X");
+			wxSizer* const opt_x_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&X");
 			/* Serial Number */
 			{
-				wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&S/N");
+				wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&S/N");
 
 				m_Motors->m_Optics[0].motor = new wxTextCtrl(
-					main_panel, 
+					m_MainPanel.get(), 
 					SettingsVariables::ID_MOT_OPT_X_MOTOR_TXT_CTRL, 
 					wxT("None"),
 					wxDefaultPosition, 
@@ -321,10 +328,10 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 			/* Steps/mm */
 			opt_x_static_box_sizer->AddSpacer(2);
 			{
-				wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Steps/mm");
+				wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&Steps/mm");
 
 				m_Motors->m_Optics[0].steps_per_mm = new wxStaticText(
-					main_panel, 
+					m_MainPanel.get(), 
 					SettingsVariables::ID_MOT_OPT_X_STEPS_PER_MM_ST_TEXT, 	
 					wxT("None"), 
 					wxDefaultPosition, 
@@ -339,13 +346,13 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 			optics_static_box_sizer->AddStretchSpacer();
 
 			/* Y */
-			wxSizer* const opt_y_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Y");
+			wxSizer* const opt_y_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&Y");
 			/* Serial Number */
 			{
-				wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&S/N");
+				wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&S/N");
 
 				m_Motors->m_Optics[1].motor = new wxTextCtrl(
-					main_panel, 
+					m_MainPanel.get(), 
 					SettingsVariables::ID_MOT_OPT_Y_MOTOR_TXT_CTRL, 
 					wxT("None"),
 					wxDefaultPosition, 
@@ -364,10 +371,10 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 			/* Steps/mm */
 			opt_y_static_box_sizer->AddSpacer(2);
 			{
-				wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Steps/mm");
+				wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&Steps/mm");
 
 				m_Motors->m_Optics[1].steps_per_mm = new wxStaticText(
-					main_panel, 
+					m_MainPanel.get(), 
 					SettingsVariables::ID_MOT_OPT_Y_STEPS_PER_MM_ST_TEXT, 
 					wxT("None"), 
 					wxDefaultPosition, 
@@ -382,13 +389,13 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 			optics_static_box_sizer->AddStretchSpacer();
 
 			/* Z */
-			wxSizer* const opt_z_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Z");
+			wxSizer* const opt_z_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&Z");
 			/* Serial Number */
 			{
-				wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&S/N");
+				wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&S/N");
 
 				m_Motors->m_Optics[2].motor = new wxTextCtrl(
-					main_panel, 
+					m_MainPanel.get(), 
 					SettingsVariables::ID_MOT_OPT_Z_MOTOR_TXT_CTRL, 
 					wxT("None"),
 					wxDefaultPosition, 
@@ -407,10 +414,10 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 			/* Steps/mm */
 			opt_z_static_box_sizer->AddSpacer(2);
 			{
-				wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, main_panel, "&Steps/mm");
+				wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&Steps/mm");
 
 				m_Motors->m_Optics[2].steps_per_mm = new wxStaticText(
-					main_panel, 
+					m_MainPanel.get(), 
 					SettingsVariables::ID_MOT_OPT_Z_STEPS_PER_MM_ST_TEXT, 
 					wxT("None"), 
 					wxDefaultPosition, 
@@ -428,15 +435,15 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 	main_panel_sizer->Add(motors_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
 
 	/* Camera */
-	CreateCameraSection(main_panel, main_panel_sizer);
+	CreateCameraSection(m_MainPanel.get(), main_panel_sizer);
 
 	main_panel_sizer->AddSpacer(5);
 	main_panel_sizer->AddStretchSpacer();
 
 	UpdatePreviousStatesData();
 
-	main_panel->SetSizer(main_panel_sizer);
-	panel_sizer->Add(main_panel, 1, wxEXPAND);
+	m_MainPanel->SetSizer(main_panel_sizer);
+	panel_sizer->Add(m_MainPanel.get(), 1, wxEXPAND);
 }
 
 auto cSettings::CreateCameraSection(wxPanel* panel, wxBoxSizer* panel_sizer) -> void
@@ -542,123 +549,6 @@ auto cSettings::CreateCameraSection(wxPanel* panel, wxBoxSizer* panel_sizer) -> 
 
 auto cSettings::CreateOtherSettings(wxBoxSizer* panel_sizer) -> void
 {	
-	wxPanel* main_panel = new wxPanel(this);
-#ifdef _DEBUG
-	main_panel->SetBackgroundColour(m_BlackAppearenceColor);
-#else
-	main_panel->SetBackgroundColour(m_BlackAppearenceColor);
-#endif // _DEBUG
-	wxBoxSizer* main_panel_sizer = new wxBoxSizer(wxVERTICAL);
-
-	//wxSizer* const settings_grid_sizer = new wxGridSizer(2);
-
-	//// Grid Mesh Step
-	//{
-	//	wxBoxSizer* horSizer = new wxBoxSizer(wxHORIZONTAL);
-
-	//	settings_grid_sizer->Add
-	//	(
-	//		new wxStaticText
-	//		(
-	//			main_panel,
-	//			wxID_ANY,
-	//			"&Grid Mesh Step:"
-	//		),
-	//		0, wxALL | wxALIGN_CENTER_VERTICAL, 5
-	//	);
-
-	//	wxIntegerValidator<unsigned int> val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
-	//	//val.SetMin(1);
-	//	m_GridMeshStepPXTxtCtrl = std::make_unique<wxTextCtrl>
-	//		(
-	//			main_panel,
-	//			SettingsVariables::ID_GRID_MESH_STEP_TXT_CTRL,
-	//			wxString("100"),
-	//			wxDefaultPosition,
-	//			wxDefaultSize,
-	//			wxTE_CENTRE
-	//		);
-	//	m_GridMeshStepPXTxtCtrl->SetValidator(val);
-
-	//	horSizer->Add(m_GridMeshStepPXTxtCtrl.get(), 0, wxALIGN_CENTER_VERTICAL);
-	//	horSizer->Add
-	//	(
-	//		new wxStaticText
-	//		(
-	//			main_panel,
-	//			wxID_ANY,
-	//			"[px]"
-	//		),
-	//		0, wxLEFT | wxALIGN_CENTER_VERTICAL, 5
-	//	);
-	//	settings_grid_sizer->Add(horSizer, 0, wxEXPAND);
-	//}
-
-	//// Circle Mesh Step
-	//{
-	//	wxBoxSizer* horSizer = new wxBoxSizer(wxHORIZONTAL);
-
-	//	settings_grid_sizer->Add
-	//	(
-	//		new wxStaticText
-	//		(
-	//			main_panel,
-	//			wxID_ANY,
-	//			"&Circle Mesh Step:"
-	//		),
-	//		0, wxALL | wxALIGN_CENTER_VERTICAL, 5
-	//	);
-
-	//	wxIntegerValidator<unsigned int> val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
-	//	//val.SetMin(1);
-	//	m_CircleMeshStepPXTxtCtrl = std::make_unique<wxTextCtrl>
-	//		(
-	//			main_panel,
-	//			SettingsVariables::ID_CIRCLE_MESH_STEP_TXT_CTRL,
-	//			wxString("120"),
-	//			wxDefaultPosition,
-	//			wxDefaultSize,
-	//			wxTE_CENTRE
-	//		);
-	//	m_CircleMeshStepPXTxtCtrl->SetValidator(val);
-
-	//	horSizer->Add(m_CircleMeshStepPXTxtCtrl.get(), 0, wxALIGN_CENTER_VERTICAL);
-	//	horSizer->Add
-	//	(
-	//		new wxStaticText
-	//		(
-	//			main_panel,
-	//			wxID_ANY,
-	//			"[px]"
-	//		),
-	//		0, wxLEFT | wxALIGN_CENTER_VERTICAL, 5
-	//	);
-	//	settings_grid_sizer->Add(horSizer, 0, wxEXPAND);
-	//}
-
-	//main_panel_sizer->Add(settings_grid_sizer, 0, wxCENTER | wxALL, 5);
-
-
-	///* Control Buttons */
-	//{
-	//	//m_RefreshBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("Refresh"));
-
-	//	//m_OkBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("OK"));
-	//	//m_OkBtn->SetFocus();
-
-	//	//m_CancelBtn = std::make_unique<wxButton>(main_panel, wxID_ANY, wxT("Cancel"));
-
-	//	//wxBoxSizer* btns_sizer = new wxBoxSizer(wxHORIZONTAL);
-	//	//btns_sizer->Add(m_RefreshBtn.get());
-	//	//btns_sizer->AddStretchSpacer();
-	//	//btns_sizer->Add(m_OkBtn.get(), 0, wxRIGHT, 2);
-	//	//btns_sizer->Add(m_CancelBtn.get());
-
-	//	//main_panel_sizer->Add(btns_sizer, 0, wxEXPAND | wxALL, 2);
-	//}
-
-	main_panel->SetSizer(main_panel_sizer);
-	panel_sizer->Add(main_panel, 0, wxEXPAND);
 }
 
 void cSettings::InitDefaultStateWidgets()

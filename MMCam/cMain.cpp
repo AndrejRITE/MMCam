@@ -2323,6 +2323,8 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 
 		bckgColour = wxColour(m_BlackAppearanceColor.GetRed() + 100, m_BlackAppearanceColor.GetGreen() + 100, m_BlackAppearanceColor.GetBlue() + 100);
 	}
+
+	m_Settings->SetBackgroundColour(bckgColour);
 	
 	m_VerticalToolBar->tool_bar->SetBackgroundColour(bckgColour);
 
