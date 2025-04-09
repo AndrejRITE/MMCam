@@ -2659,8 +2659,6 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 		);
 
 		wxFileName file(outFilePath);
-		//file.SetName(wxString("Report_") + timeStamp);
-		//destinationFilePath = file.GetFullPath();
 
 		if (wxDir::Exists(file.GetPath()))
 			cv::imwrite(file.GetFullPath().ToStdString(), cv_img);
