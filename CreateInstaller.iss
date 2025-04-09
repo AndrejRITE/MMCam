@@ -1,5 +1,5 @@
 [Setup]
-AppId={{GUID-1234-5678-ABCD-1234567890AB}}
+AppId={{GUID-1234-5678-RITE-1234567890AB}}
 AppName={#RepoName}
 AppVersion={#Major}.{#Minor}.{#Build}
 AppVerName={#RepoName} - {#Major}.{#Minor}.{#Build}
