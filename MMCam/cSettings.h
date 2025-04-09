@@ -122,6 +122,7 @@ namespace SettingsVariables
 		wxString selected_camera_in_data_file{};
 		CameraManufacturers camera_manufacturer{};
 		wxString work_station_name{};
+		double pixelSizeUM{};
 	};
 
 	struct WorkStations

@@ -668,6 +668,8 @@ auto cSettings::UpdateMotorsAndCameraTXTCtrls(const short selected_work_station)
 	m_Camera->idTxtCtrl->SetLabel(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_camera_in_data_file);
 	m_Camera->selectedCameraIDStr = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_camera_in_data_file;
 
+	m_PixelSizeUM = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].pixelSizeUM;
+
 	m_CameraManufacturer = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].camera_manufacturer;
 	m_MotorManufacturer = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].motor_manufacturer;
 }
@@ -910,7 +912,7 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 	// PixelSizeUM
 	element = SettingsVariables::FindNode(selected_motors_node, "pixel_size_um");
 	if (element)
-		m_PixelSizeUM = std::atof(element->first_node()->value());
+		m_WorkStations->work_station_data[fileNum].pixelSizeUM= std::atof(element->first_node()->value());
 
 	// Station
 	element = SettingsVariables::FindNode(selected_motors_node, "station");
