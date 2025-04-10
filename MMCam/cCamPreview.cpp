@@ -1355,10 +1355,13 @@ auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 
 	int selected_scale{ scale_bar_scale_size - 1 };
 	double length_horizontal_line = m_Zoom / m_ZoomOnOriginalSizeImage * scale_bar_um_array[selected_scale] / m_PixelSizeUM;
+	length_horizontal_line /= static_cast<int>(m_OriginalImageSize.GetWidth() / m_ImageSize.GetWidth());
+
 	while (length_horizontal_line > m_CanvasSize.GetWidth() / 3.0 && selected_scale > 0)
 	{
 		--selected_scale;
 		length_horizontal_line = m_Zoom / m_ZoomOnOriginalSizeImage * scale_bar_um_array[selected_scale] / m_PixelSizeUM;
+		length_horizontal_line /= static_cast<int>(m_OriginalImageSize.GetWidth() / m_ImageSize.GetWidth());
 	}
 
 	auto bgColor = GetPixelColorFromImage(m_LastBufferImage, scale_bar_start_draw.x - length_horizontal_line / 2, scale_bar_start_draw.y);
@@ -1607,7 +1610,7 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 			curr_value = wxString::Format(wxT("%i"), m_ImageSize.GetWidth());
 			curr_value += " [px]; ";
 
-			curr_value += wxString::Format(wxT("%.1f"), m_PixelSizeUM * m_ImageSize.GetWidth());
+			curr_value += wxString::Format(wxT("%.1f"), m_PixelSizeUM * m_OriginalImageSize.GetWidth());
 			curr_value += " [um]";
 
 			gc_->GetTextExtent(curr_value, &widthText, &heightText);
@@ -1648,7 +1651,7 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 			curr_value = wxString::Format(wxT("%i"), m_ImageSize.GetHeight());
 			curr_value += " [px]; ";
 
-			curr_value += wxString::Format(wxT("%.1f"), m_PixelSizeUM * m_ImageSize.GetHeight());
+			curr_value += wxString::Format(wxT("%.1f"), m_PixelSizeUM * m_OriginalImageSize.GetHeight());
 			curr_value += " [um]";
 
 			gc_->GetTextExtent(curr_value, &widthText, &heightText);

@@ -83,6 +83,8 @@ public:
 		if (colormapMode < 0 || colormapMode > 6) return;
 		m_ColormapMode = colormapMode;
 	};
+
+	auto SetOriginalImageSize(const wxSize imageSizeWithoutBinning) -> void { m_OriginalImageSize = imageSizeWithoutBinning; }
 	
 	auto IsImageSet() const -> bool { return m_ImageData != nullptr; }
 
@@ -260,6 +262,8 @@ private:
 	std::unique_ptr<unsigned short[]> m_ImageData{};
 	
 	wxImage m_LastBufferImage{};
+
+	wxSize m_OriginalImageSize{};
 
 	wxSize m_ImageSize{}, m_ImageOnCanvasSize{}, m_CanvasSize{};
 	wxRealPoint m_NotCheckedCursorPosOnImage{}, m_CheckedCursorPosOnImage{}, m_CursorPosOnCanvas{};

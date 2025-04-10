@@ -2824,7 +2824,7 @@ auto cMain::InitializeSelectedCamera() -> void
 	//m_SelectedCameraStaticTXT->SetLabel(selectedCamera);	
 	
 	m_OutputImageSize = wxSize(m_CameraControl->GetWidth(), m_CameraControl->GetHeight());
-	//m_CamPreview->SetImageSize(imageSize);
+	m_CamPreview->SetOriginalImageSize(m_OutputImageSize);
 
 	// Successful initialization of the camera
 	// Enabling controls
