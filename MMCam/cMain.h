@@ -41,7 +41,7 @@
 #include <wx/msw/window.h>
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 18
+#define MINOR_VERSION 19
 
 namespace MainFrameVariables
 {
@@ -252,6 +252,7 @@ namespace MainFrameVariables
 			colormap_names.Add("Grayscale");
 			colormap_names.Add("Invert");
 			colormap_names.Add("Jet");
+			colormap_names.Add("16 Colors");
 			colormap_names.Add("Cool");
 			colormap_names.Add("Hot");
 			colormap_names.Add("Winter");

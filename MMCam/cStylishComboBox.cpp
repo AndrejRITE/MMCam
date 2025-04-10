@@ -128,6 +128,65 @@ void cStylishComboBox::OnDrawItem
 				dc.DrawRectangle(colorful_square);
                 start_x += step_x - 1;
             }
+
+        }
+        else if (GetString(item) == "16 Colors")
+        {
+            for (auto i{ 0 }; i < num_of_colour_squares; ++i)
+            {
+                /* Colors are calculated on the basis of MatLab Jet Colormap implementation algorithm */
+                switch (i)
+                {
+                case 0:
+                    red = 0;
+                    green = 0;
+                    blue = 0;
+                    break;
+                case 1:
+                    red = 1;
+                    green = 1;
+                    blue = 224;
+                    break;
+                case 2:
+                    red = 1;
+                    green = 254;
+                    blue = 1;
+                    break; 
+                case 3:
+                    red = 255;
+                    green = 255;
+                    blue = 0;
+                    break;
+                case 4:
+                    red = 255;
+                    green = 141;
+                    blue = 0;
+                    break;
+                case 5:
+                    red = 245;
+                    green = 0;
+                    blue = 222;
+                    break;
+                case 6:
+                    red = 255;
+                    green = 255;
+                    blue = 255;
+                    break;
+                default:
+                    break;
+                }
+				rect_fill = wxBrush(wxColour(red, green, blue));
+				dc.SetBrush(rect_fill);
+                colorful_square =
+                {
+                    start_x,
+                    (int)(r.y + .65 * r.height),
+                    step_x,
+                    (int)(.35 * r.height)
+                };
+				dc.DrawRectangle(colorful_square);
+                start_x += step_x - 1;
+            }
         }
         else if (GetString(item) == "Cool")
         {

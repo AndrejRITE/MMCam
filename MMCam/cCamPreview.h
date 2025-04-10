@@ -27,6 +27,7 @@ namespace CameraPreviewVariables
 		GRAYSCALE_COLORMAP,
 		INVERT_COLORMAP,
 		JET_COLORMAP,
+		IMAGEJ_16_COLORS_COLORMAP,
 		COOL_COLORMAP,
 		HOT_COLORMAP,
 		WINTER_COLORMAP,
@@ -122,6 +123,14 @@ public:
 	
 	// Jet Colormaps
 	void CalculateJetColormapPixelRGB
+	(
+		const unsigned short& value,
+		unsigned char& r,
+		unsigned char& g,
+		unsigned char& b
+	);
+
+	void Calculate16_ColorsImageJColormapPixelRGB
 	(
 		const unsigned short& value,
 		unsigned char& r,
