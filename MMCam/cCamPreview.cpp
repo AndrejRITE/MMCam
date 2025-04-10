@@ -157,7 +157,7 @@ void cCamPreview::UpdateImageParameters(const wxSize oldImageSize)
 		auto temp_zoom = m_Zoom;
 		auto temp_pan_offset = m_PanOffset;
 		auto temp_start_draw_pos = m_StartDrawPos;
-		m_Zoom = 1.0;
+		m_Zoom = m_MinZoom;
 		m_PanOffset = {};
 		ChangeSizeOfImageInDependenceOnCanvasSize();
 		if (m_IsImageSet)
@@ -210,9 +210,6 @@ void cCamPreview::UpdateImageParameters(const wxSize oldImageSize)
 auto cCamPreview::GetPixelColorFromImage(const wxImage& image, int x, int y) -> wxColour
 {
 	if (!image.IsOk()) return wxColour(0, 0, 0);  // Return black if invalid
-
-	//wxImage image = bitmap.ConvertToImage();
-	if (!image.IsOk()) return wxColour(0, 0, 0);
 
 	if (x >= 0 && x < image.GetWidth() && y >= 0 && y < image.GetHeight()) 
 	{
@@ -486,19 +483,17 @@ auto cCamPreview::OnLeavePanel(wxMouseEvent& evt) -> void
 
 void cCamPreview::OnMouseWheelMoved(wxMouseEvent& evt)
 {
-	if (m_Zoom <= 1.0 && evt.GetWheelRotation() < 0)
+	if (m_Zoom <= m_MinZoom && evt.GetWheelRotation() < 0)
 		return;
 
-	if (evt.GetWheelRotation() > 0 && m_Zoom / m_ZoomOnOriginalSizeImage < 64.0)
+	if (evt.GetWheelRotation() > 0 && m_Zoom / m_ZoomOnOriginalSizeImage < m_MaxZoom)
 	{
 		AddZoom(m_ZoomStep);
 	}
 	else if (evt.GetWheelRotation() < 0)
 	{
-		if (m_Zoom > 1.0)
-		{
+		if (m_Zoom > m_MinZoom)
 			AddZoom(1 / m_ZoomStep);
-		}
 	}
 
 	/* CrossHair Tool */
@@ -528,10 +523,11 @@ void cCamPreview::SetZoom(const double& zoom, const wxRealPoint& center_)
 	position_on_image.x = (center_.x - m_PanOffset.x) / m_Zoom;
 	position_on_image.y = (center_.y - m_PanOffset.y) / m_Zoom;
 
-	m_Zoom = zoom;
+	auto isDefault = abs(zoom - m_MinZoom) < 1e-5 ? true : false;
+	m_Zoom = isDefault ? m_MinZoom : zoom;
 
-	m_PanOffset.x = m_Zoom > 1.0 ? center_.x - position_on_image.x * m_Zoom : 0.0;
-	m_PanOffset.y = m_Zoom > 1.0 ? center_.y - position_on_image.y * m_Zoom : 0.0;
+	m_PanOffset.x = m_Zoom > m_MinZoom ? center_.x - position_on_image.x * m_Zoom : 0.0;
+	m_PanOffset.y = m_Zoom > m_MinZoom ? center_.y - position_on_image.y * m_Zoom : 0.0;
 
 	m_StartDrawPos.x = m_PanOffset.x / m_Zoom + m_NotZoomedGraphicsBitmapOffset.x;
 	m_StartDrawPos.y = m_PanOffset.y / m_Zoom + m_NotZoomedGraphicsBitmapOffset.y;
@@ -584,15 +580,15 @@ void cCamPreview::CalculatePositionOnImage()
 
 	/* Checking X */
 	m_CheckedCursorPosOnImage.x = m_NotCheckedCursorPosOnImage.x >= 0.0 ? m_NotCheckedCursorPosOnImage.x : 0.0;
-	m_CheckedCursorPosOnImage.x = m_NotCheckedCursorPosOnImage.x < (double)m_ImageSize.GetWidth() ? m_CheckedCursorPosOnImage.x : (double)m_ImageSize.GetWidth() - 1.0;
+	m_CheckedCursorPosOnImage.x = m_NotCheckedCursorPosOnImage.x < (double)m_ImageSize.GetWidth() ? m_CheckedCursorPosOnImage.x : (double)m_ImageSize.GetWidth() - m_MinZoom;
 	/* Checking Y */
 	m_CheckedCursorPosOnImage.y = m_NotCheckedCursorPosOnImage.y >= 0.0 ? m_NotCheckedCursorPosOnImage.y : 0.0;
-	m_CheckedCursorPosOnImage.y = m_NotCheckedCursorPosOnImage.y < (double)m_ImageSize.GetHeight() ? m_CheckedCursorPosOnImage.y : (double)m_ImageSize.GetHeight() - 1.0;
+	m_CheckedCursorPosOnImage.y = m_NotCheckedCursorPosOnImage.y < (double)m_ImageSize.GetHeight() ? m_CheckedCursorPosOnImage.y : (double)m_ImageSize.GetHeight() - m_MinZoom;
 }
 
 void cCamPreview::OnPreviewMouseLeftPressed(wxMouseEvent& evt)
 {
-	if (m_Zoom > 1.0 && m_IsCursorInsideImage)
+	if (m_Zoom > m_MinZoom && m_IsCursorInsideImage)
 	{
 		m_Panning = true;
 		m_PanStartPoint = m_CursorPosOnCanvas;
@@ -642,7 +638,7 @@ auto cCamPreview::DrawPixelValues(wxGraphicsContext* gc) -> void
 
 	if (!m_ImageData) return;
 
-	if (m_Zoom / m_ZoomOnOriginalSizeImage < 64) return;
+	if (m_Zoom / m_ZoomOnOriginalSizeImage < m_MaxZoom) return;
 
 	auto CheckIfPixelValueIsInsideTheImage = [&](const int& x, const int& y)
 		{
@@ -702,6 +698,7 @@ auto cCamPreview::DrawPixelValues(wxGraphicsContext* gc) -> void
 				
 				auto bgColor = GetPixelColorFromImage(m_Image, x, y);
 				wxColour textColor(255 - bgColor.Red(), 255 - bgColor.Green(), 255 - bgColor.Blue());
+				textColor = bgColor.GetRed() == bgColor.GetGreen() && bgColor.GetGreen() == bgColor.GetBlue() && bgColor.GetRed() == bgColor.GetBlue() ? m_ContrastDefaultColor : textColor;
 				gc->SetFont(font, textColor);
 
 				curr_value = wxString::Format(wxT("%i"), m_ImageData[y * m_ImageSize.GetWidth() + x]);
@@ -1080,7 +1077,7 @@ void cCamPreview::DrawCameraCapturedImage(wxGraphicsContext* gc_)
 	
 	if (m_IsGraphicsBitmapSet)
 	{
-		auto interpolation_quality = m_Zoom / m_ZoomOnOriginalSizeImage >= 1.0 ? wxINTERPOLATION_NONE : wxINTERPOLATION_DEFAULT;
+		auto interpolation_quality = m_Zoom / m_ZoomOnOriginalSizeImage >= m_MinZoom ? wxINTERPOLATION_NONE : wxINTERPOLATION_DEFAULT;
 
 		gc_->SetInterpolationQuality(interpolation_quality);
 		gc_->Scale(m_Zoom / m_ZoomOnOriginalSizeImage, m_Zoom / m_ZoomOnOriginalSizeImage);
@@ -1366,6 +1363,8 @@ auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 
 	auto bgColor = GetPixelColorFromImage(m_LastBufferImage, scale_bar_start_draw.x - length_horizontal_line / 2, scale_bar_start_draw.y);
 	wxColour widgetColour(255 - bgColor.Red(), 255 - bgColor.Green(), 255 - bgColor.Blue());
+
+	widgetColour = bgColor.GetRed() == bgColor.GetGreen() && bgColor.GetGreen() == bgColor.GetBlue() && bgColor.GetRed() == bgColor.GetBlue() ? m_ContrastDefaultColor : widgetColour;
 	
 	gc_->SetPen(wxPen(widgetColour, pen_thickness));
 
@@ -1582,7 +1581,7 @@ auto cCamPreview::DrawVerticalSumLine(wxGraphicsContext* gc_) -> void
 
 auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 {
-	if (m_Zoom > 1.0) return;
+	if (m_Zoom > m_MinZoom) return;
 	if (!m_Image.IsOk()) return;
 	if (m_DisplayFWHM) return;
 
@@ -1694,7 +1693,7 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 
 auto cCamPreview::DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> void
 {
-	if (m_Zoom <= 1.0) return;
+	if (m_Zoom <= m_MinZoom) return;
 	if (!m_Image.IsOk()) return;
 
 	wxDouble offset_x{ 50.0 }, offset_y{ 50.0 };
@@ -1709,6 +1708,8 @@ auto cCamPreview::DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> v
 
 	auto bgColor = GetPixelColorFromImage(m_LastBufferImage, image_minuature.GetCentre().m_x, image_minuature.GetCentre().m_y);
 	wxColour widgetColour(255 - bgColor.Red(), 255 - bgColor.Green(), 255 - bgColor.Blue());
+
+	widgetColour = bgColor.GetRed() == bgColor.GetGreen() && bgColor.GetGreen() == bgColor.GetBlue() && bgColor.GetRed() == bgColor.GetBlue() ? m_ContrastDefaultColor : widgetColour;
 
 	gc_->SetPen(wxPen(widgetColour, 1, wxPENSTYLE_SOLID));
 	gc_->DrawRectangle
@@ -1778,7 +1779,7 @@ void cCamPreview::OnSize(wxSizeEvent& evt)
 	{
 		m_CanvasSize.SetWidth(newWidth);
 		m_CanvasSize.SetHeight(newHeight);
-		m_Zoom = 1.0;
+		m_Zoom = m_MinZoom;
 		m_PanOffset = {};
 		ChangeSizeOfImageInDependenceOnCanvasSize();
 		UpdateCrossHairOnSize();
@@ -1791,7 +1792,7 @@ void cCamPreview::ChangeSizeOfImageInDependenceOnCanvasSize()
 {
 	wxSize current_image_size{ m_ImageSize };
 	wxSize canvas_size{ GetSize().GetWidth(), GetSize().GetHeight() };
-	m_ZoomOnOriginalSizeImage = 1.0;
+	m_ZoomOnOriginalSizeImage = m_MinZoom;
 
 	if (!current_image_size.GetWidth() || !current_image_size.GetHeight()) return;
 

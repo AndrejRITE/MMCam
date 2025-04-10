@@ -272,6 +272,9 @@ private:
 	/* Zoom */
 	double m_Zoom{}, m_ZoomOnOriginalSizeImage{};
 	const double m_ZoomStep{ 1.4 }; // Should be bigger than 1.0, otherwise infinity loop
+	const double m_MinZoom{ 1.0 }, m_MaxZoom{ m_ZoomStep * 54 };
+
+	const wxColour m_ContrastDefaultColor = wxColour(255, 127, 39);
 
 	//std::unique_ptr<XimeaControl> m_XimeaCameraControl{};
 	std::string m_SelectedCameraSN{};
