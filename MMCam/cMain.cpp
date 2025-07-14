@@ -2411,6 +2411,10 @@ auto cMain::OnGridMeshButton(wxCommandEvent& evt) -> void
 	);
 
 	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked);
+
+	if (m_IsGridMeshChecked)
+		m_ToolsControlsNotebook->SetSelection(0);
+
 	Layout();
 }
 
@@ -2458,6 +2462,10 @@ auto cMain::OnCircleMeshButton(wxCommandEvent& evt) -> void
 	);
 	
 	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked);
+
+	if (m_IsCircleMeshChecked)
+		m_ToolsControlsNotebook->SetSelection(1);
+
 	Layout();
 }
 
