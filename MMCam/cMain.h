@@ -17,6 +17,7 @@
 #include "wx/html/helpctrl.h"
 #include "wx/progdlg.h"
 #include "wx/gauge.h"
+#include "wx/listctrl.h"
 
 #include "wxMaterialDesignArtProvider.hpp"
 
@@ -41,7 +42,7 @@
 #include <wx/msw/window.h>
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 19
+#define MINOR_VERSION 20
 
 namespace MainFrameVariables
 {
@@ -110,6 +111,11 @@ namespace MainFrameVariables
 		/* Tools */
 		ID_RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL,
 		ID_RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL,
+		ID_RIGHT_TOOLS_ANNULUS_CENTER_X_TXT_CTRL,
+		ID_RIGHT_TOOLS_ANNULUS_CENTER_Y_TXT_CTRL,
+		ID_RIGHT_TOOLS_ANNULUS_R1_TXT_CTRL,
+		ID_RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL,
+		ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL,
 		/* Camera */
 		ID_RIGHT_CAM_TEMPERATURE_TXT_CTL,
 		ID_RIGHT_CAM_EXPOSURE_TXT_CTL,
@@ -304,6 +310,8 @@ namespace MainFrameVariables
 	struct ToolsTabControls
 	{
 		std::unique_ptr<wxTextCtrl> gridMeshStepTxtCtrl{}, circleMeshStepTxtCtrl{};
+		std::unique_ptr<wxTextCtrl> annulusCenterXTxtCtrl{}, annulusCenterYTxtCtrl{}, annulusR1TxtCtrl{}, annulusR2TxtCtrl{};
+		std::unique_ptr<wxListCtrl> annulusListCtrl{};
 	};
 
 	struct StepperControl
@@ -610,6 +618,11 @@ private:
 		wxWindow* parent
 	) -> wxWindow*;
 
+	auto CreateAnnulusPage
+	(
+		wxWindow* parent
+	) -> wxWindow*;
+
 	auto CreateMeasurementPage
 	(
 		wxWindow* parent
@@ -633,6 +646,9 @@ private:
 	
 	auto OnFocusCenterButton(wxCommandEvent& evt) -> void;
 	auto OnCrossHairButton(wxCommandEvent& evt) -> void;
+
+	/* Annulus */
+	auto OnColBeginDrag(wxListEvent& evt) -> void;
 
 	void UnCheckAllTools();
 	/* ProgressBar */

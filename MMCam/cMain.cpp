@@ -78,6 +78,9 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_TEXT(MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL, cMain::OnXPosCrossHairTextCtrl)
 	EVT_TEXT(MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL, cMain::OnYPosCrossHairTextCtrl)
 
+	/* Annulus */
+	EVT_LIST_COL_BEGIN_DRAG(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL, cMain::OnColBeginDrag)
+
 	/* Set Out Folder */
 	EVT_BUTTON(MainFrameVariables::ID_RIGHT_MT_OUT_FLD_BTN, cMain::OnSetOutDirectoryBtn)
 	/* First Stage */
@@ -1821,6 +1824,249 @@ auto cMain::CreateCircleMeshPage(wxWindow* parent) -> wxWindow*
 	return page;
 }
 
+auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
+{
+	if (!m_ToolsControls) return nullptr;
+
+	wxPanel* page = new wxPanel(parent);
+	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+	
+	auto gridSizerCenter = new wxGridSizer(2); 
+	gridSizerCenter->SetVGap(5);
+
+	wxSize txtCtrlSize = { 64, 20 };
+
+	// Center X
+	{
+		gridSizerCenter->Add
+		(
+			new wxStaticText
+			(
+				page, 
+				wxID_ANY, 
+				wxT("X [px]:")
+			), 
+			0, 
+			wxALIGN_CENTER
+		);
+
+		wxIntegerValidator<int>	val(NULL);
+		val.SetMin(0);
+		val.SetMax(1'000'000);
+
+		m_ToolsControls->annulusCenterXTxtCtrl = std::make_unique<wxTextCtrl>
+			(
+				page, 
+				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_CENTER_X_TXT_CTRL, 
+#ifdef _DEBUG
+				wxT("0"), 
+#else
+				wxT("0"), 
+#endif // _DEBUG
+				wxDefaultPosition, 
+				txtCtrlSize, 
+				wxTE_CENTRE | wxTE_PROCESS_ENTER, 
+				val
+			);
+		
+		m_ToolsControls->annulusCenterXTxtCtrl->SetToolTip("Set desired horizontal position for annulus in [px] and press Enter");
+
+		gridSizerCenter->Add(m_ToolsControls->annulusCenterXTxtCtrl.get(), 0, wxALIGN_CENTER);
+	}
+
+	// Center Y
+	{
+		gridSizerCenter->Add
+		(
+			new wxStaticText
+			(
+				page, 
+				wxID_ANY, 
+				wxT("Y [px]:")
+			), 
+			0, 
+			wxALIGN_CENTER
+		);
+
+		wxIntegerValidator<int>	val(NULL);
+		val.SetMin(0);
+		val.SetMax(1'000'000);
+
+		m_ToolsControls->annulusCenterYTxtCtrl = std::make_unique<wxTextCtrl>
+			(
+				page, 
+				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_CENTER_Y_TXT_CTRL, 
+#ifdef _DEBUG
+				wxT("0"), 
+#else
+				wxT("0"), 
+#endif // _DEBUG
+				wxDefaultPosition, 
+				txtCtrlSize, 
+				wxTE_CENTRE | wxTE_PROCESS_ENTER, 
+				val
+			);
+		
+		m_ToolsControls->annulusCenterYTxtCtrl->SetToolTip("Set desired vertical position for annulus in [px] and press Enter");
+
+		gridSizerCenter->Add(m_ToolsControls->annulusCenterYTxtCtrl.get(), 0, wxALIGN_CENTER);
+	}
+
+	const auto centerStaticBox = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Center");
+	centerStaticBox->Add(gridSizerCenter, 0, wxEXPAND | wxALL, 5);
+
+	auto horizontalBoxSizer = new wxBoxSizer(wxHORIZONTAL);
+	horizontalBoxSizer->Add(centerStaticBox, 0, wxALL, 5);
+
+	sizerPage->Add(horizontalBoxSizer, 0, wxALL, 5);
+
+	auto gridSizerAnnulus = new wxGridSizer(2); 
+	gridSizerAnnulus->SetVGap(5);
+
+	// R1
+	{
+		gridSizerAnnulus->Add
+		(
+			new wxStaticText
+			(
+				page, 
+				wxID_ANY, 
+				wxT("R1 [px]:")
+			), 
+			0, 
+			wxALIGN_CENTER
+		);
+
+		wxIntegerValidator<int>	val(NULL);
+		val.SetMin(1);
+		val.SetMax(1'000'000);
+
+		m_ToolsControls->annulusR1TxtCtrl = std::make_unique<wxTextCtrl>
+			(
+				page, 
+				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R1_TXT_CTRL, 
+#ifdef _DEBUG
+				wxT("1"), 
+#else
+				wxT("1"), 
+#endif // _DEBUG
+				wxDefaultPosition, 
+				txtCtrlSize, 
+				wxTE_CENTRE | wxTE_PROCESS_ENTER, 
+				val
+			);
+		
+		m_ToolsControls->annulusR1TxtCtrl->SetToolTip("Set desired radius for the smaller circle R1 for annulus in [px] and press Enter");
+
+		gridSizerAnnulus->Add(m_ToolsControls->annulusR1TxtCtrl.get(), 0, wxALIGN_CENTER);
+	}
+
+	// Center Y
+	{
+		gridSizerAnnulus->Add
+		(
+			new wxStaticText
+			(
+				page, 
+				wxID_ANY, 
+				wxT("R2 [px]:")
+			), 
+			0, 
+			wxALIGN_CENTER
+		);
+
+		wxIntegerValidator<int>	val(NULL);
+		val.SetMin(1);
+		val.SetMax(1'000'000);
+
+		m_ToolsControls->annulusR2TxtCtrl = std::make_unique<wxTextCtrl>
+			(
+				page, 
+				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL, 
+#ifdef _DEBUG
+				wxT("1"), 
+#else
+				wxT("1"), 
+#endif // _DEBUG
+				wxDefaultPosition, 
+				txtCtrlSize, 
+				wxTE_CENTRE | wxTE_PROCESS_ENTER, 
+				val
+			);
+		
+		m_ToolsControls->annulusR2TxtCtrl->SetToolTip("Set desired radius for the bigger circle R2 for annulus in [px] and press Enter");
+
+		gridSizerAnnulus->Add(m_ToolsControls->annulusR2TxtCtrl.get(), 0, wxALIGN_CENTER);
+	}
+
+	const auto annulusStaticBox = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Annulus");
+	annulusStaticBox->Add(gridSizerAnnulus, 0, wxEXPAND | wxALL, 5);
+
+	horizontalBoxSizer->Add(annulusStaticBox, 0, wxALL, 5);
+
+	// Annulus List Control
+	{
+		m_ToolsControls->annulusListCtrl = std::make_unique<wxListCtrl>
+			(
+				page,
+				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL,
+				wxDefaultPosition,
+				wxDefaultSize,
+				wxLC_REPORT
+			);
+
+		auto id = 0;
+
+		// #
+		wxListItem columns;
+		columns.SetId(id);
+		columns.SetText(_("#"));
+		m_ToolsControls->annulusListCtrl->InsertColumn(id, columns);
+		++id;
+
+		// Center X
+		columns.SetId(id);
+		columns.SetText(_("X [px]"));
+		m_ToolsControls->annulusListCtrl->InsertColumn(id, columns);
+		++id;
+
+		// Center Y
+		columns.SetId(id);
+		columns.SetText(_("Y [px]"));
+		m_ToolsControls->annulusListCtrl->InsertColumn(id, columns);
+		++id;
+
+		// R1
+		columns.SetId(id);
+		columns.SetText(_("R1 [px]"));
+		m_ToolsControls->annulusListCtrl->InsertColumn(id, columns);
+		++id;
+
+		// R2
+		columns.SetId(id);
+		columns.SetText(_("R2 [px]"));
+		m_ToolsControls->annulusListCtrl->InsertColumn(id, columns);
+		++id;
+
+		// Sum
+		columns.SetId(id);
+		columns.SetText(_("Annulus"));
+		m_ToolsControls->annulusListCtrl->InsertColumn(id, columns);
+		++id;
+
+		// Set desired width of the columns
+		{
+			for (auto i{0}; i < id - 1; ++i)
+				m_ToolsControls->annulusListCtrl->SetColumnWidth(i, wxLIST_AUTOSIZE_USEHEADER);
+		}
+	}
+
+	sizerPage->Add(m_ToolsControls->annulusListCtrl.get(), 0, wxEXPAND | wxALL, 5);
+
+	page->SetSizer(sizerPage);
+	return page;
+}
+
 auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 {
 	wxPanel* page = new wxPanel(parent);
@@ -2222,7 +2468,7 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 		
 	wxBitmap circleMeshBitmap{};
 	{
-		auto bitmap = wxART_TARGET;
+		auto bitmap = wxART_CIRCLE;
 		auto client = wxART_CLIENT_FLUENTUI_FILLED;
 		auto color = wxColour(255, 128, 64);
 		circleMeshBitmap = wxMaterialDesignArtProvider::GetBitmap
@@ -2234,8 +2480,23 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 		);
 	}
 	
+	wxBitmap annulusBitmap{};
+	{
+		auto bitmap = wxART_TARGET;
+		auto client = wxART_CLIENT_FLUENTUI_FILLED;
+		auto color = wxColour(0, 255, 64);
+		annulusBitmap = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			size,
+			color
+		);
+	}
+	
 	auto imgIndexGridMesh = imageList->Add(gridMeshBitmap);
 	auto imgIndexCircleMesh = imageList->Add(circleMeshBitmap);
+	auto imgIndexAnnulus = imageList->Add(annulusBitmap);
 	
 	m_ToolsControlsNotebook = new wxNotebook(right_side_panel, wxID_ANY);
 
@@ -2248,7 +2509,7 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 		CreateGridMeshPage(m_ToolsControlsNotebook), 
 		"Grid Mesh",
 #ifdef _DEBUG
-		true,
+		false,
 #else
 		true,
 #endif // _DEBUG
@@ -2267,8 +2528,20 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 		imgIndexCircleMesh
 	);
 
-	m_ToolsControlsNotebook->Hide();
+	m_ToolsControlsNotebook->AddPage
+	(
+		CreateAnnulusPage(m_ToolsControlsNotebook), 
+		"Annulus",
+#ifdef _DEBUG
+		true,
+#else
+		false,
+#endif // _DEBUG
+		imgIndexAnnulus
+	);
+
 #ifndef _DEBUG
+	m_ToolsControlsNotebook->Hide();
 #endif // !_DEBUG
 
 	right_side_panel_sizer->Add(m_ToolsControlsNotebook, 0, wxEXPAND | wxALL, 5);
@@ -3329,7 +3602,7 @@ void cMain::CreateVerticalToolBar()
 	{
 		wxBitmap toolBitmap{};
 		{
-			auto bitmap = wxART_TARGET;
+			auto bitmap = wxART_CIRCLE;
 			auto client = wxART_CLIENT_FLUENTUI_FILLED;
 			auto color = wxColour(255, 128, 64);
 			auto size = wxSize(32, 32);
@@ -3373,6 +3646,14 @@ auto cMain::WorkerThreadFinished(bool is_finished) -> void
 
 	wxCommandEvent live_capturing_evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	ProcessEvent(live_capturing_evt);
+}
+
+auto cMain::OnColBeginDrag(wxListEvent& evt) -> void
+{
+	if (evt.GetColumn() == 0)
+	{
+		evt.Veto();
+	}
 }
 
 void cMain::UnCheckAllTools()
