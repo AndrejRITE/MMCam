@@ -148,6 +148,7 @@ Get-ChildItem -Path $sourceFolder -Recurse -File | Where-Object {
 }
 
 # Preparing name for the output archive
+Set-Location ${path_to_repository}
 $commit_number = git rev-list --count HEAD  # Get the total number of commits in the repository
 $build_version = "${major_version}.${minor_version}.${commit_number}"
 $archive_name = "${repository_name}_v${major_version}.${minor_version}.${commit_number}.7z"
