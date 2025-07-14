@@ -54,6 +54,7 @@ namespace MainFrameVariables
 		ID_MENUBAR_EDIT_SETTINGS,
 		ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING,
 		ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING,
+		ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING,
 		ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING,
 		ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING,
 		ID_MENUBAR_TOOLS_CROSSHAIR,
@@ -648,6 +649,7 @@ private:
 	auto OnCrossHairButton(wxCommandEvent& evt) -> void;
 
 	/* Annulus */
+	auto OnAnnulusButton(wxCommandEvent& evt) -> void;
 	auto OnColBeginDrag(wxListEvent& evt) -> void;
 
 	void UnCheckAllTools();
@@ -1508,7 +1510,7 @@ private:
 	wxString m_ProgressMsg{};
 
 	// Tools
-	bool m_IsCrossHairChecked{}, m_IsFWHMChecked{}, m_IsGridMeshChecked{}, m_IsCircleMeshChecked{}, m_IsFocusCenterChecked{};
+	bool m_IsCrossHairChecked{}, m_IsFWHMChecked{}, m_IsGridMeshChecked{}, m_IsCircleMeshChecked{}, m_IsFocusCenterChecked{}, m_IsAnnulusChecked{};
 
 	/* Value Displaying */
 	bool m_IsValueDisplayingChecked{};

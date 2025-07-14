@@ -7,6 +7,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_MENU(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, cMain::OnStartStopLiveCapturingMenu)
 	EVT_MENU(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE, cMain::OnEnableDarkMode)
 	EVT_MENU(MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, cMain::OnOpenSettings)
+	EVT_MENU(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, cMain::OnAnnulusButton)
 	EVT_MENU(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, cMain::OnCrossHairButton)
 	EVT_MENU(MainFrameVariables::ID_MENUBAR_TOOLS_VALUE_DISPLAYING, cMain::OnValueDisplayingCheck)
 	EVT_MENU(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, cMain::OnFWHMButton)
@@ -405,16 +406,22 @@ void cMain::CreateMenuBarOnFrame()
 		}
 
 
+		// Annulus
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, wxT("Annulus Displaying\tA"));
+		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, false);
 
 		// Circle Mesh
 		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, wxT("Circle Mesh Displaying\tCtrl+O"));
 		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, false);
+
 		// Focus Center
 		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, wxT("Focus Center Displaying\tCtrl+F"));
 		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
+
 		// FWHM
 		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, wxT("FWHM Displaying\tF"));
 		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, false);
+
 		// Grid Mesh
 		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, wxT("Grid Mesh Displaying\tCtrl+G"));
 		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, false);
@@ -2506,6 +2513,18 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 
 	m_ToolsControlsNotebook->AddPage
 	(
+		CreateAnnulusPage(m_ToolsControlsNotebook), 
+		"Annulus",
+#ifdef _DEBUG
+		true,
+#else
+		false,
+#endif // _DEBUG
+		imgIndexAnnulus
+	);
+
+	m_ToolsControlsNotebook->AddPage
+	(
 		CreateGridMeshPage(m_ToolsControlsNotebook), 
 		"Grid Mesh",
 #ifdef _DEBUG
@@ -2526,18 +2545,6 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 		false,
 #endif // _DEBUG
 		imgIndexCircleMesh
-	);
-
-	m_ToolsControlsNotebook->AddPage
-	(
-		CreateAnnulusPage(m_ToolsControlsNotebook), 
-		"Annulus",
-#ifdef _DEBUG
-		true,
-#else
-		false,
-#endif // _DEBUG
-		imgIndexAnnulus
 	);
 
 #ifndef _DEBUG
@@ -2683,10 +2690,10 @@ auto cMain::OnGridMeshButton(wxCommandEvent& evt) -> void
 		currState
 	);
 
-	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked);
+	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked || m_IsAnnulusChecked);
 
 	if (m_IsGridMeshChecked)
-		m_ToolsControlsNotebook->SetSelection(0);
+		m_ToolsControlsNotebook->SetSelection(1);
 
 	Layout();
 }
@@ -2734,10 +2741,10 @@ auto cMain::OnCircleMeshButton(wxCommandEvent& evt) -> void
 		currState
 	);
 	
-	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked);
+	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked || m_IsAnnulusChecked);
 
 	if (m_IsCircleMeshChecked)
-		m_ToolsControlsNotebook->SetSelection(1);
+		m_ToolsControlsNotebook->SetSelection(2);
 
 	Layout();
 }
@@ -3565,6 +3572,37 @@ void cMain::CreateVerticalToolBar()
 		);
 	}
 
+	/* Annulus */
+	{
+		wxBitmap toolBitmap{};
+		{
+			auto bitmap = wxART_TARGET;
+			auto client = wxART_CLIENT_FLUENTUI_FILLED;
+			auto color = wxColour(0, 255, 64);
+			auto size = wxSize(32, 32);
+			toolBitmap = wxMaterialDesignArtProvider::GetBitmap
+			(
+				bitmap,
+				client,
+				size,
+				color
+			);
+		}
+
+		m_VerticalToolBar->tool_bar->AddCheckTool
+		(
+			MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, 
+			_("Annulus"), 
+			toolBitmap
+		);
+
+		m_VerticalToolBar->tool_bar->SetToolShortHelp
+		(
+			MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, 
+			wxT("Annulus (A)")
+		);
+	}
+
 	m_VerticalToolBar->tool_bar->AddSeparator();
 
 	/* Grid Mesh */
@@ -3646,6 +3684,28 @@ auto cMain::WorkerThreadFinished(bool is_finished) -> void
 
 	wxCommandEvent live_capturing_evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	ProcessEvent(live_capturing_evt);
+}
+
+// Annulus
+auto cMain::OnAnnulusButton(wxCommandEvent& evt) -> void
+{
+	m_IsAnnulusChecked = !m_IsAnnulusChecked;
+
+	auto currID = MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING;
+	auto currState = m_IsAnnulusChecked;
+
+	m_MenuBar->menu_tools->Check(currID, currState);
+	m_VerticalToolBar->tool_bar->ToggleTool(currID, currState);
+
+	//m_CamPreview->ActivateFocusCenterDisplaying
+	//(
+	//	currState
+	//);
+
+	if (m_IsAnnulusChecked)
+		m_ToolsControlsNotebook->SetSelection(0);
+
+	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked || m_IsAnnulusChecked);
 }
 
 auto cMain::OnColBeginDrag(wxListEvent& evt) -> void
@@ -5929,6 +5989,7 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, enableWidget);
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, enableWidget);
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, enableWidget);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, enableWidget);
 
 	m_VerticalToolBar->tool_bar->Enable();
 
