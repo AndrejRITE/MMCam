@@ -78,6 +78,9 @@
     <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)</OutDir>
     <IntDir>$(SolutionDir)bin\intermediate\$(Platform)\$(Configuration)\$(ProjectName)</IntDir>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgEnableManifest>true</VcpkgEnableManifest>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -113,7 +116,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)MaterialDesign;$(WXWIN_LATEST)\include;$(WXWIN_LATEST)\include\msvc;$(OPENCV_LATEST)\..\..\include;$(MISDK_LATEST);$(XIMEA_LATEST);$(LIBXIMC_LATEST);$(SolutionDir)include;$(SolutionDir)include\rapidxml;$(SolutionDir)include\Xeryon\inc;$(SolutionDir)include\Xeryon\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VcPkgRoot)\installed\$(VcPkgTriplet)\include\opencv4;$(SolutionDir)MaterialDesign;$(MISDK_LATEST);$(XIMEA_LATEST);$(LIBXIMC_LATEST);$(SolutionDir)include;$(SolutionDir)include\rapidxml;$(SolutionDir)include\Xeryon\inc;$(SolutionDir)include\Xeryon\src</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -121,8 +124,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(WXWIN_LATEST)\lib\vc_x64_lib;$(OPENCV_LATEST)\lib;$(MISDK_LATEST)\x64\;$(XIMEA_LATEST);$(LIBXIMC_LATEST)\win64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opencv_world4100d.lib;xiapi64.lib;libximc.lib;bindy.lib;cXusb.lib;gXeth.lib;gXusb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MISDK_LATEST)\x64\;$(XIMEA_LATEST);$(LIBXIMC_LATEST)\win64</AdditionalLibraryDirectories>
+      <AdditionalDependencies>xiapi64.lib;libximc.lib;bindy.lib;cXusb.lib;gXeth.lib;gXusb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -134,7 +137,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)MaterialDesign;$(WXWIN_LATEST)\include;$(WXWIN_LATEST)\include\msvc;$(OPENCV_LATEST)\..\..\include;$(MISDK_LATEST);$(XIMEA_LATEST);$(LIBXIMC_LATEST);$(SolutionDir)include;$(SolutionDir)include\rapidxml;$(SolutionDir)include\Xeryon\inc;$(SolutionDir)include\Xeryon\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VcPkgRoot)\installed\$(VcPkgTriplet)\include\opencv4;$(SolutionDir)MaterialDesign;$(MISDK_LATEST);$(XIMEA_LATEST);$(LIBXIMC_LATEST);$(SolutionDir)include;$(SolutionDir)include\rapidxml;$(SolutionDir)include\Xeryon\inc;$(SolutionDir)include\Xeryon\src</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -143,8 +146,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(WXWIN_LATEST)\lib\vc_x64_lib;$(OPENCV_LATEST)\lib;$(MISDK_LATEST)\x64\;$(XIMEA_LATEST);$(LIBXIMC_LATEST)\win64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opencv_world4100.lib;xiapi64.lib;libximc.lib;bindy.lib;cXusb.lib;gXeth.lib;gXusb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MISDK_LATEST)\x64\;$(XIMEA_LATEST);$(LIBXIMC_LATEST)\win64</AdditionalLibraryDirectories>
+      <AdditionalDependencies>xiapi64.lib;libximc.lib;bindy.lib;cXusb.lib;gXeth.lib;gXusb.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

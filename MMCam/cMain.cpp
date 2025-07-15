@@ -793,19 +793,25 @@ auto cMain::CreateDetectorPage
 
 			/* Global positioning controls */
 			{
-				m_Detector[0].center_btn = new wxBitmapButton(
+				m_Detector[0].center_btn = new wxBitmapButton
+				(
 					page, 
 					MainFrameVariables::ID_RIGHT_SC_DET_X_CENTER_BTN, 
 					centerBitmap, 
 					wxDefaultPosition, 
-					incrementDecrementBtnSize);
+					incrementDecrementBtnSize
+				);
+
 				m_Detector[0].center_btn->SetToolTip(wxT("Go to the center position of motor"));
-				m_Detector[0].home_btn = new wxBitmapButton(
+
+				m_Detector[0].home_btn = new wxBitmapButton
+				(
 					page, 
 					MainFrameVariables::ID_RIGHT_SC_DET_X_HOME_BTN, 
 					homeBitmap, 
 					wxDefaultPosition, 
-					incrementDecrementBtnSize);
+					incrementDecrementBtnSize
+				);
 				m_Detector[0].home_btn->SetToolTip(wxT("Go to the home position of motor"));
 
 				wxSizer* const jump_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Jump");
@@ -2055,7 +2061,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 		m_ToolsControls->annulusListCtrl->InsertColumn(id, columns);
 		++id;
 
-		// Sum
+		// Annulus
 		columns.SetId(id);
 		columns.SetText(_("Annulus"));
 		m_ToolsControls->annulusListCtrl->InsertColumn(id, columns);
@@ -2066,9 +2072,87 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 			for (auto i{0}; i < id - 1; ++i)
 				m_ToolsControls->annulusListCtrl->SetColumnWidth(i, wxLIST_AUTOSIZE_USEHEADER);
 		}
+
+		// Insert FAKE items
+#ifdef _DEBUG
+		// Insert a new row
+		auto index = m_ToolsControls->annulusListCtrl->InsertItem(0, "1");
+		m_ToolsControls->annulusListCtrl->SetItem(index, 1, "0");
+		m_ToolsControls->annulusListCtrl->SetItem(index, 2, "0");
+		m_ToolsControls->annulusListCtrl->SetItem(index, 3, "0");
+		m_ToolsControls->annulusListCtrl->SetItem(index, 4, "0");
+		m_ToolsControls->annulusListCtrl->SetItem(index, 5, "0");
+
+		// Insert another row
+		index = m_ToolsControls->annulusListCtrl->InsertItem(1, "2");
+		m_ToolsControls->annulusListCtrl->SetItem(index, 1, "512");
+		m_ToolsControls->annulusListCtrl->SetItem(index, 2, "480");
+		m_ToolsControls->annulusListCtrl->SetItem(index, 3, "52");
+		m_ToolsControls->annulusListCtrl->SetItem(index, 4, "108");
+		m_ToolsControls->annulusListCtrl->SetItem(index, 5, "12031230");
+
+#endif // _DEBUG
+
 	}
 
 	sizerPage->Add(m_ToolsControls->annulusListCtrl.get(), 0, wxEXPAND | wxALL, 5);
+
+	auto size = wxSize(32, 32);
+	// Add and Remove buttons
+	// Remove button
+	{
+		wxBitmap removeBitmap{};
+		{
+			auto bitmap = wxART_REMOVE_CIRCLE;
+			auto client = wxART_CLIENT_MATERIAL_FILLED;
+			auto color = wxColour(255, 0, 128);
+			removeBitmap = wxMaterialDesignArtProvider::GetBitmap
+			(
+				bitmap,
+				client,
+				size,
+				color
+			);
+		}
+
+		m_ToolsControls->removeAnnulusFromListBtn = std::make_unique<wxBitmapButton>
+			(
+				page,
+				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_REMOVE_FROM_LIST_BTN,
+				removeBitmap
+			);
+	}
+
+	// Add button
+	{
+		wxBitmap addBitmap{};
+		{
+			auto bitmap = wxART_ADD_CIRCLE;
+			auto client = wxART_CLIENT_MATERIAL_FILLED;
+			auto color = wxColour(0, 255, 128);
+			addBitmap = wxMaterialDesignArtProvider::GetBitmap
+			(
+				bitmap,
+				client,
+				size,
+				color
+			);
+		}
+
+		m_ToolsControls->addAnnulusToListBtn = std::make_unique<wxBitmapButton>
+			(
+				page,
+				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN,
+				addBitmap
+			);
+	}
+
+	auto horizontalSizerButtons = new wxBoxSizer(wxHORIZONTAL);
+	horizontalSizerButtons->Add(m_ToolsControls->removeAnnulusFromListBtn.get(), 0, wxALL, 2);
+	horizontalSizerButtons->AddStretchSpacer();
+	horizontalSizerButtons->Add(m_ToolsControls->addAnnulusToListBtn.get(), 0, wxALL, 2);
+
+	sizerPage->Add(horizontalSizerButtons, 0, wxEXPAND | wxALL, 5);
 
 	page->SetSizer(sizerPage);
 	return page;
@@ -3571,6 +3655,8 @@ void cMain::CreateVerticalToolBar()
 			wxT("FWHM (F)")
 		);
 	}
+
+	m_VerticalToolBar->tool_bar->AddSeparator();
 
 	/* Annulus */
 	{

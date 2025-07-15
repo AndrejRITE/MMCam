@@ -24,22 +24,16 @@ Name: "{localappdata}\Programs"; Permissions: users-full
 [Files]
 Source: "{#OutputDir}\src\*"; DestDir: "{app}\src"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#OutputDir}\About.zip"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#OutputDir}\bindy.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#OutputDir}\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\keyfile.sqlite"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#OutputDir}\libximc.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\{#RepoName}.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\{#RepoName}.ini"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#OutputDir}\opencv_world4100.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\table.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#OutputDir}\xiapi64.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#OutputDir}\xiwrapper.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#OutputDir}\cXusb.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#OutputDir}\gXeth.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\Xeryon.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\xeryon_goCenter.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\xeryon_setAbsolutePosition.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\Projects\RIGAKU\{#RepoName}\{#RepoName}\src\img\logo.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#IconFullPath}"; DestDir: "{app}"; Flags: ignoreversion
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\src\ReportGenerator\.venv"

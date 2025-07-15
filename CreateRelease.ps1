@@ -78,10 +78,6 @@ Get-ChildItem -Path $release_folder -Filter *.exe | Where-Object { $_.Name -ne "
 # Get all .7z files except About.7z
 Get-ChildItem -Path $release_folder -Filter *.7z | Where-Object { $_.Name -ne "About.7z" } | Remove-Item
 
-# Copy opencv_world4100.dll file
-Write-Output "Copying opencv_world4100.dll file into ${release_folder} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
-Copy-Item -Path "${opencv_folder}\opencv_world4100.dll" -Destination "${release_folder}\opencv_world4100.dll" -Force
-
 # Copy XIMC files
 Write-Output "Copying XIMC files into ${release_folder} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
 Copy-Item -Path "${libximc_folder}\bindy.dll" -Destination "${release_folder}\bindy.dll" -Force
@@ -160,23 +156,22 @@ Remove-Item -Path "$temp_folder" -Recurse
 # Specify files to include in the archive
 $files_to_archive = @(
     "${release_folder}\src",
-	"${release_folder}\About.zip",
-    "${release_folder}\bindy.dll",
-	"${release_folder}\keyfile.sqlite",
-	"${release_folder}\libximc.dll",
-	"${release_folder}\$repository_name.exe",
-	"${release_folder}\$repository_name.ini",
-	"${release_folder}\opencv_world4100.dll",
-	"${release_folder}\table.txt",
-	"${release_folder}\xiapi64.dll",
-    "${release_folder}\xiwrapper.dll",
-	"${release_folder}\cXusb.dll",
-	"${release_folder}\gXeth.dll",
-	"${release_folder}\Xeryon.py",
-	"${release_folder}\xeryon_goCenter.py",
-	"${release_folder}\xeryon_setAbsolutePosition.py",
-	"${release_folder}\requirements.txt"
+    "${release_folder}\About.zip",
+    "${release_folder}\keyfile.sqlite",
+    "${release_folder}\$repository_name.exe",
+    "${release_folder}\$repository_name.ini",
+    "${release_folder}\table.txt",
+    "${release_folder}\Xeryon.py",
+    "${release_folder}\xeryon_goCenter.py",
+    "${release_folder}\xeryon_setAbsolutePosition.py",
+    "${release_folder}\requirements.txt"
 )
+
+# Add all .dll files from the release folder
+$dll_files = Get-ChildItem -Path $release_folder -Filter *.dll | ForEach-Object { $_.FullName }
+
+# Combine both lists
+$files_to_archive += $dll_files
 
 # Create the 7z archive
 Write-Output "Creating 7z archive - ${archive_name} [$(Get-Date)]" >> "${path_to_repository}\log.txt"

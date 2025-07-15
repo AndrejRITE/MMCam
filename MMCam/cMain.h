@@ -109,6 +109,7 @@ namespace MainFrameVariables
 		ID_RIGHT_SC_OPT_Z_INC_BTN,
 		ID_RIGHT_SC_OPT_Z_CENTER_BTN,
 		ID_RIGHT_SC_OPT_Z_HOME_BTN,
+
 		/* Tools */
 		ID_RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL,
 		ID_RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL,
@@ -117,6 +118,9 @@ namespace MainFrameVariables
 		ID_RIGHT_TOOLS_ANNULUS_R1_TXT_CTRL,
 		ID_RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL,
 		ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL,
+		ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN,
+		ID_RIGHT_TOOLS_ANNULUS_REMOVE_FROM_LIST_BTN,
+
 		/* Camera */
 		ID_RIGHT_CAM_TEMPERATURE_TXT_CTL,
 		ID_RIGHT_CAM_EXPOSURE_TXT_CTL,
@@ -313,6 +317,7 @@ namespace MainFrameVariables
 		std::unique_ptr<wxTextCtrl> gridMeshStepTxtCtrl{}, circleMeshStepTxtCtrl{};
 		std::unique_ptr<wxTextCtrl> annulusCenterXTxtCtrl{}, annulusCenterYTxtCtrl{}, annulusR1TxtCtrl{}, annulusR2TxtCtrl{};
 		std::unique_ptr<wxListCtrl> annulusListCtrl{};
+		std::unique_ptr<wxBitmapButton> addAnnulusToListBtn{}, removeAnnulusFromListBtn{};
 	};
 
 	struct StepperControl
@@ -404,15 +409,14 @@ namespace MainFrameVariables
 
 	static auto CreateStringWithPrecision(double value, int decimalPlaces = 0) -> wxString
 	{
-		// Create a wxString with the specified number of decimal places
-		wxString formattedString{}
-		;
-		if (decimalPlaces)
-			formattedString = wxString::Format(wxT("%.") + std::to_string(decimalPlaces) + wxT("f"), value);
-		else
-			formattedString = wxString::Format(wxT("%i"), (int)value);
-
-		return formattedString;
+		std::ostringstream stream;
+		if (decimalPlaces > 0)
+		{
+			stream.precision(decimalPlaces);
+			stream << std::fixed;
+		}
+		stream << value;
+		return wxString::FromUTF8(stream.str());
 	};
 
 	static auto BinImageData

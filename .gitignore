@@ -26,6 +26,7 @@ dbg_fld/
 *.temp
 ReportTemplate.*
 !ReportTemplate.tex
+vcpkg_*
 
 # Mono auto generated files
 mono_crash.*
