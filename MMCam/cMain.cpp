@@ -3506,17 +3506,6 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 
 	m_HistogramPanel->SetAutoBordersPos(minValue, maxValue);
 
-#ifdef USE_LOGGER
-	if (!IsLoggingWindowBusy())
-		m_Logger->AppendLog("Set image preview "
-			+ wxString::Format(wxT("%i"), (int)m_CapturingParameters->imgWidth)
-			+ "x"
-			+ wxString::Format(wxT("%i"), (int)m_CapturingParameters->imgHeight)
-			+ " [px]"
-			,
-			LoggerVariables::YELLOW_TEXT);
-#endif // USE_LOGGER
-
 	// Set Image
 	LOG("Set camera captured image");
 	m_CamPreview->SetCameraCapturedImage

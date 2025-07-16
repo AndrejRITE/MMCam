@@ -81,8 +81,23 @@ public:
 
 	auto SetImageColormapMode(const CameraPreviewVariables::Colormaps colormapMode) -> void
 	{
-		if (colormapMode < 0 || colormapMode > 7) return;
-		m_ColormapMode = colormapMode;
+		using Colormap = CameraPreviewVariables::Colormaps;
+
+		switch (colormapMode)
+		{
+		case Colormap::GRAYSCALE_COLORMAP:
+		case Colormap::INVERT_COLORMAP:
+		case Colormap::JET_COLORMAP:
+		case Colormap::IMAGEJ_16_COLORS_COLORMAP:
+		case Colormap::COOL_COLORMAP:
+		case Colormap::HOT_COLORMAP:
+		case Colormap::WINTER_COLORMAP:
+		case Colormap::COPPER_COLORMAP:
+			m_ColormapMode = colormapMode;
+			break;
+		default:
+			throw std::invalid_argument("SetImageColormapMode: Invalid colormap mode.");
+		}
 	};
 
 	auto SetOriginalImageSize(const wxSize imageSizeWithoutBinning) -> void { m_OriginalImageSize = imageSizeWithoutBinning; }
