@@ -151,7 +151,9 @@ public:
 		const unsigned short& value,
 		unsigned char& r,
 		unsigned char& g,
-		unsigned char& b
+		unsigned char& b,
+		const int& black,
+		const int& white
 	);
 
 	void Calculate16_ColorsImageJColormapPixelRGB
@@ -170,7 +172,9 @@ public:
 		const unsigned short& value,
 		unsigned char& r,
 		unsigned char& g,
-		unsigned char& b
+		unsigned char& b,
+		const int& black,
+		const int& white
 	) -> void;
 	
 	// Copper Colormaps
@@ -179,7 +183,9 @@ public:
 		const unsigned short& value,
 		unsigned char& r,
 		unsigned char& g,
-		unsigned char& b
+		unsigned char& b,
+		const int& black,
+		const int& white
 	) -> void;
 
 	// FWHM

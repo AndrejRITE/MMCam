@@ -322,48 +322,56 @@ void cCamPreview::CalculateJetColormapPixelRGB
 	const unsigned short& value, 
 	unsigned char& r, 
 	unsigned char& g, 
-	unsigned char& b
+	unsigned char& b,
+	const int& black,
+	const int& white
 )
 {
-	unsigned short 
-		x0{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 498U : 7'967U },
-		x1{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 1'526U : 24'415U },
-		x2{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 2'553U : 40'863U },
-		x3{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 3'581U : 57'311U },
-		x4{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4'095U : USHRT_MAX };
+	// Clamp and normalize value
+	float norm = 0.0f;
+	if (white > black) {
+		int clamped = std::clamp(static_cast<int>(value), black, white);
+		norm = static_cast<float>(clamped - black) / (white - black);
+	}
 
-	if (value < x0)
+	// Define gradient breakpoints
+	constexpr float t0 = 0.0f;
+	constexpr float t1 = 0.25f;
+	constexpr float t2 = 0.5f;
+	constexpr float t3 = 0.75f;
+	constexpr float t4 = 1.0f;
+
+	if (norm < t1)
 	{
+		// Blue ramping up
 		r = 0;
 		g = 0;
-		b = 255 * 0.51563f + (float)value * (255.0f - 255 * 0.51563f) / (float)x0;
+		b = static_cast<unsigned char>(131.48f + norm / t1 * (255.0f - 131.48f)); // 255 * 0.51563 ≈ 131.48
 	}
-	else if (value >= x0 && value <= x1)
+	else if (norm < t2)
 	{
+		// Blue to Cyan (G up)
 		r = 0;
-		g = (float)(value - x0) * 255.0f / (float)(x1 - x0);
+		g = static_cast<unsigned char>((norm - t1) / (t2 - t1) * 255.0f);
 		b = 255;
 	}
-	else if (value > x1 && value < x2)
+	else if (norm < t3)
 	{
-		r = (float)(value - x1) * 255.0f / (float)(x2 - x1);
+		// Cyan to Yellow (R up, B down)
+		r = static_cast<unsigned char>((norm - t2) / (t3 - t2) * 255.0f);
 		g = 255;
-		b = (float)(x2 - value) * 255.0f / (float)(x2 - x1);
+		b = static_cast<unsigned char>((t3 - norm) / (t3 - t2) * 255.0f);
 	}
-	else if (value >= x2 && value <= x3)
+	else if (norm < t4)
 	{
+		// Yellow to Orange-Red (G down)
 		r = 255;
-		g = (float)(x3 - value) * 255.0f / (float)(x3 - x2);
-		b = 0;
-	}
-	else if (value > x3 && value < x4)
-	{
-		r = 255.0f * 0.5f + (float)(x4 - value) * (255.0f - 255.0f * 0.5f) / (float)(x4 - x3);
-		g = 0;
+		g = static_cast<unsigned char>((t4 - norm) / (t4 - t3) * 255.0f);
 		b = 0;
 	}
 	else
 	{
+		// Clip: value >= white
 		r = 255;
 		g = 255;
 		b = 255;
@@ -421,46 +429,51 @@ auto cCamPreview::CalculateHotColormapPixelRGB
 	const unsigned short& value, 
 	unsigned char& r, 
 	unsigned char& g, 
-	unsigned char& b
+	unsigned char& b,
+	const int& black,
+	const int& white
 ) -> void
 {
-	unsigned short max_ushort{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4'095U : USHRT_MAX };
-	unsigned short
-		x1{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 1'536U : 24'575U },
-		x2{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 3'071U : 49'151U },
-		x3{ max_ushort };
-
-	unsigned short max_uchar{ UCHAR_MAX };
-	unsigned short t_red{}, t_green{}, t_blue{};
-
-	if (value < x1)
+	// Clamp and normalize the value to [0.0, 1.0]
+	float norm = 0.0f;
+	if (white > black)
 	{
-		t_red = (float)value * (float)max_ushort / (float)x1;
-		t_green = 0;
-		t_blue = 0;
-	}
-	else if (value >= x1 && value < x2)
-	{
-		t_red = max_ushort;
-		t_green = (float)(value - x1) * (float)max_ushort / (float)(x2 - x1);
-		t_blue = 0;
-	}
-	else if (value >= x2 && value < x3)
-	{
-		t_red = max_ushort;
-		t_green = max_ushort;
-		t_blue = (float)(value - x2) * (float)max_ushort / (float)(x3 - x2);
-	}
-	else if (value == x3)
-	{
-		t_red = max_ushort;
-		t_green = max_ushort;
-		t_blue = max_ushort;
+		int clamped = std::clamp(static_cast<int>(value), black, white);
+		norm = static_cast<float>(clamped - black) / (white - black);
 	}
 
-	r = (unsigned char)(max_uchar * t_red / max_ushort);
-	g = (unsigned char)(max_uchar * t_green / max_ushort);
-	b = (unsigned char)(max_uchar * t_blue / max_ushort);
+	// Define normalized thresholds
+	constexpr float t1 = 1.0f / 3.0f;
+	constexpr float t2 = 2.0f / 3.0f;
+
+	// Initialize RGB
+	float red = 0.0f;
+	float green = 0.0f;
+	float blue = 0.0f;
+
+	if (norm < t1)
+	{
+		// Stage 1: red increases
+		red = norm / t1;
+	}
+	else if (norm < t2)
+	{
+		// Stage 2: red full, green increases
+		red = 1.0f;
+		green = (norm - t1) / (t2 - t1);
+	}
+	else if (norm <= 1.0f)
+	{
+		// Stage 3: red and green full, blue increases
+		red = 1.0f;
+		green = 1.0f;
+		blue = (norm - t2) / (1.0f - t2);
+	}
+
+	// Scale to 0-255
+	r = static_cast<unsigned char>(std::round(red * 255.0f));
+	g = static_cast<unsigned char>(std::round(green * 255.0f));
+	b = static_cast<unsigned char>(std::round(blue * 255.0f));
 }
 
 auto cCamPreview::CalculateCopperColormapPixelRGB
@@ -468,27 +481,28 @@ auto cCamPreview::CalculateCopperColormapPixelRGB
 	const unsigned short& value, 
 	unsigned char& r, 
 	unsigned char& g, 
-	unsigned char& b
+	unsigned char& b,
+	const int& black,
+	const int& white
 ) -> void
 {
-	unsigned short max_ushort{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4'095U : USHRT_MAX };
-	unsigned short
-		x1{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 3'276U : 52'428U },
-		x2{ max_ushort };
+	// Normalize to [0.0, 1.0] based on black and white
+	float norm = 0.0f;
+	if (white > black)
+	{
+		int clamped = std::clamp(static_cast<int>(value), black, white);
+		norm = static_cast<float>(clamped - black) / (white - black);
+	}
 
-	unsigned short max_uchar{ UCHAR_MAX };
-	unsigned short t_red{}, t_green{}, t_blue{};
+	// Copper colormap coefficients
+	constexpr float kRed = 1.0f;
+	constexpr float kGreen = 0.7812f;
+	constexpr float kBlue = 0.4975f;
 
-	if (value < x1)
-		t_red = (float)value * (float)max_ushort / (float)x1;
-	else
-		t_red = max_ushort;
-	t_green = (float)value * .7812f * (float)max_ushort / (float)x2;
-	t_blue = (float)value * .4975f * (float)max_ushort / (float)x2;
-
-	r = (unsigned char)(max_uchar * t_red / max_ushort);
-	g = (unsigned char)(max_uchar * t_green / max_ushort);
-	b = (unsigned char)(max_uchar * t_blue / max_ushort);
+	// Apply coefficients and scale to [0, 255]
+	r = static_cast<unsigned char>(std::round(std::min(norm * kRed, 1.0f) * 255.0f));
+	g = static_cast<unsigned char>(std::round(std::min(norm * kGreen, 1.0f) * 255.0f));
+	b = static_cast<unsigned char>(std::round(std::min(norm * kBlue, 1.0f) * 255.0f));
 }
 
 void cCamPreview::OnMouseMoved(wxMouseEvent& evt)
@@ -634,7 +648,7 @@ void cCamPreview::CalculatePositionOnImage()
 
 void cCamPreview::OnPreviewMouseLeftPressed(wxMouseEvent& evt)
 {
-	if (m_Zoom > m_MinZoom && m_IsCursorInsideImage)
+	if (m_Zoom > m_MinZoom && m_IsCursorInsideImage && !m_CTRLPressed)
 	{
 		m_Panning = true;
 		m_PanStartPoint = m_CursorPosOnCanvas;
@@ -1070,7 +1084,7 @@ auto cCamPreview::AdjustImageParts
 			}
 
 			case CameraPreviewVariables::Colormaps::JET_COLORMAP:
-				CalculateJetColormapPixelRGB(current_value, red, green, blue);
+				CalculateJetColormapPixelRGB(current_value, red, green, blue, black, white);
 				break;
 
 			case CameraPreviewVariables::Colormaps::IMAGEJ_16_COLORS_COLORMAP:
@@ -1079,27 +1093,44 @@ auto cCamPreview::AdjustImageParts
 
 			case CameraPreviewVariables::Colormaps::COOL_COLORMAP:
 			{
-				red = (unsigned char)(uchar_max * adjustedValue / max_value_d);
-				green = (unsigned char)(uchar_max * (max_value_d - adjustedValue) / max_value_d);
-				blue = (unsigned char)uchar_max;
+				// Normalize adjustedValue to [0.0, 1.0] based on actual black/white
+				float norm = 0.0f;
+				if (white > black)
+				{
+					int clamped = std::clamp((int)current_value, black, white);
+					norm = static_cast<float>(clamped - black) / (white - black);
+				}
+
+				// Apply cool colormap
+				red = static_cast<unsigned char>(std::round(norm * 255.0f));
+				green = static_cast<unsigned char>(std::round((1.0f - norm) * 255.0f));
+				blue = 255;
 				break;
 			}
 
 			case CameraPreviewVariables::Colormaps::HOT_COLORMAP:
-				CalculateHotColormapPixelRGB(current_value, red, green, blue);
+				CalculateHotColormapPixelRGB(current_value, red, green, blue, black, white);
 				break;
 
 			case CameraPreviewVariables::Colormaps::WINTER_COLORMAP:
 			{
+				// Normalize adjustedValue to [0.0, 1.0] range based on black and white
+				float norm = 0.0f;
+				if (white > black)
+				{
+					int clamped = std::clamp((int)current_value, black, white);
+					norm = static_cast<float>(clamped - black) / (white - black);
+				}
+
+				// Apply winter colormap logic
 				red = 0;
-				green = (unsigned char)(uchar_max * adjustedValue / max_value_d);
-				auto t_blue = (float)max_value_d * (1.f - .5f * (float)adjustedValue / (float)max_value_d);
-				blue = (unsigned char)(uchar_max * t_blue / max_value_d);
+				green = static_cast<unsigned char>(std::round(norm * 255.0f));
+				blue = static_cast<unsigned char>(std::round((1.0f - 0.5f * norm) * 255.0f));
 				break;
 			}
 
 			case CameraPreviewVariables::Colormaps::COPPER_COLORMAP:
-				CalculateCopperColormapPixelRGB(current_value, red, green, blue);
+				CalculateCopperColormapPixelRGB(current_value, red, green, blue, black, white);
 				break;
 
 			default:
