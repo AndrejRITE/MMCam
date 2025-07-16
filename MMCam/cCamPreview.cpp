@@ -375,123 +375,45 @@ void cCamPreview::Calculate16_ColorsImageJColormapPixelRGB
 	const unsigned short& value, 
 	unsigned char& r, 
 	unsigned char& g, 
-	unsigned char& b
+	unsigned char& b,
+	const int& black,
+	const int& white
 )
 {
-	unsigned short
-		x0{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 255U : 4'095U },
-		x1{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 510U : 8'191U },
-		x2{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 765U : 12'287U },
-		x3{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 1'020U : 16'383U },
-		x4{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 1'275U : 20'497U },
-		x5{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 1'530U : 24'575U },
-		x6{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 1'785U : 28'671U },
-		x7{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 2'040U : 32'767U },
-		x8{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 2'295U : 36'863U },
-		x9{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 2'550U : 40'959U },
-		x10{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 2'805U : 45'055U },
-		x11{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 3'060U : 49'151U },
-		x12{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 3'315U : 53'247U },
-		x13{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 3'570U : 57'343U },
-		x14{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 3'825U : 61'439U },
-		x15{ m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4'095U : USHRT_MAX };
+	static const std::array<std::tuple<unsigned char, unsigned char, unsigned char>, 16> colormap = { {
+		{  0,   0,   0},
+		{  1,   1, 171},
+		{  1,   1, 224},
+		{  0, 110, 255},
+		{  1, 171, 254},
+		{  1, 224, 254},
+		{  1, 254,   1},
+		{190, 255,   0},
+		{255, 255,   0},
+		{255, 224,   0},
+		{255, 141,   0},
+		{250,  94,   0},
+		{245,   0,   0},
+		{245,   0, 222},
+		{222, 180, 222},
+		{255, 255, 255}
+	} };
 
-	if (value < x0)
+	// Clamp value to [black, white]
+	int clamped = std::clamp(static_cast<int>(value), black, white);
+
+	// Prevent divide-by-zero
+	int range = white - black;
+	int index = 0;
+
+	if (range > 0)
 	{
-		r = 0;
-		g = 0;
-		b = 0;
+		// Compute which of the 16 intervals this value falls into
+		index = static_cast<int>(15.0 * (clamped - black) / range);
 	}
-	else if (value >= x0 && value < x1)
-	{
-		r = 1;
-		g = 1;
-		b = 171;
-	}
-	else if (value >= x1 && value < x2)
-	{
-		r = 1;
-		g = 1;
-		b = 224;
-	}
-	else if (value >= x2 && value < x3)
-	{
-		r = 0;
-		g = 110;
-		b = 255;
-	}
-	else if (value >= x3 && value < x4)
-	{
-		r = 1;
-		g = 171;
-		b = 254;
-	}
-	else if (value >= x4 && value < x5)
-	{
-		r = 1;
-		g = 224;
-		b = 254;
-	}
-	else if (value >= x5 && value < x6)
-	{
-		r = 1;
-		g = 254;
-		b = 1;
-	}
-	else if (value >= x6 && value < x7)
-	{
-		r = 190;
-		g = 255;
-		b = 0;
-	}
-	else if (value >= x7 && value < x8)
-	{
-		r = 255;
-		g = 255;
-		b = 0;
-	}
-	else if (value >= x8 && value < x9)
-	{
-		r = 255;
-		g = 224;
-		b = 0;
-	}
-	else if (value >= x9 && value < x10)
-	{
-		r = 255;
-		g = 141;
-		b = 0;
-	}
-	else if (value >= x10 && value < x11)
-	{
-		r = 250;
-		g = 94;
-		b = 0;
-	}
-	else if (value >= x11 && value < x12)
-	{
-		r = 245;
-		g = 0;
-		b = 0;
-	}
-	else if (value >= x12 && value < x13)
-	{
-		r = 245;
-		g = 0;
-		b = 222;
-	}
-	else if (value >= x13 && value < x14)
-	{
-		r = 222;
-		g = 180;
-		b = 222;
-	}
-	else
-	{
-		r = 255;
-		g = 255;
-		b = 255;
-	}
+
+	// Assign RGB from the colormap
+	std::tie(r, g, b) = colormap[index];
 }
 
 auto cCamPreview::CalculateHotColormapPixelRGB
@@ -1152,7 +1074,7 @@ auto cCamPreview::AdjustImageParts
 				break;
 
 			case CameraPreviewVariables::Colormaps::IMAGEJ_16_COLORS_COLORMAP:
-				Calculate16_ColorsImageJColormapPixelRGB(current_value, red, green, blue);
+				Calculate16_ColorsImageJColormapPixelRGB(current_value, red, green, blue, black, white);
 				break;
 
 			case CameraPreviewVariables::Colormaps::COOL_COLORMAP:

@@ -50,18 +50,27 @@ namespace CameraPreviewVariables
 	struct InputPreviewPanelArgs
 	{
 		wxTextCtrl* x_pos_crosshair{}, * y_pos_crosshair{};
+		wxTextCtrl* xAnnulusCenterPos{}, * yAnnulusCenterPos{}, * r1Annulus{}, * r2Annulus{};
 		wxStatusBar* statusBar{};
 		//wxToggleButton* set_pos_tgl_btn{};
 		InputPreviewPanelArgs() {};
 		InputPreviewPanelArgs
 		(
-			wxTextCtrl* par_x_pos_crosshair,
-			wxTextCtrl* par_y_pos_crosshair,
-			wxStatusBar* par_statusBar
+			wxTextCtrl* parXPosCrosshair,
+			wxTextCtrl* parYPosCrosshair,
+			wxTextCtrl* parXAnnulusCenterPos,
+			wxTextCtrl* parYAnnulusCenterPos,
+			wxTextCtrl* parR1Annulus,
+			wxTextCtrl* parR2Annulus,
+			wxStatusBar* parStatusBar
 			//wxToggleButton* par_pos_crosshair_tgl_btn
-		) : x_pos_crosshair(par_x_pos_crosshair),
-			y_pos_crosshair(par_y_pos_crosshair),
-			statusBar(par_statusBar)
+		) : x_pos_crosshair(parXPosCrosshair),
+			y_pos_crosshair(parYPosCrosshair),
+			xAnnulusCenterPos(parXAnnulusCenterPos),
+			yAnnulusCenterPos(parYAnnulusCenterPos),
+			r1Annulus(parR1Annulus),
+			r2Annulus(parR2Annulus),
+			statusBar(parStatusBar)
 		{};
 			//set_pos_tgl_btn(par_pos_crosshair_tgl_btn) {};
 	};
@@ -150,7 +159,9 @@ public:
 		const unsigned short& value,
 		unsigned char& r,
 		unsigned char& g,
-		unsigned char& b
+		unsigned char& b,
+		const int& black,
+		const int& white
 	);
 	
 	// Hot Colormaps

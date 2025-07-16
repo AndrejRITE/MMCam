@@ -17,7 +17,11 @@ cSettings::cSettings(wxWindow* parent_frame)
 
 int cSettings::ShowModal()
 {
-	auto result = wxDialog::ShowModal();  // Call the base class method
+	int result = wxID_OK;
+
+#ifndef _DEBUG
+	result = wxDialog::ShowModal();  // Call the base class method
+#endif // !_DEBUG
 
 	wxBusyCursor busy;
 	//if (result == wxID_OK)

@@ -135,6 +135,11 @@ cMain::cMain(const wxString& title_)
 	}
 
 #ifdef _DEBUG
+	// Press Open Button
+	{
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_FILE_OPEN);
+		ProcessEvent(artEvt);
+	}
 	// Press Set Out Dir Button
 	{
 		wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_MT_OUT_FLD_BTN);
@@ -152,11 +157,6 @@ cMain::cMain(const wxString& title_)
 		//ProcessEvent(art_start_live_capturing);
 	}
 }
-
-//auto cMain::StopLiveCapturing() -> bool
-//{
-	//return m_StopLiveCapturing;
-//}
 
 void cMain::CreateMainFrame()
 {
@@ -659,13 +659,17 @@ void cMain::CreateLeftAndRightSide()
 void cMain::CreateLeftSide(wxSizer* left_side_sizer)
 {
 	left_side_sizer->Add(m_VerticalToolBar->tool_bar, 0, wxEXPAND);
+
 	auto input_args = std::make_unique<CameraPreviewVariables::InputPreviewPanelArgs>
 		(
 			m_CameraTabControls->crossHairPosXTxtCtrl.get(),
 			m_CameraTabControls->crossHairPosYTxtCtrl.get(),
+			m_ToolsControls->annulusCenterXTxtCtrl.get(),
+			m_ToolsControls->annulusCenterYTxtCtrl.get(),
+			m_ToolsControls->annulusR1TxtCtrl.get(),
+			m_ToolsControls->annulusR2TxtCtrl.get(),
 			m_StatusBar.get()
-			//m_SetCrossHairPosTglBtn.get()
-			);
+		);
 
 	m_CamPreview = std::make_unique<cCamPreview>
 		(
@@ -1910,6 +1914,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 			);
 		
 		m_ToolsControls->annulusCenterXTxtCtrl->SetToolTip("Set desired horizontal position for annulus in [px] and press Enter");
+		m_ToolsControls->annulusCenterXTxtCtrl->Disable();
 
 		gridSizerCenter->Add(m_ToolsControls->annulusCenterXTxtCtrl.get(), 0, wxALIGN_CENTER);
 	}
@@ -1948,6 +1953,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 			);
 		
 		m_ToolsControls->annulusCenterYTxtCtrl->SetToolTip("Set desired vertical position for annulus in [px] and press Enter");
+		m_ToolsControls->annulusCenterYTxtCtrl->Disable();
 
 		gridSizerCenter->Add(m_ToolsControls->annulusCenterYTxtCtrl.get(), 0, wxALIGN_CENTER);
 	}
@@ -1997,6 +2003,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 			);
 		
 		m_ToolsControls->annulusR1TxtCtrl->SetToolTip("Set desired radius for the smaller circle R1 for annulus in [px] and press Enter");
+		m_ToolsControls->annulusR1TxtCtrl->Disable();
 
 		gridSizerAnnulus->Add(m_ToolsControls->annulusR1TxtCtrl.get(), 0, wxALIGN_CENTER);
 	}
@@ -2035,6 +2042,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 			);
 		
 		m_ToolsControls->annulusR2TxtCtrl->SetToolTip("Set desired radius for the bigger circle R2 for annulus in [px] and press Enter");
+		m_ToolsControls->annulusR2TxtCtrl->Disable();
 
 		gridSizerAnnulus->Add(m_ToolsControls->annulusR2TxtCtrl.get(), 0, wxALIGN_CENTER);
 	}
@@ -2054,6 +2062,8 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 				wxDefaultSize,
 				wxLC_REPORT
 			);
+
+		m_ToolsControls->annulusListCtrl->Disable();
 
 		auto id = 0;
 
@@ -2148,6 +2158,8 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_REMOVE_FROM_LIST_BTN,
 				removeBitmap
 			);
+
+		m_ToolsControls->removeAnnulusFromListBtn->Disable();
 	}
 
 	// Add button
@@ -3429,7 +3441,7 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 	std::string filePath{};
 
 #ifdef _DEBUG
-	filePath = ".\\src\\dbg_fld\\Mesh 1mm_cured.tif";
+	filePath = ".\\src\\dbg_fld\\ss_14H_00M_18S_1500000us.tif";
 #else
 	wxFileDialog dlg
 	(
