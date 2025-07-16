@@ -14,6 +14,7 @@
 *.userprefs
 .venv
 *.txt
+!requirements.txt
 dbg_fld/
 *.raw
 *.tif
@@ -27,6 +28,7 @@ dbg_fld/
 ReportTemplate.*
 !ReportTemplate.tex
 vcpkg_*
+!vcpkg.json
 
 # Mono auto generated files
 mono_crash.*
