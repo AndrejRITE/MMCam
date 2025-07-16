@@ -81,7 +81,7 @@ public:
 
 	auto SetImageColormapMode(const CameraPreviewVariables::Colormaps colormapMode) -> void
 	{
-		if (colormapMode < 0 || colormapMode > 6) return;
+		if (colormapMode < 0 || colormapMode > 7) return;
 		m_ColormapMode = colormapMode;
 	};
 

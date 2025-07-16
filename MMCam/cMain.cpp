@@ -1,6 +1,7 @@
 #include "cMain.h"
 
 wxBEGIN_EVENT_TABLE(cMain, wxFrame)
+	EVT_MENU(MainFrameVariables::ID_MENUBAR_FILE_OPEN, cMain::OnOpen)
 	EVT_CLOSE(cMain::OnExit)
 	EVT_MENU(MainFrameVariables::ID_MENUBAR_FILE_QUIT, cMain::OnExit)
 	EVT_MENU(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
@@ -257,6 +258,32 @@ void cMain::CreateMenuBarOnFrame()
 	auto initBitmapSize = wxSize(16, 16);
 	// File Menu
 	{
+		// Open
+		{
+			auto item = new wxMenuItem(m_MenuBar->menu_file, MainFrameVariables::ID_MENUBAR_FILE_OPEN, "Open\tCtrl+O");
+			// Setting a bitmap to the Close menu item
+			{
+				wxVector<wxBitmap> bitmaps;
+				auto bitmap = wxART_FILE_OPEN;
+				auto client = wxART_CLIENT_MATERIAL_ROUND;
+				auto color = wxColour(0, 0, 0);
+				for (auto i{ 0 }; i < 3; ++i)
+					bitmaps.push_back
+					(
+						wxMaterialDesignArtProvider::GetBitmap
+						(
+							bitmap,
+							client,
+							wxSize(initBitmapSize.GetWidth() + i * initBitmapSize.GetWidth(), initBitmapSize.GetHeight() + i * initBitmapSize.GetHeight()),
+							color
+						)
+					);
+
+				item->SetBitmap(wxBitmapBundle::FromBitmaps(bitmaps));
+			}
+
+			m_MenuBar->menu_file->Append(item);
+		}
 		// Quit
 		{
 			auto item = new wxMenuItem(m_MenuBar->menu_file, MainFrameVariables::ID_MENUBAR_FILE_QUIT, "Quit\tCtrl+Q");
@@ -411,7 +438,7 @@ void cMain::CreateMenuBarOnFrame()
 		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, false);
 
 		// Circle Mesh
-		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, wxT("Circle Mesh Displaying\tCtrl+O"));
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, wxT("Circle Mesh Displaying\tCtrl+C"));
 		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, false);
 
 		// Focus Center
@@ -3397,6 +3424,113 @@ void cMain::OnMaximizeButton(wxMaximizeEvent& evt)
 	//}
 }
 
+auto cMain::OnOpen(wxCommandEvent& evt) -> void
+{
+	std::string filePath{};
+
+#ifdef _DEBUG
+	filePath = ".\\src\\dbg_fld\\Mesh 1mm_cured.tif";
+#else
+	wxFileDialog dlg
+	(
+		this,
+		"Open TIF File",
+		wxEmptyString,
+		wxEmptyString,
+		"TIF Files (*.tif)|*.tif",
+		wxFD_OPEN | wxFD_FILE_MUST_EXIST
+	);
+
+	if (dlg.ShowModal() != wxID_OK) return;
+
+	filePath = std::string(dlg.GetPath().mbc_str());
+#endif // _DEBUG
+
+	wxBusyCursor busy;
+
+	wxFileName fileName(filePath);
+
+	if (!wxFileExists(fileName.GetFullPath()))
+		return;
+
+	cv::Mat image = cv::imread(filePath, cv::IMREAD_UNCHANGED);
+
+	if (image.empty())
+		return;
+
+	auto dataType = HistogramPanelVariables::ImageDataTypes::RAW_12BIT;
+
+	dataType = image.type() == CV_16U ? HistogramPanelVariables::ImageDataTypes::RAW_16BIT : dataType;
+
+	auto dataPtr = std::make_unique<unsigned short[]>(image.rows * image.cols);
+
+	for (auto y{ 0 }; y < image.rows; ++y)
+	{
+		for (auto x{ 0 }; x < image.cols; ++x)
+			dataPtr[y * image.cols + x] = image.at<unsigned short>(y, x);
+	}
+
+	auto histogram = std::make_unique<unsigned long long[]>(USHRT_MAX + 1);
+
+	unsigned short minValue{}, maxValue{};
+	auto minimumCount = 5;
+
+	if (!CalculateHistogram
+	(
+		dataPtr.get(),
+		image.cols,
+		image.rows,
+		minimumCount,
+		histogram.get(),
+		&minValue,
+		&maxValue
+	))
+		return;
+
+	auto wasHistogramRangeChanged = m_HistogramPanel->GetWasHistogramRangeChanged();
+	auto actLeftBorder = m_HistogramPanel->GetLeftBorderValue();
+	auto actRightBorder = m_HistogramPanel->GetRightBorderValue();
+
+	// Set Histogram
+	LOG("Set histogram");
+	m_HistogramPanel->SetHistogram
+	(
+		dataType, // As default camera works in 16-bit mode
+		std::move(histogram.release()),
+		minValue,
+		maxValue
+	);
+
+	m_LeftHistogramRange->ChangeValue(wxString::Format(wxT("%i"), wasHistogramRangeChanged ? (int)actLeftBorder : (int)minValue));
+	m_RightHistogramRange->SetValue(wxString::Format(wxT("%i"), wasHistogramRangeChanged ? (int)actRightBorder : (int)maxValue));
+
+	m_HistogramPanel->SetAutoBordersPos(minValue, maxValue);
+
+#ifdef USE_LOGGER
+	if (!IsLoggingWindowBusy())
+		m_Logger->AppendLog("Set image preview "
+			+ wxString::Format(wxT("%i"), (int)m_CapturingParameters->imgWidth)
+			+ "x"
+			+ wxString::Format(wxT("%i"), (int)m_CapturingParameters->imgHeight)
+			+ " [px]"
+			,
+			LoggerVariables::YELLOW_TEXT);
+#endif // USE_LOGGER
+
+	// Set Image
+	LOG("Set camera captured image");
+	m_CamPreview->SetCameraCapturedImage
+	(
+		dataPtr.get(),
+		wxSize(image.cols, image.rows),
+		wasHistogramRangeChanged ? m_HistogramPanel->GetLeftBorderValue() : minValue,
+		wasHistogramRangeChanged ? m_HistogramPanel->GetRightBorderValue() : maxValue
+	);
+
+	EnableControlsAfterCapturing();
+	m_VerticalToolBar->tool_bar->Enable();
+}
+
 void cMain::OnExit(wxCloseEvent& evt)
 {
 #ifndef _DEBUG
@@ -3749,7 +3883,7 @@ void cMain::CreateVerticalToolBar()
 		m_VerticalToolBar->tool_bar->SetToolShortHelp
 		(
 			MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, 
-			wxT("Circle Mesh (Ctrl+O)")
+			wxT("Circle Mesh (Ctrl+C)")
 		);
 	}
 
@@ -6031,11 +6165,22 @@ auto cMain::CreateVirtualEnvironment(wxString pathToVenv, wxString pathToRequire
 auto cMain::EnableControlsAfterCapturing() -> void
 {
 	EnableUsedAndDisableNonUsedMotors();
+	
+	if (m_CameraControl && m_CameraControl->IsConnected())
+	{
+		m_CameraTabControls->camExposure->Enable();
 
-	m_CameraTabControls->camExposure->Enable();
-	if (m_OutDirTextCtrl->GetValue() != "Save directory...")
-		m_CameraTabControls->singleShotBtn->Enable();
-	m_CameraTabControls->startStopLiveCapturingTglBtn->Enable();
+		if (m_OutDirTextCtrl->GetValue() != "Save directory...")
+			m_CameraTabControls->singleShotBtn->Enable();
+
+		m_CameraTabControls->startStopLiveCapturingTglBtn->Enable();
+
+		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, true);
+		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, true);
+
+		m_OutDirBtn->Enable();
+		m_FirstStage->EnableAllControls();
+	}
 
 	m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, true);
 	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, true);
@@ -6045,14 +6190,9 @@ auto cMain::EnableControlsAfterCapturing() -> void
 		m_CameraTabControls->crossHairPosYTxtCtrl->Enable();
 	}
 
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, true);
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, true);
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, true);
 
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_VALUE_DISPLAYING, true);
-
-	m_OutDirBtn->Enable();
-	m_FirstStage->EnableAllControls();
 
 	m_ImageColormapComboBox->stylish_combo_box->Enable();
 

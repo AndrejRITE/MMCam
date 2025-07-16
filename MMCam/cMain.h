@@ -49,6 +49,7 @@ namespace MainFrameVariables
 	enum
 	{
 		/* Menu Bar */
+		ID_MENUBAR_FILE_OPEN,
 		ID_MENUBAR_FILE_QUIT,
 		ID_MENUBAR_EDIT_ENABLE_DARK_MODE,
 		ID_MENUBAR_EDIT_SETTINGS,
@@ -691,6 +692,8 @@ private:
 
 	void OnFullScreen(wxCommandEvent& evt);
 	void OnMaximizeButton(wxMaximizeEvent& evt);
+
+	auto OnOpen(wxCommandEvent& evt) -> void;
 
 	void OnExit(wxCloseEvent& evt);
 	void OnExit(wxCommandEvent& evt);
