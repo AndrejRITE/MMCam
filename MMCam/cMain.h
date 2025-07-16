@@ -656,6 +656,7 @@ private:
 	/* Annulus */
 	auto OnAnnulusButton(wxCommandEvent& evt) -> void;
 	auto OnColBeginDrag(wxListEvent& evt) -> void;
+	auto OnAddAnnulusButton(wxCommandEvent& evt) -> void;
 
 	void UnCheckAllTools();
 	/* ProgressBar */

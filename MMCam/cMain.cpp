@@ -81,6 +81,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_TEXT(MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL, cMain::OnYPosCrossHairTextCtrl)
 
 	/* Annulus */
+	EVT_BUTTON(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN, cMain::OnAddAnnulusButton)
 	EVT_LIST_COL_BEGIN_DRAG(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL, cMain::OnColBeginDrag)
 
 	/* Set Out Folder */
@@ -140,11 +141,19 @@ cMain::cMain(const wxString& title_)
 		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_FILE_OPEN);
 		ProcessEvent(artEvt);
 	}
+
 	// Press Set Out Dir Button
 	{
 		wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_MT_OUT_FLD_BTN);
 		ProcessEvent(artEvt);
 	}
+
+	// Press Add Annulus Button
+	{
+		wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN);
+		ProcessEvent(artEvt);
+	}
+
 	// Press Generate Button
 	{
 		//wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_MY_GENERATE_REPORT_BTN);
@@ -3935,6 +3944,10 @@ auto cMain::OnColBeginDrag(wxListEvent& evt) -> void
 	{
 		evt.Veto();
 	}
+}
+
+auto cMain::OnAddAnnulusButton(wxCommandEvent& evt) -> void
+{
 }
 
 void cMain::UnCheckAllTools()
