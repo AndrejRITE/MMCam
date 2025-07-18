@@ -836,6 +836,7 @@ auto cCamPreview::DrawAnnulus(wxGraphicsContext* gc) -> void
 	}
 
 	// Draw Inner Radius
+	if (currAnnulus.m_InnerRadius)
 	{
 		wxGraphicsPath path = gc->CreatePath();
 		path.AddCircle
@@ -849,6 +850,7 @@ auto cCamPreview::DrawAnnulus(wxGraphicsContext* gc) -> void
 	}
 
 	// Draw Outer Radius
+	if (currAnnulus.m_OuterRadius)
 	{
 		wxGraphicsPath path = gc->CreatePath();
 		path.AddCircle
