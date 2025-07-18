@@ -773,6 +773,95 @@ auto cCamPreview::DrawPixelValues(wxGraphicsContext* gc) -> void
 	}
 }
 
+auto cCamPreview::DrawAnnulus(wxGraphicsContext* gc) -> void
+{
+	if (!m_DisplayAnnulus) return;
+
+	if (!m_AnnulusVec.size()) return;
+
+	if (!m_ImageData) return;
+
+	auto CheckIfPixelValueIsInsideTheImage = [&](const int& x, const int& y)
+		{
+			if (x < 0 || x >= m_ImageSize.GetWidth()) return false;
+			if (y < 0 || y >= m_ImageSize.GetHeight()) return false;
+			return true;
+		};
+
+	wxRealPoint actualHalfPixelSize =
+	{
+		m_Zoom / m_ZoomOnOriginalSizeImage / 2.0,
+		m_Zoom / m_ZoomOnOriginalSizeImage / 2.0,
+	};
+
+	wxRealPoint drawPoint{};
+	wxSize canvasSize
+	{
+		(int)(m_CanvasSize.GetWidth() / m_Zoom * m_ZoomOnOriginalSizeImage),
+		(int)(m_CanvasSize.GetHeight() / m_Zoom * m_ZoomOnOriginalSizeImage)
+	};
+
+	auto imageStartDrawPoint = wxRealPoint
+	(
+		m_StartDrawPos.x * m_Zoom / m_ZoomOnOriginalSizeImage,
+		m_StartDrawPos.y * m_Zoom / m_ZoomOnOriginalSizeImage
+	);
+
+	auto currAnnulus = m_AnnulusVec[m_AnnulusVec.size() - 1];
+
+	gc->SetPen(wxPen(m_ContrastDefaultColor, 4));
+
+	// Draw Center Cross Rotated 45 Degrees (an 'X')
+	{
+		const double crossSize = 10.0; // in pixels, adjust based on zoom if needed
+
+		// Compute actual center on canvas
+		const double centerX = currAnnulus.m_Center.x * actualHalfPixelSize.x * 2 + imageStartDrawPoint.x + actualHalfPixelSize.x;
+		const double centerY = currAnnulus.m_Center.y * actualHalfPixelSize.y * 2 + imageStartDrawPoint.y + actualHalfPixelSize.y;
+
+		// Compute 45° rotated cross points
+		const double offset = crossSize / std::sqrt(2.0); // diagonal offset for 45° lines
+
+		wxPoint2DDouble p1(centerX - offset, centerY - offset);
+		wxPoint2DDouble p2(centerX + offset, centerY + offset);
+		wxPoint2DDouble p3(centerX - offset, centerY + offset);
+		wxPoint2DDouble p4(centerX + offset, centerY - offset);
+
+		wxGraphicsPath crossPath = gc->CreatePath();
+		crossPath.MoveToPoint(p1);
+		crossPath.AddLineToPoint(p2);
+		crossPath.MoveToPoint(p3);
+		crossPath.AddLineToPoint(p4);
+		gc->StrokePath(crossPath);
+	}
+
+	// Draw Inner Radius
+	{
+		wxGraphicsPath path = gc->CreatePath();
+		path.AddCircle
+		(
+			currAnnulus.m_Center.x * actualHalfPixelSize.x * 2 + imageStartDrawPoint.x,
+			currAnnulus.m_Center.y * actualHalfPixelSize.y * 2 + imageStartDrawPoint.y,
+			currAnnulus.m_InnerRadius * actualHalfPixelSize.y * 2
+		);
+
+		gc->StrokePath(path);
+	}
+
+	// Draw Outer Radius
+	{
+		wxGraphicsPath path = gc->CreatePath();
+		path.AddCircle
+		(
+			currAnnulus.m_Center.x * actualHalfPixelSize.x * 2 + imageStartDrawPoint.x,
+			currAnnulus.m_Center.y * actualHalfPixelSize.y * 2 + imageStartDrawPoint.y,
+			currAnnulus.m_OuterRadius * actualHalfPixelSize.y * 2
+		);
+
+		gc->StrokePath(path);
+	}
+}
+
 auto cCamPreview::OnKeyPressed(wxKeyEvent& evt) -> void
 {
 	/* Ctrl */
@@ -873,6 +962,38 @@ auto cCamPreview::CalculateFWHM() -> void
 	verticalThread.join();
 
 	m_MinValueInData = (minValueInHorizontalData + minValueInVerticalData) / 2;
+
+#ifdef _DEBUG
+	// Exporting Horizontal Sum Data
+	{
+		auto flags = std::ios::binary;
+
+		const auto fileName = "horizontalSum.txt";
+		std::ofstream ofs(fileName, flags);
+		if (!ofs)
+			throw std::runtime_error("Failed to open file for writing.");
+
+		for (auto i{ 0 }; i < m_ImageSize.GetWidth(); ++i)
+			ofs << m_HorizontalSumArray[i] << '\n';
+
+		ofs.close();
+	}
+
+	// Exporting Vertical Sum Data
+	{
+		auto flags = std::ios::binary;
+
+		const auto fileName = "verticalSum.txt";
+		std::ofstream ofs(fileName, flags);
+		if (!ofs)
+			throw std::runtime_error("Failed to open file for writing.");
+
+		for (auto i{ 0 }; i < m_ImageSize.GetHeight(); ++i)
+			ofs << m_VerticalSumArray[i] << '\n';
+
+		ofs.close();
+	}
+#endif // _DEBUG
 }
 
 auto cCamPreview::CalculateHEW() -> void
@@ -888,6 +1009,19 @@ auto cCamPreview::CalculateHEW() -> void
 	);
 
 	m_HEWDiameter *= 2;
+}
+
+auto cCamPreview::AddAnnulusOnCurrentImage() -> void
+{
+	CameraPreviewVariables::Annulus annulus{};
+
+#ifdef _DEBUG
+	annulus.m_Center = wxPoint(m_ImageSize.GetWidth() / 2, m_ImageSize.GetHeight() / 2);
+	annulus.m_InnerRadius = m_ImageSize.GetHeight() / 4;
+	annulus.m_OuterRadius = m_ImageSize.GetHeight() / 2;
+#endif // _DEBUG
+
+	m_AnnulusVec.push_back(annulus);
 }
 
 void cCamPreview::InitDefaultComponents()
@@ -950,6 +1084,8 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 
 		DrawCrossHair(gc);
 		DrawPixelValues(gc);
+
+		DrawAnnulus(gc);
 
 		DrawGridMesh(gc);
 		DrawCircleMesh(gc);

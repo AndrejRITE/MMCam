@@ -150,6 +150,12 @@ cMain::cMain(const wxString& title_)
 
 	// Press Add Annulus Button
 	{
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING);
+		ProcessEvent(artEvt);
+	}
+
+	// Press Add Annulus Button
+	{
 		wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN);
 		ProcessEvent(artEvt);
 	}
@@ -3450,7 +3456,10 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 	std::string filePath{};
 
 #ifdef _DEBUG
-	filePath = ".\\src\\dbg_fld\\ss_14H_00M_18S_1500000us.tif";
+	filePath = ".\\src\\dbg_fld\\goodSmooth.tif";
+	//filePath = ".\\src\\dbg_fld\\ss_14H_00M_18S_1500000us.tif";
+	//filePath = ".\\src\\dbg_fld\\badSmooth.tif";
+	//filePath = ".\\src\\dbg_fld\\ss_14H_01M_23S_1500000us.tif";
 #else
 	wxFileDialog dlg
 	(
@@ -3538,7 +3547,13 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 	);
 
 	EnableControlsAfterCapturing();
+
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, true);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, true);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, true);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, true);
 	m_VerticalToolBar->tool_bar->Enable();
+	m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 }
 
 void cMain::OnExit(wxCloseEvent& evt)
@@ -3927,10 +3942,10 @@ auto cMain::OnAnnulusButton(wxCommandEvent& evt) -> void
 	m_MenuBar->menu_tools->Check(currID, currState);
 	m_VerticalToolBar->tool_bar->ToggleTool(currID, currState);
 
-	//m_CamPreview->ActivateFocusCenterDisplaying
-	//(
-	//	currState
-	//);
+	m_CamPreview->SetAnnulusDisplayingActive
+	(
+		currState
+	);
 
 	if (m_IsAnnulusChecked)
 		m_ToolsControlsNotebook->SetSelection(0);
@@ -3948,6 +3963,8 @@ auto cMain::OnColBeginDrag(wxListEvent& evt) -> void
 
 auto cMain::OnAddAnnulusButton(wxCommandEvent& evt) -> void
 {
+	m_CamPreview->AddAnnulusOnCurrentImage();
+	Refresh();
 }
 
 void cMain::UnCheckAllTools()

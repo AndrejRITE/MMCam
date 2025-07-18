@@ -74,6 +74,29 @@ namespace CameraPreviewVariables
 		{};
 			//set_pos_tgl_btn(par_pos_crosshair_tgl_btn) {};
 	};
+
+	struct Annulus
+	{
+		Annulus()
+		{
+			wxDateTime now = wxDateTime::UNow(); // UTC time with microsecond precision
+			m_ID = now.FormatISODate() + "_" + now.FormatISOTime() + "_" + wxString::Format("%06ld", now.GetMillisecond());
+
+			// Remove colons (:) and other characters to make it filesystem- or database-friendly
+			m_ID.Replace(":", "");
+			m_ID.Replace("-", "");
+			m_ID.Replace(".", "");
+		};
+
+		auto GetID() const -> wxString { return m_ID; };
+
+	public:
+		wxPoint m_Center{};
+		wxDouble m_InnerRadius{}, m_OuterRadius{ 1.0 };
+
+	private:
+		wxString m_ID{};
+	};
 }
 
 class cCamPreview final : public wxPanel
@@ -87,6 +110,8 @@ public:
 	);
 	auto SetBackgroundColor(wxColour bckg_colour) -> void;
 	auto SetValueDisplayingActive(bool activate = false) -> void;
+
+	auto SetAnnulusDisplayingActive(const bool activate = false) -> void { m_DisplayAnnulus = activate; };
 
 	auto SetImageColormapMode(const CameraPreviewVariables::Colormaps colormapMode) -> void
 	{
@@ -217,6 +242,9 @@ public:
 		m_CircleMeshStepPX = step;
 	}
 
+	/* Annulus */
+	auto AddAnnulusOnCurrentImage() -> void;
+
 
 private:
 	void InitDefaultComponents();
@@ -280,6 +308,9 @@ private:
 	/* CrossHair */
 	void DrawCrossHair(wxGraphicsContext* graphics_context);
 	auto DrawPixelValues(wxGraphicsContext* gc) -> void;
+
+	/* Annulus */
+	auto DrawAnnulus(wxGraphicsContext* gc) -> void;
 
 	/* Key Events */
 	auto OnKeyPressed(wxKeyEvent& evt) -> void;
@@ -353,6 +384,10 @@ private:
 	int m_HEWDiameter{};
 
 	int m_ImageDataType{};
+
+	/* Annulus */
+	bool m_DisplayAnnulus{};
+	std::vector<CameraPreviewVariables::Annulus> m_AnnulusVec{};
 
 	/* Scale Bar */
 	bool m_DisplayScaleBar{ true };
