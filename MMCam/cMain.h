@@ -420,6 +420,15 @@ namespace MainFrameVariables
 		return wxString::FromUTF8(stream.str());
 	};
 
+	static auto CreateScientificString(wxLongLong value, int decimalPlaces = 3) -> wxString
+	{
+		double doubleValue = static_cast<double>(value.GetValue());
+		std::ostringstream stream;
+		stream.precision(decimalPlaces);
+		stream << std::scientific << std::uppercase << doubleValue;
+		return wxString::FromUTF8(stream.str());
+	}
+
 	static auto BinImageData
 	(
 		unsigned short* inDataPtr, 

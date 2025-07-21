@@ -1013,9 +1013,10 @@ auto cCamPreview::CalculateHEW() -> void
 	m_HEWDiameter *= 2;
 }
 
-auto cCamPreview::AddAnnulusOnCurrentImage() -> void
+auto cCamPreview::AddAnnulusOnCurrentImage() -> CameraPreviewVariables::Annulus
 {
 	CameraPreviewVariables::Annulus annulus{};
+	if (!m_ImageSize.GetWidth() || !m_ImageSize.GetHeight()) return annulus;
 
 #ifdef _DEBUG
 	annulus.m_Center = wxPoint(m_ImageSize.GetWidth() / 2, m_ImageSize.GetHeight() / 2);
@@ -1023,7 +1024,43 @@ auto cCamPreview::AddAnnulusOnCurrentImage() -> void
 	annulus.m_OuterRadius = m_ImageSize.GetHeight() / 2;
 #endif // _DEBUG
 
+	CalculateSumInsideAnnulus(annulus);
+
 	m_AnnulusVec.push_back(annulus);
+
+	return annulus;
+}
+
+auto cCamPreview::CalculateSumInsideAnnulus(CameraPreviewVariables::Annulus& annulus) -> void
+{
+	if (!m_ImageData) return;
+
+	const int r1Sq = annulus.m_InnerRadius * annulus.m_InnerRadius;
+	const int r2Sq = annulus.m_OuterRadius * annulus.m_OuterRadius;
+
+	const int xStart = std::max(0, annulus.m_Center.x - (int)annulus.m_OuterRadius);
+	const int xEnd = std::min(m_ImageSize.GetWidth() - 1, annulus.m_Center.x + (int)annulus.m_OuterRadius);
+	const int yStart = std::max(0, annulus.m_Center.y - (int)annulus.m_OuterRadius);
+	const int yEnd = std::min(m_ImageSize.GetHeight() - 1, annulus.m_Center.y + (int)annulus.m_OuterRadius);
+
+	unsigned long long sum = 0;
+
+	for (int y = yStart; y <= yEnd; ++y) 
+	{
+		const int dy = y - annulus.m_Center.y;
+		for (int x = xStart; x <= xEnd; ++x) 
+		{
+			const int dx = x - annulus.m_Center.x;
+			const int distSq = dx * dx + dy * dy;
+
+			if (distSq >= r1Sq && distSq < r2Sq) 
+			{
+				sum += m_ImageData[y * m_ImageSize.GetWidth() + x];
+			}
+		}
+	}
+
+	annulus.m_Sum = sum;
 }
 
 void cCamPreview::InitDefaultComponents()

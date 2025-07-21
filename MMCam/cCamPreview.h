@@ -93,6 +93,7 @@ namespace CameraPreviewVariables
 	public:
 		wxPoint m_Center{};
 		wxDouble m_InnerRadius{}, m_OuterRadius{ 1.0 };
+		wxLongLong m_Sum{};
 
 	private:
 		wxString m_ID{};
@@ -243,7 +244,8 @@ public:
 	}
 
 	/* Annulus */
-	auto AddAnnulusOnCurrentImage() -> void;
+	auto AddAnnulusOnCurrentImage() -> CameraPreviewVariables::Annulus;
+	auto CalculateSumInsideAnnulus(CameraPreviewVariables::Annulus& annulus) -> void;
 
 
 private:

@@ -1998,9 +1998,11 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 			wxALIGN_CENTER
 		);
 
-		wxIntegerValidator<int>	val(NULL);
-		val.SetMin(1);
+		wxFloatingPointValidator<double> val(NULL);
+		val.SetMin(0.5);
 		val.SetMax(1'000'000);
+
+		val.SetPrecision(1);
 
 		m_ToolsControls->annulusR1TxtCtrl = std::make_unique<wxTextCtrl>
 			(
@@ -2037,16 +2039,18 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 			wxALIGN_CENTER
 		);
 
-		wxIntegerValidator<int>	val(NULL);
-		val.SetMin(1);
+		wxFloatingPointValidator<double> val(NULL);
+		val.SetMin(0.5);
 		val.SetMax(1'000'000);
+
+		val.SetPrecision(1);
 
 		m_ToolsControls->annulusR2TxtCtrl = std::make_unique<wxTextCtrl>
 			(
 				page, 
 				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL, 
 #ifdef _DEBUG
-				wxT("1"), 
+				wxT("1.0"), 
 #else
 				wxT("1"), 
 #endif // _DEBUG
@@ -3963,7 +3967,84 @@ auto cMain::OnColBeginDrag(wxListEvent& evt) -> void
 
 auto cMain::OnAddAnnulusButton(wxCommandEvent& evt) -> void
 {
-	m_CamPreview->AddAnnulusOnCurrentImage();
+	auto annulus = m_CamPreview->AddAnnulusOnCurrentImage();
+
+	auto index = m_ToolsControls->annulusListCtrl->InsertItem
+	(
+		m_ToolsControls->annulusListCtrl->GetItemCount(),
+		MainFrameVariables::CreateStringWithPrecision(m_ToolsControls->annulusListCtrl->GetItemCount() + 1)
+	);
+
+	auto columnNumber = 1;
+
+	// Center X
+	{
+		auto strVal = MainFrameVariables::CreateStringWithPrecision(annulus.m_Center.x + 1);
+		m_ToolsControls->annulusListCtrl->SetItem
+		(
+			index,
+			columnNumber,
+			strVal
+		);
+
+		m_ToolsControls->annulusCenterXTxtCtrl->ChangeValue(strVal);
+	}
+	++columnNumber;
+
+	// Center Y
+	{
+		auto strVal = MainFrameVariables::CreateStringWithPrecision(annulus.m_Center.y + 1);
+		m_ToolsControls->annulusListCtrl->SetItem
+		(
+			index,
+			columnNumber,
+			strVal
+		);
+
+		m_ToolsControls->annulusCenterYTxtCtrl->ChangeValue(strVal);
+	}
+	++columnNumber;
+
+	// Inner Radius
+	{
+		auto strVal = MainFrameVariables::CreateStringWithPrecision(annulus.m_InnerRadius / 2.0);
+		m_ToolsControls->annulusListCtrl->SetItem
+		(
+			index,
+			columnNumber,
+			strVal
+		);
+
+		m_ToolsControls->annulusR1TxtCtrl->ChangeValue(strVal);
+	}
+	++columnNumber;
+
+	// Outer Radius
+	{
+		auto strVal = MainFrameVariables::CreateStringWithPrecision(annulus.m_OuterRadius / 2.0);
+		m_ToolsControls->annulusListCtrl->SetItem
+		(
+			index,
+			columnNumber,
+			strVal
+		);
+
+		m_ToolsControls->annulusR2TxtCtrl->ChangeValue(strVal);
+	}
+	++columnNumber;
+
+	// Sum
+	{
+		auto precision = 2;
+		auto strVal = MainFrameVariables::CreateScientificString(annulus.m_Sum, precision);
+		m_ToolsControls->annulusListCtrl->SetItem
+		(
+			index,
+			columnNumber,
+			strVal
+		);
+	}
+	++columnNumber;
 	Refresh();
 }
 
