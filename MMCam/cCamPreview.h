@@ -79,16 +79,13 @@ namespace CameraPreviewVariables
 	{
 		Annulus()
 		{
-			wxDateTime now = wxDateTime::UNow(); // UTC time with microsecond precision
-			m_ID = now.FormatISODate() + "_" + now.FormatISOTime() + "_" + wxString::Format("%06ld", now.GetMillisecond());
-
-			// Remove colons (:) and other characters to make it filesystem- or database-friendly
-			m_ID.Replace(":", "");
-			m_ID.Replace("-", "");
-			m_ID.Replace(".", "");
+			wxDateTime now = wxDateTime::UNow();
+			wxTimeSpan span = now - wxDateTime(1, wxDateTime::Jan, 2025);
+			m_ID = static_cast<long>(span.GetSeconds().GetValue());
 		};
 
-		auto GetID() const -> wxString { return m_ID; };
+		auto SetID(const long& id) -> void { m_ID = id; };
+		auto GetID() const -> long { return m_ID; };
 
 	public:
 		wxPoint m_Center{};
@@ -96,7 +93,28 @@ namespace CameraPreviewVariables
 		wxLongLong m_Sum{};
 
 	private:
-		wxString m_ID{};
+		long m_ID{};
+	};
+
+	static auto CreateStringWithPrecision(double value, int decimalPlaces = 0) -> wxString
+	{
+		std::ostringstream stream;
+		if (decimalPlaces > 0)
+		{
+			stream.precision(decimalPlaces);
+			stream << std::fixed;
+		}
+		stream << value;
+		return wxString::FromUTF8(stream.str());
+	};
+
+	static auto CreateScientificString(wxLongLong value, int decimalPlaces = 3) -> wxString
+	{
+		double doubleValue = static_cast<double>(value.GetValue());
+		std::ostringstream stream;
+		stream.precision(decimalPlaces);
+		stream << std::scientific << std::uppercase << doubleValue;
+		return wxString::FromUTF8(stream.str());
 	};
 }
 
@@ -246,6 +264,8 @@ public:
 	/* Annulus */
 	auto AddAnnulusOnCurrentImage() -> CameraPreviewVariables::Annulus;
 	auto CalculateSumInsideAnnulus(CameraPreviewVariables::Annulus& annulus) -> void;
+	auto SetAnnulusIDSelected(const long& id) -> CameraPreviewVariables::Annulus;
+	auto UpdateAnnulusValues(CameraPreviewVariables::Annulus& annulus) -> void;
 
 
 private:
@@ -390,6 +410,7 @@ private:
 	/* Annulus */
 	bool m_DisplayAnnulus{};
 	std::vector<CameraPreviewVariables::Annulus> m_AnnulusVec{};
+	int m_ActivatedAnnulusNum{ -1 };
 
 	/* Scale Bar */
 	bool m_DisplayScaleBar{ true };

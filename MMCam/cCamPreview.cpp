@@ -655,13 +655,22 @@ void cCamPreview::OnPreviewMouseLeftPressed(wxMouseEvent& evt)
 		ChangeCursorInDependenceOfCurrentParameters();
 	}
 
-	if (m_CTRLPressed && m_CrossHairTool->IsToolButtonActive())
+	if (!m_CTRLPressed) return;
+
+	// CTRL is Active
+
+	if (m_CrossHairTool->IsToolButtonActive())
 	{
-		m_ParentArguments->x_pos_crosshair->SetValue(wxString::Format(wxT("%i"), (int)(m_CheckedCursorPosOnImage.x + 1)));
-		m_ParentArguments->y_pos_crosshair->SetValue(wxString::Format(wxT("%i"), (int)(m_CheckedCursorPosOnImage.y + 1)));
-		//m_CrossHairTool->SetXPosFromParent(m_CheckedCursorPosOnImage.x);
-		//m_CrossHairTool->SetYPosFromParent(m_CheckedCursorPosOnImage.y);
-		//LOG2I("X: ", m_CheckedCursorPosOnImage.x, " Y: ", m_CheckedCursorPosOnImage.y);
+		m_ParentArguments->x_pos_crosshair->SetValue(CameraPreviewVariables::CreateStringWithPrecision(m_CheckedCursorPosOnImage.x + 1));
+		m_ParentArguments->y_pos_crosshair->SetValue(CameraPreviewVariables::CreateStringWithPrecision(m_CheckedCursorPosOnImage.y + 1));
+		Refresh();
+	}
+
+	if (m_DisplayAnnulus)
+	{
+		m_ParentArguments->xAnnulusCenterPos->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_CheckedCursorPosOnImage.x + 1));
+		m_ParentArguments->yAnnulusCenterPos->SetValue(CameraPreviewVariables::CreateStringWithPrecision(m_CheckedCursorPosOnImage.y + 1));
+
 		Refresh();
 	}
 }
@@ -777,7 +786,7 @@ auto cCamPreview::DrawAnnulus(wxGraphicsContext* gc) -> void
 {
 	if (!m_DisplayAnnulus) return;
 
-	if (!m_AnnulusVec.size()) return;
+	if (m_AnnulusVec.empty() || m_ActivatedAnnulusNum == -1) return;
 
 	if (!m_ImageData) return;
 
@@ -807,7 +816,7 @@ auto cCamPreview::DrawAnnulus(wxGraphicsContext* gc) -> void
 		m_StartDrawPos.y * m_Zoom / m_ZoomOnOriginalSizeImage
 	);
 
-	auto currAnnulus = m_AnnulusVec[m_AnnulusVec.size() - 1];
+	auto currAnnulus = m_AnnulusVec[m_ActivatedAnnulusNum];
 
 	gc->SetPen(wxPen(m_ContrastDefaultColor, 4));
 
@@ -1061,6 +1070,43 @@ auto cCamPreview::CalculateSumInsideAnnulus(CameraPreviewVariables::Annulus& ann
 	}
 
 	annulus.m_Sum = sum;
+}
+
+auto cCamPreview::SetAnnulusIDSelected(const long& id) -> CameraPreviewVariables::Annulus
+{
+	CameraPreviewVariables::Annulus selectedAnnulus{};
+	if (m_AnnulusVec.empty()) return selectedAnnulus;
+
+	m_ActivatedAnnulusNum = -1;
+
+	auto i = 0;
+	for (const auto& annulus : m_AnnulusVec)
+	{
+		if (annulus.GetID() == id)
+		{
+			m_ActivatedAnnulusNum = i;
+			selectedAnnulus = annulus;
+			break;
+		}
+		++i;
+	}
+
+	return selectedAnnulus;
+}
+
+auto cCamPreview::UpdateAnnulusValues(CameraPreviewVariables::Annulus& annulus) -> void
+{
+	if (m_AnnulusVec.empty()) return;
+	if (m_ActivatedAnnulusNum == -1) return;
+
+	annulus.m_Center.x = std::clamp(annulus.m_Center.x, 0, m_ImageSize.GetWidth() - 1);
+	annulus.m_Center.y = std::clamp(annulus.m_Center.y, 0, m_ImageSize.GetHeight() - 1);
+
+	annulus.m_InnerRadius = std::clamp(annulus.m_InnerRadius, 1.0, annulus.m_OuterRadius - 0.5);
+	annulus.m_OuterRadius = std::max(annulus.m_InnerRadius + 0.5, annulus.m_OuterRadius);
+
+	CalculateSumInsideAnnulus(annulus);
+	m_AnnulusVec[m_ActivatedAnnulusNum] = annulus;
 }
 
 void cCamPreview::InitDefaultComponents()

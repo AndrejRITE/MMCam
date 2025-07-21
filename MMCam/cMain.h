@@ -408,27 +408,6 @@ namespace MainFrameVariables
 		wxString sensor_height_um{ "Sensor Height [um]" };
 	};
 
-	static auto CreateStringWithPrecision(double value, int decimalPlaces = 0) -> wxString
-	{
-		std::ostringstream stream;
-		if (decimalPlaces > 0)
-		{
-			stream.precision(decimalPlaces);
-			stream << std::fixed;
-		}
-		stream << value;
-		return wxString::FromUTF8(stream.str());
-	};
-
-	static auto CreateScientificString(wxLongLong value, int decimalPlaces = 3) -> wxString
-	{
-		double doubleValue = static_cast<double>(value.GetValue());
-		std::ostringstream stream;
-		stream.precision(decimalPlaces);
-		stream << std::scientific << std::uppercase << doubleValue;
-		return wxString::FromUTF8(stream.str());
-	}
-
 	static auto BinImageData
 	(
 		unsigned short* inDataPtr, 
@@ -664,8 +643,13 @@ private:
 
 	/* Annulus */
 	auto OnAnnulusButton(wxCommandEvent& evt) -> void;
-	auto OnColBeginDrag(wxListEvent& evt) -> void;
+	auto OnAnnulusTxtCtrl(wxCommandEvent& evt) -> void;
 	auto OnAddAnnulusButton(wxCommandEvent& evt) -> void;
+	auto OnColBeginDrag(wxListEvent& evt) -> void;
+	auto OnAnnulusItemSelected(wxListEvent& evt) -> void;
+
+	auto UpdateAnnulusTextCtrls(const long& index, const CameraPreviewVariables::Annulus& annulus) -> void;
+	auto ExtractAnnulusFromTextCtrls() const -> CameraPreviewVariables::Annulus;
 
 	void UnCheckAllTools();
 	/* ProgressBar */
@@ -725,7 +709,7 @@ private:
 
 		auto currentPosition = m_Settings->GoToAbsPos(motorType, (float)absolute_position);
 
-		controlArray[index % 3].absolute_text_ctrl->SetValue(MainFrameVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
+		controlArray[index % 3].absolute_text_ctrl->SetValue(CameraPreviewVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
 	}
 
 	void OnOffsetAbsPos(wxCommandEvent& evt, int index, SettingsVariables::MotorsNames motorType, bool isIncrement)
@@ -738,7 +722,7 @@ private:
 
 		auto currentPosition = m_Settings->GoOffsetMotor(motorType, (float)(isIncrement ? delta_position : -delta_position));
 
-		controlArray[index % 3].absolute_text_ctrl->SetValue(MainFrameVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
+		controlArray[index % 3].absolute_text_ctrl->SetValue(CameraPreviewVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
 	}
 
 	void OnCenterMotor(wxCommandEvent& evt, int index, SettingsVariables::MotorsNames motorType)
@@ -747,7 +731,7 @@ private:
 		auto currentPosition = m_Settings->CenterMotor(motorType);
 		auto& controlArray = (motorType <= SettingsVariables::DETECTOR_Z) ? m_Detector : m_Optics;
 
-		controlArray[index % 3].absolute_text_ctrl->SetValue(MainFrameVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
+		controlArray[index % 3].absolute_text_ctrl->SetValue(CameraPreviewVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
 	}
 
 	void OnHomeMotor(wxCommandEvent& evt, int index, SettingsVariables::MotorsNames motorType)
@@ -756,7 +740,7 @@ private:
 		auto currentPosition = m_Settings->HomeMotor(motorType);
 		auto& controlArray = (motorType <= SettingsVariables::DETECTOR_Z) ? m_Detector : m_Optics;
 
-		controlArray[index % 3].absolute_text_ctrl->ChangeValue(MainFrameVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
+		controlArray[index % 3].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
 	}
 
 	/* _____________________Detector X_____________________ */

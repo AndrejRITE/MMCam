@@ -81,8 +81,13 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_TEXT(MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL, cMain::OnYPosCrossHairTextCtrl)
 
 	/* Annulus */
+	EVT_TEXT(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_CENTER_X_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
+	EVT_TEXT(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_CENTER_Y_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
+	EVT_TEXT(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R1_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
+	EVT_TEXT(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
 	EVT_BUTTON(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN, cMain::OnAddAnnulusButton)
 	EVT_LIST_COL_BEGIN_DRAG(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL, cMain::OnColBeginDrag)
+	EVT_LIST_ITEM_SELECTED(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL, cMain::OnAnnulusItemSelected)
 
 	/* Set Out Folder */
 	EVT_BUTTON(MainFrameVariables::ID_RIGHT_MT_OUT_FLD_BTN, cMain::OnSetOutDirectoryBtn)
@@ -561,8 +566,8 @@ void cMain::InitDefaultStateWidgets()
 	m_IsValueDisplayingChecked = true;
 
 	wxString 
-		defaultAbsoluteValueStr{ MainFrameVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) }, 
-		defaultRelativeValueStr{ MainFrameVariables::CreateStringWithPrecision(m_Config->default_motors_step_first_tab, m_DecimalDigits) };
+		defaultAbsoluteValueStr{ CameraPreviewVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) }, 
+		defaultRelativeValueStr{ CameraPreviewVariables::CreateStringWithPrecision(m_Config->default_motors_step_first_tab, m_DecimalDigits) };
 	//float default_absolute_value{ 0.0f }, default_relative_value{ 1.0f };
 	/* Disabling Detector Widgets */
 	{
@@ -586,7 +591,7 @@ void cMain::InitDefaultStateWidgets()
 		}
 	}
 	
-	defaultRelativeValueStr = MainFrameVariables::CreateStringWithPrecision(m_Config->default_motors_step_second_tab, m_DecimalDigits);
+	defaultRelativeValueStr = CameraPreviewVariables::CreateStringWithPrecision(m_Config->default_motors_step_second_tab, m_DecimalDigits);
 	
 	/* Disabling Optics Widgets */
 	{
@@ -615,7 +620,7 @@ void cMain::InitDefaultStateWidgets()
 		//m_OutDirTextCtrl->Disable();
 		//m_OutDirBtn->Disable();
 
-		wxString defaultStartStr{ MainFrameVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) }, defaultStepStr{ MainFrameVariables::CreateStringWithPrecision(0.1, m_DecimalDigits) }, defaultFinishStr{ MainFrameVariables::CreateStringWithPrecision(24.0, m_DecimalDigits) };
+		wxString defaultStartStr{ CameraPreviewVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) }, defaultStepStr{ CameraPreviewVariables::CreateStringWithPrecision(0.1, m_DecimalDigits) }, defaultFinishStr{ CameraPreviewVariables::CreateStringWithPrecision(24.0, m_DecimalDigits) };
 		//float default_start{ 0.0f }, default_step{ 0.1f }, default_finish{ 24.0f };
 
 		/* First Stage */
@@ -765,7 +770,7 @@ auto cMain::CreateDetectorPage
 
 	wxPanel* page = new wxPanel(parent);
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
-	auto defaultText = MainFrameVariables::CreateStringWithPrecision(123.456789, m_DecimalDigits);
+	auto defaultText = CameraPreviewVariables::CreateStringWithPrecision(123.456789, m_DecimalDigits);
 	{
 		/* Detector X */
 		wxSizer* const x_detector = new wxStaticBoxSizer(wxHORIZONTAL, page, "&X");
@@ -1083,7 +1088,7 @@ auto cMain::CreateOpticsPage
 {
 	wxPanel* page = new wxPanel(parent);
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
-	auto defaultText = MainFrameVariables::CreateStringWithPrecision(123.456789, m_DecimalDigits);
+	auto defaultText = CameraPreviewVariables::CreateStringWithPrecision(123.456789, m_DecimalDigits);
 	{
 		/* Optics X */
 		wxSizer* const x_optics = new wxStaticBoxSizer(wxHORIZONTAL, page, "&X");
@@ -1910,7 +1915,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 		);
 
 		wxIntegerValidator<int>	val(NULL);
-		val.SetMin(0);
+		val.SetMin(1);
 		val.SetMax(1'000'000);
 
 		m_ToolsControls->annulusCenterXTxtCtrl = std::make_unique<wxTextCtrl>
@@ -1949,7 +1954,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 		);
 
 		wxIntegerValidator<int>	val(NULL);
-		val.SetMin(0);
+		val.SetMin(1);
 		val.SetMax(1'000'000);
 
 		m_ToolsControls->annulusCenterYTxtCtrl = std::make_unique<wxTextCtrl>
@@ -2082,7 +2087,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 				wxLC_REPORT
 			);
 
-		m_ToolsControls->annulusListCtrl->Disable();
+		//m_ToolsControls->annulusListCtrl->Disable();
 
 		auto id = 0;
 
@@ -2130,7 +2135,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 		}
 
 		// Insert FAKE items
-#ifdef _DEBUG
+#ifdef FAKE
 		// Insert a new row
 		auto index = m_ToolsControls->annulusListCtrl->InsertItem(0, "1");
 		m_ToolsControls->annulusListCtrl->SetItem(index, 1, "0");
@@ -2249,7 +2254,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 
 	wxSize start_text_ctrl_size = { 54, 20 }, step_text_ctrl_size = {start_text_ctrl_size}, finish_text_ctrl_size{start_text_ctrl_size};
 
-	auto defaultText = MainFrameVariables::CreateStringWithPrecision(123.456789, m_DecimalDigits);
+	auto defaultText = CameraPreviewVariables::CreateStringWithPrecision(123.456789, m_DecimalDigits);
 	wxSizer* const directions_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, page, "&Directions");
 	{
 		/* First axis */
@@ -3312,7 +3317,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 
 	// Exposure
 	{
-		auto exposure_str = MainFrameVariables::CreateStringWithPrecision(m_Config->default_exposure_ms, 0);
+		auto exposure_str = CameraPreviewVariables::CreateStringWithPrecision(m_Config->default_exposure_ms, 0);
 		m_CameraTabControls->camExposure->SetLabel(exposure_str);
 	}
 
@@ -3349,19 +3354,19 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 	// Sensor Temperature
 	{
 		auto sensor_temperature = m_Config->default_cooled_sensor_temperature_degC;
-		auto sensor_temperature_str = MainFrameVariables::CreateStringWithPrecision(sensor_temperature, 1);
+		auto sensor_temperature_str = CameraPreviewVariables::CreateStringWithPrecision(sensor_temperature, 1);
 		m_CameraTabControls->camSensorTemperature->SetLabel(sensor_temperature_str);
 	}
 
 	// Grid Mesh Step
 	{
-		auto step_str = MainFrameVariables::CreateStringWithPrecision(m_Config->grid_mesh_step_px, 0);
+		auto step_str = CameraPreviewVariables::CreateStringWithPrecision(m_Config->grid_mesh_step_px, 0);
 		m_ToolsControls->gridMeshStepTxtCtrl->SetLabel(step_str);
 	}
 
 	// Circle Mesh Step
 	{
-		auto step_str = MainFrameVariables::CreateStringWithPrecision(m_Config->circle_mesh_step_px, 0);
+		auto step_str = CameraPreviewVariables::CreateStringWithPrecision(m_Config->circle_mesh_step_px, 0);
 		m_ToolsControls->circleMeshStepTxtCtrl->SetLabel(step_str);
 	}
 }
@@ -3371,7 +3376,7 @@ auto cMain::UpdateCameraParameters() -> void
 	auto cameraSN = wxString(m_CameraControl->GetSerialNumber());
 	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->id, cameraSN);
 
-	auto tempString = MainFrameVariables::CreateStringWithPrecision(m_CameraControl->GetSensorTemperature(), 1);
+	auto tempString = CameraPreviewVariables::CreateStringWithPrecision(m_CameraControl->GetSensorTemperature(), 1);
 	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->temperature, tempString);
 
 	auto depth = m_CameraControl->GetCameraDataType() == CameraControlVariables::ImageDataTypes::RAW_12BIT ? wxString("12") : wxString("16");
@@ -3419,7 +3424,7 @@ auto cMain::CoolDownTheCamera() -> void
 			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 			currentTemperature = m_CameraControl->GetSensorTemperature();
 
-			auto tempString = MainFrameVariables::CreateStringWithPrecision(currentTemperature, 1);
+			auto tempString = CameraPreviewVariables::CreateStringWithPrecision(currentTemperature, 1);
 			m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->temperature, tempString);
 		}
 	}
@@ -3603,30 +3608,30 @@ auto cMain::UpdateStagePositions() -> void
 	// Detector
 	{
 		m_Detector[0].absolute_text_ctrl->SetValue(
-			MainFrameVariables::CreateStringWithPrecision(	m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_X), m_DecimalDigits)
+			CameraPreviewVariables::CreateStringWithPrecision(	m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_X), m_DecimalDigits)
 		);
 
 		m_Detector[1].absolute_text_ctrl->SetValue(
-			MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Y), m_DecimalDigits)
+			CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Y), m_DecimalDigits)
 		);
 
 		m_Detector[2].absolute_text_ctrl->SetValue(
-			MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Z), m_DecimalDigits)
+			CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Z), m_DecimalDigits)
 		);
 	}
 
 	// Optics
 	{
 		m_Optics[0].absolute_text_ctrl->SetValue(
-			MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X), m_DecimalDigits)
+			CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X), m_DecimalDigits)
 		);
 
 		m_Optics[1].absolute_text_ctrl->SetValue(
-			MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Y), m_DecimalDigits)
+			CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Y), m_DecimalDigits)
 		);
 
 		m_Optics[2].absolute_text_ctrl->SetValue(
-			MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Z), m_DecimalDigits)
+			CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Z), m_DecimalDigits)
 		);
 	}
 }
@@ -3957,6 +3962,37 @@ auto cMain::OnAnnulusButton(wxCommandEvent& evt) -> void
 	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked || m_IsAnnulusChecked);
 }
 
+auto cMain::OnAnnulusTxtCtrl(wxCommandEvent& evt) -> void
+{
+	long selectedIndex = m_ToolsControls->annulusListCtrl->GetNextItem
+	(
+		-1, 
+		wxLIST_NEXT_ALL, 
+		wxLIST_STATE_SELECTED
+	);
+
+	if (selectedIndex == -1) return;
+
+	CameraPreviewVariables::Annulus annulus{};
+
+	long annulusID = m_ToolsControls->annulusListCtrl->GetItemData(selectedIndex);
+	annulus.SetID(annulusID);
+
+	m_ToolsControls->annulusCenterXTxtCtrl->GetValue().ToInt(&annulus.m_Center.x);
+	--annulus.m_Center.x;
+	m_ToolsControls->annulusCenterYTxtCtrl->GetValue().ToInt(&annulus.m_Center.y);
+	--annulus.m_Center.y;
+
+	m_ToolsControls->annulusR1TxtCtrl->GetValue().ToDouble(&annulus.m_InnerRadius);
+	m_ToolsControls->annulusR2TxtCtrl->GetValue().ToDouble(&annulus.m_OuterRadius);
+
+	m_CamPreview->UpdateAnnulusValues(annulus);
+
+	UpdateAnnulusTextCtrls(selectedIndex, annulus);
+
+	Refresh();
+}
+
 auto cMain::OnColBeginDrag(wxListEvent& evt) -> void
 {
 	if (evt.GetColumn() == 0)
@@ -3972,14 +4008,58 @@ auto cMain::OnAddAnnulusButton(wxCommandEvent& evt) -> void
 	auto index = m_ToolsControls->annulusListCtrl->InsertItem
 	(
 		m_ToolsControls->annulusListCtrl->GetItemCount(),
-		MainFrameVariables::CreateStringWithPrecision(m_ToolsControls->annulusListCtrl->GetItemCount() + 1)
+		CameraPreviewVariables::CreateStringWithPrecision(m_ToolsControls->annulusListCtrl->GetItemCount() + 1)
 	);
 
+	auto id = annulus.GetID();
+	m_ToolsControls->annulusListCtrl->SetItemData(index, id);
+
+	UpdateAnnulusTextCtrls(index, annulus);
+
+	// Working with wxListCtrl selection
+	{
+		// First: Deselect all items
+		long item = -1;
+		while ((item = m_ToolsControls->annulusListCtrl->GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) != -1)
+		{
+			m_ToolsControls->annulusListCtrl->SetItemState(item, 0, wxLIST_STATE_SELECTED);
+		}
+		// Then: Select the one you want
+		m_ToolsControls->annulusListCtrl->SetItemState(index, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+		m_CamPreview->SetAnnulusIDSelected(id);
+	}
+
+	// Enabling the TxtCtrls if they are not
+	{
+		m_ToolsControls->annulusCenterXTxtCtrl->Enable();
+		m_ToolsControls->annulusCenterYTxtCtrl->Enable();
+		m_ToolsControls->annulusR1TxtCtrl->Enable();
+		m_ToolsControls->annulusR2TxtCtrl->Enable();
+	}
+
+	Refresh();
+}
+
+auto cMain::OnAnnulusItemSelected(wxListEvent& evt) -> void
+{
+	long selectedIndex = evt.GetIndex();
+
+	auto itemID = m_ToolsControls->annulusListCtrl->GetItemData(selectedIndex);
+
+	auto selectedAnnulus = m_CamPreview->SetAnnulusIDSelected(itemID);
+
+	UpdateAnnulusTextCtrls(selectedIndex, selectedAnnulus);
+
+	Refresh();
+}
+
+auto cMain::UpdateAnnulusTextCtrls(const long& index, const CameraPreviewVariables::Annulus& annulus) -> void
+{
 	auto columnNumber = 1;
 
 	// Center X
 	{
-		auto strVal = MainFrameVariables::CreateStringWithPrecision(annulus.m_Center.x + 1);
+		auto strVal = CameraPreviewVariables::CreateStringWithPrecision(annulus.m_Center.x + 1);
 		m_ToolsControls->annulusListCtrl->SetItem
 		(
 			index,
@@ -3993,7 +4073,7 @@ auto cMain::OnAddAnnulusButton(wxCommandEvent& evt) -> void
 
 	// Center Y
 	{
-		auto strVal = MainFrameVariables::CreateStringWithPrecision(annulus.m_Center.y + 1);
+		auto strVal = CameraPreviewVariables::CreateStringWithPrecision(annulus.m_Center.y + 1);
 		m_ToolsControls->annulusListCtrl->SetItem
 		(
 			index,
@@ -4007,7 +4087,7 @@ auto cMain::OnAddAnnulusButton(wxCommandEvent& evt) -> void
 
 	// Inner Radius
 	{
-		auto strVal = MainFrameVariables::CreateStringWithPrecision(annulus.m_InnerRadius / 2.0);
+		auto strVal = CameraPreviewVariables::CreateStringWithPrecision(annulus.m_InnerRadius);
 		m_ToolsControls->annulusListCtrl->SetItem
 		(
 			index,
@@ -4021,7 +4101,7 @@ auto cMain::OnAddAnnulusButton(wxCommandEvent& evt) -> void
 
 	// Outer Radius
 	{
-		auto strVal = MainFrameVariables::CreateStringWithPrecision(annulus.m_OuterRadius / 2.0);
+		auto strVal = CameraPreviewVariables::CreateStringWithPrecision(annulus.m_OuterRadius);
 		m_ToolsControls->annulusListCtrl->SetItem
 		(
 			index,
@@ -4036,7 +4116,7 @@ auto cMain::OnAddAnnulusButton(wxCommandEvent& evt) -> void
 	// Sum
 	{
 		auto precision = 2;
-		auto strVal = MainFrameVariables::CreateScientificString(annulus.m_Sum, precision);
+		auto strVal = CameraPreviewVariables::CreateScientificString(annulus.m_Sum, precision);
 		m_ToolsControls->annulusListCtrl->SetItem
 		(
 			index,
@@ -4045,7 +4125,12 @@ auto cMain::OnAddAnnulusButton(wxCommandEvent& evt) -> void
 		);
 	}
 	++columnNumber;
-	Refresh();
+}
+
+auto cMain::ExtractAnnulusFromTextCtrls() const -> CameraPreviewVariables::Annulus
+{
+	CameraPreviewVariables::Annulus annulus{};
+	return CameraPreviewVariables::Annulus();
 }
 
 void cMain::UnCheckAllTools()
@@ -4113,7 +4198,7 @@ void cMain::OnFirstStageChoice(wxCommandEvent& evt)
 	/* Set Start To Current position of motor */
 	m_FirstStage->start->SetValue
 	(
-		MainFrameVariables::CreateStringWithPrecision(startStageValue, m_DecimalDigits)
+		CameraPreviewVariables::CreateStringWithPrecision(startStageValue, m_DecimalDigits)
 	);
 
 	if (!m_FirstStage->step->GetValue().ToDouble(&stepStageValue)) return;
@@ -4123,7 +4208,7 @@ void cMain::OnFirstStageChoice(wxCommandEvent& evt)
 
 	m_FirstStage->finish->SetValue
 	(
-		MainFrameVariables::CreateStringWithPrecision(finishStageValue, m_DecimalDigits)
+		CameraPreviewVariables::CreateStringWithPrecision(finishStageValue, m_DecimalDigits)
 	);
 }
 
@@ -5207,14 +5292,14 @@ auto cMain::GeneratePDFReportUsingLatex
 		(
 			destinationFilePath,
 			placeholder,
-			MainFrameVariables::CreateStringWithPrecision(reportParameters.focus, m_DecimalDigits)
+			CameraPreviewVariables::CreateStringWithPrecision(reportParameters.focus, m_DecimalDigits)
 		);
 		placeholder = "{#Step}";
 		ReplacePlaceholderInTexFile
 		(
 			destinationFilePath,
 			placeholder,
-			MainFrameVariables::CreateStringWithPrecision(reportParameters.step, m_DecimalDigits)
+			CameraPreviewVariables::CreateStringWithPrecision(reportParameters.step, m_DecimalDigits)
 		);
 	}
 
@@ -5432,13 +5517,13 @@ void cMain::OnValueDisplayingCheck(wxCommandEvent& evt)
 void cMain::UpdateAllAxisGlobalPositions()
 {
 	/* Detectors */
-	m_Detector[0].absolute_text_ctrl->ChangeValue(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_X), m_DecimalDigits));
-	m_Detector[1].absolute_text_ctrl->ChangeValue(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Y), m_DecimalDigits));
-	m_Detector[2].absolute_text_ctrl->ChangeValue(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Z), m_DecimalDigits));
+	m_Detector[0].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_X), m_DecimalDigits));
+	m_Detector[1].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Y), m_DecimalDigits));
+	m_Detector[2].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Z), m_DecimalDigits));
 	/* Optics */
-	m_Optics[0].absolute_text_ctrl->ChangeValue(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X), m_DecimalDigits));
-	m_Optics[1].absolute_text_ctrl->ChangeValue(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Y), m_DecimalDigits));
-	m_Optics[2].absolute_text_ctrl->ChangeValue(MainFrameVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Z), m_DecimalDigits));
+	m_Optics[0].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X), m_DecimalDigits));
+	m_Optics[1].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Y), m_DecimalDigits));
+	m_Optics[2].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Z), m_DecimalDigits));
 }
 
 void cMain::ExposureValueChanged(wxCommandEvent& evt)
@@ -5889,7 +5974,7 @@ auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 			}
 
 			auto title = wxString("Horizontal FWHM = ");
-			title += MainFrameVariables::CreateStringWithPrecision(bestHorizontalFWHM, 2);
+			title += CameraPreviewVariables::CreateStringWithPrecision(bestHorizontalFWHM, 2);
 			title += " [um]";
 			WriteTempJSONLineProfileDataToTXTFile
 			(
@@ -5923,7 +6008,7 @@ auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 			}
 
 			auto title = wxString("Vertical FWHM = ");
-			title += MainFrameVariables::CreateStringWithPrecision(bestVerticalFWHM, 2);
+			title += CameraPreviewVariables::CreateStringWithPrecision(bestVerticalFWHM, 2);
 			title += " [um]";
 			WriteTempJSONLineProfileDataToTXTFile
 			(
@@ -7246,7 +7331,7 @@ wxBitmap WorkerThread::CreateGraph
 			for (auto i{ 0 }; i < dataSize; ++i)
 			{
 
-				currTextValue = MainFrameVariables::CreateStringWithPrecision(positionsData[i], m_DecimalDigits);
+				currTextValue = CameraPreviewVariables::CreateStringWithPrecision(positionsData[i], m_DecimalDigits);
 				auto textSize = dc.GetTextExtent(currTextValue);
 
 				if (dataSize < 80 || i == 0 || (i + 1) % 10 == 0)
