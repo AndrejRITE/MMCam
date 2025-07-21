@@ -2087,6 +2087,12 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 				wxLC_REPORT
 			);
 
+		m_ToolsControls->annulusListCtrl->Bind(
+			wxEVT_LEFT_DOWN,
+			&cMain::OnAnnulusListLeftDown,
+			this
+		);
+
 		//m_ToolsControls->annulusListCtrl->Disable();
 
 		auto id = 0;
@@ -3465,8 +3471,8 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 	std::string filePath{};
 
 #ifdef _DEBUG
-	filePath = ".\\src\\dbg_fld\\goodSmooth.tif";
-	//filePath = ".\\src\\dbg_fld\\ss_14H_00M_18S_1500000us.tif";
+	//filePath = ".\\src\\dbg_fld\\goodSmooth.tif";
+	filePath = ".\\src\\dbg_fld\\ss_14H_00M_18S_1500000us.tif";
 	//filePath = ".\\src\\dbg_fld\\badSmooth.tif";
 	//filePath = ".\\src\\dbg_fld\\ss_14H_01M_23S_1500000us.tif";
 #else
@@ -3960,6 +3966,8 @@ auto cMain::OnAnnulusButton(wxCommandEvent& evt) -> void
 		m_ToolsControlsNotebook->SetSelection(0);
 
 	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked || m_IsAnnulusChecked);
+
+	Refresh();
 }
 
 auto cMain::OnAnnulusTxtCtrl(wxCommandEvent& evt) -> void
@@ -4051,6 +4059,21 @@ auto cMain::OnAnnulusItemSelected(wxListEvent& evt) -> void
 	UpdateAnnulusTextCtrls(selectedIndex, selectedAnnulus);
 
 	Refresh();
+}
+
+auto cMain::OnAnnulusListLeftDown(wxMouseEvent& evt) -> void
+{
+	// Convert mouse position to item index
+	int flags = 0;
+	long index = m_ToolsControls->annulusListCtrl->HitTest(evt.GetPosition(), flags);
+
+	if (index == wxNOT_FOUND)
+	{
+		// Click is on empty space — ignore it
+		return; // Don't call event.Skip()
+	}
+
+	evt.Skip(); // Allow default behavior for clicks on items
 }
 
 auto cMain::UpdateAnnulusTextCtrls(const long& index, const CameraPreviewVariables::Annulus& annulus) -> void

@@ -647,6 +647,7 @@ private:
 	auto OnAddAnnulusButton(wxCommandEvent& evt) -> void;
 	auto OnColBeginDrag(wxListEvent& evt) -> void;
 	auto OnAnnulusItemSelected(wxListEvent& evt) -> void;
+	auto OnAnnulusListLeftDown(wxMouseEvent& evt) -> void;
 
 	auto UpdateAnnulusTextCtrls(const long& index, const CameraPreviewVariables::Annulus& annulus) -> void;
 	auto ExtractAnnulusFromTextCtrls() const -> CameraPreviewVariables::Annulus;

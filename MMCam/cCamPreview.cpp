@@ -844,6 +844,28 @@ auto cCamPreview::DrawAnnulus(wxGraphicsContext* gc) -> void
 		gc->StrokePath(crossPath);
 	}
 
+	// --- Emphasize annulus by filling area between inner and outer circles ---
+	{
+		const double centerX = currAnnulus.m_Center.x * actualHalfPixelSize.x * 2 + imageStartDrawPoint.x;
+		const double centerY = currAnnulus.m_Center.y * actualHalfPixelSize.y * 2 + imageStartDrawPoint.y;
+
+		const double rInner = currAnnulus.m_InnerRadius * actualHalfPixelSize.y * 2;
+		const double rOuter = currAnnulus.m_OuterRadius * actualHalfPixelSize.y * 2;
+
+		if (rOuter > 0.0)
+		{
+			wxGraphicsPath ringPath = gc->CreatePath();
+			ringPath.AddCircle(centerX, centerY, rOuter); // Outer circle
+			ringPath.AddCircle(centerX, centerY, rInner); // Inner circle (default winding creates hole)
+
+			wxColour fillColor = m_ContrastDefaultColor;
+			fillColor.Set(fillColor.Red(), fillColor.Green(), fillColor.Blue(), 80); // Alpha = 80/255 (adjust to taste)
+
+			gc->SetBrush(gc->CreateBrush(wxBrush(fillColor, wxBRUSHSTYLE_SOLID)));
+			gc->FillPath(ringPath);
+		}
+	}
+
 	// Draw Inner Radius
 	if (currAnnulus.m_InnerRadius)
 	{
