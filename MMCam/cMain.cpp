@@ -83,8 +83,8 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	/* Annulus */
 	EVT_TEXT(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_CENTER_X_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
 	EVT_TEXT(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_CENTER_Y_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
-	EVT_TEXT(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R1_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
-	EVT_TEXT(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
+	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R1_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
+	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
 	EVT_BUTTON(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN, cMain::OnAddAnnulusButton)
 	EVT_LIST_COL_BEGIN_DRAG(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL, cMain::OnColBeginDrag)
 	EVT_LIST_ITEM_SELECTED(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL, cMain::OnAnnulusItemSelected)
@@ -4110,7 +4110,7 @@ auto cMain::UpdateAnnulusTextCtrls(const long& index, const CameraPreviewVariabl
 
 	// Inner Radius
 	{
-		auto strVal = CameraPreviewVariables::CreateStringWithPrecision(annulus.m_InnerRadius);
+		auto strVal = CameraPreviewVariables::CreateStringWithPrecision(annulus.m_InnerRadius, 1);
 		m_ToolsControls->annulusListCtrl->SetItem
 		(
 			index,
@@ -4124,7 +4124,7 @@ auto cMain::UpdateAnnulusTextCtrls(const long& index, const CameraPreviewVariabl
 
 	// Outer Radius
 	{
-		auto strVal = CameraPreviewVariables::CreateStringWithPrecision(annulus.m_OuterRadius);
+		auto strVal = CameraPreviewVariables::CreateStringWithPrecision(annulus.m_OuterRadius, 1);
 		m_ToolsControls->annulusListCtrl->SetItem
 		(
 			index,

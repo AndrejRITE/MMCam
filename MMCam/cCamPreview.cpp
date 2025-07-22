@@ -663,13 +663,14 @@ void cCamPreview::OnPreviewMouseLeftPressed(wxMouseEvent& evt)
 	{
 		m_ParentArguments->x_pos_crosshair->SetValue(CameraPreviewVariables::CreateStringWithPrecision(m_CheckedCursorPosOnImage.x + 1));
 		m_ParentArguments->y_pos_crosshair->SetValue(CameraPreviewVariables::CreateStringWithPrecision(m_CheckedCursorPosOnImage.y + 1));
+
 		Refresh();
 	}
 
 	if (m_DisplayAnnulus)
 	{
-		m_ParentArguments->xAnnulusCenterPos->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_CheckedCursorPosOnImage.x + 1));
-		m_ParentArguments->yAnnulusCenterPos->SetValue(CameraPreviewVariables::CreateStringWithPrecision(m_CheckedCursorPosOnImage.y + 1));
+		m_ParentArguments->xAnnulusCenterPos->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision((int)m_CheckedCursorPosOnImage.x + 1));
+		m_ParentArguments->yAnnulusCenterPos->SetValue(CameraPreviewVariables::CreateStringWithPrecision((int)m_CheckedCursorPosOnImage.y + 1));
 
 		Refresh();
 	}
