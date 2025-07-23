@@ -4084,6 +4084,8 @@ auto cMain::OnAnnulusButton(wxCommandEvent& evt) -> void
 	if (currState)
 		m_ToolsControlsNotebook->SetSelection(1);
 
+	m_CamPreview->SetFocus();
+
 	Refresh();
 }
 
@@ -4717,6 +4719,8 @@ auto cMain::OnCrossHairButton(wxCommandEvent& evt) -> void
 
 	if (currState)
 		m_ToolsControlsNotebook->SetSelection(0);
+
+	m_CamPreview->SetFocus();
 
 	Refresh();
 }

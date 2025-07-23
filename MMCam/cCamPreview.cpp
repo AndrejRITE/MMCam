@@ -821,13 +821,13 @@ auto cCamPreview::DrawAnnulus(wxGraphicsContext* gc) -> void
 
 	gc->SetPen(wxPen(m_ContrastDefaultColor, 4));
 
+	// Compute actual center on canvas
+	const double centerX = currAnnulus.m_Center.x * actualHalfPixelSize.x * 2 + imageStartDrawPoint.x + actualHalfPixelSize.x;
+	const double centerY = currAnnulus.m_Center.y * actualHalfPixelSize.y * 2 + imageStartDrawPoint.y + actualHalfPixelSize.y;
+
 	// Draw Center Cross Rotated 45 Degrees (an 'X')
 	{
 		const double crossSize = 10.0; // in pixels, adjust based on zoom if needed
-
-		// Compute actual center on canvas
-		const double centerX = currAnnulus.m_Center.x * actualHalfPixelSize.x * 2 + imageStartDrawPoint.x + actualHalfPixelSize.x;
-		const double centerY = currAnnulus.m_Center.y * actualHalfPixelSize.y * 2 + imageStartDrawPoint.y + actualHalfPixelSize.y;
 
 		// Compute 45° rotated cross points
 		const double offset = crossSize / std::sqrt(2.0); // diagonal offset for 45° lines
@@ -845,27 +845,72 @@ auto cCamPreview::DrawAnnulus(wxGraphicsContext* gc) -> void
 		gc->StrokePath(crossPath);
 	}
 
-	// --- Emphasize annulus by filling area between inner and outer circles ---
-	{
-		const double centerX = currAnnulus.m_Center.x * actualHalfPixelSize.x * 2 + imageStartDrawPoint.x;
-		const double centerY = currAnnulus.m_Center.y * actualHalfPixelSize.y * 2 + imageStartDrawPoint.y;
+	const bool isFullyZoomed = !((m_Zoom / m_ZoomOnOriginalSizeImage) < m_MaxZoom);
 
+	if (isFullyZoomed)
+	{
+		const int r1Sq = currAnnulus.m_InnerRadius * currAnnulus.m_InnerRadius;
+		const int r2Sq = currAnnulus.m_OuterRadius * currAnnulus.m_OuterRadius;
+
+		const int xStart = std::max(0, currAnnulus.m_Center.x - (int)currAnnulus.m_OuterRadius);
+		const int xEnd = std::min(m_ImageSize.GetWidth() - 1, currAnnulus.m_Center.x + (int)currAnnulus.m_OuterRadius);
+		const int yStart = std::max(0, currAnnulus.m_Center.y - (int)currAnnulus.m_OuterRadius);
+		const int yEnd = std::min(m_ImageSize.GetHeight() - 1, currAnnulus.m_Center.y + (int)currAnnulus.m_OuterRadius);
+
+		wxColour pixelOverlayColor = m_ContrastDefaultColor;
+		pixelOverlayColor.Set(pixelOverlayColor.Red(), pixelOverlayColor.Green(), pixelOverlayColor.Blue(), 100); // alpha
+
+		wxBrush pixelBrush(pixelOverlayColor);
+		gc->SetBrush(pixelBrush);
+		gc->SetPen(*wxTRANSPARENT_PEN);
+
+		const double pixelDrawWidth = actualHalfPixelSize.x * 2.0;
+		const double pixelDrawHeight = actualHalfPixelSize.y * 2.0;
+
+		for (int y = yStart; y <= yEnd; ++y)
+		{
+			const int dy = y - currAnnulus.m_Center.y;
+			for (int x = xStart; x <= xEnd; ++x)
+			{
+				const int dx = x - currAnnulus.m_Center.x;
+				const int distSq = dx * dx + dy * dy;
+
+				if (distSq >= r1Sq && distSq < r2Sq)
+				{
+					// Compute canvas position
+					const double canvasX = x * pixelDrawWidth + imageStartDrawPoint.x;
+					const double canvasY = y * pixelDrawHeight + imageStartDrawPoint.y;
+
+					// Check if within canvas boundaries (after pan/zoom)
+					if (canvasX + pixelDrawWidth < 0 || canvasX > m_CanvasSize.GetWidth()) continue;
+					if (canvasY + pixelDrawHeight < 0 || canvasY > m_CanvasSize.GetHeight()) continue;
+
+					gc->DrawRectangle(canvasX, canvasY, pixelDrawWidth, pixelDrawHeight);
+				}
+			}
+		}
+	}
+	else
+	{
+		// fallback to drawing semi-transparent ring as before
 		const double rInner = currAnnulus.m_InnerRadius * actualHalfPixelSize.y * 2;
 		const double rOuter = currAnnulus.m_OuterRadius * actualHalfPixelSize.y * 2;
 
 		if (rOuter > 0.0)
 		{
 			wxGraphicsPath ringPath = gc->CreatePath();
-			ringPath.AddCircle(centerX, centerY, rOuter); // Outer circle
-			ringPath.AddCircle(centerX, centerY, rInner); // Inner circle (default winding creates hole)
+			ringPath.AddCircle(centerX, centerY, rOuter);
+			ringPath.AddCircle(centerX, centerY, rInner);
 
 			wxColour fillColor = m_ContrastDefaultColor;
-			fillColor.Set(fillColor.Red(), fillColor.Green(), fillColor.Blue(), 80); // Alpha = 80/255 (adjust to taste)
+			fillColor.Set(fillColor.Red(), fillColor.Green(), fillColor.Blue(), 80);
 
 			gc->SetBrush(gc->CreateBrush(wxBrush(fillColor, wxBRUSHSTYLE_SOLID)));
 			gc->FillPath(ringPath);
 		}
 	}
+
+	gc->SetPen(wxPen(m_ContrastDefaultColor, 4));
 
 	// Draw Inner Radius
 	if (currAnnulus.m_InnerRadius)
@@ -873,8 +918,8 @@ auto cCamPreview::DrawAnnulus(wxGraphicsContext* gc) -> void
 		wxGraphicsPath path = gc->CreatePath();
 		path.AddCircle
 		(
-			currAnnulus.m_Center.x * actualHalfPixelSize.x * 2 + imageStartDrawPoint.x,
-			currAnnulus.m_Center.y * actualHalfPixelSize.y * 2 + imageStartDrawPoint.y,
+			centerX,
+			centerY,
 			currAnnulus.m_InnerRadius * actualHalfPixelSize.y * 2
 		);
 
@@ -887,8 +932,8 @@ auto cCamPreview::DrawAnnulus(wxGraphicsContext* gc) -> void
 		wxGraphicsPath path = gc->CreatePath();
 		path.AddCircle
 		(
-			currAnnulus.m_Center.x * actualHalfPixelSize.x * 2 + imageStartDrawPoint.x,
-			currAnnulus.m_Center.y * actualHalfPixelSize.y * 2 + imageStartDrawPoint.y,
+			centerX,
+			centerY,
 			currAnnulus.m_OuterRadius * actualHalfPixelSize.y * 2
 		);
 
