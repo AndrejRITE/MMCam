@@ -35,8 +35,22 @@ Source: "{#OutputDir}\xeryon_goCenter.py"; DestDir: "{app}"; Flags: ignoreversio
 Source: "{#OutputDir}\xeryon_setAbsolutePosition.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#IconFullPath}"; DestDir: "{app}"; Flags: ignoreversion
 
-[UninstallDelete]
-Type: filesandordirs; Name: "{app}\src\ReportGenerator\.venv"
+[Code]
+procedure DeleteOptionalDirs;
+var
+  VenvPath: string;
+begin
+  VenvPath := ExpandConstant('{app}\src\ReportGenerator\.venv');
+  if DirExists(VenvPath) then
+  begin
+    DelTree(VenvPath, True, True, True);
+  end;
+end;
+
+procedure DeinitializeUninstall();
+begin
+  DeleteOptionalDirs;
+end;
 
 [Icons]
 Name: "{group}\{#RepoName}"; Filename: "{app}\{#RepoName}.exe"; IconFilename: "{app}\logo.ico"
