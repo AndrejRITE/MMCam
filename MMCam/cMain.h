@@ -112,6 +112,8 @@ namespace MainFrameVariables
 		ID_RIGHT_SC_OPT_Z_HOME_BTN,
 
 		/* Tools */
+		ID_RIGHT_TOOLS_CROSSHAIR_AVERAGING_WIDTH_TXT_CTRL,
+		ID_RIGHT_TOOLS_CROSSHAIR_ADAPTIVE_SCALING_CHECKBOX,
 		ID_RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL,
 		ID_RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL,
 		ID_RIGHT_TOOLS_ANNULUS_CENTER_X_TXT_CTRL,
@@ -167,6 +169,7 @@ namespace MainFrameVariables
 		bool dark_mode_on{};
 		bool display_histogram{ true };
 		bool disable_report_generator{};
+		bool crosshair_adaptive_scaling{};
 
 		double crop_size_mm = 0.5;
 		double crop_size_circle_mm = 1.5;
@@ -176,6 +179,7 @@ namespace MainFrameVariables
 		double default_motors_step_first_tab = 1.0;
 		double default_motors_step_second_tab = 0.1;
 
+		int crosshair_averaging_width = 1;
 		int circle_mesh_step_px = 100;
 		int grid_mesh_step_px = 150;
 		int default_colormap = 0;
@@ -196,6 +200,7 @@ namespace MainFrameVariables
 			dark_mode_on,
 			display_histogram,
 			disable_report_generator,
+			crosshair_adaptive_scaling,
 
 			crop_size_mm, 
 			crop_size_circle_mm, 
@@ -205,6 +210,7 @@ namespace MainFrameVariables
 			default_motors_step_first_tab,
 			default_motors_step_second_tab,
 
+			crosshair_averaging_width,
 			circle_mesh_step_px,
 			grid_mesh_step_px,
 			default_colormap,
@@ -315,6 +321,8 @@ namespace MainFrameVariables
 
 	struct ToolsTabControls
 	{
+		std::unique_ptr<wxTextCtrl> crosshairAveragingWidthTxtCtrl{};
+		std::unique_ptr<wxCheckBox> crosshairAdaptiveScalingCheckBox{};
 		std::unique_ptr<wxTextCtrl> gridMeshStepTxtCtrl{}, circleMeshStepTxtCtrl{};
 		std::unique_ptr<wxTextCtrl> annulusCenterXTxtCtrl{}, annulusCenterYTxtCtrl{}, annulusR1TxtCtrl{}, annulusR2TxtCtrl{};
 		std::unique_ptr<wxListCtrl> annulusListCtrl{};
@@ -617,6 +625,11 @@ private:
 		wxWindow* parent
 	) -> wxWindow*;
 
+	auto CreateCrosshairPage
+	(
+		wxWindow* parent
+	) -> wxWindow*;
+
 	auto CreateMeasurementPage
 	(
 		wxWindow* parent
@@ -640,6 +653,8 @@ private:
 	
 	auto OnFocusCenterButton(wxCommandEvent& evt) -> void;
 	auto OnCrossHairButton(wxCommandEvent& evt) -> void;
+	auto OnCrossHairAveragingWidthTxtCtrl(wxCommandEvent& evt) -> void;
+	auto OnCrossHairAdaptiveScalingCheckBox(wxCommandEvent& evt) -> void;
 
 	/* Annulus */
 	auto OnAnnulusButton(wxCommandEvent& evt) -> void;

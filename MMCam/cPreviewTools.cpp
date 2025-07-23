@@ -285,6 +285,11 @@ auto CrossHairTool::ActivateSetPositionFromParentWindow(bool activate) -> void
 	m_SelectingPositionFromParentWindow = activate;
 }
 
+auto CrossHairTool::SetAveragingWidthPX(const int& avgWidth) -> void
+{
+	m_AveragingWidthPX = std::clamp(avgWidth, 1, 10'000);
+}
+
 void CrossHairTool::ProcessChangingCrossHairPos()
 {
 	m_ChangingHorizontalLine = m_ChangingVerticalLine = false;
@@ -351,33 +356,76 @@ void CrossHairTool::DrawDataOnHorizontalLine(wxGraphicsContext* gc, uint16_t* da
 	gc->DrawPath(path);
 }
 
-void CrossHairTool::DrawDataOnVerticalLine(wxGraphicsContext* gc, uint16_t* data_, const int& curve_x_offset, const int& max_width, const uint16_t& max_value)
+auto CrossHairTool::DrawDataOnVerticalLine
+(
+	wxGraphicsContext* gc, 
+	uint16_t* image_data, 
+	const int& curve_width_px, 
+	const int& curve_max_width, 
+	const uint16_t& fixed_max_value
+) -> void
 {
 	wxGraphicsPath path = gc->CreatePath();
-	int current_x_position_on_image = m_CrossHairOnImage.x; 
-	//LOGI("CUR X: ", current_x_position_on_image);
-	int start_draw_x_position;
-	double current_x{}, current_y{}, delta_y{};
+	const int crosshair_image_x = m_CrossHairOnImage.x;
+	const int image_width = m_ImageSize.GetWidth();
+	const int image_height = m_ImageSize.GetHeight();
 
-	start_draw_x_position = m_CrossHairOnCanvas.x > (double)max_width ?
-		m_CrossHairOnCanvas.x + m_ImageStartDraw.x - (double)curve_x_offset : 
-		m_CrossHairOnCanvas.x + m_ImageStartDraw.x + (double)curve_x_offset + (double)max_width;
-	
-	delta_y = m_ActualHalfPixelSize.y * 2.0;
-	current_y = m_ImageStartDraw.y + m_ActualHalfPixelSize.y;
+	// Calculate start position of drawing in X based on whether the curve is to the right or left of the crosshair
+	const int draw_start_x = m_CrossHairOnCanvas.x > static_cast<double>(curve_max_width)
+		? m_CrossHairOnCanvas.x + m_ImageStartDraw.x - static_cast<double>(curve_width_px)
+		: m_CrossHairOnCanvas.x + m_ImageStartDraw.x + static_cast<double>(curve_width_px) + static_cast<double>(curve_max_width);
 
-	for (auto y{ 0 }; y < m_ImageSize.GetHeight() - 1; ++y)
+	const double pixel_step_y = m_ActualHalfPixelSize.y * 2.0;
+	double current_draw_y = m_ImageStartDraw.y + m_ActualHalfPixelSize.y;
+
+	// --- Averaging logic parameters ---
+	const int half_avg_width = m_AveragingWidthPX / 2;
+	const int avg_start_x = std::max(0, crosshair_image_x - half_avg_width);
+	const int avg_end_x = std::min(image_width - 1, crosshair_image_x + half_avg_width);
+	const int avg_width = avg_end_x - avg_start_x + 1;
+
+	std::vector<double> averaged_values(image_height, 0.0);
+	double adaptive_min = std::numeric_limits<double>::max();
+	double adaptive_max = std::numeric_limits<double>::lowest();
+
+	// Compute horizontal averaging for each vertical position (y)
+	for (int y = 0; y < image_height; ++y)
 	{
-		current_x = max_width * (double)data_[y * m_ImageSize.GetWidth() + current_x_position_on_image] / (double)max_value;
-		path.MoveToPoint(start_draw_x_position - current_x, current_y);
-		current_y += delta_y;
-		current_x = max_width * (double)data_[(y + 1) * m_ImageSize.GetWidth() + current_x_position_on_image] / (double)max_value;
-		path.AddLineToPoint(start_draw_x_position - current_x, current_y);
+		double sum = 0.0;
+		for (int x = avg_start_x; x <= avg_end_x; ++x)
+		{
+			sum += image_data[y * image_width + x];
+		}
+		double avg_value = sum / avg_width;
+		averaged_values[y] = avg_value;
+
+		if (m_AdaptiveScaling)
+		{
+			if (avg_value < adaptive_min) adaptive_min = avg_value;
+			if (avg_value > adaptive_max) adaptive_max = avg_value;
+		}
+	}
+
+	// Compute vertical line path
+	double value_range = m_AdaptiveScaling ? (adaptive_max - adaptive_min) : static_cast<double>(fixed_max_value);
+	if (value_range == 0) value_range = 1.0; // avoid division by zero
+
+	for (int y = 0; y < image_height - 1; ++y)
+	{
+		double scaled_value_current = (averaged_values[y] - (m_AdaptiveScaling ? adaptive_min : 0.0)) / value_range;
+		double x_offset_current = curve_max_width * scaled_value_current;
+
+		path.MoveToPoint(draw_start_x - x_offset_current, current_draw_y);
+		current_draw_y += pixel_step_y;
+
+		double scaled_value_next = (averaged_values[y + 1] - (m_AdaptiveScaling ? adaptive_min : 0.0)) / value_range;
+		double x_offset_next = curve_max_width * scaled_value_next;
+
+		path.AddLineToPoint(draw_start_x - x_offset_next, current_draw_y);
 	}
 
 	gc->SetPen(wxColour(240, 134, 80));
 	gc->DrawPath(path);
-
 }
 
 void CrossHairTool::UpdateParentCrossHairTextCtrlsWithRefresh()

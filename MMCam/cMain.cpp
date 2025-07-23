@@ -75,6 +75,8 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_TEXT(MainFrameVariables::ID_HISTOGRAM_RIGHT_BORDER_TXT_CTRL, cMain::OnHistogramRightBorderPosChanged)
 
 	/* Tools */
+	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_CROSSHAIR_AVERAGING_WIDTH_TXT_CTRL, cMain::OnCrossHairAveragingWidthTxtCtrl)
+	EVT_CHECKBOX(MainFrameVariables::ID_RIGHT_TOOLS_CROSSHAIR_ADAPTIVE_SCALING_CHECKBOX, cMain::OnCrossHairAdaptiveScalingCheckBox)
 	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL, cMain::OnGridMeshTxtCtrl)
 	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL, cMain::OnCircleMeshTxtCtrl)
 	EVT_TEXT(MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL, cMain::OnXPosCrossHairTextCtrl)
@@ -2227,6 +2229,73 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 	return page;
 }
 
+auto cMain::CreateCrosshairPage(wxWindow* parent) -> wxWindow*
+{
+	wxPanel* page = new wxPanel(parent);
+	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+
+	wxSize txtCtrlSize = { 64, 20 };
+
+	auto gridSizer = new wxGridSizer(2); 
+	gridSizer->SetVGap(5);
+
+	// Averaging Width
+	{
+		gridSizer->Add
+		(
+			new wxStaticText
+			(
+				page,
+				wxID_ANY,
+				wxT("Averaging Width [px]:")
+			),
+			0,
+			wxALIGN_CENTER
+		);
+
+		wxIntegerValidator<int> val(NULL);
+		val.SetMin(0);
+		val.SetMax(1'000'000);
+
+		m_ToolsControls->crosshairAveragingWidthTxtCtrl = std::make_unique<wxTextCtrl>
+			(
+				page,
+				MainFrameVariables::ID_RIGHT_TOOLS_CROSSHAIR_AVERAGING_WIDTH_TXT_CTRL,
+#ifdef _DEBUG
+				CameraPreviewVariables::CreateStringWithPrecision(1),
+#else
+				CameraPreviewVariables::CreateStringWithPrecision(1),
+#endif // _DEBUG
+				wxDefaultPosition,
+				txtCtrlSize,
+				wxTE_CENTRE | wxTE_PROCESS_ENTER,
+				val
+			);
+
+		m_ToolsControls->crosshairAveragingWidthTxtCtrl->SetToolTip("Set desired averaging width in [px] and press Enter");
+		//m_ToolsControls->crosshairAveragingWidthTxtCtrl->Disable();
+
+		gridSizer->Add(m_ToolsControls->crosshairAveragingWidthTxtCtrl.get(), 0, wxALIGN_CENTER);
+	}
+
+	sizerPage->Add(gridSizer, 0, wxEXPAND | wxALL, 5);
+
+	// Adaptive Scaling
+	{
+		m_ToolsControls->crosshairAdaptiveScalingCheckBox = std::make_unique<wxCheckBox>
+			(
+				page,
+				MainFrameVariables::ID_RIGHT_TOOLS_CROSSHAIR_ADAPTIVE_SCALING_CHECKBOX,
+				wxT("Adaptive Scaling")
+			);
+	}
+
+	sizerPage->Add(m_ToolsControls->crosshairAdaptiveScalingCheckBox.get(), 0, wxCENTRE | wxALL, 5);
+
+	page->SetSizer(sizerPage);
+	return page;
+}
+
 auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 {
 	wxPanel* page = new wxPanel(parent);
@@ -2654,9 +2723,24 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 		);
 	}
 	
+	wxBitmap crosshairBitmap{};
+	{
+		auto bitmap = wxART_ARROW_TRENDING_LINES;
+		auto client = wxART_CLIENT_FLUENTUI_FILLED;
+		auto color = wxColour(128, 128, 255);
+		crosshairBitmap = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			size,
+			color
+		);
+	}
+	
 	auto imgIndexGridMesh = imageList->Add(gridMeshBitmap);
 	auto imgIndexCircleMesh = imageList->Add(circleMeshBitmap);
 	auto imgIndexAnnulus = imageList->Add(annulusBitmap);
+	auto imgIndexCrosshair = imageList->Add(crosshairBitmap);
 	
 	m_ToolsControlsNotebook = new wxNotebook(right_side_panel, wxID_ANY);
 
@@ -2666,10 +2750,22 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 
 	m_ToolsControlsNotebook->AddPage
 	(
+		CreateCrosshairPage(m_ToolsControlsNotebook), 
+		"Crosshair",
+#ifdef _DEBUG
+		true,
+#else
+		false,
+#endif // _DEBUG
+		imgIndexCrosshair
+	);
+
+	m_ToolsControlsNotebook->AddPage
+	(
 		CreateAnnulusPage(m_ToolsControlsNotebook), 
 		"Annulus",
 #ifdef _DEBUG
-		true,
+		false,
 #else
 		false,
 #endif // _DEBUG
@@ -3362,6 +3458,21 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 		auto sensor_temperature = m_Config->default_cooled_sensor_temperature_degC;
 		auto sensor_temperature_str = CameraPreviewVariables::CreateStringWithPrecision(sensor_temperature, 1);
 		m_CameraTabControls->camSensorTemperature->SetLabel(sensor_temperature_str);
+	}
+
+	// CrossHair Averaging Width
+	{
+		auto avgWidth = CameraPreviewVariables::CreateStringWithPrecision(m_Config->crosshair_averaging_width);
+		m_ToolsControls->crosshairAveragingWidthTxtCtrl->SetLabel(avgWidth);
+	}
+
+	// CrossHair Adaptive Scaling
+	{
+		auto checked = m_Config->crosshair_adaptive_scaling;
+		m_ToolsControls->crosshairAdaptiveScalingCheckBox->SetValue(checked);
+
+		wxCommandEvent evt(wxEVT_CHECKBOX, MainFrameVariables::ID_RIGHT_TOOLS_CROSSHAIR_ADAPTIVE_SCALING_CHECKBOX);
+		ProcessEvent(evt);
 	}
 
 	// Grid Mesh Step
@@ -4593,6 +4704,33 @@ auto cMain::OnCrossHairButton(wxCommandEvent& evt) -> void
 			m_CameraTabControls->crossHairPosYTxtCtrl->SetValue(wxString::Format(wxT("%i"), img_size.GetHeight() / 2));
 		}
 	}
+}
+
+auto cMain::OnCrossHairAveragingWidthTxtCtrl(wxCommandEvent& evt) -> void
+{
+	int textInt{ 1 };
+	m_ToolsControls->crosshairAveragingWidthTxtCtrl->GetValue().ToInt(&textInt);
+
+	textInt = std::clamp(textInt, 1, 10'000);
+
+	m_CamPreview->SetCrossHairAveragingWidthPX(textInt);
+
+	m_Config->crosshair_averaging_width = textInt;
+	RewriteInitializationFile();
+
+	Refresh();
+}
+
+auto cMain::OnCrossHairAdaptiveScalingCheckBox(wxCommandEvent& evt) -> void
+{
+	auto checked = m_ToolsControls->crosshairAdaptiveScalingCheckBox->GetValue();
+
+	m_CamPreview->ActivateCrossHairAdaptiveScaling(checked);
+
+	m_Config->crosshair_adaptive_scaling = checked;
+	RewriteInitializationFile();
+
+	Refresh();
 }
 
 auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void

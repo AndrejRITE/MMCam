@@ -100,12 +100,25 @@ public:
 	int GetYPos() const;
 	auto ActivateSetPositionFromParentWindow(bool activate) -> void;
 
+	auto SetAveragingWidthPX(const int& avgWidth) -> void;
+	auto ActivateAdaptiveScaling(const bool isActive = false) -> void { m_AdaptiveScaling = isActive; };
+
 private:
 	void CheckIfMouseAboveCrossHair();
 	void CalculateCrossHairOnImage();
 	void DrawData(wxGraphicsContext* graphics_context, uint16_t* data);
+
 	void DrawDataOnHorizontalLine(wxGraphicsContext* gc, uint16_t* data_, const int& curve_y_offset, const int& max_height, const uint16_t& max_value);
-	void DrawDataOnVerticalLine(wxGraphicsContext* gc, uint16_t* data_, const int& curve_x_offset, const int& max_width, const uint16_t& max_value);
+
+	auto DrawDataOnVerticalLine
+	(
+		wxGraphicsContext* gc,
+		uint16_t* image_data,
+		const int& curve_width_px,
+		const int& curve_max_width,
+		const uint16_t& fixed_max_value
+	) -> void;
+
 	void UpdateParentCrossHairTextCtrlsWithRefresh();
 
 	auto CheckIfPixelValueIsInsideTheImage(const int& x, const int& y) -> bool;
@@ -126,6 +139,9 @@ private:
 	int m_TextCtrlPixelOffset{ 1 };
 	wxRealPoint m_MultiplicationFactor{};
 	wxRealPoint m_ActualHalfPixelSize{};
+
+	int m_AveragingWidthPX{ 1 };
+	bool m_AdaptiveScaling{};
 };
 
 class RectangleSelectionTool final : public Tool

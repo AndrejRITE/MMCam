@@ -249,17 +249,26 @@ public:
 
 	auto GetExecutionFinishedPtr() -> bool* { return &m_ExecutionFinished; };
 
-	auto SetGridMeshStepPX(const unsigned int step)
+	auto SetCrossHairAveragingWidthPX(const int& avgWidth)
 	{
-		if (step < 1 || step > 10'000) return;
-		m_GridMeshStepPX = step;
-	}
+		m_CrossHairAveragingWidthPX = std::clamp(avgWidth, 1, 10'000);
+		m_CrossHairTool->SetAveragingWidthPX(m_CrossHairAveragingWidthPX);
+	};
 
-	auto SetCircleMeshStepPX(const unsigned int step)
+	auto ActivateCrossHairAdaptiveScaling(const bool isActive = false)
 	{
-		if (step < 1 || step > 10'000) return;
-		m_CircleMeshStepPX = step;
-	}
+		m_CrossHairTool->ActivateAdaptiveScaling(isActive);
+	};
+
+	auto SetGridMeshStepPX(const int& step)
+	{
+		m_GridMeshStepPX = std::clamp(step, 1, 10'000);
+	};
+
+	auto SetCircleMeshStepPX(const int& step)
+	{
+		m_CircleMeshStepPX = std::clamp(step, 1, 10'000);
+	};
 
 	/* Annulus */
 	auto AddAnnulusOnCurrentImage() -> CameraPreviewVariables::Annulus;
@@ -399,6 +408,7 @@ private:
 	bool m_DisplayGridMesh{}, m_DisplayCircleMesh{};
 	int m_GridMeshStepPX{ 100 };
 	int m_CircleMeshStepPX{ 200 };
+	int m_CrossHairAveragingWidthPX{ 1 };
 
 	bool m_DisplayFocusCenter{};
 	bool m_DisplayCrossHair{};
