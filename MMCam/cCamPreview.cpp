@@ -1095,11 +1095,29 @@ auto cCamPreview::AddAnnulusOnCurrentImage() -> CameraPreviewVariables::Annulus
 	CameraPreviewVariables::Annulus annulus{};
 	if (!m_ImageSize.GetWidth() || !m_ImageSize.GetHeight()) return annulus;
 
-#ifdef _DEBUG
-	annulus.m_Center = wxPoint(m_ImageSize.GetWidth() / 2, m_ImageSize.GetHeight() / 2);
-	annulus.m_InnerRadius = m_ImageSize.GetHeight() / 4;
-	annulus.m_OuterRadius = m_ImageSize.GetHeight() / 2;
-#endif // _DEBUG
+	CalculateFWHM();
+
+	auto maxHorizontalElem = std::max_element(m_HorizontalSumArray.get(), m_HorizontalSumArray.get() + m_ImageSize.GetWidth());
+	auto maxVerticalElem = std::max_element(m_VerticalSumArray.get(), m_VerticalSumArray.get() + m_ImageSize.GetHeight());
+	auto centerPos = wxPoint
+	(
+		std::distance(m_HorizontalSumArray.get(), maxHorizontalElem),
+		std::distance(m_VerticalSumArray.get(), maxVerticalElem)
+	);
+
+	annulus.m_Center = centerPos;
+
+	// Compute distance to all four image edges
+	const int distToLeft = centerPos.x;
+	const int distToRight = m_ImageSize.GetWidth() - 1 - centerPos.x;
+	const int distToTop = centerPos.y;
+	const int distToBottom = m_ImageSize.GetHeight() - 1 - centerPos.y;
+
+	// Smallest distance to ensure the annulus stays fully inside the image
+	annulus.m_OuterRadius = std::min({ distToLeft, distToRight, distToTop, distToBottom });
+
+	// Optional: set a default inner radius (e.g. 25% of outer)
+	annulus.m_InnerRadius = annulus.m_OuterRadius / 4;
 
 	CalculateSumInsideAnnulus(annulus);
 
