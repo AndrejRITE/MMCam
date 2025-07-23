@@ -2939,10 +2939,12 @@ auto cMain::OnGridMeshButton(wxCommandEvent& evt) -> void
 		currState
 	);
 
-	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked || m_IsAnnulusChecked);
+	auto displayTabs = m_IsCrossHairChecked || m_IsCircleMeshChecked || m_IsGridMeshChecked || m_IsAnnulusChecked;
 
-	if (m_IsGridMeshChecked)
-		m_ToolsControlsNotebook->SetSelection(1);
+	m_ToolsControlsNotebook->Show(displayTabs);
+
+	if (currState)
+		m_ToolsControlsNotebook->SetSelection(2);
 
 	Layout();
 }
@@ -2990,10 +2992,12 @@ auto cMain::OnCircleMeshButton(wxCommandEvent& evt) -> void
 		currState
 	);
 	
-	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked || m_IsAnnulusChecked);
+	auto displayTabs = m_IsCrossHairChecked || m_IsCircleMeshChecked || m_IsGridMeshChecked || m_IsAnnulusChecked;
 
-	if (m_IsCircleMeshChecked)
-		m_ToolsControlsNotebook->SetSelection(2);
+	m_ToolsControlsNotebook->Show(displayTabs);
+
+	if (currState)
+		m_ToolsControlsNotebook->SetSelection(3);
 
 	Layout();
 }
@@ -4073,10 +4077,12 @@ auto cMain::OnAnnulusButton(wxCommandEvent& evt) -> void
 		currState
 	);
 
-	if (m_IsAnnulusChecked)
-		m_ToolsControlsNotebook->SetSelection(0);
+	auto displayTabs = m_IsCrossHairChecked || m_IsCircleMeshChecked || m_IsGridMeshChecked || m_IsAnnulusChecked;
 
-	m_ToolsControlsNotebook->Show(m_IsCircleMeshChecked || m_IsGridMeshChecked || m_IsAnnulusChecked);
+	m_ToolsControlsNotebook->Show(displayTabs);
+
+	if (currState)
+		m_ToolsControlsNotebook->SetSelection(1);
 
 	Refresh();
 }
@@ -4704,6 +4710,15 @@ auto cMain::OnCrossHairButton(wxCommandEvent& evt) -> void
 			m_CameraTabControls->crossHairPosYTxtCtrl->SetValue(wxString::Format(wxT("%i"), img_size.GetHeight() / 2));
 		}
 	}
+
+	auto displayTabs = m_IsCrossHairChecked || m_IsCircleMeshChecked || m_IsGridMeshChecked || m_IsAnnulusChecked;
+
+	m_ToolsControlsNotebook->Show(displayTabs);
+
+	if (currState)
+		m_ToolsControlsNotebook->SetSelection(0);
+
+	Refresh();
 }
 
 auto cMain::OnCrossHairAveragingWidthTxtCtrl(wxCommandEvent& evt) -> void

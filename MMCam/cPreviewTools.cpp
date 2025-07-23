@@ -328,28 +328,73 @@ void CrossHairTool::DrawData(wxGraphicsContext* graphics_context, uint16_t* data
 	}
 }
 
-void CrossHairTool::DrawDataOnHorizontalLine(wxGraphicsContext* gc, uint16_t* data_, const int& curve_y_offset, const int& max_height, const uint16_t& max_value)
+auto CrossHairTool::DrawDataOnHorizontalLine
+(
+	wxGraphicsContext* gc, 
+	uint16_t* image_data, 
+	const int& curve_height_offset, 
+	const int& curve_max_height, 
+	const uint16_t& fixed_max_value
+) -> void
 {
 	wxGraphicsPath path = gc->CreatePath();
-	int current_y_position_on_image = m_CrossHairOnImage.y;
-	int start_draw_y_position{};
-	double current_x{}, delta_x{}, current_y{};
+	const int crosshair_image_y = m_CrossHairOnImage.y;
+	const int image_width = m_ImageSize.GetWidth();
+	const int image_height = m_ImageSize.GetHeight();
 
-	start_draw_y_position = m_CrossHairOnCanvas.y > (double)max_height ?
-		m_CrossHairOnCanvas.y + m_ImageStartDraw.y - curve_y_offset : 
-		m_CrossHairOnCanvas.y + m_ImageStartDraw.y + curve_y_offset + max_height;
+	// Determine vertical start point of the curve
+	const int draw_start_y = m_CrossHairOnCanvas.y > static_cast<double>(curve_max_height)
+		? m_CrossHairOnCanvas.y + m_ImageStartDraw.y - curve_height_offset
+		: m_CrossHairOnCanvas.y + m_ImageStartDraw.y + curve_height_offset + curve_max_height;
 
-	delta_x = m_ActualHalfPixelSize.x * 2.0;
-	current_x = m_ImageStartDraw.x + m_ActualHalfPixelSize.x;
+	const double pixel_step_x = m_ActualHalfPixelSize.x * 2.0;
+	double current_draw_x = m_ImageStartDraw.x + m_ActualHalfPixelSize.x;
 
-	uint64_t y_position_in_data = (uint64_t)current_y_position_on_image * m_ImageSize.GetWidth();
-	for (auto x{ 0 }; x < m_ImageSize.GetWidth() - 1; ++x)
+	// --- Averaging logic parameters ---
+	const int half_avg_height = m_AveragingWidthPX / 2;
+	const int avg_start_y = std::max(0, crosshair_image_y - half_avg_height);
+	const int avg_end_y = std::min(image_height - 1, crosshair_image_y + half_avg_height);
+	const int avg_height = avg_end_y - avg_start_y + 1;
+
+	std::vector<double> averaged_values(image_width, 0.0);
+	double adaptive_min = std::numeric_limits<double>::max();
+	double adaptive_max = std::numeric_limits<double>::lowest();
+
+	// Compute vertical averaging for each horizontal pixel (x)
+	for (int x = 0; x < image_width; ++x)
 	{
-		current_y = max_height * (double)data_[y_position_in_data + x] / (double)max_value;
-		path.MoveToPoint(current_x, (double)start_draw_y_position - current_y);
-		current_x += delta_x;
-		current_y = max_height * (double)data_[y_position_in_data + x + 1] / (double)max_value;
-		path.AddLineToPoint(current_x, (double)start_draw_y_position - current_y);
+		double sum = 0.0;
+		for (int y = avg_start_y; y <= avg_end_y; ++y)
+		{
+			sum += image_data[y * image_width + x];
+		}
+		double avg_value = sum / avg_height;
+		averaged_values[x] = avg_value;
+
+		if (m_AdaptiveScaling)
+		{
+			if (avg_value < adaptive_min) adaptive_min = avg_value;
+			if (avg_value > adaptive_max) adaptive_max = avg_value;
+		}
+	}
+
+	// Determine scale range
+	double value_range = m_AdaptiveScaling ? (adaptive_max - adaptive_min) : static_cast<double>(fixed_max_value);
+	if (value_range == 0.0) value_range = 1.0;  // Avoid divide-by-zero
+
+	// Draw the horizontal line curve
+	for (int x = 0; x < image_width - 1; ++x)
+	{
+		double scaled_value_current = (averaged_values[x] - (m_AdaptiveScaling ? adaptive_min : 0.0)) / value_range;
+		double y_offset_current = curve_max_height * scaled_value_current;
+
+		path.MoveToPoint(current_draw_x, static_cast<double>(draw_start_y) - y_offset_current);
+		current_draw_x += pixel_step_x;
+
+		double scaled_value_next = (averaged_values[x + 1] - (m_AdaptiveScaling ? adaptive_min : 0.0)) / value_range;
+		double y_offset_next = curve_max_height * scaled_value_next;
+
+		path.AddLineToPoint(current_draw_x, static_cast<double>(draw_start_y) - y_offset_next);
 	}
 
 	gc->SetPen(*wxGREEN_PEN);

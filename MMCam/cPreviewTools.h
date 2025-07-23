@@ -108,7 +108,14 @@ private:
 	void CalculateCrossHairOnImage();
 	void DrawData(wxGraphicsContext* graphics_context, uint16_t* data);
 
-	void DrawDataOnHorizontalLine(wxGraphicsContext* gc, uint16_t* data_, const int& curve_y_offset, const int& max_height, const uint16_t& max_value);
+	auto DrawDataOnHorizontalLine
+	(
+		wxGraphicsContext* gc,
+		uint16_t* image_data,
+		const int& curve_height_offset,
+		const int& curve_max_height,
+		const uint16_t& fixed_max_value
+	) -> void;
 
 	auto DrawDataOnVerticalLine
 	(
