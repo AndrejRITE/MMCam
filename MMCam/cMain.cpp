@@ -2755,7 +2755,7 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 #ifdef _DEBUG
 		true,
 #else
-		false,
+		true,
 #endif // _DEBUG
 		imgIndexCrosshair
 	);
@@ -2779,7 +2779,7 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 #ifdef _DEBUG
 		false,
 #else
-		true,
+		false,
 #endif // _DEBUG
 		imgIndexGridMesh
 	);
@@ -2797,7 +2797,7 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 	);
 
 #ifndef _DEBUG
-	m_ToolsControlsNotebook->Hide();
+	m_ToolsControlsNotebook->Show(false);
 #endif // !_DEBUG
 
 	right_side_panel_sizer->Add(m_ToolsControlsNotebook, 0, wxEXPAND | wxALL, 5);
