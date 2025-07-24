@@ -4222,6 +4222,9 @@ auto cMain::OnAddAnnulusButton(wxCommandEvent& evt) -> void
 		m_ToolsControls->removeAnnulusFromListBtn->Enable();
 
 	auto id = annulus.GetID();
+
+	wxLogDebug("Adding annulus with ID: %ld", id);
+
 	m_ToolsControls->annulusListCtrl->SetItemData(index, id);
 
 	UpdateAnnulusTextCtrls(index, annulus);
@@ -4261,6 +4264,9 @@ auto cMain::OnRemoveAnnulusButton(wxCommandEvent& evt) -> void
 
 	// Get ID before deletion (so we can inform CamPreview)
 	auto annulusID = listCtrl->GetItemData(selected);
+
+	wxLogDebug("Removing annulus with ID: %ld", (long)annulusID);
+
 	m_CamPreview->RemoveAnnulusByID(annulusID); // You should have this method in m_CamPreview
 
 	// Remove the item from the list

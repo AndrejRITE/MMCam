@@ -79,9 +79,8 @@ namespace CameraPreviewVariables
 	{
 		Annulus()
 		{
-			wxDateTime now = wxDateTime::UNow();
-			wxTimeSpan span = now - wxDateTime(1, wxDateTime::Jan, 2025);
-			m_ID = static_cast<long>(span.GetSeconds().GetValue());
+			static std::atomic<long> counter{ 1 }; // start at 1 to avoid confusion with 0
+			m_ID = counter.fetch_add(1, std::memory_order_relaxed);
 		};
 
 		auto SetID(const long& id) -> void { m_ID = id; };
