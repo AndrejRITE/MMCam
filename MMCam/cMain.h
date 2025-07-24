@@ -42,7 +42,7 @@
 #include <wx/msw/window.h>
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 20
+#define MINOR_VERSION 21
 
 namespace MainFrameVariables
 {
@@ -705,6 +705,7 @@ private:
 	void OnMaximizeButton(wxMaximizeEvent& evt);
 
 	auto OnOpen(wxCommandEvent& evt) -> void;
+	auto OnSave(wxCommandEvent& evt) -> void;
 
 	void OnExit(wxCloseEvent& evt);
 	void OnExit(wxCommandEvent& evt);

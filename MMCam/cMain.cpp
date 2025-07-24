@@ -2,6 +2,7 @@
 
 wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_MENU(MainFrameVariables::ID_MENUBAR_FILE_OPEN, cMain::OnOpen)
+	EVT_MENU(MainFrameVariables::ID_MENUBAR_FILE_SAVE, cMain::OnSave)
 	EVT_CLOSE(cMain::OnExit)
 	EVT_MENU(MainFrameVariables::ID_MENUBAR_FILE_QUIT, cMain::OnExit)
 	EVT_MENU(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
@@ -334,7 +335,6 @@ void cMain::CreateMenuBarOnFrame()
 			}
 
 			m_MenuBar->menu_file->Append(item);
-			m_MenuBar->menu_file->Enable(itemID, false);
 		}
 
 		// Quit
@@ -3716,6 +3716,51 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, true);
 	m_VerticalToolBar->tool_bar->Enable();
 	m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
+}
+
+auto cMain::OnSave(wxCommandEvent& evt) -> void
+{
+	if (!m_CamPreview) return;
+
+	auto imgSize = m_CamPreview->GetImageSize();
+	auto dataPtr = m_CamPreview->GetDataPtr();
+
+	if (!dataPtr) return;
+
+	wxString timestamp = wxDateTime::Now().FormatISOCombined('_');
+	timestamp.Replace("-", "_");
+	timestamp.Replace(":", "_");
+	timestamp += ".tif";
+
+	// Ask user for a file path to save
+	wxFileDialog saveDialog
+	(
+		this,
+		"Save TIF Image",
+		wxEmptyString,
+		timestamp,
+		"TIF files (*.tif)|*.tif",
+		wxFD_SAVE | wxFD_OVERWRITE_PROMPT
+	);
+
+	if (saveDialog.ShowModal() != wxID_OK)
+		return;
+
+	// Construct cv::Mat from raw data
+	cv::Mat cv_img
+	(
+		cv::Size(imgSize.GetWidth(), imgSize.GetHeight()),
+		CV_16U,
+		dataPtr,
+		cv::Mat::AUTO_STEP
+	);
+
+	// Save using OpenCV
+	const std::string outPath = saveDialog.GetPath().ToStdString();
+	if (!cv::imwrite(outPath, cv_img))
+	{
+		wxLogError("Failed to save the image to %s", saveDialog.GetPath());
+	}
 }
 
 void cMain::OnExit(wxCloseEvent& evt)
