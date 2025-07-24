@@ -144,10 +144,10 @@ cMain::cMain(const wxString& title_)
 
 #ifdef _DEBUG
 	// Press Open Button
-	{
-		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_FILE_OPEN);
-		ProcessEvent(artEvt);
-	}
+	//{
+	//	wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_FILE_OPEN);
+	//	ProcessEvent(artEvt);
+	//}
 
 	// Press Set Out Dir Button
 	{
@@ -155,17 +155,17 @@ cMain::cMain(const wxString& title_)
 		ProcessEvent(artEvt);
 	}
 
-	// Press Add Annulus Button
-	{
-		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING);
-		ProcessEvent(artEvt);
-	}
+	// Press Enable Annulus Button
+	//{
+	//	wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING);
+	//	ProcessEvent(artEvt);
+	//}
 
 	// Press Add Annulus Button
-	{
-		wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN);
-		ProcessEvent(artEvt);
-	}
+	//{
+	//	wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN);
+	//	ProcessEvent(artEvt);
+	//}
 
 	// Press Generate Button
 	{
@@ -282,7 +282,8 @@ void cMain::CreateMenuBarOnFrame()
 	{
 		// Open
 		{
-			auto item = new wxMenuItem(m_MenuBar->menu_file, MainFrameVariables::ID_MENUBAR_FILE_OPEN, "Open\tCtrl+O");
+			auto itemID = MainFrameVariables::ID_MENUBAR_FILE_OPEN;
+			auto item = new wxMenuItem(m_MenuBar->menu_file, itemID, "Open\tCtrl+O");
 			// Setting a bitmap to the Close menu item
 			{
 				wxVector<wxBitmap> bitmaps;
@@ -306,9 +307,40 @@ void cMain::CreateMenuBarOnFrame()
 
 			m_MenuBar->menu_file->Append(item);
 		}
+
+		// Save
+		{
+			auto itemID = MainFrameVariables::ID_MENUBAR_FILE_SAVE;
+			auto item = new wxMenuItem(m_MenuBar->menu_file, itemID, "Save\tCtrl+S");
+			// Setting a bitmap to the Close menu item
+			{
+				wxVector<wxBitmap> bitmaps;
+				auto bitmap = wxART_SAVE;
+				auto client = wxART_CLIENT_MATERIAL_ROUND;
+				auto color = wxColour(0, 0, 0);
+				for (auto i{ 0 }; i < 3; ++i)
+					bitmaps.push_back
+					(
+						wxMaterialDesignArtProvider::GetBitmap
+						(
+							bitmap,
+							client,
+							wxSize(initBitmapSize.GetWidth() + i * initBitmapSize.GetWidth(), initBitmapSize.GetHeight() + i * initBitmapSize.GetHeight()),
+							color
+						)
+					);
+
+				item->SetBitmap(wxBitmapBundle::FromBitmaps(bitmaps));
+			}
+
+			m_MenuBar->menu_file->Append(item);
+			m_MenuBar->menu_file->Enable(itemID, false);
+		}
+
 		// Quit
 		{
-			auto item = new wxMenuItem(m_MenuBar->menu_file, MainFrameVariables::ID_MENUBAR_FILE_QUIT, "Quit\tCtrl+Q");
+			auto itemID = MainFrameVariables::ID_MENUBAR_FILE_QUIT;
+			auto item = new wxMenuItem(m_MenuBar->menu_file, itemID, "Quit\tCtrl+Q");
 			// Setting a bitmap to the Close menu item
 			{
 				wxVector<wxBitmap> bitmaps;
@@ -384,7 +416,7 @@ void cMain::CreateMenuBarOnFrame()
 
 		// Settings
 		{
-			auto item = new wxMenuItem(m_MenuBar->menu_edit, MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, "Settings\tCtrl+S");
+			auto item = new wxMenuItem(m_MenuBar->menu_edit, MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, "Settings\tF2");
 
 			// Setting a bitmap to the Close menu item
 			{
