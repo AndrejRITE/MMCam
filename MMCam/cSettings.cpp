@@ -866,8 +866,9 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 	if (j.contains("detector")) {
 		for (const auto& motor : j["detector"]) {
 			const std::string sn = motor["SerialNumber"];
+			const int stepsPerMM = motor["StepsPerMM"];
 			m_WorkStations->work_station_data[fileNum].selected_motors_in_data_file.Add(wxString(sn));
-			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(sn), 1));
+			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(sn), stepsPerMM));
 		}
 	}
 
@@ -875,8 +876,9 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 	if (j.contains("optics")) {
 		for (const auto& motor : j["optics"]) {
 			const std::string sn = motor["SerialNumber"];
+			const int stepsPerMM = motor["StepsPerMM"];
 			m_WorkStations->work_station_data[fileNum].selected_motors_in_data_file.Add(wxString(sn));
-			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(sn), 1));
+			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(sn), stepsPerMM));
 		}
 	}
 
