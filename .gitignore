@@ -22,7 +22,7 @@ dbg_fld/
 *.pdf
 !main_app_window.png
 *.mat
-*.json
+temp
 *.cached
 *.temp
 ReportTemplate.*

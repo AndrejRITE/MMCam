@@ -1,0 +1,17 @@
+{
+  "camera": "21084",
+  "camera_manufacturer": "MORAVIAN_INSTRUMENTS",
+  "motor_manufacturer": "XERYON",
+  "pixel_size_um": 3.76,
+  "station": "CEXOT",
+  "detector": [
+    { "SerialNumber": "None", "StepsPerMM": 1 },
+    { "SerialNumber": "None", "StepsPerMM": 1 },
+    { "SerialNumber": "None", "StepsPerMM": 1 }
+  ],
+  "optics": [
+    { "SerialNumber": "95733333332351410021", "StepsPerMM": 1 },
+    { "SerialNumber": "A40313438353519101B1", "StepsPerMM": 1 },
+    { "SerialNumber": "A403134383535191E0D1", "StepsPerMM": 1 }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "camera": "38285758",
+  "camera_manufacturer": "XIMEA",
+  "motor_manufacturer": "STANDA",
+  "pixel_size_um": 2.2,
+  "station": "BRUKER",
+  "detector": [
+    { "SerialNumber": "18808", "StepsPerMM": 800 },
+    { "SerialNumber": "15748", "StepsPerMM": 800 },
+    { "SerialNumber": "15715", "StepsPerMM": 800 }
+  ],
+  "optics": [
+    { "SerialNumber": "12586", "StepsPerMM": 800 },
+    { "SerialNumber": "12538", "StepsPerMM": 800 },
+    { "SerialNumber": "None",  "StepsPerMM": 800 }
+  ]
+}

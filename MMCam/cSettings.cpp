@@ -19,8 +19,8 @@ int cSettings::ShowModal()
 {
 	int result = wxID_OK;
 
-#ifndef _DEBUG
 	result = wxDialog::ShowModal();  // Call the base class method
+#ifndef _DEBUG
 #endif // !_DEBUG
 
 	wxBusyCursor busy;
@@ -820,7 +820,7 @@ auto cSettings::LoadWorkStationFiles() -> void
 	m_WorkStations->work_stations_count = 0;
 	for (const auto& entry : std::filesystem::directory_iterator(work_stations_path.ToStdString()))
 	{
-		if (entry.is_regular_file() && entry.path().extension() == ".xml")
+		if (entry.is_regular_file() && entry.path().extension() == ".json")
 		{
 			++m_WorkStations->work_stations_count;
 		}
@@ -830,7 +830,7 @@ auto cSettings::LoadWorkStationFiles() -> void
 	auto i{ 0 };
 	for (const auto& entry : std::filesystem::directory_iterator(work_stations_path.ToStdString())) 
 	{
-		if (!entry.is_regular_file() || entry.path().extension() != ".xml") continue;
+		if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
 
 		fileNameWithPath = work_stations_path.ToStdString() + entry.path().filename().string();
 		ReadWorkStationFile(fileNameWithPath, i);
@@ -841,20 +841,21 @@ auto cSettings::LoadWorkStationFiles() -> void
 
 auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileNum) -> void
 {
-	auto xmlFile = std::make_unique<rapidxml::file<>>(fileName.c_str());
-	auto document = std::make_unique<rapidxml::xml_document<>>();
-	document->parse<0>(xmlFile->data());
+	std::ifstream fileStream(fileName);
+	if (!fileStream.is_open())
+		return;
 
-	rapidxml::xml_node<>* selected_motors_node = document->first_node("selected_motors");
-	if (!selected_motors_node) return;
-
-	rapidxml::xml_node<>* element;
+	nlohmann::json j;
+	try {
+		fileStream >> j;
+	}
+	catch (...) {
+		return;  // Malformed JSON
+	}
 
 	// MotorManufacturer
-	element = SettingsVariables::FindNode(selected_motors_node, "motor_manufacturer");
-	if (element)
-	{
-		auto motorManufacturerStr = wxString(element->first_node()->value());
+	if (j.contains("motor_manufacturer")) {
+		const wxString motorManufacturerStr = wxString(j["motor_manufacturer"].get<std::string>());
 		if (motorManufacturerStr == "STANDA")
 			m_WorkStations->work_station_data[fileNum].motor_manufacturer = SettingsVariables::MotorManufacturers::STANDA;
 		else if (motorManufacturerStr == "XERYON")
@@ -862,51 +863,31 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 	}
 
 	// Detector
-	element = SettingsVariables::FindNode(selected_motors_node, "detector");
-	if (element)
-	{
-		for (auto detector = element->first_node(); detector; detector = detector->next_sibling())
-		{
-			// SN
-			auto node = detector->first_node();
-			auto value = node->value();
-			m_WorkStations->work_station_data[fileNum].selected_motors_in_data_file.Add(value);
-			// Steps/mm
-			auto steps_node = node->next_sibling();
-			auto steps_per_mm = std::stoi(std::string(steps_node->value()));
-			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(value), steps_per_mm));
-			//m_PhysicalMotors->SetStepsPerMMForTheMotor(value, steps_per_mm);
+	if (j.contains("detector")) {
+		for (const auto& motor : j["detector"]) {
+			const std::string sn = motor["SerialNumber"];
+			m_WorkStations->work_station_data[fileNum].selected_motors_in_data_file.Add(wxString(sn));
+			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(sn), 1));
 		}
 	}
 
 	// Optics
-	element = SettingsVariables::FindNode(selected_motors_node, "optics");
-	if (element)
-	{
-		for (auto optics = element->first_node(); optics; optics = optics->next_sibling())
-		{
-			// SN
-			auto node = optics->first_node();
-			auto value = node->value();
-			m_WorkStations->work_station_data[fileNum].selected_motors_in_data_file.Add(value);
-			// Steps/mm
-			auto steps_node = node->next_sibling();
-			auto steps_per_mm = std::stoi(std::string(steps_node->value()));
-			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(value), steps_per_mm));
-			//m_PhysicalMotors->SetStepsPerMMForTheMotor(value, steps_per_mm);
+	if (j.contains("optics")) {
+		for (const auto& motor : j["optics"]) {
+			const std::string sn = motor["SerialNumber"];
+			m_WorkStations->work_station_data[fileNum].selected_motors_in_data_file.Add(wxString(sn));
+			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(sn), 1));
 		}
 	}
 
 	// Camera
-	element = SettingsVariables::FindNode(selected_motors_node, "camera");
-	if (element)
-		m_WorkStations->work_station_data[fileNum].selected_camera_in_data_file = wxString(element->first_node()->value());
+	if (j.contains("camera")) {
+		m_WorkStations->work_station_data[fileNum].selected_camera_in_data_file = wxString(j["camera"].get<std::string>());
+	}
 
 	// CameraManufacturer
-	element = SettingsVariables::FindNode(selected_motors_node, "camera_manufacturer");
-	if (element)
-	{
-		auto cameraManufacturerStr = wxString(element->first_node()->value());
+	if (j.contains("camera_manufacturer")) {
+		const wxString cameraManufacturerStr = wxString(j["camera_manufacturer"].get<std::string>());
 		if (cameraManufacturerStr == "XIMEA")
 			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::XIMEA;
 		else if (cameraManufacturerStr == "MORAVIAN_INSTRUMENTS")
@@ -914,15 +895,13 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 	}
 
 	// PixelSizeUM
-	element = SettingsVariables::FindNode(selected_motors_node, "pixel_size_um");
-	if (element)
-		m_WorkStations->work_station_data[fileNum].pixelSizeUM= std::atof(element->first_node()->value());
+	if (j.contains("pixel_size_um")) {
+		m_WorkStations->work_station_data[fileNum].pixelSizeUM = j["pixel_size_um"].get<double>();
+	}
 
 	// Station
-	element = SettingsVariables::FindNode(selected_motors_node, "station");
-	if (element)
-	{
-		auto stationName = wxString(element->first_node()->value());
+	if (j.contains("station")) {
+		const wxString stationName = wxString(j["station"].get<std::string>());
 		m_WorkStations->work_station_data[fileNum].work_station_name = stationName;
 		m_WorkStations->all_work_station_array_str.Add(stationName);
 	}

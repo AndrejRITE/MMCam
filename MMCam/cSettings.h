@@ -147,8 +147,56 @@ namespace SettingsVariables
 		std::string COMPort = "";
 		double LastKnownPosition = 0.0;
 
-		// To serialize Stage to JSON
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Stage, SerialNumber, COMPort, LastKnownPosition)
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE
+		(
+			Stage, 
+			SerialNumber, 
+			COMPort, 
+			LastKnownPosition
+		)
+	};
+
+	struct StageSettings
+	{
+		std::string SerialNumber{};
+
+		int StepsPerMM{};
+
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE
+		(
+			StageSettings, 
+			SerialNumber, 
+			StepsPerMM
+		)
+	};
+
+	struct SelectedMotors 
+	{
+		std::string camera{};
+		std::string camera_manufacturer{};
+		std::string motor_manufacturer{};
+		std::string station{};
+
+		double pixel_size_um{};
+		int steps_per_mm{};
+
+		std::vector<StageSettings> detector{};
+		std::vector<StageSettings> optics{};
+
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE
+		(
+			SelectedMotors, 
+			camera, 
+			camera_manufacturer, 
+			motor_manufacturer, 
+			station, 
+
+			pixel_size_um, 
+			steps_per_mm,
+
+			detector, 
+			optics
+		)
 	};
 
 	static auto FindNode(rapidxml::xml_node<>* xmlNode, std::string nodeName) -> rapidxml::xml_node<>*
