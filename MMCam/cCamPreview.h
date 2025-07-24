@@ -272,6 +272,7 @@ public:
 
 	/* Annulus */
 	auto AddAnnulusOnCurrentImage() -> CameraPreviewVariables::Annulus;
+	auto RemoveAnnulusByID(const long& id) -> void;;
 	auto CalculateSumInsideAnnulus(CameraPreviewVariables::Annulus& annulus) -> void;
 	auto SetAnnulusIDSelected(const long& id) -> CameraPreviewVariables::Annulus;
 	auto UpdateAnnulusValues(CameraPreviewVariables::Annulus& annulus) -> void;

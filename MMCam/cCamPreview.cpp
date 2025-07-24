@@ -1126,6 +1126,14 @@ auto cCamPreview::AddAnnulusOnCurrentImage() -> CameraPreviewVariables::Annulus
 	return annulus;
 }
 
+auto cCamPreview::RemoveAnnulusByID(const long& id) -> void
+{
+	std::erase_if(m_AnnulusVec, [id](const CameraPreviewVariables::Annulus& a) 
+		{ return a.GetID() == id; });
+
+	m_ActivatedAnnulusNum = std::clamp(m_ActivatedAnnulusNum, -1, (int)m_AnnulusVec.size() - 1);
+}
+
 auto cCamPreview::CalculateSumInsideAnnulus(CameraPreviewVariables::Annulus& annulus) -> void
 {
 	if (!m_ImageData) return;

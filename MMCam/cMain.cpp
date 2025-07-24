@@ -89,6 +89,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R1_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
 	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
 	EVT_BUTTON(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN, cMain::OnAddAnnulusButton)
+	EVT_BUTTON(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_REMOVE_FROM_LIST_BTN, cMain::OnRemoveAnnulusButton)
 	EVT_LIST_COL_BEGIN_DRAG(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL, cMain::OnColBeginDrag)
 	EVT_LIST_ITEM_SELECTED(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL, cMain::OnAnnulusItemSelected)
 
@@ -145,10 +146,10 @@ cMain::cMain(const wxString& title_)
 
 #ifdef _DEBUG
 	// Press Open Button
-	//{
-	//	wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_FILE_OPEN);
-	//	ProcessEvent(artEvt);
-	//}
+	{
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_FILE_OPEN);
+		ProcessEvent(artEvt);
+	}
 
 	// Press Set Out Dir Button
 	{
@@ -157,16 +158,16 @@ cMain::cMain(const wxString& title_)
 	}
 
 	// Press Enable Annulus Button
-	//{
-	//	wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING);
-	//	ProcessEvent(artEvt);
-	//}
+	{
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING);
+		ProcessEvent(artEvt);
+	}
 
 	// Press Add Annulus Button
-	//{
-	//	wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN);
-	//	ProcessEvent(artEvt);
-	//}
+	{
+		wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN);
+		ProcessEvent(artEvt);
+	}
 
 	// Press Generate Button
 	{
@@ -4217,6 +4218,9 @@ auto cMain::OnAddAnnulusButton(wxCommandEvent& evt) -> void
 		CameraPreviewVariables::CreateStringWithPrecision(m_ToolsControls->annulusListCtrl->GetItemCount() + 1)
 	);
 
+	if (!index)
+		m_ToolsControls->removeAnnulusFromListBtn->Enable();
+
 	auto id = annulus.GetID();
 	m_ToolsControls->annulusListCtrl->SetItemData(index, id);
 
@@ -4241,6 +4245,54 @@ auto cMain::OnAddAnnulusButton(wxCommandEvent& evt) -> void
 		m_ToolsControls->annulusCenterYTxtCtrl->Enable();
 		m_ToolsControls->annulusR1TxtCtrl->Enable();
 		m_ToolsControls->annulusR2TxtCtrl->Enable();
+	}
+
+	Refresh();
+}
+
+auto cMain::OnRemoveAnnulusButton(wxCommandEvent& evt) -> void
+{
+	auto listCtrl = m_ToolsControls->annulusListCtrl.get();
+
+	// Get the selected item
+	long selected = listCtrl->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+	if (selected == -1)
+		return; // Nothing selected
+
+	// Get ID before deletion (so we can inform CamPreview)
+	auto annulusID = listCtrl->GetItemData(selected);
+	m_CamPreview->RemoveAnnulusByID(annulusID); // You should have this method in m_CamPreview
+
+	// Remove the item from the list
+	listCtrl->DeleteItem(selected);
+
+	// Renumber remaining items
+	long itemCount = listCtrl->GetItemCount();
+	for (long i = 0; i < itemCount; ++i)
+	{
+		listCtrl->SetItem(i, 0, CameraPreviewVariables::CreateStringWithPrecision(i + 1));
+	}
+
+	// If list becomes empty, disable controls
+	if (itemCount == 0)
+	{
+		m_ToolsControls->removeAnnulusFromListBtn->Disable();
+		m_ToolsControls->annulusCenterXTxtCtrl->Disable();
+		m_ToolsControls->annulusCenterYTxtCtrl->Disable();
+		m_ToolsControls->annulusR1TxtCtrl->Disable();
+		m_ToolsControls->annulusR2TxtCtrl->Disable();
+		m_CamPreview->SetAnnulusIDSelected(-1); // or an invalid state
+	}
+	else
+	{
+		// Optionally select the next item or the last one
+		long newSelection = std::min(selected, itemCount - 1);
+		listCtrl->SetItemState(newSelection, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+
+		auto newID = listCtrl->GetItemData(newSelection);
+		auto currAnnulus = m_CamPreview->SetAnnulusIDSelected(newID);
+
+		UpdateAnnulusTextCtrls(newSelection, currAnnulus);
 	}
 
 	Refresh();

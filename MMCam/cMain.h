@@ -661,6 +661,7 @@ private:
 	auto OnAnnulusButton(wxCommandEvent& evt) -> void;
 	auto OnAnnulusTxtCtrl(wxCommandEvent& evt) -> void;
 	auto OnAddAnnulusButton(wxCommandEvent& evt) -> void;
+	auto OnRemoveAnnulusButton(wxCommandEvent& evt) -> void;
 	auto OnColBeginDrag(wxListEvent& evt) -> void;
 	auto OnAnnulusItemSelected(wxListEvent& evt) -> void;
 	auto OnAnnulusListLeftDown(wxMouseEvent& evt) -> void;
