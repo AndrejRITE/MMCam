@@ -867,28 +867,18 @@ auto cCamPreview::DrawAnnulus(wxGraphicsContext* gc) -> void
 		const double pixelDrawWidth = actualHalfPixelSize.x * 2.0;
 		const double pixelDrawHeight = actualHalfPixelSize.y * 2.0;
 
-		for (int y = yStart; y <= yEnd; ++y)
-		{
-			const int dy = y - currAnnulus.m_Center.y;
-			for (int x = xStart; x <= xEnd; ++x)
+		ForEachPixelInAnnulus(currAnnulus, [&](int x, int y, uint16_t)
 			{
-				const int dx = x - currAnnulus.m_Center.x;
-				const int distSq = dx * dx + dy * dy;
+				// Compute canvas position
+				const double canvasX = x * pixelDrawWidth + imageStartDrawPoint.x;
+				const double canvasY = y * pixelDrawHeight + imageStartDrawPoint.y;
 
-				if (distSq >= r1Sq && distSq < r2Sq)
-				{
-					// Compute canvas position
-					const double canvasX = x * pixelDrawWidth + imageStartDrawPoint.x;
-					const double canvasY = y * pixelDrawHeight + imageStartDrawPoint.y;
+				// Check if within canvas boundaries (after pan/zoom)
+				if (canvasX + pixelDrawWidth < 0 || canvasX > m_CanvasSize.GetWidth()) return;
+				if (canvasY + pixelDrawHeight < 0 || canvasY > m_CanvasSize.GetHeight()) return;
 
-					// Check if within canvas boundaries (after pan/zoom)
-					if (canvasX + pixelDrawWidth < 0 || canvasX > m_CanvasSize.GetWidth()) continue;
-					if (canvasY + pixelDrawHeight < 0 || canvasY > m_CanvasSize.GetHeight()) continue;
-
-					gc->DrawRectangle(canvasX, canvasY, pixelDrawWidth, pixelDrawHeight);
-				}
-			}
-		}
+				gc->DrawRectangle(canvasX, canvasY, pixelDrawWidth, pixelDrawHeight);
+			});
 	}
 	else
 	{
@@ -1138,30 +1128,12 @@ auto cCamPreview::CalculateSumInsideAnnulus(CameraPreviewVariables::Annulus& ann
 {
 	if (!m_ImageData) return;
 
-	const int r1Sq = annulus.m_InnerRadius * annulus.m_InnerRadius;
-	const int r2Sq = annulus.m_OuterRadius * annulus.m_OuterRadius;
-
-	const int xStart = std::max(0, annulus.m_Center.x - (int)annulus.m_OuterRadius);
-	const int xEnd = std::min(m_ImageSize.GetWidth() - 1, annulus.m_Center.x + (int)annulus.m_OuterRadius);
-	const int yStart = std::max(0, annulus.m_Center.y - (int)annulus.m_OuterRadius);
-	const int yEnd = std::min(m_ImageSize.GetHeight() - 1, annulus.m_Center.y + (int)annulus.m_OuterRadius);
-
 	unsigned long long sum = 0;
 
-	for (int y = yStart; y <= yEnd; ++y) 
-	{
-		const int dy = y - annulus.m_Center.y;
-		for (int x = xStart; x <= xEnd; ++x) 
+	ForEachPixelInAnnulus(annulus, [&](int x, int y, uint16_t pixelValue)
 		{
-			const int dx = x - annulus.m_Center.x;
-			const int distSq = dx * dx + dy * dy;
-
-			if (distSq >= r1Sq && distSq < r2Sq) 
-			{
-				sum += m_ImageData[y * m_ImageSize.GetWidth() + x];
-			}
-		}
-	}
+			sum += pixelValue;
+		});
 
 	annulus.m_Sum = sum;
 }

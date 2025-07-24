@@ -350,6 +350,9 @@ private:
 	auto CalculateFWHM() -> void;
 	auto CalculateHEW() -> void;
 
+	template<typename Func>
+	void ForEachPixelInAnnulus(const CameraPreviewVariables::Annulus& annulus, Func&& callback);
+
 private:
 	/* Buttons on keyboard */
 	bool m_CTRLPressed{};
@@ -430,5 +433,36 @@ private:
 	DECLARE_EVENT_TABLE();
 };
 
-#endif // !CCAM_PREVIEW_H
+template<typename Func>
+void cCamPreview::ForEachPixelInAnnulus
+(
+	const CameraPreviewVariables::Annulus& annulus, 
+	Func&& callback
+)
+{
+	if (!m_ImageData) return;
 
+	const int r1Sq = annulus.m_InnerRadius * annulus.m_InnerRadius;
+	const int r2Sq = annulus.m_OuterRadius * annulus.m_OuterRadius;
+
+	const int xStart = std::max(0, annulus.m_Center.x - (int)annulus.m_OuterRadius);
+	const int xEnd = std::min(m_ImageSize.GetWidth() - 1, annulus.m_Center.x + (int)annulus.m_OuterRadius);
+	const int yStart = std::max(0, annulus.m_Center.y - (int)annulus.m_OuterRadius);
+	const int yEnd = std::min(m_ImageSize.GetHeight() - 1, annulus.m_Center.y + (int)annulus.m_OuterRadius);
+
+	for (int y = yStart; y <= yEnd; ++y)
+	{
+		const int dy = y - annulus.m_Center.y;
+		for (int x = xStart; x <= xEnd; ++x)
+		{
+			const int dx = x - annulus.m_Center.x;
+			const int distSq = dx * dx + dy * dy;
+
+			if (distSq >= r1Sq && distSq < r2Sq)
+			{
+				callback(x, y, m_ImageData[y * m_ImageSize.GetWidth() + x]);
+			}
+		}
+	}
+}
+#endif // !CCAM_PREVIEW_H
