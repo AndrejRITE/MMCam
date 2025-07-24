@@ -444,8 +444,6 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 	main_panel_sizer->AddSpacer(5);
 	main_panel_sizer->AddStretchSpacer();
 
-	UpdatePreviousStatesData();
-
 	m_MainPanel->SetSizer(main_panel_sizer);
 	panel_sizer->Add(m_MainPanel.get(), 1, wxEXPAND);
 }
@@ -488,67 +486,8 @@ auto cSettings::CreateCameraSection(wxPanel* panel, wxBoxSizer* panel_sizer) -> 
 	}
 
 	cameraStaticBoxSizer->AddStretchSpacer();
-	//// Temperature
-	//{
-	//	auto temperatureBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "&Temperature [degC]");
-	//	auto txtCtrlSize = wxSize(80, 24);
-
-	//	wxFloatingPointValidator<float>	val(1, NULL, wxNUM_VAL_ZERO_AS_BLANK);
-	//	val.SetRange(-20.0, 50.0);
-
-	//	m_Camera->temperatureTxtCtrl = new wxTextCtrl
-	//	(
-	//		panel, 
-	//		SettingsVariables::ID_CAM_TEMPERATURE_TXT_CTRL, 
-	//		wxT("15.0"),
-	//		wxDefaultPosition, 
-	//		txtCtrlSize,
-	//		wxTE_CENTRE
-	//	);
-
-	//	temperatureBoxSizer->AddStretchSpacer();
-	//	temperatureBoxSizer->Add(m_Camera->temperatureTxtCtrl, 0, wxEXPAND);
-	//	temperatureBoxSizer->AddStretchSpacer();
-
-	//	cameraStaticBoxSizer->Add(temperatureBoxSizer, 0, wxEXPAND);
-	//}
-	//cameraStaticBoxSizer->AddStretchSpacer();
-
-	//// Binning
-	//{
-	//	auto binningBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "&Binning");
-	//	//auto txtCtrlSize = wxSize(80, 24);
-
-	//	//wxFloatingPointValidator<float>	val(1, NULL, wxNUM_VAL_ZERO_AS_BLANK);
-	//	//val.SetRange(-20.0, 50.0);
-
-	//	m_Camera->binningsArrayStr.Add("1");
-	//	m_Camera->binningsArrayStr.Add("2");
-	//	m_Camera->binningsArrayStr.Add("4");
-	//	m_Camera->binningsArrayStr.Add("8");
-	//	m_Camera->binningsArrayStr.Add("16");
-
-	//	m_Camera->binningChoice = new wxChoice
-	//	(
-	//		panel, 
-	//		SettingsVariables::ID_CAM_BINNING_CHOICE, 
-	//		wxDefaultPosition, 
-	//		wxDefaultSize,
-	//		m_Camera->binningsArrayStr
-	//	);
-
-	//	m_Camera->binningChoice->SetSelection(0);
-
-	//	binningBoxSizer->AddStretchSpacer();
-	//	binningBoxSizer->Add(m_Camera->binningChoice, 0, wxEXPAND);
-	//	binningBoxSizer->AddStretchSpacer();
-
-	//	cameraStaticBoxSizer->Add(binningBoxSizer, 0, wxEXPAND);
-	//}
-	//cameraStaticBoxSizer->AddStretchSpacer();
 
 	panel_sizer->Add(cameraStaticBoxSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
-
 }
 
 auto cSettings::CreateOtherSettings(wxBoxSizer* panel_sizer) -> void
@@ -557,13 +496,6 @@ auto cSettings::CreateOtherSettings(wxBoxSizer* panel_sizer) -> void
 
 void cSettings::InitDefaultStateWidgets()
 {
-	/* Disabling X and Z Optics motors choices */
-	{
-		//m_Motors->m_Optics[0].motor->Disable();
-		//m_Motors->m_Optics[2].motor->Disable();
-	}
-
-	//m_RefreshBtn->Disable();
 }
 
 void cSettings::InitComponents()
@@ -576,10 +508,6 @@ void cSettings::InitComponents()
 void cSettings::BindControls()
 {
 	m_WorkStations->work_station_choice->Bind(wxEVT_CHOICE, &cSettings::OnWorkStationChoice, this);
-	/* Binding Bottom Buttons */
-	//m_RefreshBtn->Bind(wxEVT_BUTTON, &cSettings::OnRefreshBtn, this);
-	//m_OkBtn->Bind(wxEVT_BUTTON, &cSettings::OnOkBtn, this);
-	//m_CancelBtn->Bind(wxEVT_BUTTON, &cSettings::OnCancelBtn, this);
 }
 
 void cSettings::UpdateRangesTextCtrls()
@@ -681,7 +609,7 @@ auto cSettings::UpdateMotorsAndCameraTXTCtrls(const short selected_work_station)
 void cSettings::OnRefreshBtn(wxCommandEvent& evt)
 {
 	wxBusyCursor busy_cursor{};
-	SelectMotorsAndRangesOnWXChoice();
+
 	for (auto motor{ 0 }; motor < m_MotorsCount; ++motor)
 	{
 		if (motor < m_MotorsCount / 2)
@@ -693,7 +621,6 @@ void cSettings::OnRefreshBtn(wxCommandEvent& evt)
 			m_Motors->m_Optics[motor - m_MotorsCount / 2].steps_per_mm->SetLabel("None");
 		}
 	}
-	ResetAllMotorsAndRangesInXMLFile();
 }
 
 bool cSettings::CheckIfThereIsCollisionWithMotors()
@@ -939,176 +866,6 @@ void cSettings::SelectMotorsAndRangesFromXMLFile()
 	};
 }
 
-void cSettings::SelectMotorsAndRangesOnWXChoice()
-{
-}
-
-void cSettings::UpdatePreviousStatesData()
-{
-}
-
-void cSettings::SetPreviousStatesDataAsCurrentSelection()
-{
-}
-
-void cSettings::WriteActualSelectedMotorsAndRangesIntoXMLFile()
-{
-	//auto document = std::make_unique<rapidxml::xml_document<>>();
-	//// Open *.xml file
-	//std::ifstream xml_file(xml_file_path.mb_str());
-	//// Preparing buffer
-	//std::stringstream file_buffer;
-	//file_buffer << xml_file.rdbuf();
-	//xml_file.close();
-
-	//std::string content(file_buffer.str());
-	//document->parse<0 | rapidxml::parse_no_data_nodes>(&content[0]);
-	//rapidxml::xml_node<>* motors_node = document->first_node("motors");
-
-	//if (!motors_node)
-	//	return;
-
-	//int count{};
-	//for (
-	//	rapidxml::xml_node<>* motor = motors_node->first_node()->first_node(); 
-	//	motor; 
-	//	motor = motor->next_sibling()
-	//	)
-	//{
-	//	motor->first_node()->value(m_Motors->xml_all_motors[0][count]);
-	//	motor->first_node()->next_sibling()->value(m_Motors->xml_all_motors[1][count]);
-	//	++count;
-	//}
-
-
-	//uint8_t position_in_unique_array{};
-	//auto xml_parser = [&](rapidxml::xml_node<>* motor_array, const int& i) 
-	//{
-	//	if (i < m_MotorsCount / 2)
-	//	{
-	//		//position_in_unique_array = m_Motors->m_Detector[i].prev_selection[0];
-	//		motor_array->first_node()->value(m_Motors->unique_motors[0][position_in_unique_array]);
-
-	//		//position_in_unique_array = m_Motors->m_Detector[i].prev_selection[1];
-	//		motor_array->first_node()->next_sibling()->value(m_Motors->unique_motors[1][position_in_unique_array]);
-	//	}
-	//	else
-	//	{
-	//		//position_in_unique_array = m_Motors->m_Optics[i - m_MotorsCount / 2].prev_selection[0];
-	//		motor_array->first_node()->value(m_Motors->unique_motors[0][position_in_unique_array]);
-
-	//		//position_in_unique_array = m_Motors->m_Optics[i - m_MotorsCount / 2].prev_selection[1];
-	//		motor_array->first_node()->next_sibling()->value(m_Motors->unique_motors[1][position_in_unique_array]);
-	//	}
-	//};
-	///* Changing values of selected motors data in XML file */
-	//count = 0;
-	//for (
-	//	rapidxml::xml_node<>* detector = motors_node->first_node()->next_sibling()->first_node()->first_node(); 
-	//	detector; 
-	//	detector = detector->next_sibling()
-	//	)
-	//{
-	//	xml_parser(detector, count);
-	//	++count;
-	//}
-	//for (
-	//	rapidxml::xml_node<>* optics = motors_node->first_node()->next_sibling()->first_node()->next_sibling()->first_node(); 
-	//	optics; 
-	//	optics = optics->next_sibling()
-	//	)
-	//{
-	//	xml_parser(optics, count);
-	//	++count;
-	//}
-
-	//// Save to file
-	//std::ofstream out_file(xml_file_path.mb_str());
-	//if (out_file.is_open())
-	//{
-	//	out_file << "<?xml version=\"1.0\"?>\n";
-	//	out_file << *document;
-	//	out_file.close();
-	//}
-	//document->clear();
-}
-
-void cSettings::ResetAllMotorsAndRangesInXMLFile()
-{
-	//auto document = std::make_unique<rapidxml::xml_document<>>();
-	//// Open *.xml file
-	//std::ifstream xml_file(xml_file_path.mb_str());
-	//// Preparing buffer
-	//std::stringstream file_buffer;
-	//file_buffer << xml_file.rdbuf();
-	//xml_file.close();
-
-	//std::string content(file_buffer.str());
-	//document->parse<0 | rapidxml::parse_no_data_nodes>(&content[0]);
-	//rapidxml::xml_node<>* motors_node = document->first_node("motors");
-
-	//if (!motors_node)
-	//	return;
-
-	//int count{};
-	///* Changing values in all_motors node */
-	//for (
-	//	rapidxml::xml_node<>* motor = motors_node->first_node()->first_node(); 
-	//	motor; 
-	//	motor = motor->next_sibling()
-	//	)
-	//{
-	//	motor->first_node()->value("None");
-	//	motor->first_node()->next_sibling()->value("None");
-	//	++count;
-	//}
-
-
-	//auto xml_parser = [&](rapidxml::xml_node<>* motor_array, const int& i) 
-	//{
-	//	if (i < m_MotorsCount / 2)
-	//	{
-	//		motor_array->first_node()->value("None");
-	//		motor_array->first_node()->next_sibling()->value("None");
-	//	}
-	//	else
-	//	{
-	//		motor_array->first_node()->value("None");
-	//		motor_array->first_node()->next_sibling()->value("None");
-	//	}
-	//};
-	///* Changing values in selected_motors node */
-	//count = 0;
-	//for (
-	//	rapidxml::xml_node<>* detector = motors_node->first_node()->next_sibling()->first_node()->first_node(); 
-	//	detector; 
-	//	detector = detector->next_sibling()
-	//	)
-	//{
-	//	xml_parser(detector, count);
-	//	++count;
-	//}
-	//for (
-	//	rapidxml::xml_node<>* optics = motors_node->first_node()->next_sibling()->first_node()->next_sibling()->first_node(); 
-	//	optics; 
-	//	optics = optics->next_sibling()
-	//	)
-	//{
-	//	xml_parser(optics, count);
-	//	++count;
-	//}
-
-	//// Save to file
-	//std::ofstream out_file(xml_file_path.mb_str());
-	//if (out_file.is_open())
-	//{
-	//	out_file << "<?xml version=\"1.0\"?>\n";
-	//	out_file << *document;
-	//	out_file.close();
-	//}
-	//document->clear();
-}
-
 auto cSettings::InitializeXeryonAndCheckPython() -> void
 {
 	wxBusyCursor busy;
@@ -1145,10 +902,12 @@ auto cSettings::ReadStagePositionsFromJSONFile() -> void
 	if (!stages.size()) return;
 
 	auto motorsCount = m_WorkStations->work_station_data[0].selected_motors_in_data_file.size();
+
 	for (auto i{ 0 }; i < motorsCount; ++i)
 	{
 		auto motorSN = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[i];
 		auto steps_per_mm = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].motors_steps_per_mm[motorSN];
+
 		for (const auto& stage : stages)
 		{
 			if (stage.SerialNumber == motorSN.ToStdString())
@@ -1158,11 +917,11 @@ auto cSettings::ReadStagePositionsFromJSONFile() -> void
 					motorSN.ToStdString(), 
 					stage.LastKnownPosition
 				);
+
 				break;
 			}
 		}
 	}
-
 }
 
 auto cSettings::PrepareStagesDataAndWriteThemIntoJSONFile() -> void

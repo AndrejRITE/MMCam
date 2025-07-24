@@ -342,16 +342,8 @@ private:
 	auto CompareXMLWithConnectedDevices();
 	auto LoadWorkStationFiles() -> void;
 	auto ReadWorkStationFile(const std::string& fileName, const int fileNum) -> void;
-	//void ReadXMLFile();
 	void UpdateUniqueArray();
 	void SelectMotorsAndRangesFromXMLFile();
-	void SelectMotorsAndRangesOnWXChoice();
-	void UpdatePreviousStatesData();
-	void SetPreviousStatesDataAsCurrentSelection();
-	void WriteActualSelectedMotorsAndRangesIntoXMLFile();
-	void ResetAllMotorsAndRangesInXMLFile();
-
-	//auto UpdateConfig() -> void;
 
 	auto InitializeXeryonAndCheckPython() -> void;
 
@@ -466,18 +458,14 @@ private:
 	SettingsVariables::CameraManufacturers m_CameraManufacturer{};
 	wxArrayString m_XRayImagesCaptions{};
 	wxString m_UploadReportFolder{};
-	//const wxString xml_file_path = "src\\old_xml\\mtrs.xml";
 	std::unique_ptr<SettingsVariables::WorkStations> m_WorkStations{};
-	//std::unique_ptr<wxButton> m_OkBtn{}, m_CancelBtn{}, m_RefreshBtn{};
 	std::unique_ptr<SettingsVariables::MotorSettingsArray> m_Motors{};
 	
-	// TODO: Move to Polymorphic class IMotorFactory
 	std::unique_ptr<IMotorArray> m_PhysicalMotors{};
 
 	std::unique_ptr<SettingsVariables::Camera> m_Camera{};
 	const int m_MotorsCount{ 6 };
 	std::unique_ptr<SettingsVariables::ProgressValues> m_Progress = std::make_unique<SettingsVariables::ProgressValues>();
-	//std::unique_ptr<wxTextCtrl> m_GridMeshStepPXTxtCtrl{}, m_CircleMeshStepPXTxtCtrl{};
 
 	wxColour m_BackgroundColour = wxColour(90, 90, 90);
 };
