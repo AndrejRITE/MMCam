@@ -109,18 +109,22 @@ Copy-Item -Path "${other_files_folder}\xeryon_goCenter.py" -Destination "${relea
 Copy-Item -Path "${other_files_folder}\xeryon_setAbsolutePosition.py" -Destination "${release_folder}\xeryon_setAbsolutePosition.py" -Force
 Copy-Item -Path "${other_files_folder}\requirements.txt" -Destination "${release_folder}\requirements.txt" -Force
 
-# Check if the src folder exists, and create it if not
+# Define the source and destination folders
 $src_folder = "${release_folder}\src"
-# Check if the temp folder exists, and create it if not
-if (-not (Test-Path -Path $src_folder)) 
-{
-    New-Item -Path $src_folder -ItemType Directory
+$source_files_folder = "${other_files_folder}\src"
+
+# Ensure the destination folder exists
+if (-not (Test-Path -Path $src_folder)) {
+    New-Item -Path $src_folder -ItemType Directory | Out-Null
 }
-Copy-Item -Path "${other_files_folder}\src\bruker.xml" -Destination "${src_folder}\bruker.xml" -Force
-Copy-Item -Path "${other_files_folder}\src\experimental.xml" -Destination "${src_folder}\experimental.xml" -Force
-Copy-Item -Path "${other_files_folder}\src\lepeni_a.xml" -Destination "${src_folder}\lepeni_a.xml" -Force
-Copy-Item -Path "${other_files_folder}\src\specs.xml" -Destination "${src_folder}\specs.xml" -Force
-Copy-Item -Path "${other_files_folder}\src\cexot.xml" -Destination "${src_folder}\cexot.xml" -Force
+
+# Get all JSON files excluding those with names starting with 'debug_'
+$json_files = Get-ChildItem -Path $source_files_folder -Filter *.json | Where-Object { $_.Name -notlike 'debug_*.json' }
+
+# Copy the filtered files to the destination
+foreach ($file in $json_files) {
+    Copy-Item -Path $file.FullName -Destination $src_folder -Force
+}
 
 
 # Check if the ReportGenerator folder exists, and create it if not
