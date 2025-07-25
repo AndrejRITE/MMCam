@@ -338,6 +338,8 @@ void cMain::CreateMenuBarOnFrame()
 			m_MenuBar->menu_file->Append(item);
 		}
 
+		m_MenuBar->menu_file->AppendSeparator();
+
 		// Quit
 		{
 			auto itemID = MainFrameVariables::ID_MENUBAR_FILE_QUIT;
@@ -2829,8 +2831,8 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 		imgIndexCircleMesh
 	);
 
-#ifndef _DEBUG
 	m_ToolsControlsNotebook->Show(false);
+#ifndef _DEBUG
 #endif // !_DEBUG
 
 	right_side_panel_sizer->Add(m_ToolsControlsNotebook, 0, wxEXPAND | wxALL, 5);
