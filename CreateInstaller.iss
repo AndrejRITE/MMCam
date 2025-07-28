@@ -80,32 +80,33 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  InstallPath: string;
+  InstallPath, UninstallerPath: string;
   ResultCode: Integer;
 begin
   if CurStep = ssInstall then
   begin
     InstallPath := GetInstallPath;
 
-    // Check if the application is already installed
     if InstallPath <> '' then
     begin
-      // MsgBox('Previous installation detected. Uninstalling...', mbInformation, MB_OK);
-
-      // Construct the path to unins000.exe
-      InstallPath := ExpandConstant(InstallPath + '\unins000.exe');
-
-      // Uninstall the existing application silently
-      if Exec(InstallPath, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+      UninstallerPath := ExpandConstant(InstallPath + '\unins000.exe');
+      if FileExists(UninstallerPath) then
       begin
-        if ResultCode <> 0 then
+        if Exec(UninstallerPath, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
         begin
-          MsgBox('Error during uninstallation. Error code: ' + IntToStr(ResultCode), mbError, MB_OK);
+          if ResultCode <> 0 then
+          begin
+            MsgBox('Error during uninstallation. Error code: ' + IntToStr(ResultCode), mbError, MB_OK);
+          end;
+        end
+        else
+        begin
+          MsgBox('Failed to execute uninstallation process. File: ' + UninstallerPath, mbError, MB_OK);
         end;
       end
       else
       begin
-        MsgBox('Failed to execute uninstallation process.', mbError, MB_OK);
+        MsgBox('Uninstaller not found at: ' + UninstallerPath, mbError, MB_OK);
       end;
     end;
   end;
