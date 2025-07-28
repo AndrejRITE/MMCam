@@ -7,7 +7,7 @@ MMCam is a software application designed for processing and visualizing raw imag
 
 - Visualization of captured data
 
-![Screenshot of the main application window.](/MMCam/src/img/main_app_window.png)
+![Screenshot of the main application window.](/MMCam/src/About/img/main_app_window.png)
 
 ## Important notes
 
