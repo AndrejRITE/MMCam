@@ -538,6 +538,7 @@ auto cCamPreview::OnEnterPanel(wxMouseEvent& evt) -> void
 
 auto cCamPreview::OnLeavePanel(wxMouseEvent& evt) -> void
 {
+	m_CTRLPressed = false;
 	OnPreviewMouseLeftReleased(evt);
 }
 
