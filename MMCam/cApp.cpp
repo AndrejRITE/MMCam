@@ -8,9 +8,10 @@ cApp::cApp()
 
 bool cApp::OnInit()
 {
+	SetAppearance(Appearance::System);
+
 	::wxInitAllImageHandlers();
 	m_cMainFrame = new cMain(wxT("MMCam"));
-	//m_cMainFrame->Show();
 	return true;
 }
 

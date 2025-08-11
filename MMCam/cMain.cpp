@@ -280,6 +280,11 @@ void cMain::CreateMenuBarOnFrame()
 	this->SetMenuBar(m_MenuBar->menu_bar);
 
 	auto initBitmapSize = wxSize(16, 16);
+
+	auto isDark = wxSystemSettings::GetAppearance().IsDark();
+
+	auto color = isDark ? wxColour(200, 200, 200) : wxColour(0, 0, 0);
+
 	// File Menu
 	{
 		// Open
@@ -291,7 +296,7 @@ void cMain::CreateMenuBarOnFrame()
 				wxVector<wxBitmap> bitmaps;
 				auto bitmap = wxART_FILE_OPEN;
 				auto client = wxART_CLIENT_MATERIAL_ROUND;
-				auto color = wxColour(0, 0, 0);
+
 				for (auto i{ 0 }; i < 3; ++i)
 					bitmaps.push_back
 					(
@@ -319,7 +324,7 @@ void cMain::CreateMenuBarOnFrame()
 				wxVector<wxBitmap> bitmaps;
 				auto bitmap = wxART_SAVE;
 				auto client = wxART_CLIENT_MATERIAL_ROUND;
-				auto color = wxColour(0, 0, 0);
+
 				for (auto i{ 0 }; i < 3; ++i)
 					bitmaps.push_back
 					(
@@ -349,7 +354,7 @@ void cMain::CreateMenuBarOnFrame()
 				wxVector<wxBitmap> bitmaps;
 				auto bitmap = wxART_CLOSE;
 				auto client = wxART_CLIENT_MATERIAL_ROUND;
-				auto color = wxColour(0, 0, 0);
+
 				for (auto i{ 0 }; i < 3; ++i)
 					bitmaps.push_back
 					(
@@ -384,7 +389,7 @@ void cMain::CreateMenuBarOnFrame()
 				wxVector<wxBitmap> bitmaps;
 				auto bitmap = wxART_CAMERA_SPARKLES;
 				auto client = wxART_CLIENT_FLUENTUI_FILLED;
-				auto color = wxColour(0, 0, 0);
+
 				for (auto i{ 0 }; i < 3; ++i)
 					bitmaps.push_back
 					(
@@ -426,7 +431,7 @@ void cMain::CreateMenuBarOnFrame()
 				wxVector<wxBitmap> bitmaps;
 				auto bitmap = wxART_SETTINGS;
 				auto client = wxART_CLIENT_FLUENTUI_FILLED;
-				auto color = wxColour(0, 0, 0);
+
 				for (auto i{ 0 }; i < 3; ++i)
 					bitmaps.push_back
 					(
@@ -470,7 +475,7 @@ void cMain::CreateMenuBarOnFrame()
 				wxVector<wxBitmap> bitmaps;
 				auto bitmap = wxART_TOOLBOX;
 				auto client = wxART_CLIENT_FLUENTUI_FILLED;
-				auto color = wxColour(0, 0, 0);
+
 				for (auto i{ 0 }; i < 3; ++i)
 					bitmaps.push_back
 					(
@@ -534,7 +539,6 @@ void cMain::CreateMenuBarOnFrame()
 			wxVector<wxBitmap> bitmaps;
 			auto bitmap = wxART_MAXIMIZE;
 			auto client = wxART_CLIENT_FLUENTUI_FILLED;
-			auto color = wxColour(0, 0, 0);
 
 			for (auto i{ 0 }; i < 3; ++i)
 				bitmaps.push_back
@@ -572,7 +576,6 @@ void cMain::CreateMenuBarOnFrame()
 			wxVector<wxBitmap> bitmaps;
 			auto bitmap = wxART_BOOK_QUESTION_MARK;
 			auto client = wxART_CLIENT_FLUENTUI_FILLED;
-			auto color = wxColour(0, 0, 0);
 
 			for (auto i{ 0 }; i < 3; ++i)
 				bitmaps.push_back
@@ -1695,7 +1698,7 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		)
 	);
 
-	property->ChangeFlag(wxPG_PROP_READONLY, true);
+	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
 	//boldFont.SetWeight(wxFONTWEIGHT_NORMAL);
 
@@ -1709,7 +1712,8 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		)
 	);
 
-	property->ChangeFlag(wxPG_PROP_READONLY, true);
+	//property->ChangeFlag(wxPG_PROP_READONLY, true);
+	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
 	property = m_CurrentCameraSettingsPropertyGrid->Append
 	(
@@ -1721,7 +1725,8 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		)
 	);
 
-	property->ChangeFlag(wxPG_PROP_READONLY, true);
+	//property->ChangeFlag(wxPG_PROP_READONLY, true);
+	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
 	auto pixelGroup = m_CurrentCameraSettingsPropertyGrid->Append(new wxPropertyCategory("Sensor Size [px]", "SensorSizePixels"));
 
@@ -1736,7 +1741,8 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		)
 	);
 
-	property->ChangeFlag(wxPG_PROP_READONLY, true);
+	//property->ChangeFlag(wxPG_PROP_READONLY, true);
+	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
 	property = m_CurrentCameraSettingsPropertyGrid->AppendIn
 	(
@@ -1749,7 +1755,8 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		)
 	);
 
-	property->ChangeFlag(wxPG_PROP_READONLY, true);
+	//property->ChangeFlag(wxPG_PROP_READONLY, true);
+	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
 	auto micronsGroup = m_CurrentCameraSettingsPropertyGrid->Append(new wxPropertyCategory("Sensor Size [um]", "SensorSizeMicrons"));
 
@@ -1764,7 +1771,8 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		)
 	);
 
-	property->ChangeFlag(wxPG_PROP_READONLY, true);
+	//property->ChangeFlag(wxPG_PROP_READONLY, true);
+	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
 	property = m_CurrentCameraSettingsPropertyGrid->AppendIn
 	(
@@ -1777,7 +1785,8 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		)
 	);
 
-	property->ChangeFlag(wxPG_PROP_READONLY, true);
+	//property->ChangeFlag(wxPG_PROP_READONLY, true);
+	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
 	auto it = m_CurrentCameraSettingsPropertyGrid->GetIterator();
 	int i = 0;
@@ -3459,7 +3468,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 	// Exposure
 	{
 		auto exposure_str = CameraPreviewVariables::CreateStringWithPrecision(m_Config->default_exposure_ms, 0);
-		m_CameraTabControls->camExposure->SetLabel(exposure_str);
+		m_CameraTabControls->camExposure->SetValue(exposure_str);
 	}
 
 	// Colormap
@@ -3496,13 +3505,13 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 	{
 		auto sensor_temperature = m_Config->default_cooled_sensor_temperature_degC;
 		auto sensor_temperature_str = CameraPreviewVariables::CreateStringWithPrecision(sensor_temperature, 1);
-		m_CameraTabControls->camSensorTemperature->SetLabel(sensor_temperature_str);
+		m_CameraTabControls->camSensorTemperature->SetValue(sensor_temperature_str);
 	}
 
 	// CrossHair Averaging Width
 	{
 		auto avgWidth = CameraPreviewVariables::CreateStringWithPrecision(m_Config->crosshair_averaging_width);
-		m_ToolsControls->crosshairAveragingWidthTxtCtrl->SetLabel(avgWidth);
+		m_ToolsControls->crosshairAveragingWidthTxtCtrl->SetValue(avgWidth);
 	}
 
 	// CrossHair Adaptive Scaling
@@ -3517,13 +3526,13 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 	// Grid Mesh Step
 	{
 		auto step_str = CameraPreviewVariables::CreateStringWithPrecision(m_Config->grid_mesh_step_px, 0);
-		m_ToolsControls->gridMeshStepTxtCtrl->SetLabel(step_str);
+		m_ToolsControls->gridMeshStepTxtCtrl->SetValue(step_str);
 	}
 
 	// Circle Mesh Step
 	{
 		auto step_str = CameraPreviewVariables::CreateStringWithPrecision(m_Config->circle_mesh_step_px, 0);
-		m_ToolsControls->circleMeshStepTxtCtrl->SetLabel(step_str);
+		m_ToolsControls->circleMeshStepTxtCtrl->SetValue(step_str);
 	}
 }
 

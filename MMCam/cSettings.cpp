@@ -583,7 +583,7 @@ auto cSettings::UpdateMotorsAndCameraTXTCtrls(const short selected_work_station)
 		if (i < 3)
 		{
 			// SN
-			m_Motors->m_Detector[i].motor->SetLabel(motorSN);
+			m_Motors->m_Detector[i].motor->SetValue(motorSN);
 			m_Motors->m_Detector[i].motor_sn = motorSN;
 			// Steps/mm
 			m_Motors->m_Detector[i].steps_per_mm->SetLabel(wxString::Format(wxT("%i"), steps_per_mm));
@@ -591,13 +591,13 @@ auto cSettings::UpdateMotorsAndCameraTXTCtrls(const short selected_work_station)
 		else
 		{
 			// SN
-			m_Motors->m_Optics[i - 3].motor->SetLabel(motorSN);
+			m_Motors->m_Optics[i - 3].motor->SetValue(motorSN);
 			m_Motors->m_Optics[i - 3].motor_sn = motorSN;
 			// Steps/mm
 			m_Motors->m_Optics[i - 3].steps_per_mm->SetLabel(wxString::Format(wxT("%i"), steps_per_mm));
 		}
 	}
-	m_Camera->idTxtCtrl->SetLabel(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_camera_in_data_file);
+	m_Camera->idTxtCtrl->SetValue(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_camera_in_data_file);
 	m_Camera->selectedCameraIDStr = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_camera_in_data_file;
 
 	m_PixelSizeUM = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].pixelSizeUM;

@@ -42,7 +42,7 @@
 #include <wx/msw/window.h>
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 22
+#define MINOR_VERSION 23
 
 namespace MainFrameVariables
 {
