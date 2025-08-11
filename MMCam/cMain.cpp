@@ -744,11 +744,8 @@ void cMain::CreateRightSide(wxSizer* right_side_sizer)
 	m_RightSidePanel = new wxScrolledWindow(this);
 	//m_RightSidePanel = new wxPanel(this);
 	m_RightSidePanel->SetScrollRate(5, 5); // Needed for scrolling
-#ifdef _DEBUG
-	m_RightSidePanel->SetBackgroundColour(wxColor(150, 100, 180));
-#else
-	m_RightSidePanel->SetBackgroundColour(wxColor(255, 255, 255));
-#endif // _DEBUG
+
+	m_RightSidePanel->SetBackgroundColour(wxColor(75, 75, 75));
 
 	wxBoxSizer* right_side_panel_sizer = new wxBoxSizer(wxVERTICAL);
 
@@ -2902,7 +2899,8 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 	{
 		m_CamPreview->SetBackgroundColor(m_BlackAppearanceColor);
 
-		bckgColour = wxColour(m_BlackAppearanceColor.GetRed() + 100, m_BlackAppearanceColor.GetGreen() + 100, m_BlackAppearanceColor.GetBlue() + 100);
+		bckgColour = m_BlackAppearanceColor;
+		//bckgColour = wxColour(m_BlackAppearanceColor.GetRed() + 100, m_BlackAppearanceColor.GetGreen() + 100, m_BlackAppearanceColor.GetBlue() + 100);
 	}
 
 	m_Settings->SetBackgroundColour(bckgColour);

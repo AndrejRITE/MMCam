@@ -1540,8 +1540,8 @@ private:
 	//bool m_LiveCapturingEndedDrawingOnCamPreview{ true };
 
 	/* Appearance Colors */
-	const wxColour m_DefaultAppearanceColor = wxColour(255, 255, 255);
-	const wxColour m_BlackAppearanceColor = wxColour(30, 30, 30);
+	const wxColour m_DefaultAppearanceColor = wxColour(180, 180, 180);
+	const wxColour m_BlackAppearanceColor = wxColour(75, 75, 75);
 
 	std::unique_ptr<wxStatusBar> m_StatusBar{};
 	std::unique_ptr<wxGauge> m_ProgressBar{};
