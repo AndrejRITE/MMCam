@@ -27,7 +27,7 @@
 #include <regex>
 #include <algorithm>
 
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 
 #include "cStylishComboBox.h"
 #include "cHistogramPanel.h"
