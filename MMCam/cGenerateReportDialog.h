@@ -11,7 +11,7 @@
 #include "wx/valnum.h"
 #include "wx/tglbtn.h"
 #include "wx/bmpbuttn.h"
-#include "wxMaterialDesignArtProvider.hpp"
+#include "MaterialDesign/wxMaterialDesignArtProvider.hpp"
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>

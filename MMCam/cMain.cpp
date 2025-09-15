@@ -6433,7 +6433,7 @@ auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 
 		//file.SetExt("bmp");
 		file.SetExt("txt");
-		if (!InvokePlotGraphCreation("plotGraph", file.GetFullPath()));
+		if (!InvokePlotGraphCreation("plotGraph", file.GetFullPath())) return;
 
 		file.SetExt("png");
 		RemoveBackgroundFromTheImage(file.GetFullPath());
@@ -6466,7 +6466,7 @@ auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 
 		//file.SetExt("bmp");
 		file.SetExt("txt");
-		if (!InvokePlotGraphCreation("plotGraph", file.GetFullPath()));
+		if (!InvokePlotGraphCreation("plotGraph", file.GetFullPath())) return;
 
 		file.SetExt("png");
 		RemoveBackgroundFromTheImage(file.GetFullPath());
@@ -7656,7 +7656,7 @@ wxBitmap WorkerThread::CreateGraph
 		{
 			dc.SetPen(wxPen(cellColour, 1, wxPENSTYLE_LONG_DASH));
 			dc.SetTextForeground(cellColour);
-			for (auto i{ 0 }; i < dataSize; ++i)
+			for (auto i{ 0 }; i < static_cast<int>(dataSize); ++i)
 			{
 
 				currTextValue = CameraPreviewVariables::CreateStringWithPrecision(positionsData[i], m_DecimalDigits);
@@ -7696,7 +7696,7 @@ wxBitmap WorkerThread::CreateGraph
 		dc.SetTextForeground(horizontalAxisColour);
 
 		// Draw vertical lines
-		for (auto i{ 0 }; i < dataSize; ++i)
+		for (auto i{ 0 }; i < static_cast<int>(dataSize); ++i)
 		{
 			currTextValue = wxString::Format(wxT("%i"), i + 1);
 			auto textSize = dc.GetTextExtent(currTextValue);
@@ -7869,7 +7869,7 @@ wxBitmap WorkerThread::CreateGraph
 
 	auto curveSize = 4;
 	// Draw the actual data
-	for (auto i = 0; i < dataSize - 1; ++i)
+	for (auto i = 0; i < static_cast<int>(dataSize) - 1; ++i)
 	{
 		// Draw horizontal data curve
 		dc.SetPen(wxPen(leftAxisColour, curveSize));

@@ -6,7 +6,7 @@
 #include "wx/dcbuffer.h"
 #include "wx/graphics.h"
 #include "wx/tglbtn.h"
-#include "wxMaterialDesignArtProvider.hpp"
+#include "MaterialDesign/wxMaterialDesignArtProvider.hpp"
 
 #include <iostream>
 #include <fstream>

@@ -19,8 +19,6 @@
 #include "wx/gauge.h"
 #include "wx/listctrl.h"
 
-#include "wxMaterialDesignArtProvider.hpp"
-
 #include <string>
 #include <memory>
 #include <chrono>

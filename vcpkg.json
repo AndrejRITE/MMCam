@@ -2,6 +2,7 @@
   "dependencies": [
     "wxwidgets",
     "opencv",
-	"nlohmann-json"
+	"nlohmann-json",
+	"rapidxml"
   ]
 }

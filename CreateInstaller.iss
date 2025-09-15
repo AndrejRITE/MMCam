@@ -17,6 +17,9 @@ SetupIconFile={#IconFullPath}
 DisableDirPage=no
 UninstallDisplayIcon={app}\{#RepoName}.exe
 PrivilegesRequired=admin
+; x64-only build
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 
 [Dirs]
 Name: "{localappdata}\Programs"; Permissions: users-full
@@ -34,6 +37,10 @@ Source: "{#OutputDir}\Xeryon.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\xeryon_goCenter.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\xeryon_setAbsolutePosition.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#IconFullPath}"; DestDir: "{app}"; Flags: ignoreversion
+
+; --- Bundle VC++ 2015–2022 (x64) redist ---
+; Place the official Microsoft installer at: .\redist\VC_redist.x64.exe
+Source: "redist\VC_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Code]
 procedure DeleteOptionalDirs;
@@ -61,6 +68,9 @@ Name: "{commonprograms}\{#RepoName}"; Filename: "{app}\{#RepoName}.exe"; IconFil
 Root: HKCU; Subkey: "SOFTWARE\RITE\{#RepoName}"; ValueType: string; ValueName: "InstallPath"; ValueData: "{app}"; Flags: createvalueifdoesntexist uninsdeletekey
 
 [Run]
+; Install VC++ runtime only if missing
+Filename: "{tmp}\VC_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Microsoft Visual C++ 2015–2022 Redistributable (x64)…"; Check: NeedsVC2015To2022x64;
+
 Filename: "{app}\{#RepoName}.exe"; Description: "{cm:LaunchProgram,{#RepoName}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
@@ -110,4 +120,23 @@ begin
       end;
     end;
   end;
+end;
+
+// ---------- VC++ 2015–2022 presence check (x64) ----------
+function IsVC2015To2022x64Installed: Boolean;
+var
+  Installed: Cardinal;
+begin
+  { Official unified key for VS 2015–2022 runtimes }
+  Result :=
+    RegQueryDWordValue(
+      HKLM,
+      'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64',
+      'Installed',
+      Installed) and (Installed = 1);
+end;
+
+function NeedsVC2015To2022x64: Boolean;
+begin
+  Result := not IsVC2015To2022x64Installed;
 end;
