@@ -18,6 +18,7 @@
 #include "wx/progdlg.h"
 #include "wx/gauge.h"
 #include "wx/listctrl.h"
+#include "wx/msw/window.h"
 
 #include <string>
 #include <memory>
@@ -37,10 +38,9 @@
 #include "MoravianInstrumentsControl.h"
 
 #include "src/img/logo.xpm"
-#include <wx/msw/window.h>
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 23
+#define MINOR_VERSION 24
 
 namespace MainFrameVariables
 {

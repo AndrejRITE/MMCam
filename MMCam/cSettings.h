@@ -71,7 +71,10 @@ namespace SettingsVariables
 		DETECTOR_Z,
 		OPTICS_X,
 		OPTICS_Y,
-		OPTICS_Z
+		OPTICS_Z,
+		AUX_X,
+		AUX_Y,
+		AUX_Z
 	};
 
 	enum MotorManufacturers
@@ -108,10 +111,7 @@ namespace SettingsVariables
 	struct Camera
 	{
 		wxTextCtrl* idTxtCtrl{};
-		//wxTextCtrl* temperatureTxtCtrl{};
-		//wxChoice* binningChoice{};
 		wxString selectedCameraIDStr{};
-		//wxArrayString binningsArrayStr{};
 	};
 
 	struct WorkStationData
