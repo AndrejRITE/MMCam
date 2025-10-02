@@ -138,6 +138,9 @@
     <ClInclude Include="..\include\MaterialDesign\wxAwesomeBrandsArt.hpp">
       <Filter>Header Files\MaterialDesign</Filter>
     </ClInclude>
+    <ClInclude Include="TucsenControl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cApp.cpp">
@@ -211,6 +214,9 @@
     </ClCompile>
     <ClCompile Include="..\include\MaterialDesign\wxAwesomeBrandsArt.cpp">
       <Filter>Source Files\MaterialDesign</Filter>
+    </ClCompile>
+    <ClCompile Include="TucsenControl.cpp">
+      <Filter>Source Files\Camera</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
