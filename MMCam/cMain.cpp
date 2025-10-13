@@ -7,7 +7,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_FILE_QUIT, cMain::OnExit)
 	EVT_MENU(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
 	EVT_MENU(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, cMain::OnStartStopLiveCapturingMenu)
-	EVT_MENU(MainFrameVariables::ID::MENUBAR_EDIT_ENABLE_DARK_MODE, cMain::OnEnableDarkMode)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_WINDOW_ENABLE_DARK_MODE, cMain::OnEnableDarkMode)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_EDIT_SETTINGS, cMain::OnOpenSettings)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, cMain::OnAnnulusButton)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, cMain::OnCrossHairButton)
@@ -443,8 +443,6 @@ void cMain::CreateMenuBarOnFrame()
 
 		m_MenuBar->menu_edit->AppendSeparator();
 		
-		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID::MENUBAR_EDIT_ENABLE_DARK_MODE, wxT("Dark Mode"));
-		
 		m_MenuBar->menu_edit->AppendSeparator();
 
 		// Settings
@@ -551,6 +549,8 @@ void cMain::CreateMenuBarOnFrame()
 
 	// Window Menu
 	{
+		m_MenuBar->menu_window->AppendCheckItem(MainFrameVariables::ID::MENUBAR_WINDOW_ENABLE_DARK_MODE, wxT("Dark Mode"));
+		
 		auto item = new wxMenuItem
 		(
 			m_MenuBar->menu_window,
@@ -633,8 +633,8 @@ void cMain::InitDefaultStateWidgets()
 	wxString 
 		defaultAbsoluteValueStr{ CameraPreviewVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) }, 
 		defaultRelativeValueStr{ CameraPreviewVariables::CreateStringWithPrecision(m_Config->default_motors_step_first_tab, m_DecimalDigits) };
-	//float default_absolute_value{ 0.0f }, default_relative_value{ 1.0f };
-	/* Disabling Detector Widgets */
+
+	/* Detector Widgets */
 	{
 		/* X */
 		{
@@ -658,7 +658,7 @@ void cMain::InitDefaultStateWidgets()
 	
 	defaultRelativeValueStr = CameraPreviewVariables::CreateStringWithPrecision(m_Config->default_motors_step_second_tab, m_DecimalDigits);
 	
-	/* Disabling Optics Widgets */
+	/* Optics Widgets */
 	{
 		/* X */
 		{
@@ -676,6 +676,30 @@ void cMain::InitDefaultStateWidgets()
 		{
 			m_Optics[2].absolute_text_ctrl->ChangeValue(defaultAbsoluteValueStr);
 			m_Optics[2].relative_text_ctrl->ChangeValue(defaultRelativeValueStr);
+			//m_Z_Optics->DisableAllControls();
+		}
+	}
+
+	defaultRelativeValueStr = CameraPreviewVariables::CreateStringWithPrecision(m_Config->default_motors_step_third_tab, m_DecimalDigits);
+
+	/* Aux Widgets */
+	{
+		/* X */
+		{
+			m_Aux[0].absolute_text_ctrl->ChangeValue(defaultAbsoluteValueStr);
+			m_Aux[0].relative_text_ctrl->ChangeValue(defaultRelativeValueStr);
+			//m_X_Optics->DisableAllControls();
+		}
+		/* Y */
+		{
+			m_Aux[1].absolute_text_ctrl->ChangeValue(defaultAbsoluteValueStr);
+			m_Aux[1].relative_text_ctrl->ChangeValue(defaultRelativeValueStr);
+			//m_Y_Optics->DisableAllControls();
+		}
+		/* Z */
+		{
+			m_Aux[2].absolute_text_ctrl->ChangeValue(defaultAbsoluteValueStr);
+			m_Aux[2].relative_text_ctrl->ChangeValue(defaultRelativeValueStr);
 			//m_Z_Optics->DisableAllControls();
 		}
 	}
@@ -3270,8 +3294,8 @@ void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_
 
 auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 {
-	auto currID = MainFrameVariables::ID::MENUBAR_EDIT_ENABLE_DARK_MODE;
-	auto currState = m_MenuBar->menu_edit->IsChecked(currID);
+	auto currID = MainFrameVariables::ID::MENUBAR_WINDOW_ENABLE_DARK_MODE;
+	auto currState = m_MenuBar->menu_window->IsChecked(currID);
 	
 	m_Config->dark_mode_on = currState;
 	RewriteInitializationFile();
@@ -3297,6 +3321,8 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 	m_DetectorControlsNotebook->SetBackgroundColour(bckgColour);
 	
 	m_OpticsControlsNotebook->SetBackgroundColour(bckgColour);
+
+	m_AuxControlsNotebook->SetBackgroundColour(bckgColour);
 	
 	m_CameraControlNotebook->SetBackgroundColour(bckgColour);
 	
@@ -3807,7 +3833,7 @@ auto cMain::InitializeSelectedCamera() -> void
 
 #ifndef _DEBUG
 	m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(true);
-	wxCommandEvent art_start_live_capturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+	wxCommandEvent art_start_live_capturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	ProcessEvent(art_start_live_capturing);
 #endif // !_DEBUG
 }
@@ -3818,8 +3844,8 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 	{
 		auto darkMode = m_Config->dark_mode_on;
 
-		m_MenuBar->menu_edit->Check(MainFrameVariables::ID::MENUBAR_EDIT_ENABLE_DARK_MODE, darkMode);
-		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_EDIT_ENABLE_DARK_MODE);
+		m_MenuBar->menu_window->Check(MainFrameVariables::ID::MENUBAR_WINDOW_ENABLE_DARK_MODE, darkMode);
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_WINDOW_ENABLE_DARK_MODE);
 		ProcessEvent(artEvt);
 	}
 
@@ -3846,6 +3872,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 	{
 		m_DetectorControlsNotebook->SetPageText(0, m_Config->default_motors_name_first_tab);
 		m_OpticsControlsNotebook->SetPageText(0, m_Config->default_motors_name_second_tab);
+		m_AuxControlsNotebook->SetPageText(0, m_Config->default_motors_name_third_tab);
 	}
 
 	// Exposure
@@ -4242,8 +4269,9 @@ void cMain::OnExit(wxCommandEvent& evt)
 
 void cMain::EnableUsedAndDisableNonUsedMotors()
 {
+	bool isAnyDetectorActive{}, isAnyOpticsActive{}, isAnyAuxActive{};
+
 	// Detector 
-	bool isAnyDetectorActive{}, isAnyOpticsActive{};
 	{
 		/* X */
 		if (m_Settings->MotorHasSerialNumber(SettingsVariables::DETECTOR_X))
@@ -4271,6 +4299,7 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 		else m_DetectorControlsNotebook->Show();
 
 	}
+
 	// Optics
 	{
 		/* X */
@@ -4302,8 +4331,38 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 
 	}
 
+	// Aux
+	{
+		/* X */
+		if (m_Settings->MotorHasSerialNumber(SettingsVariables::AUX_X))
+		{
+			m_Aux[0].EnableAllControls();
+			isAnyAuxActive = true;
+		}
+		else m_Aux[0].DisableAllControls();
+
+		/* Y */
+		if (m_Settings->MotorHasSerialNumber(SettingsVariables::AUX_Y))
+		{
+			m_Aux[1].EnableAllControls();
+			isAnyAuxActive = true;
+		}
+		else m_Aux[1].DisableAllControls();
+
+		/* Z */
+		if (m_Settings->MotorHasSerialNumber(SettingsVariables::AUX_Z))
+		{
+			m_Aux[2].EnableAllControls();
+			isAnyAuxActive = true;
+		}
+		else m_Aux[2].DisableAllControls();
+
+		if (!isAnyAuxActive) m_AuxControlsNotebook->Hide();
+		else m_AuxControlsNotebook->Show();
+	}
+
 #ifndef _DEBUG
-	if (!isAnyDetectorActive && !isAnyOpticsActive)
+	if (!isAnyDetectorActive && !isAnyOpticsActive && !isAnyAuxActive)
 		m_FirstStage->DisableAllControls();
 	else
 		m_FirstStage->EnableAllControls();
@@ -6233,10 +6292,16 @@ void cMain::UpdateAllAxisGlobalPositions()
 	m_Detector[0].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_X), m_DecimalDigits));
 	m_Detector[1].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Y), m_DecimalDigits));
 	m_Detector[2].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::DETECTOR_Z), m_DecimalDigits));
+
 	/* Optics */
 	m_Optics[0].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_X), m_DecimalDigits));
 	m_Optics[1].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Y), m_DecimalDigits));
 	m_Optics[2].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Z), m_DecimalDigits));
+
+	/* Aux */
+	m_Aux[0].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::AUX_X), m_DecimalDigits));
+	m_Aux[1].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::AUX_Y), m_DecimalDigits));
+	m_Aux[2].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::AUX_Z), m_DecimalDigits));
 }
 
 void cMain::ExposureValueChanged(wxCommandEvent& evt)

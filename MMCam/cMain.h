@@ -50,7 +50,6 @@ namespace MainFrameVariables
 		MENUBAR_FILE_OPEN,
 		MENUBAR_FILE_SAVE,
 		MENUBAR_FILE_QUIT,
-		MENUBAR_EDIT_ENABLE_DARK_MODE,
 		MENUBAR_EDIT_SETTINGS,
 		MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING,
 		MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING,
@@ -59,6 +58,7 @@ namespace MainFrameVariables
 		MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING,
 		MENUBAR_TOOLS_CROSSHAIR,
 		MENUBAR_TOOLS_VALUE_DISPLAYING,
+		MENUBAR_WINDOW_ENABLE_DARK_MODE,
 		MENUBAR_WINDOW_FULLSCREEN,
 		MENUBAR_HELP_ABOUT,
 
@@ -204,6 +204,7 @@ namespace MainFrameVariables
 
 		double default_motors_step_first_tab = 1.0;
 		double default_motors_step_second_tab = 0.1;
+		double default_motors_step_third_tab = 0.1;
 
 		int crosshair_averaging_width = 1;
 		int circle_mesh_step_px = 100;
@@ -214,6 +215,7 @@ namespace MainFrameVariables
 		
 		std::string default_motors_name_first_tab{ "Detector" };
 		std::string default_motors_name_second_tab{ "Optics" };
+		std::string default_motors_name_third_tab{ "Aux" };
 
 		std::string upload_report_folder{};
 		std::string work_station{};
@@ -235,6 +237,7 @@ namespace MainFrameVariables
 
 			default_motors_step_first_tab,
 			default_motors_step_second_tab,
+			default_motors_step_third_tab,
 
 			crosshair_averaging_width,
 			circle_mesh_step_px,
@@ -245,6 +248,7 @@ namespace MainFrameVariables
 
 			default_motors_name_first_tab,
 			default_motors_name_second_tab,
+			default_motors_name_third_tab,
 
 			upload_report_folder,
 			work_station, 
@@ -758,7 +762,7 @@ private:
 	{
 		wxBusyCursor cursor;
 		double absolute_position{};
-		auto& controlArray = (motorType <= SettingsVariables::DETECTOR_Z) ? m_Detector : m_Optics;
+		auto& controlArray = (motorType <= SettingsVariables::MotorsNames::DETECTOR_Z) ? m_Detector : ((motorType <= SettingsVariables::MotorsNames::OPTICS_Z) ? m_Optics : m_Aux);
 
 		if (!controlArray[index % 3].absolute_text_ctrl->GetValue().ToDouble(&absolute_position)) return;
 
@@ -771,7 +775,7 @@ private:
 	{
 		wxBusyCursor cursor;
 		double delta_position{};
-		auto& controlArray = (motorType <= SettingsVariables::DETECTOR_Z) ? m_Detector : m_Optics;
+		auto& controlArray = (motorType <= SettingsVariables::MotorsNames::DETECTOR_Z) ? m_Detector : ((motorType <= SettingsVariables::MotorsNames::OPTICS_Z) ? m_Optics : m_Aux);
 
 		if (!controlArray[index % 3].relative_text_ctrl->GetValue().ToDouble(&delta_position)) return;
 
@@ -784,7 +788,7 @@ private:
 	{
 		wxBusyCursor cursor;
 		auto currentPosition = m_Settings->CenterMotor(motorType);
-		auto& controlArray = (motorType <= SettingsVariables::DETECTOR_Z) ? m_Detector : m_Optics;
+		auto& controlArray = (motorType <= SettingsVariables::MotorsNames::DETECTOR_Z) ? m_Detector : ((motorType <= SettingsVariables::MotorsNames::OPTICS_Z) ? m_Optics : m_Aux);
 
 		controlArray[index % 3].absolute_text_ctrl->SetValue(CameraPreviewVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
 	}
@@ -793,7 +797,7 @@ private:
 	{
 		wxBusyCursor cursor;
 		auto currentPosition = m_Settings->HomeMotor(motorType);
-		auto& controlArray = (motorType <= SettingsVariables::DETECTOR_Z) ? m_Detector : m_Optics;
+		auto& controlArray = (motorType <= SettingsVariables::MotorsNames::DETECTOR_Z) ? m_Detector : ((motorType <= SettingsVariables::MotorsNames::OPTICS_Z) ? m_Optics : m_Aux);
 
 		controlArray[index % 3].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
 	}
