@@ -544,6 +544,7 @@ auto cSettings::CreateAuxPage(wxWindow* parent, const wxSize& txtCtrlSize, const
 
 		x_static_box_sizer->Add(sn_static_box_sizer);
 	}
+
 	/* Steps/mm */
 	x_static_box_sizer->AddSpacer(2);
 	{
@@ -826,6 +827,8 @@ auto cSettings::UpdateMotorsAndCameraTXTCtrls(const short selected_work_station)
 
 	m_CameraManufacturer = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].camera_manufacturer;
 	m_MotorManufacturer = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].motor_manufacturer;
+
+	Layout();
 }
 
 void cSettings::OnRefreshBtn(wxCommandEvent& evt)

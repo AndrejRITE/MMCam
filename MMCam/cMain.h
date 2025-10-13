@@ -44,117 +44,144 @@
 
 namespace MainFrameVariables
 {
-	enum
+	enum ID
 	{
 		/* Menu Bar */
-		ID_MENUBAR_FILE_OPEN,
-		ID_MENUBAR_FILE_SAVE,
-		ID_MENUBAR_FILE_QUIT,
-		ID_MENUBAR_EDIT_ENABLE_DARK_MODE,
-		ID_MENUBAR_EDIT_SETTINGS,
-		ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING,
-		ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING,
-		ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING,
-		ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING,
-		ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING,
-		ID_MENUBAR_TOOLS_CROSSHAIR,
-		ID_MENUBAR_TOOLS_VALUE_DISPLAYING,
-		ID_MENUBAR_WINDOW_FULLSCREEN,
-		ID_MENUBAR_HELP_ABOUT,
+		MENUBAR_FILE_OPEN,
+		MENUBAR_FILE_SAVE,
+		MENUBAR_FILE_QUIT,
+		MENUBAR_EDIT_ENABLE_DARK_MODE,
+		MENUBAR_EDIT_SETTINGS,
+		MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING,
+		MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING,
+		MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING,
+		MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING,
+		MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING,
+		MENUBAR_TOOLS_CROSSHAIR,
+		MENUBAR_TOOLS_VALUE_DISPLAYING,
+		MENUBAR_WINDOW_FULLSCREEN,
+		MENUBAR_HELP_ABOUT,
+
 		/* Detector X */
-		ID_RIGHT_SC_DET_X_ABS_TE_CTL,
-		ID_RIGHT_SC_DET_X_SET_BTN,
-		ID_RIGHT_SC_DET_X_REL_TE_CTL,
-		ID_RIGHT_SC_DET_X_DEC_BTN,
-		ID_RIGHT_SC_DET_X_INC_BTN,
-		ID_RIGHT_SC_DET_X_CENTER_BTN,
-		ID_RIGHT_SC_DET_X_HOME_BTN,
+		RIGHT_SC_DET_X_ABS_TE_CTL,
+		RIGHT_SC_DET_X_SET_BTN,
+		RIGHT_SC_DET_X_REL_TE_CTL,
+		RIGHT_SC_DET_X_DEC_BTN,
+		RIGHT_SC_DET_X_INC_BTN,
+		RIGHT_SC_DET_X_CENTER_BTN,
+		RIGHT_SC_DET_X_HOME_BTN,
 		/* Detector Y */
-		ID_RIGHT_SC_DET_Y_ABS_TE_CTL,
-		ID_RIGHT_SC_DET_Y_SET_BTN,
-		ID_RIGHT_SC_DET_Y_REL_TE_CTL,
-		ID_RIGHT_SC_DET_Y_DEC_BTN,
-		ID_RIGHT_SC_DET_Y_INC_BTN,
-		ID_RIGHT_SC_DET_Y_CENTER_BTN,
-		ID_RIGHT_SC_DET_Y_HOME_BTN,
+		RIGHT_SC_DET_Y_ABS_TE_CTL,
+		RIGHT_SC_DET_Y_SET_BTN,
+		RIGHT_SC_DET_Y_REL_TE_CTL,
+		RIGHT_SC_DET_Y_DEC_BTN,
+		RIGHT_SC_DET_Y_INC_BTN,
+		RIGHT_SC_DET_Y_CENTER_BTN,
+		RIGHT_SC_DET_Y_HOME_BTN,
 		/* Detector Z */
-		ID_RIGHT_SC_DET_Z_ABS_TE_CTL,
-		ID_RIGHT_SC_DET_Z_SET_BTN,
-		ID_RIGHT_SC_DET_Z_REL_TE_CTL,
-		ID_RIGHT_SC_DET_Z_DEC_BTN,
-		ID_RIGHT_SC_DET_Z_INC_BTN,
-		ID_RIGHT_SC_DET_Z_CENTER_BTN,
-		ID_RIGHT_SC_DET_Z_HOME_BTN,
+		RIGHT_SC_DET_Z_ABS_TE_CTL,
+		RIGHT_SC_DET_Z_SET_BTN,
+		RIGHT_SC_DET_Z_REL_TE_CTL,
+		RIGHT_SC_DET_Z_DEC_BTN,
+		RIGHT_SC_DET_Z_INC_BTN,
+		RIGHT_SC_DET_Z_CENTER_BTN,
+		RIGHT_SC_DET_Z_HOME_BTN,
+
 		/* Optics X */
-		ID_RIGHT_SC_OPT_X_ABS_TE_CTL,
-		ID_RIGHT_SC_OPT_X_SET_BTN,
-		ID_RIGHT_SC_OPT_X_REL_TE_CTL,
-		ID_RIGHT_SC_OPT_X_DEC_BTN,
-		ID_RIGHT_SC_OPT_X_INC_BTN,
-		ID_RIGHT_SC_OPT_X_CENTER_BTN,
-		ID_RIGHT_SC_OPT_X_HOME_BTN,	
+		RIGHT_SC_OPT_X_ABS_TE_CTL,
+		RIGHT_SC_OPT_X_SET_BTN,
+		RIGHT_SC_OPT_X_REL_TE_CTL,
+		RIGHT_SC_OPT_X_DEC_BTN,
+		RIGHT_SC_OPT_X_INC_BTN,
+		RIGHT_SC_OPT_X_CENTER_BTN,
+		RIGHT_SC_OPT_X_HOME_BTN,	
 		/* Optics Y */
-		ID_RIGHT_SC_OPT_Y_ABS_TE_CTL,
-		ID_RIGHT_SC_OPT_Y_SET_BTN,
-		ID_RIGHT_SC_OPT_Y_REL_TE_CTL,
-		ID_RIGHT_SC_OPT_Y_DEC_BTN,
-		ID_RIGHT_SC_OPT_Y_INC_BTN,
-		ID_RIGHT_SC_OPT_Y_CENTER_BTN,
-		ID_RIGHT_SC_OPT_Y_HOME_BTN,
+		RIGHT_SC_OPT_Y_ABS_TE_CTL,
+		RIGHT_SC_OPT_Y_SET_BTN,
+		RIGHT_SC_OPT_Y_REL_TE_CTL,
+		RIGHT_SC_OPT_Y_DEC_BTN,
+		RIGHT_SC_OPT_Y_INC_BTN,
+		RIGHT_SC_OPT_Y_CENTER_BTN,
+		RIGHT_SC_OPT_Y_HOME_BTN,
 		/* Optics Z */
-		ID_RIGHT_SC_OPT_Z_ABS_TE_CTL,
-		ID_RIGHT_SC_OPT_Z_SET_BTN,
-		ID_RIGHT_SC_OPT_Z_REL_TE_CTL,
-		ID_RIGHT_SC_OPT_Z_DEC_BTN,
-		ID_RIGHT_SC_OPT_Z_INC_BTN,
-		ID_RIGHT_SC_OPT_Z_CENTER_BTN,
-		ID_RIGHT_SC_OPT_Z_HOME_BTN,
+		RIGHT_SC_OPT_Z_ABS_TE_CTL,
+		RIGHT_SC_OPT_Z_SET_BTN,
+		RIGHT_SC_OPT_Z_REL_TE_CTL,
+		RIGHT_SC_OPT_Z_DEC_BTN,
+		RIGHT_SC_OPT_Z_INC_BTN,
+		RIGHT_SC_OPT_Z_CENTER_BTN,
+		RIGHT_SC_OPT_Z_HOME_BTN,
+
+		/* Aux X */
+		RIGHT_SC_AUX_X_ABS_TE_CTL,
+		RIGHT_SC_AUX_X_SET_BTN,
+		RIGHT_SC_AUX_X_REL_TE_CTL,
+		RIGHT_SC_AUX_X_DEC_BTN,
+		RIGHT_SC_AUX_X_INC_BTN,
+		RIGHT_SC_AUX_X_CENTER_BTN,
+		RIGHT_SC_AUX_X_HOME_BTN,	
+		/* Aux Y */
+		RIGHT_SC_AUX_Y_ABS_TE_CTL,
+		RIGHT_SC_AUX_Y_SET_BTN,
+		RIGHT_SC_AUX_Y_REL_TE_CTL,
+		RIGHT_SC_AUX_Y_DEC_BTN,
+		RIGHT_SC_AUX_Y_INC_BTN,
+		RIGHT_SC_AUX_Y_CENTER_BTN,
+		RIGHT_SC_AUX_Y_HOME_BTN,
+		/* Aux Z */
+		RIGHT_SC_AUX_Z_ABS_TE_CTL,
+		RIGHT_SC_AUX_Z_SET_BTN,
+		RIGHT_SC_AUX_Z_REL_TE_CTL,
+		RIGHT_SC_AUX_Z_DEC_BTN,
+		RIGHT_SC_AUX_Z_INC_BTN,
+		RIGHT_SC_AUX_Z_CENTER_BTN,
+		RIGHT_SC_AUX_Z_HOME_BTN,
 
 		/* Tools */
-		ID_RIGHT_TOOLS_CROSSHAIR_AVERAGING_WIDTH_TXT_CTRL,
-		ID_RIGHT_TOOLS_CROSSHAIR_ADAPTIVE_SCALING_CHECKBOX,
-		ID_RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL,
-		ID_RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL,
-		ID_RIGHT_TOOLS_ANNULUS_CENTER_X_TXT_CTRL,
-		ID_RIGHT_TOOLS_ANNULUS_CENTER_Y_TXT_CTRL,
-		ID_RIGHT_TOOLS_ANNULUS_R1_TXT_CTRL,
-		ID_RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL,
-		ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL,
-		ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN,
-		ID_RIGHT_TOOLS_ANNULUS_REMOVE_FROM_LIST_BTN,
+		RIGHT_TOOLS_CROSSHAIR_AVERAGING_WIDTH_TXT_CTRL,
+		RIGHT_TOOLS_CROSSHAIR_ADAPTIVE_SCALING_CHECKBOX,
+		RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL,
+		RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL,
+		RIGHT_TOOLS_ANNULUS_CENTER_X_TXT_CTRL,
+		RIGHT_TOOLS_ANNULUS_CENTER_Y_TXT_CTRL,
+		RIGHT_TOOLS_ANNULUS_R1_TXT_CTRL,
+		RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL,
+		RIGHT_TOOLS_ANNULUS_LIST_CTRL,
+		RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN,
+		RIGHT_TOOLS_ANNULUS_REMOVE_FROM_LIST_BTN,
 
 		/* Camera */
-		ID_RIGHT_CAM_TEMPERATURE_TXT_CTL,
-		ID_RIGHT_CAM_EXPOSURE_TXT_CTL,
-		ID_RIGHT_CAM_BINNING_CHOICE,
-		ID_RIGHT_CAM_COLORMAP_COMBOBOX,
-		ID_RIGHT_CAM_MANUFACTURER_CHOICE,
-		ID_RIGHT_CAM_SINGLE_SHOT_BTN,
-		ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN,
-		ID_RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL,
-		ID_RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL,
-		ID_RIGHT_CAM_CROSS_HAIR_SET_POS_TGL_BTN,
-		ID_RIGHT_CAM_ACTUAL_PARAMETERS_PROPERTY_GRID,
+		RIGHT_CAM_TEMPERATURE_TXT_CTL,
+		RIGHT_CAM_EXPOSURE_TXT_CTL,
+		RIGHT_CAM_BINNING_CHOICE,
+		RIGHT_CAM_COLORMAP_COMBOBOX,
+		RIGHT_CAM_MANUFACTURER_CHOICE,
+		RIGHT_CAM_SINGLE_SHOT_BTN,
+		RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN,
+		RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL,
+		RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL,
+		RIGHT_CAM_CROSS_HAIR_SET_POS_TGL_BTN,
+		RIGHT_CAM_ACTUAL_PARAMETERS_PROPERTY_GRID,
 		/* Histogram */
-		ID_HISTOGRAM_LEFT_BORDER_TXT_CTRL,
-		ID_HISTOGRAM_RIGHT_BORDER_TXT_CTRL,
+		HISTOGRAM_LEFT_BORDER_TXT_CTRL,
+		HISTOGRAM_RIGHT_BORDER_TXT_CTRL,
 		/* Measurement */
-		ID_RIGHT_MT_OUT_FLD_TEXT_CTRL,
-		ID_RIGHT_MT_OUT_FLD_BTN,
-		ID_RIGHT_MT_FIRST_STAGE_CHOICE,
-		ID_RIGHT_MT_FIRST_STAGE_START,
-		ID_RIGHT_MT_FIRST_STAGE_STEP,
-		ID_RIGHT_MT_FIRST_STAGE_FINISH,
-		ID_RIGHT_MT_SECOND_STAGE_CHOICE,
-		ID_RIGHT_MT_SECOND_STAGE_START,
-		ID_RIGHT_MT_SECOND_STAGE_STEP,
-		ID_RIGHT_MT_SECOND_STAGE_FINISH,
-		ID_RIGHT_MY_GENERATE_REPORT_BTN,
-		ID_RIGHT_MT_START_STOP_MEASUREMENT,
+		RIGHT_MT_OUT_FLD_TEXT_CTRL,
+		RIGHT_MT_OUT_FLD_BTN,
+		RIGHT_MT_FIRST_STAGE_CHOICE,
+		RIGHT_MT_FIRST_STAGE_START,
+		RIGHT_MT_FIRST_STAGE_STEP,
+		RIGHT_MT_FIRST_STAGE_FINISH,
+		RIGHT_MT_SECOND_STAGE_CHOICE,
+		RIGHT_MT_SECOND_STAGE_START,
+		RIGHT_MT_SECOND_STAGE_STEP,
+		RIGHT_MT_SECOND_STAGE_FINISH,
+		RIGHT_MY_GENERATE_REPORT_BTN,
+		RIGHT_MT_START_STOP_MEASUREMENT,
 		/* Live Capturing */
-		ID_THREAD_LIVE_CAPTURING,
+		THREAD_LIVE_CAPTURING,
 		/* Progress */
-		ID_THREAD_PROGRESS_CAPTURING,
+		THREAD_PROGRESS_CAPTURING,
 	};
 
 	enum BinningModes
@@ -599,6 +626,17 @@ private:
 		const wxBitmap& homeBitmap
 	) -> wxWindow*;
 
+	auto CreateAuxPage
+	(
+		wxWindow* parent, 
+		const wxSize& absoluteTxtCtrlSize, 
+		const wxSize& relativeTxtCtrlSize,
+		const wxSize& setBtnSize,
+		const wxSize& incrementDecrementBtnSize,
+		const wxBitmap& centerBitmap,
+		const wxBitmap& homeBitmap
+	) -> wxWindow*;
+
 	auto CreateCameraPage
 	(
 		wxWindow* parent
@@ -761,7 +799,7 @@ private:
 	}
 
 	/* _____________________Detector X_____________________ */
-	void OnEnterTextCtrlDetectorXAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 0, MainFrameVariables::ID_RIGHT_SC_DET_X_SET_BTN); }
+	void OnEnterTextCtrlDetectorXAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 0, MainFrameVariables::ID::RIGHT_SC_DET_X_SET_BTN); }
 	void OnSetDetectorXAbsPos(wxCommandEvent& evt) { OnSetAbsPos(evt, 0, SettingsVariables::DETECTOR_X); }
 	void OnDecrementDetectorXAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 0, SettingsVariables::DETECTOR_X, false); }
 	void OnIncrementDetectorXAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 0, SettingsVariables::DETECTOR_X, true); }
@@ -769,7 +807,7 @@ private:
 	void OnHomeDetectorX(wxCommandEvent& evt) { OnHomeMotor(evt, 0, SettingsVariables::DETECTOR_X); }
 
 	/* _____________________Detector Y_____________________ */
-	void OnEnterTextCtrlDetectorYAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 1, MainFrameVariables::ID_RIGHT_SC_DET_Y_SET_BTN); }
+	void OnEnterTextCtrlDetectorYAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 1, MainFrameVariables::ID::RIGHT_SC_DET_Y_SET_BTN); }
 	void OnSetDetectorYAbsPos(wxCommandEvent& evt) { OnSetAbsPos(evt, 1, SettingsVariables::DETECTOR_Y); }
 	void OnDecrementDetectorYAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 1, SettingsVariables::DETECTOR_Y, false); }
 	void OnIncrementDetectorYAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 1, SettingsVariables::DETECTOR_Y, true); }
@@ -777,7 +815,7 @@ private:
 	void OnHomeDetectorY(wxCommandEvent& evt) { OnHomeMotor(evt, 1, SettingsVariables::DETECTOR_Y); }
 
 	/* _____________________Detector Z_____________________ */
-	void OnEnterTextCtrlDetectorZAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 2, MainFrameVariables::ID_RIGHT_SC_DET_Z_SET_BTN); }
+	void OnEnterTextCtrlDetectorZAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 2, MainFrameVariables::ID::RIGHT_SC_DET_Z_SET_BTN); }
 	void OnSetDetectorZAbsPos(wxCommandEvent& evt) { OnSetAbsPos(evt, 2, SettingsVariables::DETECTOR_Z); }
 	void OnDecrementDetectorZAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 2, SettingsVariables::DETECTOR_Z, false); }
 	void OnIncrementDetectorZAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 2, SettingsVariables::DETECTOR_Z, true); }
@@ -785,7 +823,7 @@ private:
 	void OnHomeDetectorZ(wxCommandEvent& evt) { OnHomeMotor(evt, 2, SettingsVariables::DETECTOR_Z); }
 
 	/* _____________________Optics X_____________________ */
-	void OnEnterTextCtrlOpticsXAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 3, MainFrameVariables::ID_RIGHT_SC_OPT_X_SET_BTN); }
+	void OnEnterTextCtrlOpticsXAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 3, MainFrameVariables::ID::RIGHT_SC_OPT_X_SET_BTN); }
 	void OnSetOpticsXAbsPos(wxCommandEvent& evt) { OnSetAbsPos(evt, 3, SettingsVariables::OPTICS_X); }
 	void OnDecrementOpticsXAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 3, SettingsVariables::OPTICS_X, false); }
 	void OnIncrementOpticsXAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 3, SettingsVariables::OPTICS_X, true); }
@@ -793,7 +831,7 @@ private:
 	void OnHomeOpticsX(wxCommandEvent& evt) { OnHomeMotor(evt, 3, SettingsVariables::OPTICS_X); }
 
 	/* _____________________Optics Y_____________________ */
-	void OnEnterTextCtrlOpticsYAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 4, MainFrameVariables::ID_RIGHT_SC_OPT_Y_SET_BTN); }
+	void OnEnterTextCtrlOpticsYAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 4, MainFrameVariables::ID::RIGHT_SC_OPT_Y_SET_BTN); }
 	void OnSetOpticsYAbsPos(wxCommandEvent& evt) { OnSetAbsPos(evt, 4, SettingsVariables::OPTICS_Y); }
 	void OnDecrementOpticsYAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 4, SettingsVariables::OPTICS_Y, false); }
 	void OnIncrementOpticsYAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 4, SettingsVariables::OPTICS_Y, true); }
@@ -801,12 +839,36 @@ private:
 	void OnHomeOpticsY(wxCommandEvent& evt) { OnHomeMotor(evt, 4, SettingsVariables::OPTICS_Y); }
 
 	/* _____________________Optics Z_____________________ */
-	void OnEnterTextCtrlOpticsZAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 5, MainFrameVariables::ID_RIGHT_SC_OPT_Z_SET_BTN); }
+	void OnEnterTextCtrlOpticsZAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 5, MainFrameVariables::ID::RIGHT_SC_OPT_Z_SET_BTN); }
 	void OnSetOpticsZAbsPos(wxCommandEvent& evt) { OnSetAbsPos(evt, 5, SettingsVariables::OPTICS_Z); }
 	void OnDecrementOpticsZAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 5, SettingsVariables::OPTICS_Z, false); }
 	void OnIncrementOpticsZAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 5, SettingsVariables::OPTICS_Z, true); }
 	void OnCenterOpticsZ(wxCommandEvent& evt) { OnCenterMotor(evt, 5, SettingsVariables::OPTICS_Z); }
 	void OnHomeOpticsZ(wxCommandEvent& evt) { OnHomeMotor(evt, 5, SettingsVariables::OPTICS_Z); }
+
+	/* _____________________Aux X_____________________ */
+	void OnEnterTextCtrlAuxXAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 6, MainFrameVariables::ID::RIGHT_SC_AUX_X_SET_BTN); }
+	void OnSetAuxXAbsPos(wxCommandEvent& evt) { OnSetAbsPos(evt, 6, SettingsVariables::AUX_X); }
+	void OnAuxXAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 6, SettingsVariables::AUX_X, false); }
+	void OnIncrementAuxXAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 6, SettingsVariables::AUX_X, true); }
+	void OnCenterAuxX(wxCommandEvent& evt) { OnCenterMotor(evt, 6, SettingsVariables::AUX_X); }
+	void OnHomeAuxX(wxCommandEvent& evt) { OnHomeMotor(evt, 6, SettingsVariables::AUX_X); }
+
+	/* _____________________Aux Y_____________________ */
+	void OnEnterTextCtrlAuxYAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 7, MainFrameVariables::ID::RIGHT_SC_AUX_Y_SET_BTN); }
+	void OnSetAuxYAbsPos(wxCommandEvent& evt) { OnSetAbsPos(evt, 7, SettingsVariables::AUX_Y); }
+	void OnAuxYAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 7, SettingsVariables::AUX_Y, false); }
+	void OnIncrementAuxYAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 7, SettingsVariables::AUX_Y, true); }
+	void OnCenterAuxY(wxCommandEvent& evt) { OnCenterMotor(evt, 7, SettingsVariables::AUX_Y); }
+	void OnHomeAuxY(wxCommandEvent& evt) { OnHomeMotor(evt, 7, SettingsVariables::AUX_Y); }
+
+	/* _____________________Aux Z_____________________ */
+	void OnEnterTextCtrlAuxZAbsPos(wxCommandEvent& evt) { OnEnterTextCtrlAbsPos(evt, 8, MainFrameVariables::ID::RIGHT_SC_AUX_Z_SET_BTN); }
+	void OnSetAuxZAbsPos(wxCommandEvent& evt) { OnSetAbsPos(evt, 8, SettingsVariables::AUX_Z); }
+	void OnAuxZAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 8, SettingsVariables::AUX_Z, false); }
+	void OnIncrementAuxZAbsPos(wxCommandEvent& evt) { OnOffsetAbsPos(evt, 8, SettingsVariables::AUX_Z, true); }
+	void OnCenterAuxZ(wxCommandEvent& evt) { OnCenterMotor(evt, 8, SettingsVariables::AUX_Z); }
+	void OnHomeAuxZ(wxCommandEvent& evt) { OnHomeMotor(evt, 8, SettingsVariables::AUX_Z); }
 
 	/* First Stage */
 	void OnFirstStageChoice(wxCommandEvent& evt);
@@ -1496,6 +1558,7 @@ private:
 	/* Steppers Control */
 	std::unique_ptr<MainFrameVariables::StepperControl[]> m_Detector = std::make_unique<MainFrameVariables::StepperControl[]>(3);
 	std::unique_ptr<MainFrameVariables::StepperControl[]> m_Optics = std::make_unique<MainFrameVariables::StepperControl[]>(3);
+	std::unique_ptr<MainFrameVariables::StepperControl[]> m_Aux = std::make_unique<MainFrameVariables::StepperControl[]>(3);
 
 	// Colormap ComboBox
 	std::unique_ptr<MainFrameVariables::ImageColormapComboBox> m_ImageColormapComboBox{};
@@ -1551,7 +1614,7 @@ private:
 	/* wxPanels */
 	wxScrolledWindow* m_RightSidePanel{};
 	//wxPanel* m_RightSidePanel{};
-	wxNotebook* m_DetectorControlsNotebook{}, * m_OpticsControlsNotebook{};
+	wxNotebook* m_DetectorControlsNotebook{}, * m_OpticsControlsNotebook{}, * m_AuxControlsNotebook{};
 	
 	wxNotebook* m_CameraControlNotebook{};
 	

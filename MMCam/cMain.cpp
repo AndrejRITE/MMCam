@@ -1,115 +1,140 @@
 #include "cMain.h"
 
 wxBEGIN_EVENT_TABLE(cMain, wxFrame)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_FILE_OPEN, cMain::OnOpen)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_FILE_SAVE, cMain::OnSave)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_FILE_OPEN, cMain::OnOpen)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_FILE_SAVE, cMain::OnSave)
 	EVT_CLOSE(cMain::OnExit)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_FILE_QUIT, cMain::OnExit)
-	EVT_MENU(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
-	EVT_MENU(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, cMain::OnStartStopLiveCapturingMenu)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE, cMain::OnEnableDarkMode)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, cMain::OnOpenSettings)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, cMain::OnAnnulusButton)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, cMain::OnCrossHairButton)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_TOOLS_VALUE_DISPLAYING, cMain::OnValueDisplayingCheck)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, cMain::OnFWHMButton)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, cMain::OnFocusCenterButton)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, cMain::OnGridMeshButton)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, cMain::OnCircleMeshButton)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN, cMain::OnFullScreen)
-	EVT_MENU(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, cMain::OnStartStopCapturingMenuButton)
-	EVT_MENU(MainFrameVariables::ID_MENUBAR_HELP_ABOUT, cMain::OnAbout)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_FILE_QUIT, cMain::OnExit)
+	EVT_MENU(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
+	EVT_MENU(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, cMain::OnStartStopLiveCapturingMenu)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_EDIT_ENABLE_DARK_MODE, cMain::OnEnableDarkMode)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_EDIT_SETTINGS, cMain::OnOpenSettings)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, cMain::OnAnnulusButton)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, cMain::OnCrossHairButton)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, cMain::OnValueDisplayingCheck)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, cMain::OnFWHMButton)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, cMain::OnFocusCenterButton)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, cMain::OnGridMeshButton)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, cMain::OnCircleMeshButton)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_WINDOW_FULLSCREEN, cMain::OnFullScreen)
+	EVT_MENU(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, cMain::OnStartStopCapturingMenuButton)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_HELP_ABOUT, cMain::OnAbout)
 	EVT_MAXIMIZE(cMain::OnMaximizeButton)
-	/* Detector X */
-	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_SC_DET_X_ABS_TE_CTL, cMain::OnEnterTextCtrlDetectorXAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_X_SET_BTN, cMain::OnSetDetectorXAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_X_DEC_BTN, cMain::OnDecrementDetectorXAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_X_INC_BTN, cMain::OnIncrementDetectorXAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_X_CENTER_BTN, cMain::OnCenterDetectorX)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_X_HOME_BTN, cMain::OnHomeDetectorX)
-	/* Detector Y */
-	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_SC_DET_Y_ABS_TE_CTL, cMain::OnEnterTextCtrlDetectorYAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_Y_SET_BTN, cMain::OnSetDetectorYAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_Y_DEC_BTN, cMain::OnDecrementDetectorYAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_Y_INC_BTN, cMain::OnIncrementDetectorYAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_Y_CENTER_BTN, cMain::OnCenterDetectorY)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_Y_HOME_BTN, cMain::OnHomeDetectorY)
-	/* Detector Z */
-	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_SC_DET_Z_ABS_TE_CTL, cMain::OnEnterTextCtrlDetectorZAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_Z_SET_BTN, cMain::OnSetDetectorZAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_Z_DEC_BTN, cMain::OnDecrementDetectorZAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_Z_INC_BTN, cMain::OnIncrementDetectorZAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_Z_CENTER_BTN, cMain::OnCenterDetectorZ)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_DET_Z_HOME_BTN, cMain::OnHomeDetectorZ)
-	/* Optics X */
-	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_SC_OPT_X_ABS_TE_CTL, cMain::OnEnterTextCtrlOpticsXAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_X_SET_BTN, cMain::OnSetOpticsXAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_X_DEC_BTN, cMain::OnDecrementOpticsXAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_X_INC_BTN, cMain::OnIncrementOpticsXAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_X_CENTER_BTN, cMain::OnCenterOpticsX)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_X_HOME_BTN, cMain::OnHomeOpticsX)
-	/* Optics Y */
-	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_SC_OPT_Y_ABS_TE_CTL, cMain::OnEnterTextCtrlOpticsYAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_Y_SET_BTN, cMain::OnSetOpticsYAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_Y_DEC_BTN, cMain::OnDecrementOpticsYAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_Y_INC_BTN, cMain::OnIncrementOpticsYAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_Y_CENTER_BTN, cMain::OnCenterOpticsY)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_Y_HOME_BTN, cMain::OnHomeOpticsY)
-	/* Optics Z */
-	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_SC_OPT_Z_ABS_TE_CTL, cMain::OnEnterTextCtrlOpticsZAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_Z_SET_BTN, cMain::OnSetOpticsZAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_Z_DEC_BTN, cMain::OnDecrementOpticsZAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_Z_INC_BTN, cMain::OnIncrementOpticsZAbsPos)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_Z_CENTER_BTN, cMain::OnCenterOpticsZ)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_SC_OPT_Z_HOME_BTN, cMain::OnHomeOpticsZ)
-	/* Camera */
-	EVT_CHOICE(MainFrameVariables::ID_RIGHT_CAM_MANUFACTURER_CHOICE, cMain::ChangeCameraManufacturerChoice)
-	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_CAM_TEMPERATURE_TXT_CTL, cMain::OnSensorTemperatureChanged)
-	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_CAM_EXPOSURE_TXT_CTL, cMain::ExposureValueChanged)
-	EVT_CHOICE(MainFrameVariables::ID_RIGHT_CAM_BINNING_CHOICE, cMain::OnBinningChoice)
-	EVT_COMBOBOX(MainFrameVariables::ID_RIGHT_CAM_COLORMAP_COMBOBOX, cMain::OnColormapComboBox)
 
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
+	/* Detector X */
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_SC_DET_X_ABS_TE_CTL, cMain::OnEnterTextCtrlDetectorXAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_X_SET_BTN, cMain::OnSetDetectorXAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_X_DEC_BTN, cMain::OnDecrementDetectorXAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_X_INC_BTN, cMain::OnIncrementDetectorXAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_X_CENTER_BTN, cMain::OnCenterDetectorX)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_X_HOME_BTN, cMain::OnHomeDetectorX)
+	/* Detector Y */
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_SC_DET_Y_ABS_TE_CTL, cMain::OnEnterTextCtrlDetectorYAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_Y_SET_BTN, cMain::OnSetDetectorYAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_Y_DEC_BTN, cMain::OnDecrementDetectorYAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_Y_INC_BTN, cMain::OnIncrementDetectorYAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_Y_CENTER_BTN, cMain::OnCenterDetectorY)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_Y_HOME_BTN, cMain::OnHomeDetectorY)
+	/* Detector Z */
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_SC_DET_Z_ABS_TE_CTL, cMain::OnEnterTextCtrlDetectorZAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_Z_SET_BTN, cMain::OnSetDetectorZAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_Z_DEC_BTN, cMain::OnDecrementDetectorZAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_Z_INC_BTN, cMain::OnIncrementDetectorZAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_Z_CENTER_BTN, cMain::OnCenterDetectorZ)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_DET_Z_HOME_BTN, cMain::OnHomeDetectorZ)
+
+	/* Optics X */
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_SC_OPT_X_ABS_TE_CTL, cMain::OnEnterTextCtrlOpticsXAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_X_SET_BTN, cMain::OnSetOpticsXAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_X_DEC_BTN, cMain::OnDecrementOpticsXAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_X_INC_BTN, cMain::OnIncrementOpticsXAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_X_CENTER_BTN, cMain::OnCenterOpticsX)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_X_HOME_BTN, cMain::OnHomeOpticsX)
+	/* Optics Y */
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_SC_OPT_Y_ABS_TE_CTL, cMain::OnEnterTextCtrlOpticsYAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_Y_SET_BTN, cMain::OnSetOpticsYAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_Y_DEC_BTN, cMain::OnDecrementOpticsYAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_Y_INC_BTN, cMain::OnIncrementOpticsYAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_Y_CENTER_BTN, cMain::OnCenterOpticsY)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_Y_HOME_BTN, cMain::OnHomeOpticsY)
+	/* Optics Z */
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_SC_OPT_Z_ABS_TE_CTL, cMain::OnEnterTextCtrlOpticsZAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_Z_SET_BTN, cMain::OnSetOpticsZAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_Z_DEC_BTN, cMain::OnDecrementOpticsZAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_Z_INC_BTN, cMain::OnIncrementOpticsZAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_Z_CENTER_BTN, cMain::OnCenterOpticsZ)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_OPT_Z_HOME_BTN, cMain::OnHomeOpticsZ)
+
+	/* Aux X */
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_SC_AUX_X_ABS_TE_CTL, cMain::OnEnterTextCtrlAuxXAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_X_SET_BTN, cMain::OnSetAuxXAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_X_DEC_BTN, cMain::OnAuxXAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_X_INC_BTN, cMain::OnIncrementAuxXAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_X_CENTER_BTN, cMain::OnCenterAuxX)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_X_HOME_BTN, cMain::OnHomeAuxX)
+	/* Aux Y */
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_SC_AUX_Y_ABS_TE_CTL, cMain::OnEnterTextCtrlAuxYAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_Y_SET_BTN, cMain::OnSetAuxYAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_Y_DEC_BTN, cMain::OnAuxYAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_Y_INC_BTN, cMain::OnIncrementAuxYAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_Y_CENTER_BTN, cMain::OnCenterAuxY)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_Y_HOME_BTN, cMain::OnHomeAuxY)
+	/* Aux Z */
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_SC_AUX_Z_ABS_TE_CTL, cMain::OnEnterTextCtrlAuxZAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_Z_SET_BTN, cMain::OnSetAuxZAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_Z_DEC_BTN, cMain::OnAuxZAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_Z_INC_BTN, cMain::OnIncrementAuxZAbsPos)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_Z_CENTER_BTN, cMain::OnCenterAuxZ)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_Z_HOME_BTN, cMain::OnHomeAuxZ)
+
+	/* Camera */
+	EVT_CHOICE(MainFrameVariables::ID::RIGHT_CAM_MANUFACTURER_CHOICE, cMain::ChangeCameraManufacturerChoice)
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_TEMPERATURE_TXT_CTL, cMain::OnSensorTemperatureChanged)
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_EXPOSURE_TXT_CTL, cMain::ExposureValueChanged)
+	EVT_CHOICE(MainFrameVariables::ID::RIGHT_CAM_BINNING_CHOICE, cMain::OnBinningChoice)
+	EVT_COMBOBOX(MainFrameVariables::ID::RIGHT_CAM_COLORMAP_COMBOBOX, cMain::OnColormapComboBox)
+
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
 
 	/* Histogram */
-	EVT_TEXT(MainFrameVariables::ID_HISTOGRAM_LEFT_BORDER_TXT_CTRL, cMain::OnHistogramLeftBorderPosChanged)
-	EVT_TEXT(MainFrameVariables::ID_HISTOGRAM_RIGHT_BORDER_TXT_CTRL, cMain::OnHistogramRightBorderPosChanged)
+	EVT_TEXT(MainFrameVariables::ID::HISTOGRAM_LEFT_BORDER_TXT_CTRL, cMain::OnHistogramLeftBorderPosChanged)
+	EVT_TEXT(MainFrameVariables::ID::HISTOGRAM_RIGHT_BORDER_TXT_CTRL, cMain::OnHistogramRightBorderPosChanged)
 
 	/* Tools */
-	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_CROSSHAIR_AVERAGING_WIDTH_TXT_CTRL, cMain::OnCrossHairAveragingWidthTxtCtrl)
-	EVT_CHECKBOX(MainFrameVariables::ID_RIGHT_TOOLS_CROSSHAIR_ADAPTIVE_SCALING_CHECKBOX, cMain::OnCrossHairAdaptiveScalingCheckBox)
-	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL, cMain::OnGridMeshTxtCtrl)
-	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL, cMain::OnCircleMeshTxtCtrl)
-	EVT_TEXT(MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL, cMain::OnXPosCrossHairTextCtrl)
-	EVT_TEXT(MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL, cMain::OnYPosCrossHairTextCtrl)
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_TOOLS_CROSSHAIR_AVERAGING_WIDTH_TXT_CTRL, cMain::OnCrossHairAveragingWidthTxtCtrl)
+	EVT_CHECKBOX(MainFrameVariables::ID::RIGHT_TOOLS_CROSSHAIR_ADAPTIVE_SCALING_CHECKBOX, cMain::OnCrossHairAdaptiveScalingCheckBox)
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL, cMain::OnGridMeshTxtCtrl)
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL, cMain::OnCircleMeshTxtCtrl)
+	EVT_TEXT(MainFrameVariables::ID::RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL, cMain::OnXPosCrossHairTextCtrl)
+	EVT_TEXT(MainFrameVariables::ID::RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL, cMain::OnYPosCrossHairTextCtrl)
 
 	/* Annulus */
-	EVT_TEXT(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_CENTER_X_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
-	EVT_TEXT(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_CENTER_Y_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
-	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R1_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
-	EVT_TEXT_ENTER(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN, cMain::OnAddAnnulusButton)
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_REMOVE_FROM_LIST_BTN, cMain::OnRemoveAnnulusButton)
-	EVT_LIST_COL_BEGIN_DRAG(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL, cMain::OnColBeginDrag)
-	EVT_LIST_ITEM_SELECTED(MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL, cMain::OnAnnulusItemSelected)
+	EVT_TEXT(MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_CENTER_X_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
+	EVT_TEXT(MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_CENTER_Y_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_R1_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL, cMain::OnAnnulusTxtCtrl)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN, cMain::OnAddAnnulusButton)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_REMOVE_FROM_LIST_BTN, cMain::OnRemoveAnnulusButton)
+	EVT_LIST_COL_BEGIN_DRAG(MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_LIST_CTRL, cMain::OnColBeginDrag)
+	EVT_LIST_ITEM_SELECTED(MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_LIST_CTRL, cMain::OnAnnulusItemSelected)
 
 	/* Set Out Folder */
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_MT_OUT_FLD_BTN, cMain::OnSetOutDirectoryBtn)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_MT_OUT_FLD_BTN, cMain::OnSetOutDirectoryBtn)
 	/* First Stage */
-	EVT_CHOICE(MainFrameVariables::ID_RIGHT_MT_FIRST_STAGE_CHOICE, cMain::OnFirstStageChoice)
+	EVT_CHOICE(MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_CHOICE, cMain::OnFirstStageChoice)
 	/* Second Stage */
-	EVT_CHOICE(MainFrameVariables::ID_RIGHT_MT_SECOND_STAGE_CHOICE, cMain::OnSecondStageChoice)
+	EVT_CHOICE(MainFrameVariables::ID::RIGHT_MT_SECOND_STAGE_CHOICE, cMain::OnSecondStageChoice)
 	/* Generate Report */
-	EVT_BUTTON(MainFrameVariables::ID_RIGHT_MY_GENERATE_REPORT_BTN, cMain::OnGenerateReportBtn)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_MY_GENERATE_REPORT_BTN, cMain::OnGenerateReportBtn)
 	/* Start Capturing */
-	EVT_TOGGLEBUTTON(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, cMain::OnStartStopCapturingTglButton)
+	EVT_TOGGLEBUTTON(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, cMain::OnStartStopCapturingTglButton)
 	/* Start\Stop Live Capturing */
-	EVT_TOGGLEBUTTON(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, cMain::OnStartStopLiveCapturingTglBtn)
+	EVT_TOGGLEBUTTON(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, cMain::OnStartStopLiveCapturingTglBtn)
 
 	/* Live Capturing */
-	EVT_THREAD(MainFrameVariables::ID_THREAD_LIVE_CAPTURING, cMain::LiveCapturingThread)
+	EVT_THREAD(MainFrameVariables::ID::THREAD_LIVE_CAPTURING, cMain::LiveCapturingThread)
 	/* Progress */
-	EVT_THREAD(MainFrameVariables::ID_THREAD_PROGRESS_CAPTURING, cMain::UpdateProgress)
+	EVT_THREAD(MainFrameVariables::ID::THREAD_PROGRESS_CAPTURING, cMain::UpdateProgress)
 
 wxEND_EVENT_TABLE()
 
@@ -140,32 +165,32 @@ cMain::cMain(const wxString& title_)
 
 	// Open Settings Menu
 	{
-		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS);
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_EDIT_SETTINGS);
 		ProcessEvent(artEvt);
 	}
 
 #ifdef _DEBUG
 	// Press Open Button
 	{
-		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_FILE_OPEN);
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_FILE_OPEN);
 		ProcessEvent(artEvt);
 	}
 
 	// Press Set Out Dir Button
 	{
-		wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_MT_OUT_FLD_BTN);
+		wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID::RIGHT_MT_OUT_FLD_BTN);
 		ProcessEvent(artEvt);
 	}
 
 	// Press Enable Annulus Button
 	{
-		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING);
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING);
 		ProcessEvent(artEvt);
 	}
 
 	// Press Add Annulus Button
 	{
-		wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN);
+		wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN);
 		ProcessEvent(artEvt);
 	}
 
@@ -271,7 +296,7 @@ auto cMain::InitializeAboutHTML() -> void
 		return;
 	}
 
-	m_MenuBar->menu_help->Enable(MainFrameVariables::ID_MENUBAR_HELP_ABOUT, true);
+	m_MenuBar->menu_help->Enable(MainFrameVariables::ID::MENUBAR_HELP_ABOUT, true);
 }
 
 void cMain::CreateMenuBarOnFrame()
@@ -289,7 +314,7 @@ void cMain::CreateMenuBarOnFrame()
 	{
 		// Open
 		{
-			auto itemID = MainFrameVariables::ID_MENUBAR_FILE_OPEN;
+			auto itemID = MainFrameVariables::ID::MENUBAR_FILE_OPEN;
 			auto item = new wxMenuItem(m_MenuBar->menu_file, itemID, "Open\tCtrl+O");
 			// Setting a bitmap to the Close menu item
 			{
@@ -317,7 +342,7 @@ void cMain::CreateMenuBarOnFrame()
 
 		// Save
 		{
-			auto itemID = MainFrameVariables::ID_MENUBAR_FILE_SAVE;
+			auto itemID = MainFrameVariables::ID::MENUBAR_FILE_SAVE;
 			auto item = new wxMenuItem(m_MenuBar->menu_file, itemID, "Save\tCtrl+S");
 			// Setting a bitmap to the Close menu item
 			{
@@ -347,7 +372,7 @@ void cMain::CreateMenuBarOnFrame()
 
 		// Quit
 		{
-			auto itemID = MainFrameVariables::ID_MENUBAR_FILE_QUIT;
+			auto itemID = MainFrameVariables::ID::MENUBAR_FILE_QUIT;
 			auto item = new wxMenuItem(m_MenuBar->menu_file, itemID, "Quit\tCtrl+Q");
 			// Setting a bitmap to the Close menu item
 			{
@@ -372,7 +397,7 @@ void cMain::CreateMenuBarOnFrame()
 
 			m_MenuBar->menu_file->Append(item);
 		}
-		//m_MenuBar->menu_file->Append(MainFrameVariables::ID_MENUBAR_FILE_QUIT, wxT("Quit\tCtrl+Q"));
+		//m_MenuBar->menu_file->Append(MainFrameVariables::ID::MENUBAR_FILE_QUIT, wxT("Quit\tCtrl+Q"));
 	}
 	// Append File Menu to the Menu Bar
 	m_MenuBar->menu_bar->Append(m_MenuBar->menu_file, wxT("&File"));
@@ -381,7 +406,7 @@ void cMain::CreateMenuBarOnFrame()
 	{
 		// Single Shot
 		{
-			auto itemID = MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN;
+			auto itemID = MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN;
 			auto item = new wxMenuItem(m_MenuBar->menu_edit, itemID, "Single Shot\tS");
 
 			// Setting a bitmap to the Close menu item
@@ -409,22 +434,22 @@ void cMain::CreateMenuBarOnFrame()
 			m_MenuBar->menu_edit->Enable(itemID, false);
 		}
 
-		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, wxT("Start Live\tL"));
-		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
+		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, wxT("Start Live\tL"));
+		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
 
 
-		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, wxT("Start Measurement\tM"));
-		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, false);
+		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, wxT("Start Measurement\tM"));
+		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, false);
 
 		m_MenuBar->menu_edit->AppendSeparator();
 		
-		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE, wxT("Dark Mode"));
+		m_MenuBar->menu_edit->AppendCheckItem(MainFrameVariables::ID::MENUBAR_EDIT_ENABLE_DARK_MODE, wxT("Dark Mode"));
 		
 		m_MenuBar->menu_edit->AppendSeparator();
 
 		// Settings
 		{
-			auto item = new wxMenuItem(m_MenuBar->menu_edit, MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, "Settings\tF2");
+			auto item = new wxMenuItem(m_MenuBar->menu_edit, MainFrameVariables::ID::MENUBAR_EDIT_SETTINGS, "Settings\tF2");
 
 			// Setting a bitmap to the Close menu item
 			{
@@ -457,8 +482,8 @@ void cMain::CreateMenuBarOnFrame()
 	{
 		// Intensity Profile SubMenu
 		{
-			m_MenuBar->submenu_intensity_profile->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, wxT("Crosshair\tC"));
-			m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, false);
+			m_MenuBar->submenu_intensity_profile->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, wxT("Crosshair\tC"));
+			m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, false);
 
 			wxMenuItem* item = new wxMenuItem
 			(
@@ -496,29 +521,29 @@ void cMain::CreateMenuBarOnFrame()
 
 
 		// Annulus
-		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, wxT("Annulus Displaying\tA"));
-		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, false);
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, wxT("Annulus Displaying\tA"));
+		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, false);
 
 		// Circle Mesh
-		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, wxT("Circle Mesh Displaying\tCtrl+C"));
-		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, false);
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, wxT("Circle Mesh Displaying\tCtrl+C"));
+		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, false);
 
 		// Focus Center
-		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, wxT("Focus Center Displaying\tCtrl+F"));
-		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, wxT("Focus Center Displaying\tCtrl+F"));
+		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 
 		// FWHM
-		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, wxT("FWHM Displaying\tF"));
-		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, false);
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, wxT("FWHM Displaying\tF"));
+		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, false);
 
 		// Grid Mesh
-		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, wxT("Grid Mesh Displaying\tCtrl+G"));
-		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, false);
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, wxT("Grid Mesh Displaying\tCtrl+G"));
+		m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, false);
 
 		m_MenuBar->menu_tools->AppendSeparator();
 
 		// Append Value Displaying Check
-		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID_MENUBAR_TOOLS_VALUE_DISPLAYING, wxT("Value Displaying\tV"));
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, wxT("Value Displaying\tV"));
 	}
 
 	// Append Tools Menu to the Menu Bar
@@ -529,7 +554,7 @@ void cMain::CreateMenuBarOnFrame()
 		auto item = new wxMenuItem
 		(
 			m_MenuBar->menu_window,
-			MainFrameVariables::ID_MENUBAR_WINDOW_FULLSCREEN,
+			MainFrameVariables::ID::MENUBAR_WINDOW_FULLSCREEN,
 			"Full screen mode\tF11",
 			"Minimize/Maximize the main window."
 		);
@@ -566,7 +591,7 @@ void cMain::CreateMenuBarOnFrame()
 		auto item = new wxMenuItem
 		(
 			m_MenuBar->menu_help,
-			MainFrameVariables::ID_MENUBAR_HELP_ABOUT,
+			MainFrameVariables::ID::MENUBAR_HELP_ABOUT,
 			"About MMCam\tF1",
 			"Open an HTML Help"
 		);
@@ -601,7 +626,7 @@ void cMain::CreateMenuBarOnFrame()
 
 void cMain::InitDefaultStateWidgets()
 {
-	m_MenuBar->menu_tools->Check(MainFrameVariables::ID_MENUBAR_TOOLS_VALUE_DISPLAYING, true);
+	m_MenuBar->menu_tools->Check(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, true);
 	m_CamPreview->SetValueDisplayingActive(true);
 	m_IsValueDisplayingChecked = true;
 
@@ -679,7 +704,7 @@ void cMain::InitDefaultStateWidgets()
 		}
 		/* Start Capturing */
 		m_StartStopMeasurementTglBtn->Disable();
-		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, false);
+		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, false);
 	}
 }
 
@@ -759,7 +784,6 @@ void cMain::CreateRightSide(wxSizer* right_side_sizer)
 	
 	CreateMeasurement(m_RightSidePanel, right_side_panel_sizer);
 
-
 	m_RightSidePanel->SetSizer(right_side_panel_sizer);
 	m_RightSidePanel->FitInside();         // Adjust scrolling area
 	//m_RightSidePanel->Layout();
@@ -769,9 +793,9 @@ void cMain::CreateRightSide(wxSizer* right_side_sizer)
 
 auto cMain::CreateBottomPanel(wxSizer* sizer, const int borderSize) -> void
 {
-	m_LeftHistogramRange = std::make_unique<wxTextCtrl>(this, MainFrameVariables::ID_HISTOGRAM_LEFT_BORDER_TXT_CTRL);
+	m_LeftHistogramRange = std::make_unique<wxTextCtrl>(this, MainFrameVariables::ID::HISTOGRAM_LEFT_BORDER_TXT_CTRL);
 	m_LeftHistogramRange->Hide();
-	m_RightHistogramRange = std::make_unique<wxTextCtrl>(this, MainFrameVariables::ID_HISTOGRAM_RIGHT_BORDER_TXT_CTRL);
+	m_RightHistogramRange = std::make_unique<wxTextCtrl>(this, MainFrameVariables::ID::HISTOGRAM_RIGHT_BORDER_TXT_CTRL);
 	m_RightHistogramRange->Hide();
 
 	// Histogram Panel
@@ -821,7 +845,7 @@ auto cMain::CreateDetectorPage
 				abs_val.SetMax(1000.f);
 				m_Detector[0].absolute_text_ctrl = new wxTextCtrl(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_X_ABS_TE_CTL, 
+					MainFrameVariables::ID::RIGHT_SC_DET_X_ABS_TE_CTL, 
 					defaultText, 
 					wxDefaultPosition, 
 					absoluteTxtCtrlSize, 
@@ -831,7 +855,7 @@ auto cMain::CreateDetectorPage
 
 				m_Detector[0].set_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_X_SET_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_X_SET_BTN, 
 					wxT("Set"), 
 					wxDefaultPosition, 
 					setBtnSize);
@@ -846,7 +870,7 @@ auto cMain::CreateDetectorPage
 			{
 				m_Detector[0].decrement_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_X_DEC_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_X_DEC_BTN, 
 					wxT("-"), 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -856,7 +880,7 @@ auto cMain::CreateDetectorPage
 				rel_val.SetMax(1000.f);
 				m_Detector[0].relative_text_ctrl = new wxTextCtrl(
 					page,
-					MainFrameVariables::ID_RIGHT_SC_DET_X_REL_TE_CTL, 
+					MainFrameVariables::ID::RIGHT_SC_DET_X_REL_TE_CTL, 
 					defaultText, 
 					wxDefaultPosition, 
 					relativeTxtCtrlSize, 
@@ -865,7 +889,7 @@ auto cMain::CreateDetectorPage
 				);
 				m_Detector[0].increment_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_X_INC_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_X_INC_BTN, 
 					wxT("+"), 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -884,7 +908,7 @@ auto cMain::CreateDetectorPage
 				m_Detector[0].center_btn = new wxBitmapButton
 				(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_X_CENTER_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_X_CENTER_BTN, 
 					centerBitmap, 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize
@@ -895,7 +919,7 @@ auto cMain::CreateDetectorPage
 				m_Detector[0].home_btn = new wxBitmapButton
 				(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_X_HOME_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_X_HOME_BTN, 
 					homeBitmap, 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize
@@ -925,7 +949,7 @@ auto cMain::CreateDetectorPage
 				abs_val.SetMax(1000.f);
 				m_Detector[1].absolute_text_ctrl = new wxTextCtrl(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_Y_ABS_TE_CTL, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Y_ABS_TE_CTL, 
 					defaultText, 
 					wxDefaultPosition, 
 					absoluteTxtCtrlSize, 
@@ -935,7 +959,7 @@ auto cMain::CreateDetectorPage
 
 				m_Detector[1].set_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_Y_SET_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Y_SET_BTN, 
 					wxT("Set"), 
 					wxDefaultPosition, 
 					setBtnSize);
@@ -950,7 +974,7 @@ auto cMain::CreateDetectorPage
 			{
 				m_Detector[1].decrement_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_Y_DEC_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Y_DEC_BTN, 
 					wxT("-"), 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -960,7 +984,7 @@ auto cMain::CreateDetectorPage
 				rel_val.SetMax(1000.f);
 				m_Detector[1].relative_text_ctrl = new wxTextCtrl(
 					page,
-					MainFrameVariables::ID_RIGHT_SC_DET_Y_REL_TE_CTL, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Y_REL_TE_CTL, 
 					defaultText, 
 					wxDefaultPosition, 
 					relativeTxtCtrlSize, 
@@ -969,7 +993,7 @@ auto cMain::CreateDetectorPage
 				);
 				m_Detector[1].increment_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_Y_INC_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Y_INC_BTN, 
 					wxT("+"), 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -987,14 +1011,14 @@ auto cMain::CreateDetectorPage
 			{
 				m_Detector[1].center_btn = new wxBitmapButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_Y_CENTER_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Y_CENTER_BTN, 
 					centerBitmap, 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
 				m_Detector[1].center_btn->SetToolTip(wxT("Go to the center position of motor"));
 				m_Detector[1].home_btn = new wxBitmapButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_Y_HOME_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Y_HOME_BTN, 
 					homeBitmap, 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -1023,7 +1047,7 @@ auto cMain::CreateDetectorPage
 				abs_val.SetMax(1000.f);
 				m_Detector[2].absolute_text_ctrl = new wxTextCtrl(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_Z_ABS_TE_CTL, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Z_ABS_TE_CTL, 
 					defaultText, 
 					wxDefaultPosition, 
 					absoluteTxtCtrlSize, 
@@ -1033,7 +1057,7 @@ auto cMain::CreateDetectorPage
 
 				m_Detector[2].set_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_Z_SET_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Z_SET_BTN, 
 					wxT("Set"), 
 					wxDefaultPosition, 
 					setBtnSize);
@@ -1048,7 +1072,7 @@ auto cMain::CreateDetectorPage
 			{
 				m_Detector[2].decrement_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_Z_DEC_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Z_DEC_BTN, 
 					wxT("-"), 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -1058,7 +1082,7 @@ auto cMain::CreateDetectorPage
 				rel_val.SetMax(1000.f);
 				m_Detector[2].relative_text_ctrl = new wxTextCtrl(
 					page,
-					MainFrameVariables::ID_RIGHT_SC_DET_Z_REL_TE_CTL, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Z_REL_TE_CTL, 
 					defaultText, 
 					wxDefaultPosition, 
 					relativeTxtCtrlSize, 
@@ -1067,7 +1091,7 @@ auto cMain::CreateDetectorPage
 				);
 				m_Detector[2].increment_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_Z_INC_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Z_INC_BTN, 
 					wxT("+"), 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -1085,14 +1109,14 @@ auto cMain::CreateDetectorPage
 			{
 				m_Detector[2].center_btn = new wxBitmapButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_Z_CENTER_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Z_CENTER_BTN, 
 					centerBitmap, 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
 				m_Detector[2].center_btn->SetToolTip(wxT("Go to the center position of motor"));
 				m_Detector[2].home_btn = new wxBitmapButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_DET_Z_HOME_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_DET_Z_HOME_BTN, 
 					homeBitmap, 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -1125,6 +1149,7 @@ auto cMain::CreateOpticsPage
 {
 	wxPanel* page = new wxPanel(parent);
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+
 	auto defaultText = CameraPreviewVariables::CreateStringWithPrecision(123.456789, m_DecimalDigits);
 	{
 		/* Optics X */
@@ -1139,7 +1164,7 @@ auto cMain::CreateOpticsPage
 				abs_val.SetMax(1000.f);
 				m_Optics[0].absolute_text_ctrl = new wxTextCtrl(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_X_ABS_TE_CTL, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_X_ABS_TE_CTL, 
 					defaultText, 
 					wxDefaultPosition, 
 					absoluteTxtCtrlSize, 
@@ -1149,7 +1174,7 @@ auto cMain::CreateOpticsPage
 
 				m_Optics[0].set_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_X_SET_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_X_SET_BTN, 
 					wxT("Set"), 
 					wxDefaultPosition, 
 					setBtnSize);
@@ -1164,7 +1189,7 @@ auto cMain::CreateOpticsPage
 			{
 				m_Optics[0].decrement_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_X_DEC_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_X_DEC_BTN, 
 					wxT("-"), 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -1176,7 +1201,7 @@ auto cMain::CreateOpticsPage
 
 				m_Optics[0].relative_text_ctrl = new wxTextCtrl(
 					page,
-					MainFrameVariables::ID_RIGHT_SC_OPT_X_REL_TE_CTL, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_X_REL_TE_CTL, 
 					defaultText, 
 					wxDefaultPosition, 
 					relativeTxtCtrlSize, 
@@ -1185,7 +1210,7 @@ auto cMain::CreateOpticsPage
 				);
 				m_Optics[0].increment_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_X_INC_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_X_INC_BTN, 
 					wxT("+"), 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -1202,14 +1227,14 @@ auto cMain::CreateOpticsPage
 			{
 				m_Optics[0].center_btn = new wxBitmapButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_X_CENTER_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_X_CENTER_BTN, 
 					centerBitmap, 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
 				m_Optics[0].center_btn->SetToolTip(wxT("Go to the center position of motor"));
 				m_Optics[0].home_btn = new wxBitmapButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_X_HOME_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_X_HOME_BTN, 
 					homeBitmap, 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -1238,7 +1263,7 @@ auto cMain::CreateOpticsPage
 
 				m_Optics[1].absolute_text_ctrl = new wxTextCtrl(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_Y_ABS_TE_CTL, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Y_ABS_TE_CTL, 
 					defaultText, 
 					wxDefaultPosition, 
 					absoluteTxtCtrlSize, 
@@ -1248,7 +1273,7 @@ auto cMain::CreateOpticsPage
 
 				m_Optics[1].set_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_Y_SET_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Y_SET_BTN, 
 					wxT("Set"), 
 					wxDefaultPosition, 
 					setBtnSize);
@@ -1263,7 +1288,7 @@ auto cMain::CreateOpticsPage
 			{
 				m_Optics[1].decrement_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_Y_DEC_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Y_DEC_BTN, 
 					wxT("-"), 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -1273,7 +1298,7 @@ auto cMain::CreateOpticsPage
 				rel_val.SetMax(1000.f);
 				m_Optics[1].relative_text_ctrl = new wxTextCtrl(
 					page,
-					MainFrameVariables::ID_RIGHT_SC_OPT_Y_REL_TE_CTL, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Y_REL_TE_CTL, 
 					defaultText, 
 					wxDefaultPosition, 
 					relativeTxtCtrlSize, 
@@ -1282,7 +1307,7 @@ auto cMain::CreateOpticsPage
 				);
 				m_Optics[1].increment_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_Y_INC_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Y_INC_BTN, 
 					wxT("+"), 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -1299,14 +1324,14 @@ auto cMain::CreateOpticsPage
 			{
 				m_Optics[1].center_btn = new wxBitmapButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_Y_CENTER_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Y_CENTER_BTN, 
 					centerBitmap, 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
 				m_Optics[1].center_btn->SetToolTip(wxT("Go to the center position of motor"));
 				m_Optics[1].home_btn = new wxBitmapButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_Y_HOME_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Y_HOME_BTN, 
 					homeBitmap, 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -1334,7 +1359,7 @@ auto cMain::CreateOpticsPage
 				abs_val.SetMax(1000.f);
 				m_Optics[2].absolute_text_ctrl = new wxTextCtrl(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_Z_ABS_TE_CTL, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Z_ABS_TE_CTL, 
 					defaultText, 
 					wxDefaultPosition, 
 					absoluteTxtCtrlSize, 
@@ -1344,7 +1369,7 @@ auto cMain::CreateOpticsPage
 
 				m_Optics[2].set_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_Z_SET_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Z_SET_BTN, 
 					wxT("Set"), 
 					wxDefaultPosition, 
 					setBtnSize);
@@ -1359,7 +1384,7 @@ auto cMain::CreateOpticsPage
 			{
 				m_Optics[2].decrement_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_Z_DEC_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Z_DEC_BTN, 
 					wxT("-"), 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -1369,7 +1394,7 @@ auto cMain::CreateOpticsPage
 				rel_val.SetMax(1000.f);
 				m_Optics[2].relative_text_ctrl = new wxTextCtrl(
 					page,
-					MainFrameVariables::ID_RIGHT_SC_OPT_Z_REL_TE_CTL, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Z_REL_TE_CTL, 
 					defaultText, 
 					wxDefaultPosition, 
 					relativeTxtCtrlSize, 
@@ -1378,7 +1403,7 @@ auto cMain::CreateOpticsPage
 				);
 				m_Optics[2].increment_btn = new wxButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_Z_INC_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Z_INC_BTN, 
 					wxT("+"), 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -1395,14 +1420,14 @@ auto cMain::CreateOpticsPage
 			{
 				m_Optics[2].center_btn = new wxBitmapButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_Z_CENTER_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Z_CENTER_BTN, 
 					centerBitmap, 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
 				m_Optics[2].center_btn->SetToolTip(wxT("Go to the center position of motor"));
 				m_Optics[2].home_btn = new wxBitmapButton(
 					page, 
-					MainFrameVariables::ID_RIGHT_SC_OPT_Z_HOME_BTN, 
+					MainFrameVariables::ID::RIGHT_SC_OPT_Z_HOME_BTN, 
 					homeBitmap, 
 					wxDefaultPosition, 
 					incrementDecrementBtnSize);
@@ -1418,6 +1443,319 @@ auto cMain::CreateOpticsPage
 		z_optics->AddStretchSpacer();
 		sizerPage->Add(z_optics, 0, wxEXPAND);
 	}
+
+	page->SetSizer(sizerPage);
+	return page;
+}
+
+auto cMain::CreateAuxPage
+(
+	wxWindow* parent, 
+	const wxSize& absoluteTxtCtrlSize, 
+	const wxSize& relativeTxtCtrlSize, 
+	const wxSize& setBtnSize, 
+	const wxSize& incrementDecrementBtnSize, 
+	const wxBitmap& centerBitmap, 
+	const wxBitmap& homeBitmap
+) -> wxWindow*
+{
+	wxPanel* page = new wxPanel(parent);
+	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+
+	auto defaultText = CameraPreviewVariables::CreateStringWithPrecision(123.456789, m_DecimalDigits);
+	{
+		/* Aux X */
+		wxSizer* const x_optics = new wxStaticBoxSizer(wxHORIZONTAL, page, "&X");
+		x_optics->AddStretchSpacer();
+		{
+			/* Absolute */
+			{
+				wxSizer* const abs_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Absolute [mm]");
+				wxFloatingPointValidator<float>	abs_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
+				abs_val.SetMin(-1000.f);
+				abs_val.SetMax(1000.f);
+				m_Aux[0].absolute_text_ctrl = new wxTextCtrl(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_X_ABS_TE_CTL, 
+					defaultText, 
+					wxDefaultPosition, 
+					absoluteTxtCtrlSize, 
+					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
+					abs_val
+				);
+
+				m_Aux[0].set_btn = new wxButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_X_SET_BTN, 
+					wxT("Set"), 
+					wxDefaultPosition, 
+					setBtnSize);
+				m_Aux[0].set_btn->SetToolTip(wxT("Set the absolute motor position"));
+
+				abs_sizer->Add(m_Aux[0].absolute_text_ctrl, 0, wxALIGN_CENTER);
+				abs_sizer->Add(m_Aux[0].set_btn, 0, wxALIGN_CENTER | wxLEFT, 2);
+				x_optics->Add(abs_sizer, 0, wxALIGN_CENTER);
+			}
+
+			/* Relative */
+			{
+				m_Aux[0].decrement_btn = new wxButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_X_DEC_BTN, 
+					wxT("-"), 
+					wxDefaultPosition, 
+					incrementDecrementBtnSize);
+
+				m_Aux[0].decrement_btn->SetToolTip(wxT("Decrement distance"));
+				wxFloatingPointValidator<float>	rel_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
+				rel_val.SetMin(-1000.f);
+				rel_val.SetMax(1000.f);
+
+				m_Aux[0].relative_text_ctrl = new wxTextCtrl(
+					page,
+					MainFrameVariables::ID::RIGHT_SC_AUX_X_REL_TE_CTL, 
+					defaultText, 
+					wxDefaultPosition, 
+					relativeTxtCtrlSize, 
+					wxTE_CENTRE, 
+					rel_val
+				);
+				m_Aux[0].increment_btn = new wxButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_X_INC_BTN, 
+					wxT("+"), 
+					wxDefaultPosition, 
+					incrementDecrementBtnSize);
+				m_Aux[0].increment_btn->SetToolTip(wxT("Increment distance"));
+
+				wxSizer* const rel_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Relative [mm]");
+				rel_sizer->Add(m_Aux[0].decrement_btn, 0, wxALIGN_CENTER | wxRIGHT, 2);
+				rel_sizer->Add(m_Aux[0].relative_text_ctrl, 0, wxALIGN_CENTER);
+				rel_sizer->Add(m_Aux[0].increment_btn, 0, wxALIGN_CENTER | wxLEFT, 2);
+				x_optics->Add(rel_sizer, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT, 2);
+			}
+
+			/* Global positioning controls */
+			{
+				m_Aux[0].center_btn = new wxBitmapButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_X_CENTER_BTN, 
+					centerBitmap, 
+					wxDefaultPosition, 
+					incrementDecrementBtnSize);
+				m_Aux[0].center_btn->SetToolTip(wxT("Go to the center position of motor"));
+				m_Aux[0].home_btn = new wxBitmapButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_X_HOME_BTN, 
+					homeBitmap, 
+					wxDefaultPosition, 
+					incrementDecrementBtnSize);
+				m_Aux[0].home_btn->SetToolTip(wxT("Go to the home position of motor"));
+
+				wxSizer* const jump_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Jump");
+				jump_sizer->Add(m_Aux[0].center_btn, 0, wxALIGN_CENTER | wxRIGHT, 2);
+				jump_sizer->Add(m_Aux[0].home_btn, 0, wxALIGN_CENTER);
+
+				x_optics->Add(jump_sizer, 0, wxALIGN_CENTER);
+			}
+		}
+		x_optics->AddStretchSpacer();
+		sizerPage->Add(x_optics, 0, wxEXPAND);
+
+		/* Optics Y */
+		wxSizer* const y_optics = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Y");
+		y_optics->AddStretchSpacer();
+		{
+			/* Absolute */
+			{
+				wxSizer* const abs_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Absolute [mm]");
+				wxFloatingPointValidator<float>	abs_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
+				abs_val.SetMin(-1000.f);
+				abs_val.SetMax(1000.f);
+
+				m_Aux[1].absolute_text_ctrl = new wxTextCtrl(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_Y_ABS_TE_CTL, 
+					defaultText, 
+					wxDefaultPosition, 
+					absoluteTxtCtrlSize, 
+					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
+					abs_val
+				);
+
+				m_Aux[1].set_btn = new wxButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_Y_SET_BTN, 
+					wxT("Set"), 
+					wxDefaultPosition, 
+					setBtnSize);
+				m_Aux[1].set_btn->SetToolTip(wxT("Set the absolute motor position"));
+
+				abs_sizer->Add(m_Aux[1].absolute_text_ctrl, 0, wxALIGN_CENTER);
+				abs_sizer->Add(m_Aux[1].set_btn, 0, wxALIGN_CENTER | wxLEFT, 2);
+				y_optics->Add(abs_sizer, 0, wxALIGN_CENTER);
+			}
+
+			/* Relative */
+			{
+				m_Aux[1].decrement_btn = new wxButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_Y_DEC_BTN, 
+					wxT("-"), 
+					wxDefaultPosition, 
+					incrementDecrementBtnSize);
+				m_Aux[1].decrement_btn->SetToolTip(wxT("Decrement distance"));
+				wxFloatingPointValidator<float>	rel_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
+				rel_val.SetMin(-1000.f);
+				rel_val.SetMax(1000.f);
+				m_Aux[1].relative_text_ctrl = new wxTextCtrl(
+					page,
+					MainFrameVariables::ID::RIGHT_SC_AUX_Y_REL_TE_CTL, 
+					defaultText, 
+					wxDefaultPosition, 
+					relativeTxtCtrlSize, 
+					wxTE_CENTRE, 
+					rel_val
+				);
+				m_Aux[1].increment_btn = new wxButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_Y_INC_BTN, 
+					wxT("+"), 
+					wxDefaultPosition, 
+					incrementDecrementBtnSize);
+				m_Aux[1].increment_btn->SetToolTip(wxT("Increment distance"));
+
+				wxSizer* const rel_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Relative [mm]");
+				rel_sizer->Add(m_Aux[1].decrement_btn, 0, wxALIGN_CENTER | wxRIGHT, 2);
+				rel_sizer->Add(m_Aux[1].relative_text_ctrl, 0, wxALIGN_CENTER);
+				rel_sizer->Add(m_Aux[1].increment_btn, 0, wxALIGN_CENTER | wxLEFT, 2);
+				y_optics->Add(rel_sizer, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT, 2);
+			}
+
+			/* Global positioning controls */
+			{
+				m_Aux[1].center_btn = new wxBitmapButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_Y_CENTER_BTN, 
+					centerBitmap, 
+					wxDefaultPosition, 
+					incrementDecrementBtnSize);
+				m_Aux[1].center_btn->SetToolTip(wxT("Go to the center position of motor"));
+				m_Aux[1].home_btn = new wxBitmapButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_Y_HOME_BTN, 
+					homeBitmap, 
+					wxDefaultPosition, 
+					incrementDecrementBtnSize);
+				m_Aux[1].home_btn->SetToolTip(wxT("Go to the home position of motor"));
+
+				wxSizer* const jump_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Jump");
+				jump_sizer->Add(m_Aux[1].center_btn, 0, wxALIGN_CENTER | wxRIGHT, 2);
+				jump_sizer->Add(m_Aux[1].home_btn, 0, wxALIGN_CENTER);
+
+				y_optics->Add(jump_sizer, 0, wxALIGN_CENTER);
+			}
+		}
+		y_optics->AddStretchSpacer();
+		sizerPage->Add(y_optics, 0, wxEXPAND);
+
+		/* Optics Z */
+		wxSizer* const z_optics = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Z");
+		z_optics->AddStretchSpacer();
+		{
+			/* Absolute */
+			{
+				wxSizer* const abs_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Absolute [mm]");
+				wxFloatingPointValidator<float>	abs_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
+				abs_val.SetMin(-1000.f);
+				abs_val.SetMax(1000.f);
+				m_Aux[2].absolute_text_ctrl = new wxTextCtrl(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_Z_ABS_TE_CTL, 
+					defaultText, 
+					wxDefaultPosition, 
+					absoluteTxtCtrlSize, 
+					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
+					abs_val
+				);
+
+				m_Aux[2].set_btn = new wxButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_Z_SET_BTN, 
+					wxT("Set"), 
+					wxDefaultPosition, 
+					setBtnSize);
+				m_Aux[2].set_btn->SetToolTip(wxT("Set the absolute motor position"));
+
+				abs_sizer->Add(m_Aux[2].absolute_text_ctrl, 0, wxALIGN_CENTER);
+				abs_sizer->Add(m_Aux[2].set_btn, 0, wxALIGN_CENTER | wxLEFT, 2);
+				z_optics->Add(abs_sizer, 0, wxALIGN_CENTER);
+			}
+
+			/* Relative */
+			{
+				m_Aux[2].decrement_btn = new wxButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_Z_DEC_BTN, 
+					wxT("-"), 
+					wxDefaultPosition, 
+					incrementDecrementBtnSize);
+				m_Aux[2].decrement_btn->SetToolTip(wxT("Decrement distance"));
+				wxFloatingPointValidator<float>	rel_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
+				rel_val.SetMin(-1000.f);
+				rel_val.SetMax(1000.f);
+				m_Aux[2].relative_text_ctrl = new wxTextCtrl(
+					page,
+					MainFrameVariables::ID::RIGHT_SC_AUX_Z_REL_TE_CTL, 
+					defaultText, 
+					wxDefaultPosition, 
+					relativeTxtCtrlSize, 
+					wxTE_CENTRE, 
+					rel_val
+				);
+				m_Aux[2].increment_btn = new wxButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_Z_INC_BTN, 
+					wxT("+"), 
+					wxDefaultPosition, 
+					incrementDecrementBtnSize);
+				m_Aux[2].increment_btn->SetToolTip(wxT("Increment distance"));
+
+				wxSizer* const rel_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Relative [mm]");
+				rel_sizer->Add(m_Aux[2].decrement_btn, 0, wxALIGN_CENTER | wxRIGHT, 2);
+				rel_sizer->Add(m_Aux[2].relative_text_ctrl, 0, wxALIGN_CENTER);
+				rel_sizer->Add(m_Aux[2].increment_btn, 0, wxALIGN_CENTER | wxLEFT, 2);
+				z_optics->Add(rel_sizer, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT, 2);
+			}
+
+			/* Global positioning controls */
+			{
+				m_Aux[2].center_btn = new wxBitmapButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_Z_CENTER_BTN, 
+					centerBitmap, 
+					wxDefaultPosition, 
+					incrementDecrementBtnSize);
+				m_Aux[2].center_btn->SetToolTip(wxT("Go to the center position of motor"));
+				m_Aux[2].home_btn = new wxBitmapButton(
+					page, 
+					MainFrameVariables::ID::RIGHT_SC_AUX_Z_HOME_BTN, 
+					homeBitmap, 
+					wxDefaultPosition, 
+					incrementDecrementBtnSize);
+				m_Aux[2].home_btn->SetToolTip(wxT("Go to the home position of motor"));
+
+				wxSizer* const jump_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Jump");
+				jump_sizer->Add(m_Aux[2].center_btn, 0, wxALIGN_CENTER | wxRIGHT, 2);
+				jump_sizer->Add(m_Aux[2].home_btn, 0, wxALIGN_CENTER);
+
+				z_optics->Add(jump_sizer, 0, wxALIGN_CENTER);
+			}
+		}
+		z_optics->AddStretchSpacer();
+		sizerPage->Add(z_optics, 0, wxEXPAND);
+	}
+
 	page->SetSizer(sizerPage);
 	return page;
 }
@@ -1456,7 +1794,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			m_CameraTabControls->camSensorTemperature = std::make_unique<wxTextCtrl>
 				(
 					page, 
-					MainFrameVariables::ID_RIGHT_CAM_TEMPERATURE_TXT_CTL, 
+					MainFrameVariables::ID::RIGHT_CAM_TEMPERATURE_TXT_CTL, 
 #ifdef _DEBUG
 					wxT("15.0"), 
 #else
@@ -1494,7 +1832,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			m_CameraTabControls->camExposure = std::make_unique<wxTextCtrl>
 				(
 					page, 
-					MainFrameVariables::ID_RIGHT_CAM_EXPOSURE_TXT_CTL, 
+					MainFrameVariables::ID::RIGHT_CAM_EXPOSURE_TXT_CTL, 
 #ifdef _DEBUG
 					wxT("100"), 
 #else
@@ -1534,7 +1872,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			m_CameraTabControls->camBinning = std::make_unique<wxChoice>
 				(
 					page, 
-					MainFrameVariables::ID_RIGHT_CAM_BINNING_CHOICE
+					MainFrameVariables::ID::RIGHT_CAM_BINNING_CHOICE
 				);
 			m_CameraTabControls->camBinning->SetExtraStyle(wxCB_READONLY);
 			m_CameraTabControls->camBinning->Set(choices);
@@ -1563,7 +1901,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			m_ImageColormapComboBox->stylish_combo_box->Create
 			(
 				page,
-				MainFrameVariables::ID_RIGHT_CAM_COLORMAP_COMBOBOX,
+				MainFrameVariables::ID::RIGHT_CAM_COLORMAP_COMBOBOX,
 				wxEmptyString,
 				wxDefaultPosition,
 				wxSize(100, 30),
@@ -1586,7 +1924,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 		
 		m_CameraTabControls->singleShotBtn = std::make_unique<wxButton>(
 			page,
-			MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN,
+			MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN,
 			wxT("Single Shot (S)"), 
 			wxDefaultPosition, 
 			wxDefaultSize);
@@ -1599,7 +1937,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 		m_CameraTabControls->startStopLiveCapturingTglBtn = std::make_unique<wxToggleButton>
 			(
 				page,
-				MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, 
+				MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, 
 				wxT("Start Live (L)")
 			);
 		m_CameraTabControls->startStopLiveCapturingTglBtn->Disable();
@@ -1624,7 +1962,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			m_CameraTabControls->crossHairPosXTxtCtrl = std::make_unique<wxTextCtrl>
 				(
 					page,
-					MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL,
+					MainFrameVariables::ID::RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL,
 					wxT("1"), 
 					wxDefaultPosition, 
 					txt_ctrl_size, 
@@ -1647,7 +1985,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			m_CameraTabControls->crossHairPosYTxtCtrl = std::make_unique<wxTextCtrl>
 				(
 					page,
-					MainFrameVariables::ID_RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL,
+					MainFrameVariables::ID::RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL,
 					wxT("1"), 
 					wxDefaultPosition, 
 					txt_ctrl_size, 
@@ -1675,7 +2013,7 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 	m_CurrentCameraSettingsPropertyGrid = new wxPropertyGrid
 	(
 		page, 
-		MainFrameVariables::ID_RIGHT_CAM_ACTUAL_PARAMETERS_PROPERTY_GRID, 
+		MainFrameVariables::ID::RIGHT_CAM_ACTUAL_PARAMETERS_PROPERTY_GRID, 
 		wxDefaultPosition, 
 		wxDefaultSize, 
 		wxPG_SPLITTER_AUTO_CENTER
@@ -1852,7 +2190,7 @@ auto cMain::CreateGridMeshPage(wxWindow* parent) -> wxWindow*
 		m_ToolsControls->gridMeshStepTxtCtrl = std::make_unique<wxTextCtrl>
 			(
 				page, 
-				MainFrameVariables::ID_RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL, 
+				MainFrameVariables::ID::RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL, 
 #ifdef _DEBUG
 				wxT("100"), 
 #else
@@ -1908,7 +2246,7 @@ auto cMain::CreateCircleMeshPage(wxWindow* parent) -> wxWindow*
 		m_ToolsControls->circleMeshStepTxtCtrl = std::make_unique<wxTextCtrl>
 			(
 				page, 
-				MainFrameVariables::ID_RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL, 
+				MainFrameVariables::ID::RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL, 
 #ifdef _DEBUG
 				wxT("200"), 
 #else
@@ -1964,7 +2302,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 		m_ToolsControls->annulusCenterXTxtCtrl = std::make_unique<wxTextCtrl>
 			(
 				page, 
-				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_CENTER_X_TXT_CTRL, 
+				MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_CENTER_X_TXT_CTRL, 
 #ifdef _DEBUG
 				wxT("0"), 
 #else
@@ -2003,7 +2341,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 		m_ToolsControls->annulusCenterYTxtCtrl = std::make_unique<wxTextCtrl>
 			(
 				page, 
-				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_CENTER_Y_TXT_CTRL, 
+				MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_CENTER_Y_TXT_CTRL, 
 #ifdef _DEBUG
 				wxT("0"), 
 #else
@@ -2055,7 +2393,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 		m_ToolsControls->annulusR1TxtCtrl = std::make_unique<wxTextCtrl>
 			(
 				page, 
-				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R1_TXT_CTRL, 
+				MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_R1_TXT_CTRL, 
 #ifdef _DEBUG
 				wxT("1"), 
 #else
@@ -2096,7 +2434,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 		m_ToolsControls->annulusR2TxtCtrl = std::make_unique<wxTextCtrl>
 			(
 				page, 
-				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL, 
+				MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_R2_TXT_CTRL, 
 #ifdef _DEBUG
 				wxT("1.0"), 
 #else
@@ -2124,7 +2462,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 		m_ToolsControls->annulusListCtrl = std::make_unique<wxListCtrl>
 			(
 				page,
-				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_LIST_CTRL,
+				MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_LIST_CTRL,
 				wxDefaultPosition,
 				wxDefaultSize,
 				wxLC_REPORT
@@ -2228,7 +2566,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 		m_ToolsControls->removeAnnulusFromListBtn = std::make_unique<wxBitmapButton>
 			(
 				page,
-				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_REMOVE_FROM_LIST_BTN,
+				MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_REMOVE_FROM_LIST_BTN,
 				removeBitmap
 			);
 
@@ -2254,7 +2592,7 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 		m_ToolsControls->addAnnulusToListBtn = std::make_unique<wxBitmapButton>
 			(
 				page,
-				MainFrameVariables::ID_RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN,
+				MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN,
 				addBitmap
 			);
 	}
@@ -2301,7 +2639,7 @@ auto cMain::CreateCrosshairPage(wxWindow* parent) -> wxWindow*
 		m_ToolsControls->crosshairAveragingWidthTxtCtrl = std::make_unique<wxTextCtrl>
 			(
 				page,
-				MainFrameVariables::ID_RIGHT_TOOLS_CROSSHAIR_AVERAGING_WIDTH_TXT_CTRL,
+				MainFrameVariables::ID::RIGHT_TOOLS_CROSSHAIR_AVERAGING_WIDTH_TXT_CTRL,
 #ifdef _DEBUG
 				CameraPreviewVariables::CreateStringWithPrecision(1),
 #else
@@ -2326,7 +2664,7 @@ auto cMain::CreateCrosshairPage(wxWindow* parent) -> wxWindow*
 		m_ToolsControls->crosshairAdaptiveScalingCheckBox = std::make_unique<wxCheckBox>
 			(
 				page,
-				MainFrameVariables::ID_RIGHT_TOOLS_CROSSHAIR_ADAPTIVE_SCALING_CHECKBOX,
+				MainFrameVariables::ID::RIGHT_TOOLS_CROSSHAIR_ADAPTIVE_SCALING_CHECKBOX,
 				wxT("Adaptive Scaling")
 			);
 	}
@@ -2349,7 +2687,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 	{
 		m_OutDirTextCtrl = std::make_unique<wxTextCtrl>(
 			page, 
-			MainFrameVariables::ID_RIGHT_MT_OUT_FLD_TEXT_CTRL, 
+			MainFrameVariables::ID::RIGHT_MT_OUT_FLD_TEXT_CTRL, 
 			wxT("Save directory..."), 
 			wxDefaultPosition, 
 			wxDefaultSize, 
@@ -2358,7 +2696,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 
 		m_OutDirBtn = std::make_unique<wxButton>(
 			page, 
-			MainFrameVariables::ID_RIGHT_MT_OUT_FLD_BTN, 
+			MainFrameVariables::ID::RIGHT_MT_OUT_FLD_BTN, 
 			wxT("Select folder"));
 		m_OutDirBtn->SetToolTip(wxT("Set the output directory"));
 
@@ -2382,7 +2720,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 				wxSizer* const stage_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Stage");
 				m_FirstStage->stage = new wxChoice(
 					page, 
-					MainFrameVariables::ID_RIGHT_MT_FIRST_STAGE_CHOICE, 
+					MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_CHOICE, 
 					wxDefaultPosition, 
 					wxDefaultSize, 
 					m_FirstStage->motors);
@@ -2401,7 +2739,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 
 				m_FirstStage->start = new wxTextCtrl(
 					page,
-					MainFrameVariables::ID_RIGHT_MT_FIRST_STAGE_START,
+					MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_START,
 					defaultText, 
 					wxDefaultPosition, 
 					start_text_ctrl_size, 
@@ -2423,7 +2761,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 
 				m_FirstStage->step = new wxTextCtrl(
 					page, 
-					MainFrameVariables::ID_RIGHT_MT_FIRST_STAGE_STEP,
+					MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_STEP,
 					defaultText, 
 					wxDefaultPosition, 
 					step_text_ctrl_size, 
@@ -2444,7 +2782,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 
 				m_FirstStage->finish = new wxTextCtrl(
 					page, 
-					MainFrameVariables::ID_RIGHT_MT_FIRST_STAGE_FINISH,
+					MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_FINISH,
 					defaultText, 
 					wxDefaultPosition, 
 					finish_text_ctrl_size, 
@@ -2485,7 +2823,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 		m_GenerateReportBtn = std::make_unique<wxButton>
 			(
 				page,
-				MainFrameVariables::ID_RIGHT_MY_GENERATE_REPORT_BTN,
+				MainFrameVariables::ID::RIGHT_MY_GENERATE_REPORT_BTN,
 				wxT("Generate")					
 			);
 		m_GenerateReportBtn->SetToolTip("Generate a verbose report");
@@ -2499,7 +2837,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 		m_StartStopMeasurementTglBtn = std::make_unique<wxToggleButton>
 			(
 				page,
-				MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT,
+				MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT,
 				wxT("Start Measurement (M)")					
 			);
 		m_StartStopMeasurementTglBtn->SetToolTip("Repeatedly move the stage, capture, and save images to disk.");
@@ -2524,8 +2862,9 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 	wxSize inc_dec_size = { 20, 20 };
 
 	auto size = wxSize(16, 16);
-	wxImageList* imageListDetector = new wxImageList(size.GetWidth(), size.GetHeight(), true);
-	wxImageList* imageListOptics = new wxImageList(size.GetWidth(), size.GetHeight(), true);
+	auto imageListDetector = new wxImageList(size.GetWidth(), size.GetHeight(), true);
+	auto imageListOptics = new wxImageList(size.GetWidth(), size.GetHeight(), true);
+	auto imageListAux = new wxImageList(size.GetWidth(), size.GetHeight(), true);
 
 	/* Center bitmap */
 	wxBitmap centerBitmap{};
@@ -2557,40 +2896,60 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 		);
 	}
 
+	int detectorImgIndex{};
+
 	/* Detector bitmap */
-	wxBitmap detectorBitmap{};
 	{
 		auto bitmap = wxART_CAMERA;
 		auto client = wxART_CLIENT_MATERIAL_FILLED;
 		auto color = wxColour(128, 0, 255);
-		detectorBitmap = wxMaterialDesignArtProvider::GetBitmap
+
+		auto bmp = wxMaterialDesignArtProvider::GetBitmap
 		(
 			bitmap,
 			client,
 			size,
 			color
 		);
+
+		detectorImgIndex = imageListDetector->Add(bmp);
 	}
 
+	int opticsImgIndexSupport{};
+
 	/* Optics bitmap */
-	wxBitmap opticsBitmap{};
 	{
 		auto bitmap = wxART_CIRCLE_HINT;
 		auto client = wxART_CLIENT_FLUENTUI_FILLED;
 		auto color = wxColour(255, 128, 128);
-		opticsBitmap = wxMaterialDesignArtProvider::GetBitmap
+		auto bmp = wxMaterialDesignArtProvider::GetBitmap
 		(
 			bitmap,
 			client,
 			size,
 			color
 		);
+
+		opticsImgIndexSupport = imageListOptics->Add(bmp);
 	}
 
-	int detectorImgIndex = imageListDetector->Add(detectorBitmap);
-	//int opticsImgIndex = imageList->Add(opticsBitmap);
+	int auxImgIndex{};
 
-	int opticsImgIndexSupport = imageListOptics->Add(opticsBitmap);
+	/* Aux bitmap */
+	{
+		auto bitmap = wxART_AUTO_AWESOME_MOTION;
+		auto client = wxART_CLIENT_MATERIAL_ROUND;
+		auto color = wxColour(181, 230, 29);
+		auto bmp = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			size,
+			color
+		);
+
+		auxImgIndex = imageListAux->Add(bmp);
+	}
 
 	m_DetectorControlsNotebook = new wxNotebook(right_side_panel, wxID_ANY);
 
@@ -2642,8 +3001,34 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 	m_OpticsControlsNotebook->Hide();
 #endif // !_DEBUG
 
+	m_AuxControlsNotebook = new wxNotebook(right_side_panel, wxID_ANY);
+
+	m_AuxControlsNotebook->AssignImageList(imageListAux);
+
+	m_AuxControlsNotebook->AddPage
+	(
+		CreateAuxPage
+		(
+			m_AuxControlsNotebook,
+			absolute_text_ctrl_size,
+			relative_text_ctrl_size,
+			set_btn_size,
+			inc_dec_size,
+			centerBitmap,
+			homeBitmap
+		),
+		"Aux",
+		false,
+		auxImgIndex
+	);
+
+#ifndef _DEBUG
+	m_AuxControlsNotebook->Hide();
+#endif // !_DEBUG
+
 	right_side_panel_sizer->Add(m_DetectorControlsNotebook, 0, wxEXPAND | wxALL, 5);
 	right_side_panel_sizer->Add(m_OpticsControlsNotebook, 0, wxEXPAND | wxALL, 5);
+	right_side_panel_sizer->Add(m_AuxControlsNotebook, 0, wxEXPAND | wxALL, 5);
 	//right_side_panel_sizer->Add(sc_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
 }
 
@@ -2885,7 +3270,7 @@ void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_
 
 auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 {
-	auto currID = MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE;
+	auto currID = MainFrameVariables::ID::MENUBAR_EDIT_ENABLE_DARK_MODE;
 	auto currState = m_MenuBar->menu_edit->IsChecked(currID);
 	
 	m_Config->dark_mode_on = currState;
@@ -2934,7 +3319,7 @@ auto cMain::OnFWHMButton(wxCommandEvent& evt) -> void
 {
 	m_IsFWHMChecked = !m_IsFWHMChecked;
 
-	auto currID = MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING;
+	auto currID = MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING;
 	auto currState = m_IsFWHMChecked;
 
 	m_MenuBar->menu_tools->Check(currID, currState);
@@ -2947,7 +3332,7 @@ auto cMain::OnFWHMButton(wxCommandEvent& evt) -> void
 
 	// Enable Focus Center Displaying
 	{
-		currID = MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING;
+		currID = MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING;
 
 		if (!currState)
 		{
@@ -2970,7 +3355,7 @@ auto cMain::OnGridMeshButton(wxCommandEvent& evt) -> void
 {	
 	m_IsGridMeshChecked = !m_IsGridMeshChecked;
 
-	auto currID = MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING;
+	auto currID = MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING;
 	auto currState = m_IsGridMeshChecked;
 
 	m_MenuBar->menu_tools->Check(currID, currState);
@@ -3007,7 +3392,7 @@ auto cMain::OnFocusCenterButton(wxCommandEvent& evt) -> void
 {
 	m_IsFocusCenterChecked = !m_IsFocusCenterChecked;
 
-	auto currID = MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING;
+	auto currID = MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING;
 	auto currState = m_IsFocusCenterChecked;
 
 	m_MenuBar->menu_tools->Check(currID, currState);
@@ -3023,7 +3408,7 @@ auto cMain::OnCircleMeshButton(wxCommandEvent& evt) -> void
 {
 	m_IsCircleMeshChecked = !m_IsCircleMeshChecked;
 
-	auto currID = MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING;
+	auto currID = MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING;
 	auto currState = m_IsCircleMeshChecked;
 
 	m_MenuBar->menu_tools->Check(currID, currState);
@@ -3097,7 +3482,7 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 	auto out_dir = m_OutDirTextCtrl->GetValue();
 	while (!wxDir::Exists(out_dir))
 	{
-		wxCommandEvent artSetOutDir(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_MT_OUT_FLD_BTN);
+		wxCommandEvent artSetOutDir(wxEVT_BUTTON, MainFrameVariables::ID::RIGHT_MT_OUT_FLD_BTN);
 		ProcessEvent(artSetOutDir);
 		out_dir = m_OutDirTextCtrl->GetValue();
 	}
@@ -3109,7 +3494,7 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 
 	auto start_live_capturing_after_ss = m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue();
 
-	wxCommandEvent artStartStopLiveCapturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+	wxCommandEvent artStartStopLiveCapturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	if (start_live_capturing_after_ss)
 	{
 		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
@@ -3276,11 +3661,11 @@ void cMain::OnSetOutDirectoryBtn(wxCommandEvent& evt)
 	m_OutDirTextCtrl->SetValue(outDirPath);
 	m_FirstStage->EnableAllControls();
 	//m_SecondStage->EnableAllControls();
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, true);
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, true);
 
 	m_CameraTabControls->singleShotBtn->Enable();
 	m_StartStopMeasurementTglBtn->Enable();
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, true);
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, true);
 }
 
 auto cMain::ReadInitializationFile() -> void
@@ -3379,7 +3764,7 @@ auto cMain::InitializeSelectedCamera() -> void
 		if (m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
 		{
 			m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
-			wxCommandEvent artStopLive(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+			wxCommandEvent artStopLive(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 			ProcessEvent(artStopLive);
 		}
 
@@ -3433,8 +3818,8 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 	{
 		auto darkMode = m_Config->dark_mode_on;
 
-		m_MenuBar->menu_edit->Check(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE, darkMode);
-		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_DARK_MODE);
+		m_MenuBar->menu_edit->Check(MainFrameVariables::ID::MENUBAR_EDIT_ENABLE_DARK_MODE, darkMode);
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_EDIT_ENABLE_DARK_MODE);
 		ProcessEvent(artEvt);
 	}
 
@@ -3476,7 +3861,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 		if (colormap >= CameraPreviewVariables::Colormaps::GRAYSCALE_COLORMAP && colormap <= CameraPreviewVariables::Colormaps::COPPER_COLORMAP)
 			m_ImageColormapComboBox->stylish_combo_box->SetSelection(colormap);
 
-		wxCommandEvent artColormapPress(wxEVT_COMBOBOX, MainFrameVariables::ID_RIGHT_CAM_COLORMAP_COMBOBOX);
+		wxCommandEvent artColormapPress(wxEVT_COMBOBOX, MainFrameVariables::ID::RIGHT_CAM_COLORMAP_COMBOBOX);
 		ProcessEvent(artColormapPress);
 	}
 
@@ -3495,7 +3880,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 			++i;
 		}
 
-		wxCommandEvent artBinPress(wxEVT_CHOICE, MainFrameVariables::ID_RIGHT_CAM_BINNING_CHOICE);
+		wxCommandEvent artBinPress(wxEVT_CHOICE, MainFrameVariables::ID::RIGHT_CAM_BINNING_CHOICE);
 		ProcessEvent(artBinPress);
 	}
 
@@ -3517,7 +3902,7 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 		auto checked = m_Config->crosshair_adaptive_scaling;
 		m_ToolsControls->crosshairAdaptiveScalingCheckBox->SetValue(checked);
 
-		wxCommandEvent evt(wxEVT_CHECKBOX, MainFrameVariables::ID_RIGHT_TOOLS_CROSSHAIR_ADAPTIVE_SCALING_CHECKBOX);
+		wxCommandEvent evt(wxEVT_CHECKBOX, MainFrameVariables::ID::RIGHT_TOOLS_CROSSHAIR_ADAPTIVE_SCALING_CHECKBOX);
 		ProcessEvent(evt);
 	}
 
@@ -3720,12 +4105,12 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 
 	EnableControlsAfterCapturing();
 
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, true);
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, true);
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, true);
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, true);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, true);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, true);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, true);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, true);
 	m_VerticalToolBar->tool_bar->Enable();
-	m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
+	m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 }
 
 auto cMain::OnSave(wxCommandEvent& evt) -> void
@@ -3792,14 +4177,14 @@ void cMain::OnExit(wxCloseEvent& evt)
 		if (m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
 		{
 			m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
-			wxCommandEvent artStopLiveCapturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+			wxCommandEvent artStopLiveCapturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 			ProcessEvent(artStopLiveCapturing);
 		}
 
 		if (m_StartStopMeasurementTglBtn->GetValue())
 		{
 			m_StartStopMeasurementTglBtn->SetValue(!m_StartStopMeasurementTglBtn->GetValue());
-			wxCommandEvent artStopMeasurement(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT);
+			wxCommandEvent artStopMeasurement(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT);
 			ProcessEvent(artStopMeasurement);
 		}
 
@@ -3958,14 +4343,14 @@ void cMain::CreateVerticalToolBar()
 
 		m_VerticalToolBar->tool_bar->AddCheckTool
 		(
-			MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, 
+			MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, 
 			_("Crosshair"), 
 			toolBitmap
 		);
 
 		m_VerticalToolBar->tool_bar->SetToolShortHelp
 		(
-			MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, 
+			MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, 
 			wxT("Crosshair (C)")
 		);
 	}
@@ -3989,14 +4374,14 @@ void cMain::CreateVerticalToolBar()
 
 		m_VerticalToolBar->tool_bar->AddCheckTool
 		(
-			MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, 
+			MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, 
 			_("Focus Center"), 
 			toolBitmap
 		);
 
 		m_VerticalToolBar->tool_bar->SetToolShortHelp
 		(
-			MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, 
+			MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, 
 			wxT("Focus Center (Ctrl+F)")
 		);
 	}
@@ -4020,14 +4405,14 @@ void cMain::CreateVerticalToolBar()
 
 		m_VerticalToolBar->tool_bar->AddCheckTool
 		(
-			MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, 
+			MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, 
 			_("FWHM"), 
 			toolBitmap
 		);
 
 		m_VerticalToolBar->tool_bar->SetToolShortHelp
 		(
-			MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, 
+			MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, 
 			wxT("FWHM (F)")
 		);
 	}
@@ -4053,14 +4438,14 @@ void cMain::CreateVerticalToolBar()
 
 		m_VerticalToolBar->tool_bar->AddCheckTool
 		(
-			MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, 
+			MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, 
 			_("Annulus"), 
 			toolBitmap
 		);
 
 		m_VerticalToolBar->tool_bar->SetToolShortHelp
 		(
-			MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, 
+			MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, 
 			wxT("Annulus (A)")
 		);
 	}
@@ -4086,14 +4471,14 @@ void cMain::CreateVerticalToolBar()
 
 		m_VerticalToolBar->tool_bar->AddCheckTool
 		(
-			MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, 
+			MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, 
 			_("Grid Mesh"), 
 			toolBitmap
 		);
 
 		m_VerticalToolBar->tool_bar->SetToolShortHelp
 		(
-			MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, 
+			MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, 
 			wxT("Grid Mesh (Ctrl+G)")
 		);
 	}
@@ -4117,14 +4502,14 @@ void cMain::CreateVerticalToolBar()
 
 		m_VerticalToolBar->tool_bar->AddCheckTool
 		(
-			MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, 
+			MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, 
 			_("Circle Mesh"), 
 			toolBitmap
 		);
 
 		m_VerticalToolBar->tool_bar->SetToolShortHelp
 		(
-			MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, 
+			MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, 
 			wxT("Circle Mesh (Ctrl+C)")
 		);
 	}
@@ -4144,7 +4529,7 @@ auto cMain::WorkerThreadFinished(bool is_finished) -> void
 {
 	if (!is_finished) return;
 
-	wxCommandEvent live_capturing_evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+	wxCommandEvent live_capturing_evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	ProcessEvent(live_capturing_evt);
 }
 
@@ -4153,7 +4538,7 @@ auto cMain::OnAnnulusButton(wxCommandEvent& evt) -> void
 {
 	m_IsAnnulusChecked = !m_IsAnnulusChecked;
 
-	auto currID = MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING;
+	auto currID = MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING;
 	auto currState = m_IsAnnulusChecked;
 
 	m_MenuBar->menu_tools->Check(currID, currState);
@@ -4424,15 +4809,15 @@ auto cMain::ExtractAnnulusFromTextCtrls() const -> CameraPreviewVariables::Annul
 void cMain::UnCheckAllTools()
 {
 	/* Unchecking CrossHair Button */
-	m_VerticalToolBar->tool_bar->ToggleTool(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, false);
-	m_MenuBar->menu_tools->Check(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, false);
+	m_VerticalToolBar->tool_bar->ToggleTool(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, false);
+	m_MenuBar->menu_tools->Check(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, false);
 	m_CamPreview->ActivateCrossHairDisplaying(false);
 	m_CameraTabControls->crossHairPosXTxtCtrl->Disable();
 	m_CameraTabControls->crossHairPosYTxtCtrl->Disable();
 	//m_SetCrossHairPosTglBtn->Disable();
 
-	m_VerticalToolBar->tool_bar->ToggleTool(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
-	m_MenuBar->menu_tools->Check(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
+	m_VerticalToolBar->tool_bar->ToggleTool(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
+	m_MenuBar->menu_tools->Check(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 	//m_CamPreview->SetCrossHairButtonActive(false);
 	//m_CameraTabControls->crossHairPosXTxtCtrl->Disable();
 	//m_CameraTabControls->crossHairPosYTxtCtrl->Disable();
@@ -4583,7 +4968,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			LOG("StartedThreads.back(): " + m_StartedThreads.back().first);
 
 			{
-				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, false);
+				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, false);
 				m_StartStopMeasurementTglBtn->Disable();
 
 				m_CameraTabControls->DisableAllControls();
@@ -4596,8 +4981,8 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 
 			{
 				m_StartStopMeasurementTglBtn->Enable();
-				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, true);
-				m_MenuBar->menu_edit->Check(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, false);
+				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, true);
+				m_MenuBar->menu_edit->Check(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, false);
 
 				m_CameraTabControls->EnableAllControls();
 			}
@@ -4617,7 +5002,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 	if (m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
 	{
 		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
-		wxCommandEvent untoggleLiveCapturingBtn(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+		wxCommandEvent untoggleLiveCapturingBtn(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 		ProcessEvent(untoggleLiveCapturingBtn);
 	}
 
@@ -4704,7 +5089,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		auto out_dir = m_OutDirTextCtrl->GetValue();
 		while (!wxDir::Exists(out_dir))
 		{
-			wxCommandEvent artSetOutDir(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_MT_OUT_FLD_BTN);
+			wxCommandEvent artSetOutDir(wxEVT_BUTTON, MainFrameVariables::ID::RIGHT_MT_OUT_FLD_BTN);
 			ProcessEvent(artSetOutDir);
 			out_dir = m_OutDirTextCtrl->GetValue();
 		}
@@ -4766,7 +5151,7 @@ auto cMain::OnStartStopCapturingMenuButton(wxCommandEvent& evt) -> void
 {
 	m_StartStopMeasurementTglBtn->SetValue(!m_StartStopMeasurementTglBtn->GetValue());
 
-	wxCommandEvent art_evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT);
+	wxCommandEvent art_evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT);
 	ProcessEvent(art_evt);
 }
 
@@ -4824,7 +5209,7 @@ void cMain::StartLiveCapturing()
 
 void cMain::ChangeCameraManufacturerChoice(wxCommandEvent& evt)
 {
-	wxCommandEvent simulate_change_exposure_value(wxEVT_TEXT_ENTER, MainFrameVariables::ID_RIGHT_CAM_EXPOSURE_TXT_CTL);
+	wxCommandEvent simulate_change_exposure_value(wxEVT_TEXT_ENTER, MainFrameVariables::ID::RIGHT_CAM_EXPOSURE_TXT_CTL);
 	ProcessEvent(simulate_change_exposure_value);
 }
 
@@ -4832,7 +5217,7 @@ auto cMain::OnCrossHairButton(wxCommandEvent& evt) -> void
 {
 	m_IsCrossHairChecked = !m_IsCrossHairChecked;
 
-	auto currID = MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR;
+	auto currID = MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR;
 	auto currState = m_IsCrossHairChecked;
 
 	m_MenuBar->menu_tools->Check(currID, currState);
@@ -4907,13 +5292,13 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 			if (m_StartStopMeasurementTglBtn->GetValue())
 			{
 				m_StartStopMeasurementTglBtn->SetValue(false);
-				wxCommandEvent evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT);
+				wxCommandEvent evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT);
 				ProcessEvent(evt);
 			}
 			else
 			{
 				m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
-				wxCommandEvent evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+				wxCommandEvent evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 				ProcessEvent(evt);
 			}
 		};
@@ -5005,7 +5390,7 @@ void cMain::UpdateProgress(wxThreadEvent& evt)
 	else if (progress == -1)
 	{
 		m_StartStopMeasurementTglBtn->SetValue(false);
-		wxCommandEvent art_evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT);
+		wxCommandEvent art_evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT);
 		ProcessEvent(art_evt);
 	}
 	// Interrupted
@@ -5838,7 +6223,7 @@ bool cMain::Cancelled()
 
 void cMain::OnValueDisplayingCheck(wxCommandEvent& evt)
 {
-	m_IsValueDisplayingChecked = m_MenuBar->menu_tools->IsChecked(MainFrameVariables::ID_MENUBAR_TOOLS_VALUE_DISPLAYING);
+	m_IsValueDisplayingChecked = m_MenuBar->menu_tools->IsChecked(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING);
 	m_CamPreview->SetValueDisplayingActive(m_IsValueDisplayingChecked);
 }
 
@@ -5866,7 +6251,7 @@ void cMain::ExposureValueChanged(wxCommandEvent& evt)
 
 	// Stop acquisition
 	m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
-	wxCommandEvent artStartStopLiveCapturingPressed(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+	wxCommandEvent artStartStopLiveCapturingPressed(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	ProcessEvent(artStartStopLiveCapturingPressed);
 
 	// Start acquisition
@@ -5919,7 +6304,7 @@ auto cMain::OnColormapComboBox(wxCommandEvent& evt) -> void
 
 	//if (!m_CameraParametersControls->startCapturing->GetValue())
 
-	wxCommandEvent artLeftBorderHostogramChanged(wxEVT_TEXT, MainFrameVariables::ID_HISTOGRAM_LEFT_BORDER_TXT_CTRL);
+	wxCommandEvent artLeftBorderHostogramChanged(wxEVT_TEXT, MainFrameVariables::ID::HISTOGRAM_LEFT_BORDER_TXT_CTRL);
 	ProcessEvent(artLeftBorderHostogramChanged);
 }
 
@@ -5941,7 +6326,7 @@ auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 	{
 		// Stop acquisition
 		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
-		wxCommandEvent artStartStopLiveCapturingPressed(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+		wxCommandEvent artStartStopLiveCapturingPressed(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 		ProcessEvent(artStartStopLiveCapturingPressed);
 	}
 
@@ -5949,7 +6334,7 @@ auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 	{
 		// Stop acquisition
 		m_StartStopMeasurementTglBtn->SetValue(!m_StartStopMeasurementTglBtn->GetValue());
-		wxCommandEvent artStartStopMeasurementPressed(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT);
+		wxCommandEvent artStartStopMeasurementPressed(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT);
 		ProcessEvent(artStartStopMeasurementPressed);
 	}
 
@@ -6700,24 +7085,24 @@ auto cMain::EnableControlsAfterCapturing() -> void
 
 		m_CameraTabControls->startStopLiveCapturingTglBtn->Enable();
 
-		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, true);
-		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, true);
+		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, true);
+		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, true);
 
 		m_OutDirBtn->Enable();
 		m_FirstStage->EnableAllControls();
 	}
 
-	m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, true);
-	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, true);
-	if (m_MenuBar->submenu_intensity_profile->IsChecked(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR))
+	m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, true);
+	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, true);
+	if (m_MenuBar->submenu_intensity_profile->IsChecked(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR))
 	{
 		m_CameraTabControls->crossHairPosXTxtCtrl->Enable();
 		m_CameraTabControls->crossHairPosYTxtCtrl->Enable();
 	}
 
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, true);
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::MENUBAR_EDIT_SETTINGS, true);
 
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_VALUE_DISPLAYING, true);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, true);
 
 	m_ImageColormapComboBox->stylish_combo_box->Enable();
 
@@ -6728,36 +7113,36 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 {
 	auto enableWidget = true;
 
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, enableWidget);
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, enableWidget);
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, enableWidget);
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, enableWidget);
 
 	m_CameraTabControls->EnableAllControls();
 
 	m_ImageColormapComboBox->stylish_combo_box->Enable();
 
-	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, enableWidget);
+	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, enableWidget);
 
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, enableWidget);
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, enableWidget);
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, enableWidget);
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, enableWidget);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, enableWidget);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, enableWidget);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, enableWidget);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, enableWidget);
 
 	m_VerticalToolBar->tool_bar->Enable();
 
 	m_OutDirBtn->Enable();
 	
-	if (!m_VerticalToolBar->tool_bar->GetToolState(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING))
-		m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID_MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
+	if (!m_VerticalToolBar->tool_bar->GetToolState(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING))
+		m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 }
 
 auto cMain::DisableControlsAfterUnsuccessfulCameraInitialization() -> void
 {
 	auto enableWidget = false;
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, enableWidget);
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, enableWidget);
 
 	m_StartStopMeasurementTglBtn->Disable();
 	DisableControlsBeforeCapturing();
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, !enableWidget);
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::MENUBAR_EDIT_SETTINGS, !enableWidget);
 }
 
 auto cMain::DisableControlsBeforeCapturing() -> void
@@ -6770,13 +7155,13 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 
 	m_ImageColormapComboBox->stylish_combo_box->Disable();
 	m_CameraTabControls->DisableAllControls();
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_SINGLE_SHOT_BTN, false);
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, false);
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
 
-	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_MENUBAR_EDIT_SETTINGS, false);
-	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_CROSSHAIR, false);
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::MENUBAR_EDIT_SETTINGS, false);
+	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, false);
 
-	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID_MENUBAR_TOOLS_VALUE_DISPLAYING, false);
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, false);
 
 	m_OutDirBtn->Disable();
 	m_FirstStage->DisableAllControls();
@@ -6786,7 +7171,7 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 
 void cMain::OnStartStopLiveCapturingMenu(wxCommandEvent& evt)
 {
-	if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
+	if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
 	{
 		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(true);
 	}
@@ -6794,7 +7179,7 @@ void cMain::OnStartStopLiveCapturingMenu(wxCommandEvent& evt)
 	{
 		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
 	}
-	wxCommandEvent art_start_live_pressed(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+	wxCommandEvent art_start_live_pressed(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	ProcessEvent(art_start_live_pressed);
 }
 
@@ -6806,8 +7191,8 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 		{
 			m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
 			m_CameraTabControls->startStopLiveCapturingTglBtn->SetLabel(wxT("Start Live (L)"));
-			if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
-				m_MenuBar->menu_edit->Check(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
+			if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
+				m_MenuBar->menu_edit->Check(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
 			return;
 		}
 
@@ -6819,8 +7204,8 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 		StartLiveCapturing();
 
 		m_CameraTabControls->startStopLiveCapturingTglBtn->SetLabel(wxT("Stop Live (L)"));
-		if (!m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
-			m_MenuBar->menu_edit->Check(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, true);
+		if (!m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
+			m_MenuBar->menu_edit->Check(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, true);
 	}
 	else
 	{	
@@ -6835,7 +7220,7 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 				m_CameraTabControls->DisableAllControls();
 			
 				m_StartStopMeasurementTglBtn->Disable();
-				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, false);
+				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, false);
 			}
 
 			while (!m_StartedThreads.back().first.empty())
@@ -6848,7 +7233,7 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 				m_CameraTabControls->EnableAllControls();
 				
 				m_StartStopMeasurementTglBtn->Enable();
-				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID_RIGHT_MT_START_STOP_MEASUREMENT, true);
+				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, true);
 			}
 		}
 
@@ -6860,8 +7245,8 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 		m_StartStopMeasurementTglBtn->Enable();
 
 		m_CameraTabControls->startStopLiveCapturingTglBtn->SetLabel(wxT("Start Live (L)"));
-		if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
-			m_MenuBar->menu_edit->Check(MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
+		if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
+			m_MenuBar->menu_edit->Check(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
 	}
 }
 
@@ -6955,7 +7340,7 @@ wxThread::ExitCode LiveCapturing::Entry()
 		m_CameraControl = nullptr;
 	};	
 	
-	wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID_THREAD_LIVE_CAPTURING);
+	wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_LIVE_CAPTURING);
 
 	auto text_id = "LiveCapturing ID: " + *m_UniqueThreadKey;
 	LOG(text_id);
@@ -7205,7 +7590,7 @@ WorkerThread::~WorkerThread()
 
 wxThread::ExitCode WorkerThread::Entry()
 {
-	wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID_THREAD_LIVE_CAPTURING);
+	wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_LIVE_CAPTURING);
 	
 	constexpr auto raise_exception_msg = [](wxString camera_name) 
 	{
@@ -8041,7 +8426,7 @@ wxThread::ExitCode ProgressThread::Entry()
 {
 	m_Progress = 0;
 	m_ProgressMsg = "";
-	wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID_THREAD_PROGRESS_CAPTURING);
+	wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_PROGRESS_CAPTURING);
 	while (!m_Settings->IsCapturingFinished())
 	{
 		//m_Settings->ProvideProgressInfo(&m_ProgressMsg, &m_Progress);
