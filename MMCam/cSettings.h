@@ -5,6 +5,8 @@
 #include "wx/wx.h"
 #include "wx/valnum.h"
 #include "wx/textfile.h"
+#include "wx/notebook.h"
+#include "MaterialDesign/wxMaterialDesignArtProvider.hpp"
 
 #include <memory>
 #include <map>
@@ -332,9 +334,9 @@ private:
 	void CreateSettings();
 	void CreateMotorsSelection(wxBoxSizer* panel_sizer);
 
-	auto CreateDetectorGroup(wxPanel* panel, wxSizer* panelSizer, const wxSize& txtCtrlSize, const int& topOffset) -> void;
-	auto CreateOpticsGroup(wxPanel* panel, wxSizer* panelSizer, const wxSize& txtCtrlSize, const int& topOffset) -> void;
-	auto CreateAuxGroup(wxPanel* panel, wxSizer* panelSizer, const wxSize& txtCtrlSize, const int& topOffset) -> void;
+	auto CreateDetectorPage(wxWindow* parent, const wxSize& txtCtrlSize, const int& topOffset) -> wxWindow*;
+	auto CreateOpticsPage(wxWindow* parent, const wxSize& txtCtrlSize, const int& topOffset) -> wxWindow*;
+	auto CreateAuxPage(wxWindow* parent, const wxSize& txtCtrlSize, const int& topOffset) -> wxWindow*;
 
 	auto CreateCameraSection(wxPanel* panel, wxBoxSizer* panel_sizer) -> void;
 	auto CreateOtherSettings(wxBoxSizer* panel_sizer) -> void;
@@ -470,6 +472,9 @@ private:
 	double m_PixelSizeUM{};
 
 	std::unique_ptr<wxPanel> m_MainPanel{};
+
+	wxNotebook* m_MotorsNotebook{};
+
 	SettingsVariables::MotorManufacturers m_MotorManufacturer{};
 	SettingsVariables::CameraManufacturers m_CameraManufacturer{};
 	wxArrayString m_XRayImagesCaptions{};
