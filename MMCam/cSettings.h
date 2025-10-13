@@ -27,35 +27,48 @@
 
 namespace SettingsVariables
 {
-	enum
+	enum ID
 	{
 		/* Work Station */
-		ID_WORK_STATION_CHOICE,
+		WORK_STATION_CHOICE,
+
 		/* Detector X */
-		ID_MOT_DET_X_MOTOR_TXT_CTRL,
-		ID_MOT_DET_X_STEPS_PER_MM_ST_TEXT,
+		MOT_DET_X_MOTOR_TXT_CTRL,
+		MOT_DET_X_STEPS_PER_MM_ST_TEXT,
 		/* Detector Y */
-		ID_MOT_DET_Y_MOTOR_TXT_CTRL,
-		ID_MOT_DET_Y_STEPS_PER_MM_ST_TEXT,
+		MOT_DET_Y_MOTOR_TXT_CTRL,
+		MOT_DET_Y_STEPS_PER_MM_ST_TEXT,
 		/* Detector Z */
-		ID_MOT_DET_Z_MOTOR_TXT_CTRL,
-		ID_MOT_DET_Z_STEPS_PER_MM_ST_TEXT,
+		MOT_DET_Z_MOTOR_TXT_CTRL,
+		MOT_DET_Z_STEPS_PER_MM_ST_TEXT,
+
 		/* Optics X */
-		ID_MOT_OPT_X_MOTOR_TXT_CTRL,
-		ID_MOT_OPT_X_STEPS_PER_MM_ST_TEXT,
+		MOT_OPT_X_MOTOR_TXT_CTRL,
+		MOT_OPT_X_STEPS_PER_MM_ST_TEXT,
 		/* Optics Y */
-		ID_MOT_OPT_Y_MOTOR_TXT_CTRL,
-		ID_MOT_OPT_Y_STEPS_PER_MM_ST_TEXT,
+		MOT_OPT_Y_MOTOR_TXT_CTRL,
+		MOT_OPT_Y_STEPS_PER_MM_ST_TEXT,
 		/* Optics Z */
-		ID_MOT_OPT_Z_MOTOR_TXT_CTRL,
-		ID_MOT_OPT_Z_STEPS_PER_MM_ST_TEXT,
+		MOT_OPT_Z_MOTOR_TXT_CTRL,
+		MOT_OPT_Z_STEPS_PER_MM_ST_TEXT,
+
+		/* AUX X */
+		MOT_AUX_X_MOTOR_TXT_CTRL,
+		MOT_AUX_X_STEPS_PER_MM_ST_TEXT,
+		/* AUX Y */
+		MOT_AUX_Y_MOTOR_TXT_CTRL,
+		MOT_AUX_Y_STEPS_PER_MM_ST_TEXT,
+		/* AUX Z */
+		MOT_AUX_Z_MOTOR_TXT_CTRL,
+		MOT_AUX_Z_STEPS_PER_MM_ST_TEXT,
+
 		/* Cameras */
-		ID_CAM_ID_TXT_CTRL,
-		ID_CAM_TEMPERATURE_TXT_CTRL,
-		ID_CAM_BINNING_CHOICE,
+		CAM_ID_TXT_CTRL,
+		CAM_TEMPERATURE_TXT_CTRL,
+		CAM_BINNING_CHOICE,
 		/* Other Parameters */
-		ID_GRID_MESH_STEP_TXT_CTRL,
-		ID_CIRCLE_MESH_STEP_TXT_CTRL
+		GRID_MESH_STEP_TXT_CTRL,
+		CIRCLE_MESH_STEP_TXT_CTRL
 	};
 
 	enum CameraManufacturers
@@ -92,7 +105,7 @@ namespace SettingsVariables
 
 	struct MotorSettingsArray
 	{
-		std::unique_ptr<MotorSettings[]> m_Detector{}, m_Optics{};
+		std::unique_ptr<MotorSettings[]> m_Detector{}, m_Optics{}, m_Aux{};
 
 		wxArrayString xml_all_motors[2];
 		wxArrayString xml_selected_motors[2];
@@ -105,6 +118,7 @@ namespace SettingsVariables
 		{
 			m_Detector = std::make_unique<MotorSettings[]>(3);
 			m_Optics = std::make_unique<MotorSettings[]>(3);
+			m_Aux = std::make_unique<MotorSettings[]>(3);
 		}
 	};
 
@@ -180,8 +194,7 @@ namespace SettingsVariables
 		double pixel_size_um{};
 		int steps_per_mm{};
 
-		std::vector<StageSettings> detector{};
-		std::vector<StageSettings> optics{};
+		std::vector<StageSettings> detector{}, optics{}, aux{};
 
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE
 		(
@@ -195,7 +208,8 @@ namespace SettingsVariables
 			steps_per_mm,
 
 			detector, 
-			optics
+			optics,
+			aux
 		)
 	};
 
@@ -298,7 +312,7 @@ public:
 		if (workStationPosition == wxNOT_FOUND) return;
 
 		m_WorkStations->work_station_choice->SetSelection(workStationPosition);
-		wxCommandEvent event(wxEVT_CHOICE, SettingsVariables::ID_WORK_STATION_CHOICE);
+		wxCommandEvent event(wxEVT_CHOICE, SettingsVariables::ID::WORK_STATION_CHOICE);
 		OnWorkStationChoice(event);
 	};
 
@@ -313,13 +327,15 @@ public:
 	auto GetCameraManufacturer() const -> int { return m_CameraManufacturer; }
 	auto GetMotorManufacturer() const -> int { return m_MotorManufacturer; }
 
-
-	bool SetBackgroundColour(const wxColour& colour) override;
-
 private:
 	void CreateMainFrame();
 	void CreateSettings();
 	void CreateMotorsSelection(wxBoxSizer* panel_sizer);
+
+	auto CreateDetectorGroup(wxPanel* panel, wxSizer* panelSizer, const wxSize& txtCtrlSize, const int& topOffset) -> void;
+	auto CreateOpticsGroup(wxPanel* panel, wxSizer* panelSizer, const wxSize& txtCtrlSize, const int& topOffset) -> void;
+	auto CreateAuxGroup(wxPanel* panel, wxSizer* panelSizer, const wxSize& txtCtrlSize, const int& topOffset) -> void;
+
 	auto CreateCameraSection(wxPanel* panel, wxBoxSizer* panel_sizer) -> void;
 	auto CreateOtherSettings(wxBoxSizer* panel_sizer) -> void;
 	void InitDefaultStateWidgets();

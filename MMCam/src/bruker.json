@@ -13,5 +13,10 @@
     { "SerialNumber": "12586", "StepsPerMM": 800 },
     { "SerialNumber": "12538", "StepsPerMM": 800 },
     { "SerialNumber": "None",  "StepsPerMM": 800 }
+  ],
+  "aux": [
+    { "SerialNumber": "None", "StepsPerMM": 800 },
+    { "SerialNumber": "None", "StepsPerMM": 800 },
+    { "SerialNumber": "None",  "StepsPerMM": 800 }
   ]
 }
