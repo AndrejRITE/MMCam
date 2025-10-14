@@ -26,12 +26,10 @@ cHistogramPanel::cHistogramPanel
 	m_TitleStr(title)
 {
 	SetDoubleBuffered(true);
-#ifdef _DEBUG
+
 	SetBackgroundColour(m_BackgroundColour);
-#else
-	SetBackgroundColour(m_BackgroundColour);
-#endif // _DEBUG
-	parent_sizer->Add(this, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, borderSize);
+
+	parent_sizer->Add(this, 1, wxEXPAND | wxLEFT | wxRIGHT, borderSize);
 
 	SetMinSize(wxSize(200, 100));
 
@@ -179,7 +177,7 @@ void cHistogramPanel::DrawImage(wxGraphicsContext* gc)
 
 	if (m_IsGraphicsBitmapSet)
 	{
-		auto interpolation_quality = wxINTERPOLATION_DEFAULT;
+		auto interpolation_quality = wxINTERPOLATION_BEST;
 
 		gc->SetInterpolationQuality(interpolation_quality);
 		gc->DrawBitmap
@@ -198,9 +196,9 @@ auto cHistogramPanel::DrawTitle(wxGraphicsContext* gc) -> void
 {
 	if (m_TitleStr == wxEmptyString) return;
 
-	wxColour fontColour(128, 128, 255, 64);
+	wxColour fontColor(128, 128, 255, 64);
 	wxFont font = wxFont(22, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
-	gc->SetFont(font, fontColour);
+	gc->SetFont(font, fontColor);
 
 	wxString curr_value{};
 	wxDouble widthText{}, heightText{};
@@ -230,7 +228,7 @@ auto cHistogramPanel::DrawRectangleRange(wxGraphicsContext* gc) -> void
 		heightTransRect{ (wxDouble)m_CanvasSize.GetHeight() - 1.0 };
 	gc->DrawRectangle(m_LeftBorderOnCanvas.x, 0.0, widthTransRect, heightTransRect);
 
-	// Draw astersk if Range was changed
+	// Draw asterisk if Range was changed
 	if (m_WasRangeChanged)
 	{
 		wxColour fontColour(255, 165, 0, 160);
@@ -316,15 +314,13 @@ void cHistogramPanel::CreateGraphicsBitmapImage(wxGraphicsContext* gc_)
 
 void cHistogramPanel::OnSize(wxSizeEvent& evt)
 {
-	int newWidth{ evt.GetSize().x }, newHeight{ evt.GetSize().y };
-	if (newWidth != m_CanvasSize.GetWidth() || newHeight != m_CanvasSize.GetHeight())
-	{
-		m_CanvasSize.SetWidth(newWidth);
-		m_CanvasSize.SetHeight(newHeight);
-		ChangeSizeOfImageInDependenceOnCanvasSize();
-		m_IsGraphicsBitmapSet = false;
-		Refresh();
-	}
+	if (evt.GetSize() == m_CanvasSize) return;
+
+	m_CanvasSize = evt.GetSize();
+
+	ChangeSizeOfImageInDependenceOnCanvasSize();
+	m_IsGraphicsBitmapSet = false;
+	Refresh();
 }
 
 void cHistogramPanel::ChangeSizeOfImageInDependenceOnCanvasSize()
