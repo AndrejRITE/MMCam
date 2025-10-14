@@ -46,7 +46,7 @@ class cHistogramPanel final : public wxPanel
 public:
 	cHistogramPanel
 	(
-		wxFrame* parent_frame,
+		wxWindow* parent_frame,
 		wxSizer* parent_sizer,
 		wxTextCtrl* parent_black_txt_ctrl,
 		wxTextCtrl* parent_white_txt_ctrl,

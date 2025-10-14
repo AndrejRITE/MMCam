@@ -139,11 +139,13 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 wxEND_EVENT_TABLE()
 
 cMain::cMain(const wxString& title_) 
-	: wxFrame(NULL, wxID_ANY, title_)
+	: wxFrame(NULL, wxID_ANY, title_), m_AppName(title_)
 {
 #ifndef _DEBUG
 	wxBusyCursor busy;
 #endif // !_DEBUG
+
+	m_InitializationFilePath = m_AppName + ".ini";
 
 	wxArtProvider::Push(new wxMaterialDesignArtProvider);
 	CreateMainFrame();
@@ -205,6 +207,8 @@ cMain::cMain(const wxString& title_)
 		//wxCommandEvent art_start_live_capturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 		//ProcessEvent(art_start_live_capturing);
 	}
+
+	SetMinClientSize(wxSize(800, 600));
 }
 
 void cMain::CreateMainFrame()
@@ -734,43 +738,90 @@ void cMain::InitDefaultStateWidgets()
 
 void cMain::CreateLeftAndRightSide()
 {
-	auto borderSize = 2;
+	// Frame-level sizer holds the OUTER splitter:
+	auto* frameSizer = new wxBoxSizer(wxVERTICAL);
+	auto* leftSizer = new wxBoxSizer(wxHORIZONTAL);
+	auto* rightSizer = new wxBoxSizer(wxVERTICAL);
+	auto* bottomSizer = new wxBoxSizer(wxVERTICAL);
 
-	wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
+	SetSizer(frameSizer);
 
-	int height_left_and_right_panels{ 600 };
-	wxBoxSizer* leftAndRightPanelSizer = new wxBoxSizer(wxHORIZONTAL);
-	wxBoxSizer* right_sizer = new wxBoxSizer(wxVERTICAL);
-	wxSize sizeOfRightSide = { 350, height_left_and_right_panels };
-	right_sizer->SetMinSize(sizeOfRightSide);
-	CreateRightSide(right_sizer);
+	// OUTER splitter: splits Top(Left+Right) vs Bottom
+	m_MainSplitter = new wxSplitterWindow
+	(
+		this, 
+		wxID_ANY, 
+		wxDefaultPosition, 
+		wxDefaultSize,
+		wxSP_LIVE_UPDATE | wxSP_3D | wxSP_BORDER
+	);
 
-	// Creating Histogram Panel
-	wxBoxSizer* bottomSizer = new wxBoxSizer(wxVERTICAL);
-	CreateBottomPanel(bottomSizer, borderSize);
+	m_MainSplitter->SetMinimumPaneSize(120);   // avoid collapsing panes
+	m_MainSplitter->SetSashGravity(0.80);      // keep ~80% for the top on resize
 
-	wxBoxSizer* left_sizer = new wxBoxSizer(wxHORIZONTAL);
-	wxSize sizeOfPreviewWindow = { 600, height_left_and_right_panels };
-	left_sizer->SetMinSize(sizeOfPreviewWindow);
-	CreateLeftSide(left_sizer);
-	
-	leftAndRightPanelSizer->Add(left_sizer, 1, wxEXPAND | wxALL, borderSize);
-	leftAndRightPanelSizer->Add(right_sizer, 0, wxEXPAND | wxRIGHT | wxTOP | wxBOTTOM, borderSize);
-	
-	main_sizer->Add(leftAndRightPanelSizer, 1, wxEXPAND);
-	//main_sizer->Add(left_sizer, 1, wxEXPAND);
-	//main_sizer->Add(right_sizer, 0, wxEXPAND);
-	main_sizer->Add(bottomSizer, 0, wxEXPAND);
+	// ----- TOP part: an INNER splitter that splits Left vs Right -----
+	m_TopSplitter = new wxSplitterWindow
+	(
+		m_MainSplitter, 
+		wxID_ANY, 
+		wxDefaultPosition, 
+		wxDefaultSize,
+		wxSP_LIVE_UPDATE | wxSP_3D | wxSP_BORDER
+	);
 
-	SetSizerAndFit(main_sizer);
+	m_TopSplitter->SetMinimumPaneSize(350);
+	m_TopSplitter->SetSashGravity(1.0);       // keep both sides balanced
+
+	m_LeftPanel = new wxPanel(m_TopSplitter);
+
+	// Vertical Toolbar
+	if (m_VerticalToolBar && m_VerticalToolBar->tool_bar->GetParent() != m_LeftPanel)
+		m_VerticalToolBar->tool_bar->Reparent(m_LeftPanel);
+	leftSizer->Add(m_VerticalToolBar->tool_bar, 0, wxEXPAND);
+
+	// Left container panel
+	m_LeftPanel->SetSizer(leftSizer);
+
+	// Right container (scrolled) — reuse your member so existing code still works
+	m_RightSidePanel = new wxScrolledWindow
+	(
+		m_TopSplitter, 
+		wxID_ANY, 
+		wxDefaultPosition, 
+		wxDefaultSize,
+		wxVSCROLL | wxHSCROLL | wxBORDER_NONE
+	);
+
+	m_RightSidePanel->SetScrollRate(8, 8);
+	m_RightSidePanel->SetSizer(rightSizer);
+	CreateRightSide(m_RightSidePanel, rightSizer);               // your existing builder
+
+	CreateLeftSide(m_LeftPanel, leftSizer);                 // your existing builder
+
+	// Split Left vs Right (vertical sash)
+	// Choose an initial sash position that fits your UI
+	m_TopSplitter->SplitVertically(m_LeftPanel, m_RightSidePanel, FromDIP(600));
+
+	// ----- BOTTOM part: a simple panel built by your existing function -----
+	m_BottomPanel = new wxPanel(m_MainSplitter);
+	m_BottomPanel->SetSizer(bottomSizer);
+	const int border = FromDIP(5);
+	CreateBottomPanel(bottomSizer, border);    // you already have this
+
+	// OUTER split: Top(=inner splitter) vs Bottom
+	m_MainSplitter->SplitHorizontally(m_TopSplitter, m_BottomPanel, FromDIP(700));
+
+	// Put the OUTER splitter into the frame sizer and lay out
+	frameSizer->Add(m_MainSplitter, 1, wxEXPAND);
+	Layout();
 }
 
-void cMain::CreateLeftSide(wxSizer* left_side_sizer)
+void cMain::CreateLeftSide(wxWindow* parent, wxSizer* left_side_sizer)
 {
-	left_side_sizer->Add(m_VerticalToolBar->tool_bar, 0, wxEXPAND);
-
 	auto input_args = std::make_unique<CameraPreviewVariables::InputPreviewPanelArgs>
 		(
+			parent,
+			left_side_sizer,
 			m_CameraTabControls->crossHairPosXTxtCtrl.get(),
 			m_CameraTabControls->crossHairPosYTxtCtrl.get(),
 			m_ToolsControls->annulusCenterXTxtCtrl.get(),
@@ -780,52 +831,33 @@ void cMain::CreateLeftSide(wxSizer* left_side_sizer)
 			m_StatusBar.get()
 		);
 
-	m_CamPreview = std::make_unique<cCamPreview>
-		(
-		this, 
-		left_side_sizer, 
-		std::move(input_args)
-		);
+	m_CamPreview = std::make_unique<cCamPreview>(std::move(input_args));
 }
 
-void cMain::CreateRightSide(wxSizer* right_side_sizer)
+void cMain::CreateRightSide(wxWindow* parent, wxSizer* right_side_sizer)
 {
-	m_RightSidePanel = new wxScrolledWindow(this);
-	//m_RightSidePanel = new wxPanel(this);
-	m_RightSidePanel->SetScrollRate(5, 5); // Needed for scrolling
-
-	m_RightSidePanel->SetBackgroundColour(wxColor(75, 75, 75));
-
-	wxBoxSizer* right_side_panel_sizer = new wxBoxSizer(wxVERTICAL);
-
-	CreateSteppersControl(m_RightSidePanel, right_side_panel_sizer);
+	CreateSteppersControl(parent, right_side_sizer);
 	
-	CreateCameraControls(m_RightSidePanel, right_side_panel_sizer);
+	CreateCameraControls(parent, right_side_sizer);
 	
-	CreateTools(m_RightSidePanel, right_side_panel_sizer);
+	CreateTools(parent, right_side_sizer);
 
-	right_side_panel_sizer->AddStretchSpacer();
-	
-	CreateMeasurement(m_RightSidePanel, right_side_panel_sizer);
-
-	m_RightSidePanel->SetSizer(right_side_panel_sizer);
-	m_RightSidePanel->FitInside();         // Adjust scrolling area
-	//m_RightSidePanel->Layout();
-
-	right_side_sizer->Add(m_RightSidePanel, 1, wxEXPAND);
+	CreateMeasurement(parent, right_side_sizer);
 }
 
 auto cMain::CreateBottomPanel(wxSizer* sizer, const int borderSize) -> void
 {
-	m_LeftHistogramRange = std::make_unique<wxTextCtrl>(this, MainFrameVariables::ID::HISTOGRAM_LEFT_BORDER_TXT_CTRL);
+	auto parent = sizer->GetContainingWindow();
+
+	m_LeftHistogramRange = std::make_unique<wxTextCtrl>(parent, MainFrameVariables::ID::HISTOGRAM_LEFT_BORDER_TXT_CTRL);
 	m_LeftHistogramRange->Hide();
-	m_RightHistogramRange = std::make_unique<wxTextCtrl>(this, MainFrameVariables::ID::HISTOGRAM_RIGHT_BORDER_TXT_CTRL);
+	m_RightHistogramRange = std::make_unique<wxTextCtrl>(parent, MainFrameVariables::ID::HISTOGRAM_RIGHT_BORDER_TXT_CTRL);
 	m_RightHistogramRange->Hide();
 
 	// Histogram Panel
 	m_HistogramPanel = std::make_unique<cHistogramPanel>
 		(
-			this,
+			parent,
 			sizer,
 			m_LeftHistogramRange.get(),
 			m_RightHistogramRange.get(),
@@ -2879,7 +2911,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 	return page;
 }
 
-void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer)
+void cMain::CreateSteppersControl(wxWindow* right_side_panel, wxSizer* right_side_panel_sizer)
 {
 	wxSize absolute_text_ctrl_size = { 54, 20 }, relative_text_ctrl_size = {absolute_text_ctrl_size};
 	wxSize set_btn_size = { 35, 20 };
@@ -3056,7 +3088,7 @@ void cMain::CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_s
 	//right_side_panel_sizer->Add(sc_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
 }
 
-void cMain::CreateCameraControls(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer)
+void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side_panel_sizer)
 {
 	auto size = wxSize(16, 16);
 	wxImageList* imageList = new wxImageList(size.GetWidth(), size.GetHeight(), true);
@@ -3126,7 +3158,7 @@ void cMain::CreateCameraControls(wxPanel* right_side_panel, wxBoxSizer* right_si
 	right_side_panel_sizer->Add(m_CameraControlNotebook, 0, wxEXPAND | wxALL, 5);
 }
 
-void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer)
+void cMain::CreateTools(wxWindow* right_side_panel, wxSizer* right_side_panel_sizer)
 {
 	auto size = wxSize(16, 16);
 	wxImageList* imageList = new wxImageList(size.GetWidth(), size.GetHeight(), true);
@@ -3253,7 +3285,7 @@ void cMain::CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_
 	right_side_panel_sizer->Add(m_ToolsControlsNotebook, 0, wxEXPAND | wxALL, 5);
 }
 
-void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer)
+void cMain::CreateMeasurement(wxWindow* right_side_panel, wxSizer* right_side_panel_sizer)
 {
 	auto size = wxSize(16, 16);
 	wxImageList* imageList = new wxImageList(size.GetWidth(), size.GetHeight(), true);
@@ -3289,7 +3321,7 @@ void cMain::CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_
 		imgIndexMeasurement
 	);
 
-	right_side_panel_sizer->Add(m_MeasurementNotebook, 0, wxEXPAND | wxALL, 5);
+	right_side_panel_sizer->Add(m_MeasurementNotebook, 1, wxEXPAND | wxALL, 5);
 }
 
 auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
@@ -3399,7 +3431,7 @@ auto cMain::OnGridMeshButton(wxCommandEvent& evt) -> void
 	if (currState)
 		m_ToolsControlsNotebook->SetSelection(2);
 
-	Layout();
+	RelayoutRightPanel();
 }
 
 auto cMain::OnGridMeshTxtCtrl(wxCommandEvent& evt) -> void
@@ -3452,7 +3484,7 @@ auto cMain::OnCircleMeshButton(wxCommandEvent& evt) -> void
 	if (currState)
 		m_ToolsControlsNotebook->SetSelection(3);
 
-	Layout();
+	RelayoutRightPanel();
 }
 
 auto cMain::OnCircleMeshTxtCtrl(wxCommandEvent& evt) -> void
@@ -4368,7 +4400,7 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 		m_FirstStage->EnableAllControls();
 #endif // !_DEBUG
 
-	Layout();
+	RelayoutRightPanel();
 }
 
 void cMain::CreateVerticalToolBar()
@@ -4615,7 +4647,7 @@ auto cMain::OnAnnulusButton(wxCommandEvent& evt) -> void
 	if (currState)
 		m_ToolsControlsNotebook->SetSelection(1);
 
-	Layout();
+	RelayoutRightPanel();
 
 	m_CamPreview->SetFocus();
 
@@ -5310,7 +5342,7 @@ auto cMain::OnCrossHairButton(wxCommandEvent& evt) -> void
 	if (currState)
 		m_ToolsControlsNotebook->SetSelection(0);
 
-	Layout();
+	RelayoutRightPanel();
 
 	m_CamPreview->SetFocus();
 

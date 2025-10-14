@@ -7,12 +7,7 @@
 class cApp final : public wxApp
 {
 public:
-	cApp();
 	virtual bool OnInit();
-	~cApp();
-
-private:
-	cMain* m_cMainFrame{};
 };
 
 #endif // !CAPP_H

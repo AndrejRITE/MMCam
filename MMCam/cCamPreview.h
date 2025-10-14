@@ -49,13 +49,17 @@ namespace CameraPreviewVariables
 
 	struct InputPreviewPanelArgs
 	{
+		wxWindow* frame;
+		wxSizer* sizer;
 		wxTextCtrl* x_pos_crosshair{}, * y_pos_crosshair{};
 		wxTextCtrl* xAnnulusCenterPos{}, * yAnnulusCenterPos{}, * r1Annulus{}, * r2Annulus{};
 		wxStatusBar* statusBar{};
-		//wxToggleButton* set_pos_tgl_btn{};
+
 		InputPreviewPanelArgs() {};
 		InputPreviewPanelArgs
 		(
+			wxWindow* parentFrame,
+			wxSizer* parentSizer,
 			wxTextCtrl* parXPosCrosshair,
 			wxTextCtrl* parYPosCrosshair,
 			wxTextCtrl* parXAnnulusCenterPos,
@@ -63,8 +67,9 @@ namespace CameraPreviewVariables
 			wxTextCtrl* parR1Annulus,
 			wxTextCtrl* parR2Annulus,
 			wxStatusBar* parStatusBar
-			//wxToggleButton* par_pos_crosshair_tgl_btn
-		) : x_pos_crosshair(parXPosCrosshair),
+		) : frame(parentFrame),
+			sizer(parentSizer),
+			x_pos_crosshair(parXPosCrosshair),
 			y_pos_crosshair(parYPosCrosshair),
 			xAnnulusCenterPos(parXAnnulusCenterPos),
 			yAnnulusCenterPos(parYAnnulusCenterPos),
@@ -72,7 +77,6 @@ namespace CameraPreviewVariables
 			r2Annulus(parR2Annulus),
 			statusBar(parStatusBar)
 		{};
-			//set_pos_tgl_btn(par_pos_crosshair_tgl_btn) {};
 	};
 
 	struct Annulus
@@ -122,9 +126,7 @@ class cCamPreview final : public wxPanel
 public:
 	cCamPreview
 	(
-		wxFrame* parent_frame,
-		wxSizer* parent_sizer,
-		std::unique_ptr<CameraPreviewVariables::InputPreviewPanelArgs> input_preview_panel_args
+		std::unique_ptr<CameraPreviewVariables::InputPreviewPanelArgs> previewPanelArgs
 	);
 	auto SetBackgroundColor(wxColour bckg_colour) -> void;
 	auto SetValueDisplayingActive(bool activate = false) -> void;

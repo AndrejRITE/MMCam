@@ -18,6 +18,7 @@
 #include "wx/progdlg.h"
 #include "wx/gauge.h"
 #include "wx/listctrl.h"
+#include "wx/splitter.h"
 #include "wx/msw/window.h"
 
 #include <string>
@@ -601,8 +602,8 @@ private:
 	void CreateMenuBarOnFrame();
 	void CreateVerticalToolBar();
 	void CreateLeftAndRightSide();
-	void CreateLeftSide(wxSizer* left_side_sizer);
-	void CreateRightSide(wxSizer* right_side_sizer);
+	void CreateLeftSide(wxWindow* parent, wxSizer* left_side_sizer);
+	void CreateRightSide(wxWindow* parent, wxSizer* right_side_sizer);
 
 	auto CreateBottomPanel(wxSizer* sizer, const int borderSize) -> void;
 
@@ -677,10 +678,10 @@ private:
 	) -> wxWindow*;
 
 
-	void CreateSteppersControl(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
-	void CreateCameraControls(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
-	void CreateTools(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
-	void CreateMeasurement(wxPanel* right_side_panel, wxBoxSizer* right_side_panel_sizer);
+	void CreateSteppersControl(wxWindow* right_side_panel, wxSizer* right_side_panel_sizer);
+	void CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side_panel_sizer);
+	void CreateTools(wxWindow* right_side_panel, wxSizer* right_side_panel_sizer);
+	void CreateMeasurement(wxWindow* right_side_panel, wxSizer* right_side_panel_sizer);
 
 	auto OnEnableDarkMode(wxCommandEvent& evt) -> void;
 	auto OnAbout(wxCommandEvent& evt) -> void;
@@ -1542,10 +1543,41 @@ private:
 		//wxLogMessage("File successfully copied to: %s", destination);
 	}
 
+	void RelayoutRightPanel()
+	{
+		if (!m_RightSidePanel) return;
+
+		m_RightSidePanel->Freeze();
+
+		// Invalidate cached sizes so Hide()/Show() take immediate effect
+		if (m_DetectorControlsNotebook)   m_DetectorControlsNotebook->InvalidateBestSize();
+		if (m_OpticsControlsNotebook)     m_OpticsControlsNotebook->InvalidateBestSize();
+		if (m_AuxControlsNotebook)        m_AuxControlsNotebook->InvalidateBestSize();
+		if (m_CameraControlNotebook)      m_CameraControlNotebook->InvalidateBestSize();
+		if (m_ToolsControlsNotebook)      m_ToolsControlsNotebook->InvalidateBestSize();
+		if (m_MeasurementNotebook)        m_MeasurementNotebook->InvalidateBestSize();
+
+		if (auto* s = m_RightSidePanel->GetSizer())
+		{
+			s->Layout();
+			s->Fit(m_RightSidePanel);      // recompute best size for the scrolled window
+		}
+
+		// Critical for wxScrolledWindow: refresh virtual size/scrollbars
+		m_RightSidePanel->FitInside();
+		m_RightSidePanel->SendSizeEvent();
+
+		// If you want to be extra safe:
+		if (m_TopSplitter)  m_TopSplitter->Layout();
+		if (m_MainSplitter) m_MainSplitter->Layout();
+		this->Layout();
+
+		m_RightSidePanel->Thaw();
+	}
 
 private:
 	/* Initialization file */
-	const wxString m_InitializationFilePath = "MMCam.ini";
+	wxString m_AppName{}, m_InitializationFilePath{};
 	std::unique_ptr<MainFrameVariables::InitializationFileStructure> m_Config{};
 
 	/* Settings Menu */
@@ -1616,8 +1648,13 @@ private:
 	std::unique_ptr<wxTextCtrl> m_LeftHistogramRange{}, m_RightHistogramRange{};
 
 	/* wxPanels */
-	wxScrolledWindow* m_RightSidePanel{};
-	//wxPanel* m_RightSidePanel{};
+	wxSplitterWindow* m_MainSplitter{};   // outer: top (Left+Right) vs bottom
+	wxSplitterWindow* m_TopSplitter{};    // inner: Left vs Right
+
+	wxPanel* m_LeftPanel{};      // container for left side
+	wxScrolledWindow* m_RightSidePanel{}; // you already have this member - keep it
+	wxPanel* m_BottomPanel{};    // container for bottom side
+
 	wxNotebook* m_DetectorControlsNotebook{}, * m_OpticsControlsNotebook{}, * m_AuxControlsNotebook{};
 	
 	wxNotebook* m_CameraControlNotebook{};

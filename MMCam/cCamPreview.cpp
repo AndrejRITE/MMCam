@@ -15,15 +15,13 @@ END_EVENT_TABLE()
 
 cCamPreview::cCamPreview
 (
-	wxFrame* parent_frame, 
-	wxSizer* parent_sizer,
-	std::unique_ptr<CameraPreviewVariables::InputPreviewPanelArgs> input_preview_panel_args
+	std::unique_ptr<CameraPreviewVariables::InputPreviewPanelArgs> previewPanelArgs
 ) 
-	: wxPanel(parent_frame)
+	: wxPanel(previewPanelArgs->frame)
 {
 	wxArtProvider::Push(new wxMaterialDesignArtProvider);
 
-	m_ParentArguments.reset(input_preview_panel_args.release());
+	m_ParentArguments.reset(previewPanelArgs.release());
 
 	//m_XimeaCameraControl = std::make_unique<XimeaControl>();
 	SetDoubleBuffered(true);
@@ -32,7 +30,7 @@ cCamPreview::cCamPreview
 #else
 	SetBackgroundColour(wxColor(255, 255, 255));
 #endif // _DEBUG
-	parent_sizer->Add(this, 1, wxEXPAND);
+	m_ParentArguments->sizer->Add(this, 1, wxEXPAND);
 
 	InitDefaultComponents();
 }
