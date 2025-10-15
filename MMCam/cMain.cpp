@@ -456,8 +456,6 @@ void cMain::CreateMenuBarOnFrame()
 		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, false);
 
 		m_MenuBar->menu_edit->AppendSeparator();
-		
-		m_MenuBar->menu_edit->AppendSeparator();
 
 		// Settings
 		{
@@ -766,8 +764,8 @@ void cMain::CreateLeftAndRightSide()
 		wxSP_LIVE_UPDATE | wxSP_3D | wxSP_BORDER
 	);
 
-	m_MainSplitter->SetMinimumPaneSize(120);   // avoid collapsing panes
-	m_MainSplitter->SetSashGravity(0.80);      // keep ~80% for the top on resize
+	m_MainSplitter->SetMinimumPaneSize(100);   // avoid collapsing panes
+	m_MainSplitter->SetSashGravity(1.0);      // keep ~80% for the top on resize
 
 	// ----- TOP part: an INNER splitter that splits Left vs Right -----
 	m_TopSplitter = new wxSplitterWindow
