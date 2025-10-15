@@ -4313,7 +4313,7 @@ auto cMain::UpdateStagePositions() -> void
 		);
 
 		m_Aux[1].absolute_text_ctrl->SetValue(
-			CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::AUX_Z), m_DecimalDigits)
+			CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::AUX_Y), m_DecimalDigits)
 		);
 
 		m_Aux[2].absolute_text_ctrl->SetValue(
