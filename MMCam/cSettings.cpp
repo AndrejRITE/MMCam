@@ -143,15 +143,14 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 			m_MainPanel.get(), 
 			SettingsVariables::ID::WORK_STATION_CHOICE, 
 			wxDefaultPosition, 
-			work_station_txt_ctrl_size,
+			wxDefaultSize,
 			m_WorkStations->all_work_station_array_str
 		);
 		m_WorkStations->work_station_choice->SetSelection(m_WorkStations->initialized_work_station_num);
 
-
-		work_station_static_box_sizer->AddStretchSpacer();
-		work_station_static_box_sizer->Add(m_WorkStations->work_station_choice, 0, wxEXPAND);
-		work_station_static_box_sizer->AddStretchSpacer();
+		//work_station_static_box_sizer->AddStretchSpacer();
+		work_station_static_box_sizer->Add(m_WorkStations->work_station_choice, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
+		//work_station_static_box_sizer->AddStretchSpacer();
 	}
 	main_panel_sizer->Add(work_station_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
 
