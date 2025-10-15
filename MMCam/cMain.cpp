@@ -150,6 +150,7 @@ cMain::cMain(const wxString& title_)
 	wxArtProvider::Push(new wxMaterialDesignArtProvider);
 	CreateMainFrame();
 	InitDefaultStateWidgets();
+
 	SetIcon(logo_xpm);
 
 	/* Creating, but not showing ProgressBar */
@@ -212,6 +213,8 @@ cMain::cMain(const wxString& title_)
 		//wxCommandEvent art_start_live_capturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID_RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 		//ProcessEvent(art_start_live_capturing);
 	}
+
+	ReLayoutRightPanel();
 
 	SetMinClientSize(wxSize(800, 600));
 }
@@ -3436,7 +3439,7 @@ auto cMain::OnGridMeshButton(wxCommandEvent& evt) -> void
 	if (currState)
 		m_ToolsControlsNotebook->SetSelection(2);
 
-	RelayoutRightPanel();
+	ReLayoutRightPanel();
 }
 
 auto cMain::OnGridMeshTxtCtrl(wxCommandEvent& evt) -> void
@@ -3489,7 +3492,7 @@ auto cMain::OnCircleMeshButton(wxCommandEvent& evt) -> void
 	if (currState)
 		m_ToolsControlsNotebook->SetSelection(3);
 
-	RelayoutRightPanel();
+	ReLayoutRightPanel();
 }
 
 auto cMain::OnCircleMeshTxtCtrl(wxCommandEvent& evt) -> void
@@ -4414,7 +4417,7 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 		m_FirstStage->EnableAllControls();
 #endif // !_DEBUG
 
-	RelayoutRightPanel();
+	ReLayoutRightPanel();
 }
 
 void cMain::CreateVerticalToolBar()
@@ -4661,7 +4664,7 @@ auto cMain::OnAnnulusButton(wxCommandEvent& evt) -> void
 	if (currState)
 		m_ToolsControlsNotebook->SetSelection(1);
 
-	RelayoutRightPanel();
+	ReLayoutRightPanel();
 
 	m_CamPreview->SetFocus();
 
@@ -5356,7 +5359,7 @@ auto cMain::OnCrossHairButton(wxCommandEvent& evt) -> void
 	if (currState)
 		m_ToolsControlsNotebook->SetSelection(0);
 
-	RelayoutRightPanel();
+	ReLayoutRightPanel();
 
 	m_CamPreview->SetFocus();
 
@@ -7194,8 +7197,6 @@ auto cMain::CreateVirtualEnvironment(wxString pathToVenv, wxString pathToRequire
 
 auto cMain::EnableControlsAfterCapturing() -> void
 {
-	EnableUsedAndDisableNonUsedMotors();
-	
 	if (m_CameraControl && m_CameraControl->IsConnected())
 	{
 		m_CameraTabControls->camExposure->Enable();
@@ -7227,6 +7228,8 @@ auto cMain::EnableControlsAfterCapturing() -> void
 	m_ImageColormapComboBox->stylish_combo_box->Enable();
 
 	m_HistogramPanel->Enable();
+	
+	EnableUsedAndDisableNonUsedMotors();
 }
 
 auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void

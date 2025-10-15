@@ -1548,7 +1548,7 @@ private:
 		//wxLogMessage("File successfully copied to: %s", destination);
 	}
 
-	void RelayoutRightPanel()
+	void ReLayoutRightPanel()
 	{
 		if (!m_RightSidePanel) return;
 
@@ -1578,6 +1578,11 @@ private:
 		this->Layout();
 
 		m_RightSidePanel->Thaw();
+
+		m_RightSidePanel->Layout();
+
+		if (m_TopSplitter)     m_TopSplitter->SendSizeEvent();
+		if (m_MainSplitter)    m_MainSplitter->SendSizeEvent();
 	}
 
 private:
