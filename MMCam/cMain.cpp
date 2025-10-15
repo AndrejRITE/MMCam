@@ -148,7 +148,9 @@ cMain::cMain(const wxString& title_)
 	m_InitializationFilePath = m_AppName + ".ini";
 
 	wxArtProvider::Push(new wxMaterialDesignArtProvider);
+
 	CreateMainFrame();
+
 	InitDefaultStateWidgets();
 
 	SetIcon(logo_xpm);
@@ -4303,6 +4305,21 @@ auto cMain::UpdateStagePositions() -> void
 			CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::OPTICS_Z), m_DecimalDigits)
 		);
 	}
+
+	// Optics
+	{
+		m_Aux[0].absolute_text_ctrl->SetValue(
+			CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::AUX_X), m_DecimalDigits)
+		);
+
+		m_Aux[1].absolute_text_ctrl->SetValue(
+			CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::AUX_Z), m_DecimalDigits)
+		);
+
+		m_Aux[2].absolute_text_ctrl->SetValue(
+			CameraPreviewVariables::CreateStringWithPrecision(m_Settings->GetActualMotorPosition(SettingsVariables::AUX_Z), m_DecimalDigits)
+		);
+	}
 }
 
 auto cMain::GoStageToAbsPos(SettingsVariables::MotorsNames motorName, float position) -> float
@@ -4947,34 +4964,10 @@ void cMain::OnFirstStageChoice(wxCommandEvent& evt)
 
 	double startStageValue{}, stepStageValue{}, finishStageValue{};
 
-	auto& controlArray = (motorType <= SettingsVariables::DETECTOR_Z) ? m_Detector : m_Optics;
+	auto& controlArray = (motorType <= SettingsVariables::DETECTOR_Z) 
+		? m_Detector 
+		: (motorType > SettingsVariables::MotorsNames::DETECTOR_Z && motorType <= SettingsVariables::MotorsNames::OPTICS_Z ? m_Optics : m_Aux);
 	if (!controlArray[motorType % 3].absolute_text_ctrl->GetValue().ToDouble(&startStageValue)) return;
-
-	//switch (motorType)
-	//{
-	///* Detector */
-	//case 0:
-	//	if (!m_Detector[0].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
-	//	break;
-	//case 1:
-	//	if (!m_Detector[1].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
-	//	break;
-	//case 2:
-	//	if (!m_Detector[2].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
-	//	break;
-	///* Optics */
-	//case 3:
-	//	if (!m_Optics[0].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
-	//	break;
-	//case 4:
-	//	if (!m_Optics[1].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
-	//	break;
-	//case 5:
-	//	if (!m_Optics[2].absolute_text_ctrl->GetValue().ToDouble(&start_stage_value)) return;
-	//	break;
-	//default:
-	//	break;
-	//}
 
 	/* Set Start To Current position of motor */
 	m_FirstStage->start->SetValue
@@ -5650,16 +5643,23 @@ auto cMain::CreateMetadataFile() -> void
 
 	double det_x_pos{}, det_y_pos{}, det_z_pos{};
 	double opt_x_pos{}, opt_y_pos{}, opt_z_pos{};
+	double aux_x_pos{}, aux_y_pos{}, aux_z_pos{};
 
 	{
 		/* Detector */
 		if (!m_Detector[0].absolute_text_ctrl->GetValue().ToDouble(&det_x_pos)) return;
 		if (!m_Detector[1].absolute_text_ctrl->GetValue().ToDouble(&det_y_pos)) return;
 		if (!m_Detector[2].absolute_text_ctrl->GetValue().ToDouble(&det_z_pos)) return;
+
 		/* Optics */
 		if (!m_Optics[0].absolute_text_ctrl->GetValue().ToDouble(&opt_x_pos)) return;
 		if (!m_Optics[1].absolute_text_ctrl->GetValue().ToDouble(&opt_y_pos)) return;
 		if (!m_Optics[2].absolute_text_ctrl->GetValue().ToDouble(&opt_z_pos)) return;
+
+		/* Aux */
+		if (!m_Aux[0].absolute_text_ctrl->GetValue().ToDouble(&aux_x_pos)) return;
+		if (!m_Aux[1].absolute_text_ctrl->GetValue().ToDouble(&aux_y_pos)) return;
+		if (!m_Aux[2].absolute_text_ctrl->GetValue().ToDouble(&aux_z_pos)) return;
 	}
 
 	std::string selected_axis{};
@@ -5685,6 +5685,15 @@ auto cMain::CreateMetadataFile() -> void
 	case 5:
 		selected_axis = std::string("optics_z");
 		break;
+	case 6:
+		selected_axis = std::string("aux_x");
+		break;
+	case 7:
+		selected_axis = std::string("aux_y");
+		break;
+	case 8:
+		selected_axis = std::string("aux_z");
+		break;
 	default:
 		break;
 	}
@@ -5695,6 +5704,7 @@ auto cMain::CreateMetadataFile() -> void
 		if (!m_FirstStage->step->GetValue().ToDouble(&step_first_stage_value)) return;
 		if (!m_FirstStage->finish->GetValue().ToDouble(&finish_first_stage_value)) return;
 	}
+
 	auto now = std::chrono::system_clock::now();
 	auto cur_time = std::chrono::system_clock::to_time_t(now);
 	std::string time_metadata_filename{};
@@ -5718,42 +5728,61 @@ auto cMain::CreateMetadataFile() -> void
 		{"pos_source", 0.000},
 		{"pos_optics", 123.456},
 		{"pos_detector", 234.567},
-		{"first_stage", 
+		{"stage_1", 
 			{
 				{"title", "detector_x"}, 
 				{"position", det_x_pos}
 			}
 		},
-		{"second_stage", 
+		{"stage_2", 
 			{
 				{"title", "detector_y"}, 
 				{"position", det_y_pos}
 			}
 		},
-		{"third_stage", 
+		{"stage_3", 
 			{
 				{"title", "detector_z"}, 
 				{"position", det_z_pos}
 			}
 		},
-		{"fourth_stage", 
+		{"stage_4", 
 			{
 				{"title", "optics_x"}, 
 				{"position", opt_x_pos}
 			}
 		},
-		{"fifth_stage", 
+		{"stage_5", 
 			{
 				{"title", "optics_y"}, 
 				{"position", opt_y_pos}
 			}
 		},
-		{"sixth_stage", 
+		{"stage_6", 
 			{
 				{"title", "optics_z"}, 
 				{"position", opt_z_pos}
 			}
 		},
+		{"stage_7", 
+			{
+				{"title", "aux_x"}, 
+				{"position", aux_x_pos}
+			}
+		},
+		{"stage_8", 
+			{
+				{"title", "aux_y"}, 
+				{"position", aux_y_pos}
+			}
+		},
+		{"stage_9", 
+			{
+				{"title", "aux_z"}, 
+				{"position", aux_z_pos}
+			}
+		},
+
 		{"measurement", 
 			{
 				{"stage", selected_axis}, 
