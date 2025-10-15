@@ -1848,7 +1848,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 				(
 					page, 
 					wxID_ANY, 
-					wxT("Temperature [degC]:")
+					wxT("Set Temperature [degC]:")
 				), 
 				0, 
 				wxALIGN_CENTER
