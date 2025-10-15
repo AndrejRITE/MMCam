@@ -5,13 +5,13 @@
   "pixel_size_um": 2.2,
   "station": "EXPERIMENTAL",
   "detector": [
-    { "SerialNumber": "12538", "StepsPerMM": 800 },
-    { "SerialNumber": "12598", "StepsPerMM": 800 },
-    { "SerialNumber": "12586", "StepsPerMM": 800 }
+    { "SerialNumber": "6783", "StepsPerMM": 800 },
+    { "SerialNumber": "5064", "StepsPerMM": 800 },
+    { "SerialNumber": "32857", "StepsPerMM": 800 }
   ],
   "optics": [
     { "SerialNumber": "None", "StepsPerMM": 800 },
-    { "SerialNumber": "None", "StepsPerMM": 800 },
+    { "SerialNumber": "32815", "StepsPerMM": 800 },
     { "SerialNumber": "None", "StepsPerMM": 800 }
   ],
   "aux": [

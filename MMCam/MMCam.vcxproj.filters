@@ -139,7 +139,7 @@
       <Filter>Header Files\MaterialDesign</Filter>
     </ClInclude>
     <ClInclude Include="TucsenControl.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\Camera</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

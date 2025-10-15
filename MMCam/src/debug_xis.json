@@ -5,9 +5,9 @@
   "pixel_size_um": 2.2,
   "station": "DEBUG_XIS",
   "detector": [
-    { "SerialNumber": "18808", "StepsPerMM": 800 },
-    { "SerialNumber": "15748", "StepsPerMM": 800 },
-    { "SerialNumber": "15715", "StepsPerMM": 800 }
+	{ "SerialNumber": "None", "StepsPerMM": 800 },
+    { "SerialNumber": "None", "StepsPerMM": 800 },
+    { "SerialNumber": "None",  "StepsPerMM": 800 }
   ],
   "optics": [
     { "SerialNumber": "12586", "StepsPerMM": 800 },
@@ -15,8 +15,8 @@
     { "SerialNumber": "None",  "StepsPerMM": 800 }
   ],
   "aux": [
-    { "SerialNumber": "None", "StepsPerMM": 800 },
-    { "SerialNumber": "None", "StepsPerMM": 800 },
-    { "SerialNumber": "None",  "StepsPerMM": 800 }
+    { "SerialNumber": "18808", "StepsPerMM": 800 },
+    { "SerialNumber": "15748", "StepsPerMM": 800 },
+    { "SerialNumber": "15715", "StepsPerMM": 800 }
   ]
 }

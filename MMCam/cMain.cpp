@@ -172,11 +172,14 @@ cMain::cMain(const wxString& title_)
 	}
 
 #ifdef _DEBUG
+
+#ifdef DEBUG_OPEN
 	// Press Open Button
 	{
 		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_FILE_OPEN);
 		ProcessEvent(artEvt);
 	}
+#endif // DEBUG_OPEN
 
 	// Press Set Out Dir Button
 	{
@@ -184,6 +187,7 @@ cMain::cMain(const wxString& title_)
 		ProcessEvent(artEvt);
 	}
 
+#ifdef DEBUG_ANNULUS
 	// Press Enable Annulus Button
 	{
 		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING);
@@ -195,6 +199,7 @@ cMain::cMain(const wxString& title_)
 		wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID::RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN);
 		ProcessEvent(artEvt);
 	}
+#endif // DEBUG_ANNULUS
 
 	// Press Generate Button
 	{
@@ -630,9 +635,9 @@ void cMain::CreateMenuBarOnFrame()
 
 void cMain::InitDefaultStateWidgets()
 {
-	m_MenuBar->menu_tools->Check(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, true);
-	m_CamPreview->SetValueDisplayingActive(true);
-	m_IsValueDisplayingChecked = true;
+	//m_MenuBar->menu_tools->Check(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, true);
+	//m_CamPreview->SetValueDisplayingActive(true);
+	//m_IsValueDisplayingChecked = true;
 
 	wxString 
 		defaultAbsoluteValueStr{ CameraPreviewVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) }, 
@@ -3881,6 +3886,15 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 		ProcessEvent(artEvt);
 	}
 
+	// Display Pixel Value
+	{
+		auto displayPixelValue = m_Config->display_pixel_value;
+
+		m_MenuBar->menu_tools->Check(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, displayPixelValue);
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING);
+		ProcessEvent(artEvt);
+	}
+
 	// Display Histogram
 	{
 		auto displayHistogram = m_Config->display_histogram;
@@ -6314,8 +6328,17 @@ bool cMain::Cancelled()
 
 void cMain::OnValueDisplayingCheck(wxCommandEvent& evt)
 {
-	m_IsValueDisplayingChecked = m_MenuBar->menu_tools->IsChecked(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING);
+	auto id = MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING;
+	auto isChecked = m_MenuBar->menu_tools->IsChecked(id);
+
+	m_IsValueDisplayingChecked = isChecked;
+
+	m_Config->display_pixel_value = m_IsValueDisplayingChecked;
+	RewriteInitializationFile();
+
 	m_CamPreview->SetValueDisplayingActive(m_IsValueDisplayingChecked);
+
+	Refresh();
 }
 
 void cMain::UpdateAllAxisGlobalPositions()

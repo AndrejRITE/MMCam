@@ -43,6 +43,9 @@
 #define MAJOR_VERSION 1
 #define MINOR_VERSION 24
 
+//#define DEBUG_OPEN
+//#define DEBUG_ANNULUS
+
 namespace MainFrameVariables
 {
 	enum ID
@@ -195,6 +198,7 @@ namespace MainFrameVariables
 	{
 		bool dark_mode_on{};
 		bool display_histogram{ true };
+		bool display_pixel_value{ true };
 		bool disable_report_generator{};
 		bool crosshair_adaptive_scaling{};
 
@@ -228,6 +232,7 @@ namespace MainFrameVariables
 			InitializationFileStructure, 
 			dark_mode_on,
 			display_histogram,
+			display_pixel_value,
 			disable_report_generator,
 			crosshair_adaptive_scaling,
 
