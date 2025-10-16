@@ -156,6 +156,7 @@ namespace MainFrameVariables
 		RIGHT_TOOLS_ANNULUS_REMOVE_FROM_LIST_BTN,
 
 		/* Camera */
+		RIGHT_CAM_NOTEBOOK,
 		RIGHT_CAM_TEMPERATURE_TXT_CTL,
 		RIGHT_CAM_EXPOSURE_TXT_CTL,
 		RIGHT_CAM_BINNING_CHOICE,
@@ -408,6 +409,9 @@ namespace MainFrameVariables
 			motors.Add("Optics X");
 			motors.Add("Optics Y");
 			motors.Add("Optics Z");
+			motors.Add("Aux X");
+			motors.Add("Aux Y");
+			motors.Add("Aux Z");
 		};
 
 		void DisableAllControls()
@@ -890,6 +894,7 @@ private:
 	/* Changed Exposure value */
 	void ExposureValueChanged(wxCommandEvent& evt);
 	auto OnSensorTemperatureChanged(wxCommandEvent& evt) -> void;
+	auto OnCameraNotebookPageChanged(wxBookCtrlEvent& evt) -> void;
 	auto OnBinningChoice(wxCommandEvent& evt) -> void;
 	auto OnColormapComboBox(wxCommandEvent& evt) -> void;
 
@@ -1844,6 +1849,9 @@ private:
 		case SettingsVariables::OPTICS_X:   return "OPTICS X";
 		case SettingsVariables::OPTICS_Y:   return "OPTICS Y";
 		case SettingsVariables::OPTICS_Z:   return "OPTICS Z";
+		case SettingsVariables::AUX_X:   return "AUX X";
+		case SettingsVariables::AUX_Y:   return "AUX Y";
+		case SettingsVariables::AUX_Z:   return "AUX Z";
 		default:           return "Unknown";
 		}
 	};

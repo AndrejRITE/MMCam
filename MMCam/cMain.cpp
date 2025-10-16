@@ -90,6 +90,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	/* Camera */
 	EVT_CHOICE(MainFrameVariables::ID::RIGHT_CAM_MANUFACTURER_CHOICE, cMain::ChangeCameraManufacturerChoice)
 	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_TEMPERATURE_TXT_CTL, cMain::OnSensorTemperatureChanged)
+	EVT_NOTEBOOK_PAGE_CHANGED(MainFrameVariables::ID::RIGHT_CAM_NOTEBOOK, cMain::OnCameraNotebookPageChanged)
 	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_EXPOSURE_TXT_CTL, cMain::ExposureValueChanged)
 	EVT_CHOICE(MainFrameVariables::ID::RIGHT_CAM_BINNING_CHOICE, cMain::OnBinningChoice)
 	EVT_COMBOBOX(MainFrameVariables::ID::RIGHT_CAM_COLORMAP_COMBOBOX, cMain::OnColormapComboBox)
@@ -3134,7 +3135,7 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 	auto imgIndexCamera = imageList->Add(cameraBitmap);
 	auto imgIndexCameraParameters = imageList->Add(cameraParametersBitmap);
 
-	m_CameraControlNotebook = new wxNotebook(right_side_panel, wxID_ANY);
+	m_CameraControlNotebook = new wxNotebook(right_side_panel, MainFrameVariables::ID::RIGHT_CAM_NOTEBOOK);
 
 	m_CameraControlNotebook->AssignImageList(imageList);
 
@@ -6425,6 +6426,18 @@ auto cMain::OnSensorTemperatureChanged(wxCommandEvent& evt) -> void
 	CoolDownTheCamera();
 }
 
+auto cMain::OnCameraNotebookPageChanged(wxBookCtrlEvent& evt) -> void
+{
+	auto pageNum = m_CameraControlNotebook->GetSelection();
+
+	if (pageNum != 1) return;
+
+	auto currentTemperature = m_CameraControl->GetSensorTemperature();
+
+	auto tempString = CameraPreviewVariables::CreateStringWithPrecision(currentTemperature, 1);
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->temperature, tempString);
+}
+
 auto cMain::OnBinningChoice(wxCommandEvent& evt) -> void
 {
 	int binning{ 1 };
@@ -8130,8 +8143,6 @@ wxBitmap WorkerThread::CreateGraph
 	wxColour rightAxisColour = wxColour(255, 127, 39);
 	wxColour horizontalAxisColour = wxColour(0, 0, 0);
 	wxColour cellColour = wxColour(90, 90, 90, 80);
-	//wxColour gaussianCurveColour = wxColour(181, 230, 29, 100);
-	//wxColour highlightingBestMeasurementColour = wxColour(255, 0, 0, 230);
 	wxColour axisColour = wxColour(0, 162, 232, 64);
 
 	auto graphRect = wxRect
