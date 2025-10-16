@@ -1,8 +1,8 @@
 {
-  "camera": "37680258",
+  "camera": "Dhyana XF/XV95",
   "camera_manufacturer": "TUCSEN",
   "motor_manufacturer": "STANDA",
-  "pixel_size_um": 2.2,
+  "pixel_size_um": 11,
   "station": "DEBUG_TUS",
   "detector": [
     { "SerialNumber": "None", "StepsPerMM": 800 },

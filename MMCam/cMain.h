@@ -37,6 +37,7 @@
 
 #include "XimeaControl.h"
 #include "MoravianInstrumentsControl.h"
+#include "TucsenControl.h"
 
 #include "src/img/logo.xpm"
 

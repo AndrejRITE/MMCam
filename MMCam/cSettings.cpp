@@ -659,7 +659,6 @@ auto cSettings::CreateAuxPage(wxWindow* parent, const wxSize& txtCtrlSize, const
 auto cSettings::CreateCameraSection(wxPanel* panel, wxBoxSizer* panel_sizer) -> void
 {
 	wxSizer* const cameraStaticBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "&Camera");
-	cameraStaticBoxSizer->AddStretchSpacer();
 
 	// ID
 	{
@@ -689,11 +688,9 @@ auto cSettings::CreateCameraSection(wxPanel* panel, wxBoxSizer* panel_sizer) -> 
 			m_Camera->idTxtCtrl->SetValue(m_Camera->selectedCameraIDStr);
 		}
 
-		idBoxSizer->Add(m_Camera->idTxtCtrl, 0, wxEXPAND);
-		cameraStaticBoxSizer->Add(idBoxSizer, 0, wxEXPAND);
+		idBoxSizer->Add(m_Camera->idTxtCtrl, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
+		cameraStaticBoxSizer->Add(idBoxSizer, 1, wxEXPAND);
 	}
-
-	cameraStaticBoxSizer->AddStretchSpacer();
 
 	panel_sizer->Add(cameraStaticBoxSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
 }
@@ -1051,10 +1048,12 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 	// CameraManufacturer
 	if (j.contains("camera_manufacturer")) {
 		const wxString cameraManufacturerStr = wxString(j["camera_manufacturer"].get<std::string>());
-		if (cameraManufacturerStr == "XIMEA")
+		if (cameraManufacturerStr.Lower() == "ximea")
 			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::XIMEA;
-		else if (cameraManufacturerStr == "MORAVIAN_INSTRUMENTS")
+		else if (cameraManufacturerStr.Lower() == "moravian_instruments")
 			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::MORAVIAN_INSTRUMENTS;
+		else if (cameraManufacturerStr.Lower() == "tucsen")
+			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::TUCSEN;
 	}
 
 	// PixelSizeUM

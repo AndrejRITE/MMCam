@@ -3845,6 +3845,8 @@ auto cMain::InitializeSelectedCamera() -> void
 		m_CameraControl = std::make_unique<XimeaControl>(selectedCamera.ToStdString());
 	else if (m_Settings->GetCameraManufacturer() == SettingsVariables::CameraManufacturers::MORAVIAN_INSTRUMENTS)
 		m_CameraControl = std::make_unique<MoravianInstrumentsControl>(selectedCamera.ToStdString());
+	else if (m_Settings->GetCameraManufacturer() == SettingsVariables::CameraManufacturers::TUCSEN)
+		m_CameraControl = std::make_unique<TucsenControl>(selectedCamera.ToStdString());
 
 	m_CameraControl->Initialize();
 

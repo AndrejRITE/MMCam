@@ -76,7 +76,8 @@ namespace SettingsVariables
 	enum CameraManufacturers
 	{
 		XIMEA,
-		MORAVIAN_INSTRUMENTS
+		MORAVIAN_INSTRUMENTS,
+		TUCSEN
 	};
 
 	enum MotorsNames 

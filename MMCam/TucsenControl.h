@@ -36,9 +36,6 @@ public:
     auto SetSensorTemperature(const double requiredTemperature) -> void override;
     auto GetSensorTemperature() -> double override;
 
-    // Extra utility (not in base interface)
-    auto DeviceModelString() const -> std::string;   // requires Initialize()
-
 private:
     // Helpers
     auto parseIndexOrDefault() const -> unsigned int;
@@ -46,11 +43,24 @@ private:
     static auto toMsFromUs(int us) -> double;
 
 private:
+    TUCAMRET InitApi(); /* Init the TUCAM API */
+    TUCAMRET UnInitApi(); /* UnInit the TUCAM API */
+    TUCAMRET OpenCamera(UINT uiIdx); /* Open the camera by index number */
+    TUCAMRET CloseCamera(); /* Close the current camera */
+
+    std::string GetCameraName();
+    int GetVID();
+    int GetPID();
+    int GetCameraChannels();
+
+private:
+
     // Configuration / state
     std::string  m_CameraSN{};
     TUCAM_INIT   m_itApi{};
     TUCAM_OPEN   m_opCam{};
     TUCAM_FRAME  m_frame{};
+    TUCAM_VALUE_INFO  m_info{};
 
     bool m_ApiInitialized{ false };
     bool m_CameraOpened{ false };
