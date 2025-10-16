@@ -2525,7 +2525,8 @@ auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*
 				wxLC_REPORT
 			);
 
-		m_ToolsControls->annulusListCtrl->Bind(
+		m_ToolsControls->annulusListCtrl->Bind
+		(
 			wxEVT_LEFT_DOWN,
 			&cMain::OnAnnulusListLeftDown,
 			this
@@ -2865,12 +2866,14 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 			);
 
 		// Optionally hide the panel in debug mode
-		m_ProgressBar->Hide();
 #ifndef _DEBUG
+		m_ProgressBar->Hide();
 #endif
 
 		sizerPage->Add(m_ProgressBar.get(), 0, wxEXPAND | wxALL, 5);
 	}
+
+	sizerPage->AddStretchSpacer();
 
 	auto horizontal_sizer = new wxBoxSizer(wxHORIZONTAL);
 	{
@@ -5088,7 +5091,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		EnableControlsAfterCapturing();
 		m_StartStopMeasurementTglBtn->SetLabel("Start Measurement (M)");
 
-		Layout();
+		ReLayoutRightPanel();
 
 		return;
 	}
@@ -5096,8 +5099,8 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 	if (m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
 	{
 		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
-		wxCommandEvent untoggleLiveCapturingBtn(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
-		ProcessEvent(untoggleLiveCapturingBtn);
+		wxCommandEvent evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+		ProcessEvent(evt);
 	}
 
 	DisableControlsBeforeCapturing();
@@ -5153,21 +5156,14 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			//this->GetPosition().x + this->GetSize().x - m_ProgressBar->GetSize().x, 
 			//this->GetPosition().y + this->GetSize().y - m_ProgressBar->GetSize().y 
 		};
-		//m_ProgressBar->SetPosition(start_point_progress_bar);
 		m_Settings->ResetCapturing();
 
 		m_ProgressBar->Show();
 		m_ProgressBar->SetValue(0);
 
-		Layout();
-		//m_MeasurementNotebook->Refresh();
+		ReLayoutRightPanel();
 
 		SetFocus();
-
-		//m_AppProgressIndicator = std::make_unique<wxAppProgressIndicator>(this, 100);
-
-		//this->Disable();
-		//m_StartMeasurement->Disable();
 	}
 
 	auto currThreadTimeStamp = timePointToWxString();
@@ -5210,7 +5206,6 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			m_Settings->GetPixelSizeUM(),
 			m_DecimalDigits
 		);
-		//ProgressThread* progress_thread = new ProgressThread(m_Settings.get(), this);
 
 		if (worker_thread->CreateThread() != wxTHREAD_NO_ERROR)
 		{
@@ -5218,22 +5213,9 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			worker_thread = nullptr;
 			return;
 		}
-		//if (progress_thread->CreateThread() != wxTHREAD_NO_ERROR)
-		//{
-		//	delete progress_thread;
-		//	progress_thread = nullptr;
-		//	return;
-		//}
-		//if (progress_thread->GetThread()->Run() != wxTHREAD_NO_ERROR)
-		//{
-		//	delete progress_thread;
-		//	progress_thread = nullptr;
-		//	return;
-		//}
+
 		if (worker_thread->GetThread()->Run() != wxTHREAD_NO_ERROR)
 		{
-			//delete progress_thread;
-			//progress_thread = nullptr;
 			delete worker_thread;
 			worker_thread = nullptr;
 			return;
