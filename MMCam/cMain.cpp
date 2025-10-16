@@ -321,9 +321,10 @@ void cMain::CreateMenuBarOnFrame()
 
 	auto initBitmapSize = wxSize(16, 16);
 
-	auto isDark = wxSystemSettings::GetAppearance().IsDark();
+	m_IsDark = wxSystemSettings::GetAppearance().IsDark();
+	m_DefaultCellColor = m_IsDark ?  m_DefaultCellColor : wxColour(255 - m_DefaultCellColor.GetRed(), 255 - m_DefaultCellColor.GetGreen(), 255 - m_DefaultCellColor.GetBlue());
 
-	auto color = isDark ? wxColour(200, 200, 200) : wxColour(0, 0, 0);
+	auto color = m_IsDark ? wxColour(200, 200, 200) : wxColour(0, 0, 0);
 
 	// File Menu
 	{
@@ -2185,38 +2186,29 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		)
 	);
 
-	//property->ChangeFlag(wxPG_PROP_READONLY, true);
 	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
 	auto it = m_CurrentCameraSettingsPropertyGrid->GetIterator();
 	int i = 0;
+
+
 	for (; !it.AtEnd(); it++)
 	{
 		auto prop = *it;
 		if (prop)
 		{
 			if (!i)
-				m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(prop, wxColour(150, 150, 150));
+				m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(prop, wxColour(m_DefaultCellColor.GetRed() - 20, m_DefaultCellColor.GetGreen() - 20, m_DefaultCellColor.GetBlue() - 20));
 			else
-				m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(prop, m_DefaultCellColour);
+				m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(prop, m_DefaultCellColor);
 
 			++i;
 		}
 	}
 
 	m_CurrentCameraSettingsPropertyGrid->Refresh();
-	//m_CurrentCameraSettingsPropertyGrid->SetColumnProportion(0, m_CurrentCameraSettingsPropertyGrid->GetColumnProportion(0));
 
 	sizerPage->Add(m_CurrentCameraSettingsPropertyGrid, 1, wxEXPAND);
-
-	//wxSizer* const selected_camera_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Selected Camera");
-	//{
-	//	m_SelectedCameraStaticTXT = std::make_unique<wxStaticText>(page, wxID_ANY, wxT("None"));
-	//	selected_camera_box_sizer->AddStretchSpacer();
-	//	selected_camera_box_sizer->Add(m_SelectedCameraStaticTXT.get(), 0, wxCENTER);
-	//	selected_camera_box_sizer->AddStretchSpacer();
-	//}
-	//sizerPage->Add(selected_camera_box_sizer, 0, wxEXPAND);
 
 	page->SetSizer(sizerPage);
 	return page;
@@ -4056,7 +4048,7 @@ auto cMain::CoolDownTheCamera() -> void
 		}
 	}
 
-	m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(m_PropertiesNames->temperature, m_DefaultCellColour);
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(m_PropertiesNames->temperature, m_DefaultCellColor);
 
 	m_CameraControlNotebook->SetSelection(0);
 }

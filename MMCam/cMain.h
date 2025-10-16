@@ -1681,12 +1681,14 @@ private:
 	wxNotebook* m_MeasurementNotebook{};
 
 	wxPropertyGrid* m_CurrentCameraSettingsPropertyGrid{};
-	const wxColour m_DefaultCellColour = wxColour(180, 180, 180);
+	wxColour m_DefaultCellColor = wxColour(70, 70, 70);
 	std::unique_ptr<MainFrameVariables::PropertiesNames> m_PropertiesNames{};
 
 	std::vector<std::pair<wxString, bool>> m_StartedThreads{};
 
 	int m_DecimalDigits = 4;
+
+	bool m_IsDark{};
 
 	wxDECLARE_EVENT_TABLE();
 };
