@@ -7285,6 +7285,7 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 	{
 		m_Detector[i].DisableAllControls();
 		m_Optics[i].DisableAllControls();
+		m_Aux[i].DisableAllControls();
 	}
 
 	m_ImageColormapComboBox->stylish_combo_box->Disable();
