@@ -25,38 +25,37 @@ int cSettings::ShowModal()
 #endif // !_DEBUG
 
 	wxBusyCursor busy;
-	//if (result == wxID_OK)
-		//UpdateConfig();
 
-	//m_WorkStations->initialized_work_station = m_Config->work_station;
+	// Instantiate drivers only if needed (at least one motor of that vendor exists)
+	const auto& ws = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num];
+	bool needStanda = false, needXeryon = false;
 
-	switch (m_MotorManufacturer)
-	{
-	case SettingsVariables::STANDA:
-		m_PhysicalMotors = std::make_unique<StandaMotorArray>();
-		break;
-	case SettingsVariables::XERYON:
-		InitializeXeryonAndCheckPython();
-		break;
-	default:
-		break;
+	for (auto& sn : ws.selected_motors_in_data_file) {
+		auto it = ws.motor_vendor_by_sn.find(sn);
+		auto vendor = (it != ws.motor_vendor_by_sn.end()) ? it->second : SettingsVariables::STANDA;
+		needStanda |= (vendor == SettingsVariables::STANDA);
+		needXeryon |= (vendor == SettingsVariables::XERYON);
 	}
 
-	SetMotorStepsPerMM();
+	if (needStanda)  m_StandaMotors = std::make_unique<StandaMotorArray>();
+	if (needXeryon)  InitializeXeryonAndCheckPython(), m_XeryonMotors = std::make_unique<XeryonMotorArray>();
 
-	//RewriteInitializationFile();
+	SetMotorStepsPerMM();
 
 	return result;
 }
 
 auto cSettings::SetMotorStepsPerMM() -> void
 {
-	auto motorsCount = m_WorkStations->work_station_data[0].selected_motors_in_data_file.size();
-	for (auto i{ 0 }; i < motorsCount; ++i)
-	{
-		auto motorSN = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[i];
-		auto steps_per_mm = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].motors_steps_per_mm[motorSN];
-		m_PhysicalMotors->SetStepsPerMMForTheMotor(motorSN.ToStdString(), steps_per_mm);
+	auto& ws = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num];
+	for (size_t i = 0; i < ws.selected_motors_in_data_file.size(); ++i) {
+		const wxString sn = ws.selected_motors_in_data_file[i];
+		const int steps = ws.motors_steps_per_mm[sn];
+		if (sn != "None") {
+			if (auto* arr = WhichArrayFor(sn)) {
+				arr->SetStepsPerMMForTheMotor(sn.ToStdString(), steps);
+			}
+		}
 	}
 }
 
@@ -264,7 +263,6 @@ auto cSettings::CreateDetectorPage(wxWindow* parent, const wxSize& txtCtrlSize, 
 		);
 		
 		m_Motors->m_Detector[0].motor->SetValue(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[0]);
-		//m_Motors->m_Detector[0].motors->SetSelection(0);
 
 		sn_static_box_sizer->Add(m_Motors->m_Detector[0].motor);
 
@@ -282,7 +280,10 @@ auto cSettings::CreateDetectorPage(wxWindow* parent, const wxSize& txtCtrlSize, 
 			wxDefaultPosition, 
 			wxDefaultSize, 
 			wxALIGN_CENTRE_HORIZONTAL);
-		range_static_box_sizer->Add(m_Motors->m_Detector[0].steps_per_mm, 1, wxEXPAND | wxTOP, topOffset);
+
+		range_static_box_sizer->AddStretchSpacer();
+		range_static_box_sizer->Add(m_Motors->m_Detector[0].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
+		range_static_box_sizer->AddStretchSpacer();
 
 		det_x_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 	}
@@ -326,7 +327,10 @@ auto cSettings::CreateDetectorPage(wxWindow* parent, const wxSize& txtCtrlSize, 
 			wxDefaultPosition, 
 			wxDefaultSize,
 			wxALIGN_CENTRE_HORIZONTAL);
-		range_static_box_sizer->Add(m_Motors->m_Detector[1].steps_per_mm, 1, wxEXPAND | wxTOP, topOffset);
+
+		range_static_box_sizer->AddStretchSpacer();
+		range_static_box_sizer->Add(m_Motors->m_Detector[1].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
+		range_static_box_sizer->AddStretchSpacer();
 
 		det_y_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 	}
@@ -369,7 +373,10 @@ auto cSettings::CreateDetectorPage(wxWindow* parent, const wxSize& txtCtrlSize, 
 			wxDefaultPosition, 
 			wxDefaultSize, 
 			wxALIGN_CENTRE_HORIZONTAL);
-		range_static_box_sizer->Add(m_Motors->m_Detector[2].steps_per_mm, 1, wxEXPAND | wxTOP, topOffset);
+
+		range_static_box_sizer->AddStretchSpacer();
+		range_static_box_sizer->Add(m_Motors->m_Detector[2].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
+		range_static_box_sizer->AddStretchSpacer();
 
 		det_z_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 	}
@@ -419,7 +426,10 @@ auto cSettings::CreateOpticsPage(wxWindow* parent, const wxSize& txtCtrlSize, co
 			wxDefaultPosition, 
 			wxDefaultSize, 
 			wxALIGN_CENTRE_HORIZONTAL);
-		range_static_box_sizer->Add(m_Motors->m_Optics[0].steps_per_mm, 1, wxEXPAND | wxTOP, topOffset);
+
+		range_static_box_sizer->AddStretchSpacer();
+		range_static_box_sizer->Add(m_Motors->m_Optics[0].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
+		range_static_box_sizer->AddStretchSpacer();
 
 		opt_x_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 	}
@@ -462,7 +472,10 @@ auto cSettings::CreateOpticsPage(wxWindow* parent, const wxSize& txtCtrlSize, co
 			wxDefaultPosition, 
 			wxDefaultSize, 
 			wxALIGN_CENTRE_HORIZONTAL);
-		range_static_box_sizer->Add(m_Motors->m_Optics[1].steps_per_mm, 1, wxEXPAND | wxTOP, topOffset);
+
+		range_static_box_sizer->AddStretchSpacer();
+		range_static_box_sizer->Add(m_Motors->m_Optics[1].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
+		range_static_box_sizer->AddStretchSpacer();
 
 		opt_y_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 	}
@@ -505,7 +518,10 @@ auto cSettings::CreateOpticsPage(wxWindow* parent, const wxSize& txtCtrlSize, co
 			wxDefaultPosition, 
 			wxDefaultSize, 
 			wxALIGN_CENTRE_HORIZONTAL);
-		range_static_box_sizer->Add(m_Motors->m_Optics[2].steps_per_mm, 1, wxEXPAND | wxTOP, topOffset);
+
+		range_static_box_sizer->AddStretchSpacer();
+		range_static_box_sizer->Add(m_Motors->m_Optics[2].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
+		range_static_box_sizer->AddStretchSpacer();
 
 		opt_z_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 	}
@@ -556,7 +572,10 @@ auto cSettings::CreateAuxPage(wxWindow* parent, const wxSize& txtCtrlSize, const
 			wxDefaultPosition, 
 			wxDefaultSize, 
 			wxALIGN_CENTRE_HORIZONTAL);
-		range_static_box_sizer->Add(m_Motors->m_Aux[0].steps_per_mm, 1, wxEXPAND | wxTOP, topOffset);
+
+		range_static_box_sizer->AddStretchSpacer();
+		range_static_box_sizer->Add(m_Motors->m_Aux[0].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
+		range_static_box_sizer->AddStretchSpacer();
 
 		x_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 	}
@@ -600,7 +619,10 @@ auto cSettings::CreateAuxPage(wxWindow* parent, const wxSize& txtCtrlSize, const
 			wxDefaultPosition, 
 			wxDefaultSize, 
 			wxALIGN_CENTRE_HORIZONTAL);
-		range_static_box_sizer->Add(m_Motors->m_Aux[1].steps_per_mm, 1, wxEXPAND | wxTOP, topOffset);
+
+		range_static_box_sizer->AddStretchSpacer();
+		range_static_box_sizer->Add(m_Motors->m_Aux[1].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
+		range_static_box_sizer->AddStretchSpacer();
 
 		opt_y_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 	}
@@ -645,7 +667,10 @@ auto cSettings::CreateAuxPage(wxWindow* parent, const wxSize& txtCtrlSize, const
 			wxDefaultPosition, 
 			wxDefaultSize, 
 			wxALIGN_CENTRE_HORIZONTAL);
-		range_static_box_sizer->Add(m_Motors->m_Aux[2].steps_per_mm, 1, wxEXPAND | wxTOP, topOffset);
+
+		range_static_box_sizer->AddStretchSpacer();
+		range_static_box_sizer->Add(m_Motors->m_Aux[2].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
+		range_static_box_sizer->AddStretchSpacer();
 
 		opt_z_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
 	}
@@ -822,9 +847,8 @@ auto cSettings::UpdateMotorsAndCameraTXTCtrls(const short selected_work_station)
 	m_PixelSizeUM = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].pixelSizeUM;
 
 	m_CameraManufacturer = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].camera_manufacturer;
-	m_MotorManufacturer = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].motor_manufacturer;
 
-	Layout();
+	m_MotorsNotebook->Layout();
 }
 
 void cSettings::OnRefreshBtn(wxCommandEvent& evt)
@@ -901,67 +925,6 @@ unsigned int cSettings::FindSerialNumber
 	return (unsigned int)wxAtoi(find_string);
 }
 
-auto cSettings::CompareXMLWithConnectedDevices()
-{
-	auto raise_exception_msg = []() 
-	{
-		wxString title = "Device enumeration error";
-		wxMessageBox(
-			wxT
-			(
-				"Data file is not correct!"
-				"\nData from file don't correspond with connected devices"
-			),
-			title,
-			wxICON_ERROR);
-	};
-
-
-	auto physical_motors = m_PhysicalMotors->GetSerialNumbersWithRanges();
-	unsigned short serial_numbers_in_xml = m_Motors->unique_motors_map.size();
-	m_Motors->unique_motors_map.clear();
-	for (const auto& motor : physical_motors)
-	{
-		m_Motors->unique_motors_map.emplace(motor);
-	}
-
-	auto default_state_of_motors = [&]()
-	{
-		m_Motors->xml_all_motors[0].Clear();
-		m_Motors->xml_all_motors[1].Clear();
-		m_Motors->xml_selected_motors[0].Clear();
-		m_Motors->xml_selected_motors[1].Clear();
-
-		wxString motor_sn{}, motor_range{};
-		auto phys_mot_iter = physical_motors.begin();
-		//std::map<std::string, float>::iterator phys_mot_iter = physical_motors.begin();
-
-		for (auto motor{ 0 }; motor < m_MotorsCount; ++motor)
-		{
-			if (motor < physical_motors.size())
-			{
-				motor_sn = wxString::Format(wxT("%i"), phys_mot_iter->first);
-				motor_range = wxString::Format(wxT("%.2f"), phys_mot_iter->second);
-				++phys_mot_iter;
-			}
-			else
-			{
-				motor_sn = "None";
-				motor_range = "None";
-			}
-			m_Motors->xml_all_motors[0].Add(motor_sn);
-			m_Motors->xml_all_motors[1].Add(motor_range);
-		}
-	};
-
-	if (serial_numbers_in_xml != m_Motors->unique_motors_map.size() || serial_numbers_in_xml == 0)
-	{
-		m_Motors->unique_motors_map = physical_motors;
-		default_state_of_motors();
-		raise_exception_msg();
-	}
-}
-
 auto cSettings::LoadWorkStationFiles() -> void
 {
 	std::string fileNameWithPath{};
@@ -1001,20 +964,21 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 		return;  // Malformed JSON
 	}
 
-	// MotorManufacturer
-	if (j.contains("motor_manufacturer")) {
-		const wxString motorManufacturerStr = wxString(j["motor_manufacturer"].get<std::string>());
-		if (motorManufacturerStr == "STANDA")
-			m_WorkStations->work_station_data[fileNum].motor_manufacturer = SettingsVariables::MotorManufacturers::STANDA;
-		else if (motorManufacturerStr == "XERYON")
-			m_WorkStations->work_station_data[fileNum].motor_manufacturer = SettingsVariables::MotorManufacturers::XERYON;
-	}
-
 	// Detector
 	if (j.contains("detector")) {
 		for (const auto& motor : j["detector"]) {
 			const std::string sn = motor["SerialNumber"];
 			const int stepsPerMM = motor["StepsPerMM"];
+
+			SettingsVariables::MotorManufacturers fallback =
+				(j.contains("motor_manufacturer") ? SettingsVariables::ParseVendor(j["motor_manufacturer"].get<std::string>())
+					: SettingsVariables::MotorManufacturers::STANDA);
+
+			SettingsVariables::MotorManufacturers v =
+				(motor.contains("Manufacturer") ? SettingsVariables::ParseVendor(motor["Manufacturer"].get<std::string>())
+					: fallback);
+
+			m_WorkStations->work_station_data[fileNum].motor_vendor_by_sn.emplace(wxString(sn), v);
 			m_WorkStations->work_station_data[fileNum].selected_motors_in_data_file.Add(wxString(sn));
 			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(sn), stepsPerMM));
 		}
@@ -1103,8 +1067,6 @@ auto cSettings::InitializeXeryonAndCheckPython() -> void
 {
 	wxBusyCursor busy;
 
-	m_PhysicalMotors = std::make_unique<XeryonMotorArray>();
-
 	ReadStagePositionsFromJSONFile();
 
 	// Checking for Python and modules
@@ -1127,30 +1089,18 @@ auto cSettings::InitializeXeryonAndCheckPython() -> void
 
 auto cSettings::ReadStagePositionsFromJSONFile() -> void
 {
-	if (m_MotorManufacturer != SettingsVariables::XERYON) return;
-
-	// Read existing stages from JSON (if file exists)
 	auto stages = ReadJson(m_StagesPositionsFilename);
+	if (stages.empty()) return;
 
-	if (!stages.size()) return;
-
-	auto motorsCount = m_WorkStations->work_station_data[0].selected_motors_in_data_file.size();
-
-	for (auto i{ 0 }; i < motorsCount; ++i)
+	const auto& ws = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num];
+	for (auto& sn : ws.selected_motors_in_data_file) 
 	{
-		auto motorSN = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[i];
-		auto steps_per_mm = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].motors_steps_per_mm[motorSN];
-
-		for (const auto& stage : stages)
-		{
-			if (stage.SerialNumber == motorSN.ToStdString())
-			{
-				m_PhysicalMotors->SetCurrentPositionForTheMotor
-				(
-					motorSN.ToStdString(), 
-					stage.LastKnownPosition
-				);
-
+		if (sn == "None") continue;
+		if (ws.motor_vendor_by_sn.at(sn) != SettingsVariables::XERYON) continue; // only XERYON
+		for (const auto& stage : stages) {
+			if (stage.SerialNumber == sn.ToStdString()) {
+				if (m_XeryonMotors)
+					m_XeryonMotors->SetCurrentPositionForTheMotor(sn.ToStdString(), stage.LastKnownPosition);
 				break;
 			}
 		}
@@ -1159,21 +1109,16 @@ auto cSettings::ReadStagePositionsFromJSONFile() -> void
 
 auto cSettings::PrepareStagesDataAndWriteThemIntoJSONFile() -> void
 {
-	if (m_MotorManufacturer != SettingsVariables::XERYON) return;
-
-	std::vector<SettingsVariables::Stage> stages;
-
-	auto serialNumbersWithRanges = m_PhysicalMotors->GetSerialNumbersWithRanges();
-
-	for (auto const& motor : serialNumbersWithRanges)
-	{
-		SettingsVariables::Stage stage;
-		stage.SerialNumber = motor.first;
-		stage.COMPort = m_PhysicalMotors->GetMotorCOMPort(motor.first);
-		stage.LastKnownPosition = m_PhysicalMotors->GetActualStagePos(motor.first);
-		stages.push_back(stage);
+	std::vector<SettingsVariables::Stage> out;
+	if (m_XeryonMotors) {
+		auto serials = m_XeryonMotors->GetSerialNumbersWithRanges();
+		for (auto& s : serials) {
+			SettingsVariables::Stage st;
+			st.SerialNumber = s.first;
+			st.COMPort = m_XeryonMotors->GetMotorCOMPort(s.first);
+			st.LastKnownPosition = m_XeryonMotors->GetActualStagePos(s.first);
+			out.push_back(st);
+		}
 	}
-
-	// Write updated stages back to JSON
-	WriteJson(m_StagesPositionsFilename, stages);
+	WriteJson(m_StagesPositionsFilename, out);
 }

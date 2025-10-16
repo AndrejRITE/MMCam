@@ -134,8 +134,10 @@ namespace SettingsVariables
 	struct WorkStationData
 	{
 		wxArrayString selected_motors_in_data_file{};
-		MotorManufacturers motor_manufacturer{};
+
 		std::map<wxString, int> motors_steps_per_mm{};
+		std::map<wxString, SettingsVariables::MotorManufacturers> motor_vendor_by_sn{};
+
 		wxString selected_camera_in_data_file{};
 		CameraManufacturers camera_manufacturer{};
 		wxString work_station_name{};
@@ -179,11 +181,14 @@ namespace SettingsVariables
 
 		int StepsPerMM{};
 
+		std::string Manufacturer{}; // "STANDA" | "XERYON"
+
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE
 		(
 			StageSettings, 
 			SerialNumber, 
-			StepsPerMM
+			StepsPerMM,
+			Manufacturer
 		)
 	};
 
@@ -225,6 +230,13 @@ namespace SettingsVariables
 		}
 	};
 
+	static MotorManufacturers ParseVendor(const std::string& s) 
+	{
+		auto low = wxString(s).Lower();
+		if (low == "xeryon") return SettingsVariables::MotorManufacturers::XERYON;
+		return SettingsVariables::MotorManufacturers::STANDA; // default
+	}
+
 }
 
 class cSettings final : public wxDialog
@@ -232,20 +244,39 @@ class cSettings final : public wxDialog
 public:
 	cSettings(wxWindow* parent_frame);
 
-	bool MotorHasSerialNumber(const int motorName)
+	bool MotorHasSerialNumber(const SettingsVariables::MotorsNames& motorName)
 	{
-		return m_PhysicalMotors->IsMotorConnected
-		(
-			m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[motorName].ToStdString()
-		);
+		const auto& ws = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num];
+
+		if (motorName < 0 || motorName >= static_cast<int>(ws.selected_motors_in_data_file.size()))
+			return false;
+
+		const wxString sn = ws.selected_motors_in_data_file[motorName];
+		if (sn.IsEmpty() || sn == "None")
+			return false;
+
+		if (IMotorArray* arr = WhichArrayFor(sn))
+			return arr->IsMotorConnected(sn.ToStdString());
+
+		return false;
 	}
 
-	float GetActualMotorPosition(const int motorName)
+	float GetActualMotorPosition(const SettingsVariables::MotorsNames& motorName)
 	{
-		return m_PhysicalMotors->GetActualStagePos
-		(
-			m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[motorName].ToStdString()
-		);
+		const auto& ws = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num];
+
+		if (motorName < 0 || motorName >= static_cast<int>(ws.selected_motors_in_data_file.size()))
+			return 0.0f;
+
+		const wxString sn = ws.selected_motors_in_data_file[motorName];
+		if (sn.IsEmpty() || sn == "None")
+			return 0.0f;
+
+		if (IMotorArray* arr = WhichArrayFor(sn))
+			return arr->GetActualStagePos(sn.ToStdString());
+
+		// Driver not available (e.g., vendor array not instantiated)
+		return 0.0f;
 	}
 
 	int ShowModal() override;
@@ -262,47 +293,41 @@ public:
 	/* Setters */
 	float GoToAbsPos(const int motorName, const float absolute_position)
 	{
-		auto position = m_PhysicalMotors->GoMotorToAbsolutePosition
-		(
-			m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[motorName].ToStdString(),
-			absolute_position
-		);
-		PrepareStagesDataAndWriteThemIntoJSONFile();
-
+		auto& ws = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num];
+		const wxString sn = ws.selected_motors_in_data_file[motorName];
+		IMotorArray* arr = WhichArrayFor(sn);
+		auto position = arr->GoMotorToAbsolutePosition(sn.ToStdString(), absolute_position);
+		PrepareStagesDataAndWriteThemIntoJSONFile(); // still fine; see step 5
 		return position;
 	};
 
 	float GoOffsetMotor(const int motorName, const float delta)
 	{
-		auto position = m_PhysicalMotors->GoMotorOffset
-		(
-			m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[motorName].ToStdString(),
-			delta
-		);
+		auto& ws = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num];
+		const wxString sn = ws.selected_motors_in_data_file[motorName];
+		IMotorArray* arr = WhichArrayFor(sn);
+		auto position = arr->GoMotorOffset(sn.ToStdString(), delta);
 		PrepareStagesDataAndWriteThemIntoJSONFile();
-
 		return position;
 	};
 
 	float CenterMotor(const int motorName)
 	{
-		auto position = m_PhysicalMotors->GoMotorCenter
-		(
-			m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[motorName].ToStdString()
-		);
+		auto& ws = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num];
+		const wxString sn = ws.selected_motors_in_data_file[motorName];
+		IMotorArray* arr = WhichArrayFor(sn);
+		auto position = arr->GoMotorCenter(sn.ToStdString());
 		PrepareStagesDataAndWriteThemIntoJSONFile();
-
 		return position;
 	};
 
 	float HomeMotor(const int motorName)
 	{
-		auto position = m_PhysicalMotors->GoMotorHome
-		(
-			m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[motorName].ToStdString()
-		);
+		auto& ws = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num];
+		const wxString sn = ws.selected_motors_in_data_file[motorName];
+		IMotorArray* arr = WhichArrayFor(sn);
+		auto position = arr->GoMotorHome(sn.ToStdString());
 		PrepareStagesDataAndWriteThemIntoJSONFile();
-
 		return position;
 	};
 
@@ -328,7 +353,6 @@ public:
 	auto GetXRayImagesDefaultCaption() const -> wxArrayString { return m_XRayImagesCaptions; };
 	
 	auto GetCameraManufacturer() const -> int { return m_CameraManufacturer; }
-	auto GetMotorManufacturer() const -> int { return m_MotorManufacturer; }
 
 private:
 	void CreateMainFrame();
@@ -358,7 +382,6 @@ private:
 	unsigned int FindSerialNumber(const uint8_t selection_number, const SettingsVariables::MotorSettings* motor_settings) const;
 
 	/* Working with XML data and operating with m_Motors variables */
-	auto CompareXMLWithConnectedDevices();
 	auto LoadWorkStationFiles() -> void;
 	auto ReadWorkStationFile(const std::string& fileName, const int fileNum) -> void;
 	void UpdateUniqueArray();
@@ -466,6 +489,14 @@ private:
 	auto ReadStagePositionsFromJSONFile() -> void;
 	auto PrepareStagesDataAndWriteThemIntoJSONFile() -> void;
 
+	IMotorArray* WhichArrayFor(const wxString& sn) const 
+	{
+		const auto& ws = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num];
+		auto it = ws.motor_vendor_by_sn.find(sn);
+		auto v = (it != ws.motor_vendor_by_sn.end()) ? it->second : SettingsVariables::STANDA;
+		return (v == SettingsVariables::XERYON) ? m_XeryonMotors.get() : m_StandaMotors.get();
+	}
+
 private:
 	const wxString work_stations_path = "src\\";
 	const std::string m_StagesPositionsFilename = "temp\\StagesPositions.json";
@@ -476,14 +507,14 @@ private:
 
 	wxNotebook* m_MotorsNotebook{};
 
-	SettingsVariables::MotorManufacturers m_MotorManufacturer{};
 	SettingsVariables::CameraManufacturers m_CameraManufacturer{};
 	wxArrayString m_XRayImagesCaptions{};
 	wxString m_UploadReportFolder{};
 	std::unique_ptr<SettingsVariables::WorkStations> m_WorkStations{};
 	std::unique_ptr<SettingsVariables::MotorSettingsArray> m_Motors{};
 	
-	std::unique_ptr<IMotorArray> m_PhysicalMotors{};
+	std::unique_ptr<IMotorArray> m_StandaMotors{};
+	std::unique_ptr<IMotorArray> m_XeryonMotors{};
 
 	std::unique_ptr<SettingsVariables::Camera> m_Camera{};
 	const int m_MotorsCount{ 6 };

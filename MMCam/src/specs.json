@@ -1,22 +1,21 @@
 {
   "camera": "37680258",
   "camera_manufacturer": "XIMEA",
-  "motor_manufacturer": "STANDA",
   "pixel_size_um": 2.2,
   "station": "SPECS",
   "detector": [
-    { "SerialNumber": "None", "StepsPerMM": 800 },
-    { "SerialNumber": "None", "StepsPerMM": 800 },
-    { "SerialNumber": "None", "StepsPerMM": 800 }
+    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" },
+    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" },
+    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" }
   ],
   "optics": [
-    { "SerialNumber": "None", "StepsPerMM": 800 },
-    { "SerialNumber": "None", "StepsPerMM": 800 },
-    { "SerialNumber": "None", "StepsPerMM": 800 }
+    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" },
+    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" },
+    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" }
   ],
   "aux": [
-    { "SerialNumber": "None", "StepsPerMM": 800 },
-    { "SerialNumber": "None", "StepsPerMM": 800 },
-    { "SerialNumber": "None",  "StepsPerMM": 800 }
+    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" },
+    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" },
+    { "SerialNumber": "None",  "StepsPerMM": 800, "Manufacturer": "STANDA" }
   ]
 }
