@@ -4935,14 +4935,9 @@ void cMain::UnCheckAllTools()
 	m_CamPreview->ActivateCrossHairDisplaying(false);
 	m_CameraTabControls->crossHairPosXTxtCtrl->Disable();
 	m_CameraTabControls->crossHairPosYTxtCtrl->Disable();
-	//m_SetCrossHairPosTglBtn->Disable();
 
 	m_VerticalToolBar->tool_bar->ToggleTool(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 	m_MenuBar->menu_tools->Check(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
-	//m_CamPreview->SetCrossHairButtonActive(false);
-	//m_CameraTabControls->crossHairPosXTxtCtrl->Disable();
-	//m_CameraTabControls->crossHairPosYTxtCtrl->Disable();
-
 }
 
 void cMain::OnFirstStageChoice(wxCommandEvent& evt)
@@ -4974,7 +4969,7 @@ void cMain::OnFirstStageChoice(wxCommandEvent& evt)
 	if (!m_FirstStage->step->GetValue().ToDouble(&stepStageValue)) return;
 
 	/* Set Finish To Current position of motor + Step */
-	finishStageValue = stepStageValue + 1.0;
+	finishStageValue = startStageValue + 10 * stepStageValue;
 
 	m_FirstStage->finish->SetValue
 	(
