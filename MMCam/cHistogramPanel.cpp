@@ -153,6 +153,8 @@ void cHistogramPanel::Render(wxBufferedPaintDC& dc)
 		if (!gc) return;
 
 		DrawImage(gc);
+		DrawGridAndAxes(gc);
+
 		delete gc;
 	}
 
@@ -461,6 +463,8 @@ auto cHistogramPanel::OnPreviewMouseLeftDoubleClick(wxMouseEvent& evt) -> void
 	m_ParentRightBorder->SetValue(wxString::Format(wxT("%i"), m_RightBorder.x));
 	m_WasRangeChanged = false;
 
+	ResetViewToFull();
+
 	Refresh();
 }
 
@@ -500,6 +504,15 @@ auto cHistogramPanel::OnPreviewMouseLeftWindow(wxMouseEvent& evt) -> void
 		SetCursor(wxCURSOR_DEFAULT);
 	}
 	Refresh();
+}
+
+void cHistogramPanel::ResetViewToFull()
+{
+	m_ViewMin = 0;
+	m_ViewMax = (unsigned int)m_MaxHistogramValue;
+	RebuildHistogramImageForCurrentView();
+	InvalidateGraphicsBitmap();
+	Refresh(false);
 }
 
 auto cHistogramPanel::OnMouseWheel(wxMouseEvent& evt) -> void
@@ -579,6 +592,8 @@ void cHistogramPanel::RebuildHistogramImageForCurrentView()
 	unsigned long long viewPeak = 0;
 	for (unsigned int v = m_ViewMin; v <= m_ViewMax; ++v)
 		viewPeak = std::max(viewPeak, m_HistogramData[v]);
+
+	m_ViewPeak = viewPeak;
 
 	// Avoid divide-by-zero
 	const double denom = m_LogScale ? std::log1p((double)std::max(1ULL, viewPeak))
@@ -663,5 +678,149 @@ auto cHistogramPanel::MedianBlur1D
 
 		// Compute the median and assign it to the result
 		dataPtr[i] = median_of_window(window);
+	}
+}
+
+int cHistogramPanel::CountToCanvasY(unsigned long long c) const
+{
+	const int H = m_CanvasSize.GetHeight();
+	if (H <= 0) return 0;
+
+	if (m_ViewPeak == 0) return H - 1;
+
+	double num = m_LogScale ? std::log1p((double)c) : (double)c;
+	double den = m_LogScale ? std::log1p((double)m_ViewPeak) : (double)m_ViewPeak;
+
+	double t = (den > 0.0) ? (num / den) : 0.0;   // 0..1
+	int y = H - 1 - (int)std::round(t * (H - 1)); // 0=top, H-1=bottom
+	return std::clamp(y, 0, H - 1);
+}
+
+void cHistogramPanel::DrawGridAndAxes(wxGraphicsContext* gc)
+{
+	if (m_CanvasSize.GetWidth() <= 0 || m_CanvasSize.GetHeight() <= 0) return;
+
+	// === helpers ===
+	auto nice_step = [](double span, int targetTicks) {
+		if (span <= 0.0) return 1.0;
+		double raw = span / std::max(1, targetTicks);
+		double pow10 = std::pow(10.0, std::floor(std::log10(raw)));
+		double frac = raw / pow10;
+		double step;
+		if (frac < 1.5) step = 1.0;
+		else if (frac < 3.5) step = 2.0;
+		else if (frac < 7.5) step = 5.0;
+		else step = 10.0;
+		return step * pow10;
+		};
+	auto fmt_uint = [](double v) {
+		// avoid scientific notation, clamp to integer bins
+		unsigned int ui = (unsigned int)std::llround(std::max(0.0, v));
+		return wxString::Format("%u", ui);
+		};
+
+	// === grid styles ===
+	const wxColour gridMajor(255 - m_backgroundColour.GetRed(), 255 - m_backgroundColour.GetGreen(), 255 - m_backgroundColour.GetBlue(), 60);
+	const wxColour gridMinor(255 - m_backgroundColour.GetRed(), 255 - m_backgroundColour.GetGreen(), 255 - m_backgroundColour.GetBlue(), 30);
+	const auto redLabel = 255 - m_backgroundColour.GetRed() - 20 < 0 ? 0 : 255 - m_backgroundColour.GetRed() - 20;
+	const wxColour labelCol(redLabel, redLabel, redLabel, 140);
+
+	gc->SetFont(wxFontInfo(9), labelCol);
+
+	const int W = m_CanvasSize.GetWidth();
+	const int H = m_CanvasSize.GetHeight();
+
+	// =========================
+	// X ticks (value domain)
+	// =========================
+	const double xSpan = std::max(1u, DomainSpan());
+	// Aim for ~8 vertical lines max, based on pixel width
+	int targetXTicks = std::clamp(W / 120, 3, 8);
+	double xStep = nice_step((double)xSpan, targetXTicks);
+
+	// start at the first multiple within view
+	double xStart = std::ceil((double)m_ViewMin / xStep) * xStep;
+
+	for (double xv = xStart; xv <= (double)m_ViewMax + 0.5; xv += xStep) {
+		int x = ValueToCanvasX((unsigned int)std::llround(xv));
+		bool isMajor = std::fmod(std::round(xv / xStep), 5.0) == 0.0; // every 5th is major
+
+		gc->SetPen(wxPen(isMajor ? gridMajor : gridMinor, isMajor ? 1.5 : 1));
+		gc->StrokeLine(x + 0.5, 0, x + 0.5, H);
+
+		// label: only for majors and if not too crowded
+		if (isMajor) {
+			auto s = fmt_uint(xv);
+			wxDouble tw, th, d, l;
+			gc->GetTextExtent(s, &tw, &th, &d, &l);
+			int lx = std::clamp(x - (int)tw / 2, 0, std::max(0, W - (int)tw));
+			int ly = H - (int)th - 2;
+			// avoid overlapping with left/right edges too much
+			if (lx < 2) lx = 2;
+			if (lx + (int)tw > W - 2) lx = W - 2 - (int)tw;
+			gc->SetBrush(*wxTRANSPARENT_BRUSH);
+			gc->DrawText(s, lx, ly);
+		}
+	}
+
+	// =========================
+	// Y ticks (counts)
+	// =========================
+	if (m_ViewPeak > 0) {
+		// Build Y ticks for linear or log scale
+		std::vector<unsigned long long> yTicks;
+
+		if (!m_LogScale) {
+			// linear
+			int targetYTicks = std::clamp(H / 80, 3, 8);
+			double yStep = nice_step((double)m_ViewPeak, targetYTicks);
+			double yStart = std::ceil(0.0 / yStep) * yStep; // zero
+			for (double yv = yStart; yv <= (double)m_ViewPeak + 0.5; yv += yStep)
+				yTicks.push_back((unsigned long long)std::llround(yv));
+		}
+		else {
+			// log scale — use 1,2,5 * 10^k up to peak
+			double maxVal = (double)m_ViewPeak;
+			int kmin = 0;
+			int kmax = (int)std::floor(std::log10(std::max(1.0, maxVal)));
+			const int mults[3] = { 1, 2, 5 };
+			for (int k = 0; k <= kmax; ++k) {
+				for (int m : mults) {
+					double v = m * std::pow(10.0, k);
+					if (v <= maxVal) yTicks.push_back((unsigned long long)std::llround(v));
+				}
+			}
+			// ensure we include the top if not exact
+			if (yTicks.empty() || yTicks.back() != m_ViewPeak) yTicks.push_back(m_ViewPeak);
+		}
+
+		for (size_t i = 0; i < yTicks.size(); ++i) {
+			unsigned long long cv = yTicks[i];
+			int y = CountToCanvasY(cv);
+			bool isMajor = (!m_LogScale)
+				? (i % 2 == 0)          // every 2nd major on linear
+				: (cv == 1 || cv == 5 ||
+					cv == 10 || cv == 50 ||
+					std::fmod(std::log10((double)std::max(1ULL, cv)), 1.0) == 0.0); // powers of 10
+
+			gc->SetPen(wxPen(isMajor ? gridMajor : gridMinor, isMajor ? 1.5 : 1));
+			gc->StrokeLine(0, y + 0.5, W, y + 0.5);
+
+			// labels at left
+			wxString s = (!m_LogScale) ? wxString::Format("%llu", cv)
+				: wxString::Format("%llu", cv);
+			wxDouble tw, th, d, l;
+			gc->GetTextExtent(s, &tw, &th, &d, &l);
+			int lx = 2;
+			int ly = std::clamp(y - (int)th - 1, 0, H - (int)th);
+			gc->DrawText(s, lx, ly);
+		}
+	}
+
+	// Corner info (optional): show [viewMin:viewMax]
+	{
+		wxString s = wxString::Format("[%u : %u]", m_ViewMin, m_ViewMax);
+		wxDouble tw, th, d, l; gc->GetTextExtent(s, &tw, &th, &d, &l);
+		gc->DrawText(s, W - (int)tw - 6, H - (int)th - 2);
 	}
 }

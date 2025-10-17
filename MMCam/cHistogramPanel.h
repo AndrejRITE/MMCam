@@ -110,6 +110,7 @@ private:
 	auto OnPreviewMouseEnteredWindow(wxMouseEvent& evt) -> void;
 	auto OnPreviewMouseLeftWindow(wxMouseEvent& evt) -> void;
 
+	void ResetViewToFull();
 
 	void InvalidateGraphicsBitmap() { m_IsGraphicsBitmapSet = false; }
 	void RebuildHistogramImageForCurrentView();
@@ -117,6 +118,9 @@ private:
 	void ChangeCursorInDependenceOfCurrentParameters();
 
 	auto MedianBlur1D(unsigned long long* dataPtr, const size_t dataSize, size_t windowSize) -> void;
+
+	int CountToCanvasY(unsigned long long c) const;  // maps count->Y using current (log/linear) scale and H
+	void DrawGridAndAxes(wxGraphicsContext* gc);     // draws grid + tick labels over the bitmap
 
 private:
 	// Helpers to convert between value<->canvas X using current view
@@ -169,6 +173,8 @@ private:
 	bool m_Panning{ false };
 	int  m_PanStartX{ 0 };
 	unsigned int m_ViewMinAtDragStart{ 0 }, m_ViewMaxAtDragStart{ 0 };
+
+	unsigned long long m_ViewPeak{ 0 };
 
 	DECLARE_EVENT_TABLE();
 };
