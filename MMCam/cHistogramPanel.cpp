@@ -3,10 +3,12 @@
 BEGIN_EVENT_TABLE(cHistogramPanel, wxPanel)
 	EVT_PAINT(cHistogramPanel::PaintEvent)
 	EVT_SIZE(cHistogramPanel::OnSize)
-	EVT_MOTION(cHistogramPanel::OnMouseMoved)
-	EVT_LEFT_DOWN(cHistogramPanel::OnPreviewMouseLeftPressed)
+	EVT_MOUSEWHEEL(cHistogramPanel::OnMouseWheel)
+	EVT_LEFT_DOWN(cHistogramPanel::OnMouseDown)
+	EVT_MOTION(cHistogramPanel::OnMouseMove)
+	EVT_LEFT_UP(cHistogramPanel::OnMouseUp)
+	EVT_RIGHT_UP(cHistogramPanel::OnToggleLogScale)
 	EVT_LEFT_DCLICK(cHistogramPanel::OnPreviewMouseLeftDoubleClick)
-	EVT_LEFT_UP(cHistogramPanel::OnPreviewMouseLeftReleased)
 	EVT_ENTER_WINDOW(cHistogramPanel::OnPreviewMouseEnteredWindow)
 	EVT_LEAVE_WINDOW(cHistogramPanel::OnPreviewMouseLeftWindow)
 END_EVENT_TABLE()
@@ -26,8 +28,6 @@ cHistogramPanel::cHistogramPanel
 	m_TitleStr(title)
 {
 	SetDoubleBuffered(true);
-
-	SetBackgroundColour(m_BackgroundColour);
 
 	parent_sizer->Add(this, 1, wxEXPAND | wxLEFT | wxRIGHT, borderSize);
 
@@ -72,13 +72,15 @@ auto cHistogramPanel::SetHistogram
 	m_RightBorder = m_AutoRightBorder;
 	m_WasRangeChanged = false;
 
+	m_ViewMin = min_value;
+	m_ViewMax = max_value ? max_value : USHRT_MAX;
+
 	return std::optional<int>();
 }
 
-auto cHistogramPanel::SetBackgroundColor(wxColour bckg_colour) -> void
+auto cHistogramPanel::SetBackgroundColor(wxColour color) -> void
 {
-	SetBackgroundColour(bckg_colour);
-	m_BackgroundColour = bckg_colour;
+	SetBackgroundColour(color);
 	SetWXImage();
 }
 
@@ -91,9 +93,9 @@ auto cHistogramPanel::SetWXImage() -> void
 	
 	//m_Image.InitAlpha();
 	
-	m_Image.Clear(m_BackgroundColour.GetRed());
+	m_Image.Clear(m_backgroundColour.GetRed());
 
-	auto histColour = wxColour(180, 29, 47);
+	auto histColor = wxColour(180, 29, 47);
 	int curr_x{}, curr_y{};
 
 	auto maxHistogramValue = static_cast<double>(m_MaxHistogramValue);
@@ -113,9 +115,9 @@ auto cHistogramPanel::SetWXImage() -> void
 				wxPoint(curr_x, m_CanvasSize.GetHeight() - curr_y),
 				wxSize(1, curr_y)
 			),
-			histColour.GetRed(),
-			histColour.GetGreen(),
-			histColour.GetBlue()
+			histColor.GetRed(),
+			histColor.GetGreen(),
+			histColor.GetBlue()
 		);
 	}
 
@@ -137,9 +139,8 @@ void cHistogramPanel::PaintEvent(wxPaintEvent& evt)
 
 void cHistogramPanel::Render(wxBufferedPaintDC& dc)
 {	
-	dc.SetBackground(wxBrush(m_BackgroundColour));
+	dc.SetBackground(wxBrush(m_backgroundColour));
 	dc.Clear();
-	//wxGraphicsContext* gc_image{};
 
 	if (!m_Image.IsOk()) return;
 
@@ -327,7 +328,7 @@ void cHistogramPanel::ChangeSizeOfImageInDependenceOnCanvasSize()
 {
 }
 
-void cHistogramPanel::OnMouseMoved(wxMouseEvent& evt)
+void cHistogramPanel::OnMouseMove(wxMouseEvent& evt)
 {
 	m_CursorPosOnCanvas = evt.GetPosition();
 	
@@ -391,7 +392,7 @@ void cHistogramPanel::CalculatePositionOnImage()
 {
 }
 
-void cHistogramPanel::OnPreviewMouseLeftPressed(wxMouseEvent& evt)
+void cHistogramPanel::OnMouseDown(wxMouseEvent& evt)
 {
 	if (m_IsCursorAboveLeftBorder && evt.LeftDown())
 	{
@@ -424,7 +425,7 @@ auto cHistogramPanel::OnPreviewMouseLeftDoubleClick(wxMouseEvent& evt) -> void
 	Refresh();
 }
 
-void cHistogramPanel::OnPreviewMouseLeftReleased(wxMouseEvent& evt)
+void cHistogramPanel::OnMouseUp(wxMouseEvent& evt)
 {
 	if (!m_ChangingLeftBorder && !m_ChangingRightBorder) return;
 
@@ -454,6 +455,23 @@ auto cHistogramPanel::OnPreviewMouseLeftWindow(wxMouseEvent& evt) -> void
 		SetCursor(wxCURSOR_DEFAULT);
 	}
 	Refresh();
+}
+
+auto cHistogramPanel::OnMouseWheel(wxMouseEvent& evt) -> void
+{
+	const double factor = (evt.GetWheelRotation() > 0) ? 0.8 : 1.25; // zoom in/out
+	const auto px = evt.GetX();
+	const double t = std::clamp(double(px) / GetClientSize().x, 0.0, 1.0);
+	const auto center = m_ViewMin + t * (m_ViewMax - m_ViewMin);
+	auto newHalf = (m_ViewMax - m_ViewMin) * 0.5 * factor;
+	m_ViewMin = (unsigned)std::max(0.0, center - newHalf);
+	m_ViewMax = (unsigned)std::min<double>(USHRT_MAX, center + newHalf);
+
+	Refresh();
+}
+
+auto cHistogramPanel::OnToggleLogScale(wxMouseEvent& evt) -> void
+{
 }
 
 void cHistogramPanel::ChangeCursorInDependenceOfCurrentParameters()

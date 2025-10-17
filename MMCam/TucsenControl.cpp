@@ -195,8 +195,8 @@ auto TucsenControl::StopAcquisition() -> bool
 
     if (m_Capturing) 
     {
-        TUCAM_Buf_AbortWait(m_opCam.hIdxTUCam);                             // break any waiters :contentReference[oaicite:13]{index=13}
-        TUCAM_Cap_Stop(m_opCam.hIdxTUCam);                                  // stop capture :contentReference[oaicite:14]{index=14}
+        TUCAM_Buf_AbortWait(m_opCam.hIdxTUCam);
+        TUCAM_Cap_Stop(m_opCam.hIdxTUCam);
         m_Capturing = false;
     }
     return true;
@@ -211,10 +211,14 @@ auto TucsenControl::GetImage() -> unsigned short*
     const bool startedHere = !m_Capturing;
     if (startedHere && !StartAcquisition()) return nullptr;
 
-    auto timeout_ms = 1000;
+    const int exp_ms = (m_ExposureUS > 0) ? (m_ExposureUS / 1000) : 0;
+
+	auto maxTimeout = exp_ms * 2 < 2000 ? 2000 : exp_ms * 2;
+    const int timeout_ms = std::clamp(int(exp_ms * 1.5), 200, maxTimeout);
 
     // Wait with timeout; must be after Cap_Start, else NOT_READY (per doc) :contentReference[oaicite:15]{index=15}
-    if (!ok(TUCAM_Buf_WaitForFrame(m_opCam.hIdxTUCam, &m_frame, timeout_ms))) {
+    if (!ok(TUCAM_Buf_WaitForFrame(m_opCam.hIdxTUCam, &m_frame, timeout_ms))) 
+    {
         if (startedHere) StopAcquisition();
         return nullptr;
     }

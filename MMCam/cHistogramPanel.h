@@ -97,16 +97,19 @@ private:
 	void CreateGraphicsBitmapImage(wxGraphicsContext* gc_);
 	void OnSize(wxSizeEvent& evt);
 	void ChangeSizeOfImageInDependenceOnCanvasSize();
-	void OnMouseMoved(wxMouseEvent& evt);
 
 	void CheckIfMouseAboveImage();
 	void CalculatePositionOnImage();
 
-	void OnPreviewMouseLeftPressed(wxMouseEvent& evt);
+	void OnMouseDown(wxMouseEvent& evt);
+	void OnMouseMove(wxMouseEvent& evt);
 	auto OnPreviewMouseLeftDoubleClick(wxMouseEvent& evt) -> void;
-	void OnPreviewMouseLeftReleased(wxMouseEvent& evt);
+	void OnMouseUp(wxMouseEvent& evt);
 	auto OnPreviewMouseEnteredWindow(wxMouseEvent& evt) -> void;
 	auto OnPreviewMouseLeftWindow(wxMouseEvent& evt) -> void;
+
+	auto OnMouseWheel(wxMouseEvent& evt) -> void;
+	auto OnToggleLogScale(wxMouseEvent& evt) -> void;
 
 	void ChangeCursorInDependenceOfCurrentParameters();
 
@@ -117,10 +120,7 @@ private:
 	bool m_IsGraphicsBitmapSet{}, m_IsImageSet{};
 	wxGraphicsBitmap m_GraphicsBitmapImage{};
 
-	wxColour m_BackgroundColour = wxColour(95, 95, 95);
-
 	wxImage m_Image{};
-	//std::shared_ptr<unsigned short[]> m_ImageData{};
 
 	wxSize m_ImageSize{}, m_ImageOnCanvasSize{}, m_CanvasSize{};
 	wxRealPoint m_NotCheckedCursorPosOnImage{}, m_CheckedCursorPosOnImage{}, m_CursorPosOnCanvas{};
@@ -145,6 +145,10 @@ private:
 	wxString m_TitleStr{};
 
 	bool m_IsMouseInsidePanel{};
+
+	// View on the X axis (value domain)
+	unsigned int m_ViewMin{ 0 }, m_ViewMax{ USHRT_MAX };
+	bool m_LogScale{ false }; // toggle for low-signal visibility
 
 	DECLARE_EVENT_TABLE();
 };
