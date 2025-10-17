@@ -101,19 +101,35 @@ private:
 	void CheckIfMouseAboveImage();
 	void CalculatePositionOnImage();
 
+	auto OnMouseWheel(wxMouseEvent& evt) -> void;
 	void OnMouseDown(wxMouseEvent& evt);
 	void OnMouseMove(wxMouseEvent& evt);
-	auto OnPreviewMouseLeftDoubleClick(wxMouseEvent& evt) -> void;
 	void OnMouseUp(wxMouseEvent& evt);
+	auto OnToggleLogScale(wxMouseEvent& evt) -> void;
+	auto OnPreviewMouseLeftDoubleClick(wxMouseEvent& evt) -> void;
 	auto OnPreviewMouseEnteredWindow(wxMouseEvent& evt) -> void;
 	auto OnPreviewMouseLeftWindow(wxMouseEvent& evt) -> void;
 
-	auto OnMouseWheel(wxMouseEvent& evt) -> void;
-	auto OnToggleLogScale(wxMouseEvent& evt) -> void;
+
+	void InvalidateGraphicsBitmap() { m_IsGraphicsBitmapSet = false; }
+	void RebuildHistogramImageForCurrentView();
 
 	void ChangeCursorInDependenceOfCurrentParameters();
 
 	auto MedianBlur1D(unsigned long long* dataPtr, const size_t dataSize, size_t windowSize) -> void;
+
+private:
+	// Helpers to convert between value<->canvas X using current view
+	inline unsigned int DomainSpan() const { return (m_ViewMax > m_ViewMin) ? (m_ViewMax - m_ViewMin) : 1; }
+	inline int ValueToCanvasX(unsigned int v) const {
+		double t = (double)(std::clamp(v, m_ViewMin, m_ViewMax) - m_ViewMin) / (double)DomainSpan();
+		return (int)std::round(t * (m_CanvasSize.GetWidth() - 1));
+	}
+	inline unsigned int CanvasXToValue(int x) const {
+		x = std::clamp(x, 0, std::max(0, m_CanvasSize.GetWidth() - 1));
+		double t = (m_CanvasSize.GetWidth() > 1) ? (double)x / (double)(m_CanvasSize.GetWidth() - 1) : 0.0;
+		return m_ViewMin + (unsigned int)std::round(t * DomainSpan());
+	}
 
 private:
 	int m_Width{}, m_Height{};
@@ -149,6 +165,10 @@ private:
 	// View on the X axis (value domain)
 	unsigned int m_ViewMin{ 0 }, m_ViewMax{ USHRT_MAX };
 	bool m_LogScale{ false }; // toggle for low-signal visibility
+
+	bool m_Panning{ false };
+	int  m_PanStartX{ 0 };
+	unsigned int m_ViewMinAtDragStart{ 0 }, m_ViewMaxAtDragStart{ 0 };
 
 	DECLARE_EVENT_TABLE();
 };

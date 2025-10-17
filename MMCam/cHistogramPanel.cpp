@@ -48,10 +48,9 @@ auto cHistogramPanel::SetHistogram
 
 	m_DataType = data_type;
 	m_HistogramData.reset(data);
-	MedianBlur1D
-	(
-		m_HistogramData.get(), 
-		m_DataType == HistogramPanelVariables::ImageDataTypes::RAW_12BIT ? 4'095 : USHRT_MAX, 
+	MedianBlur1D(
+		m_HistogramData.get(),
+		(m_DataType == HistogramPanelVariables::ImageDataTypes::RAW_12BIT) ? 4096 : (size_t)USHRT_MAX + 1,
 		5
 	);
 
@@ -72,8 +71,12 @@ auto cHistogramPanel::SetHistogram
 	m_RightBorder = m_AutoRightBorder;
 	m_WasRangeChanged = false;
 
-	m_ViewMin = min_value;
-	m_ViewMax = max_value ? max_value : USHRT_MAX;
+	m_ViewMin = (unsigned int)std::max<unsigned long long>(0, min_value);
+	m_ViewMax = (unsigned int)std::min<unsigned long long>(m_MaxHistogramValue, max_value);
+	RebuildHistogramImageForCurrentView();
+	InvalidateGraphicsBitmap();
+
+	Refresh();
 
 	return std::optional<int>();
 }
@@ -122,7 +125,7 @@ auto cHistogramPanel::SetWXImage() -> void
 	}
 
 	m_IsImageSet = true;
-	m_IsGraphicsBitmapSet = false;
+	InvalidateGraphicsBitmap();
 
 	Refresh();
 }
@@ -217,16 +220,21 @@ auto cHistogramPanel::DrawTitle(wxGraphicsContext* gc) -> void
 auto cHistogramPanel::DrawRectangleRange(wxGraphicsContext* gc) -> void
 {
 	if (!m_MaxHistogramValue) return;
-	m_LeftBorderOnCanvas.x = m_CanvasSize.GetWidth() * m_LeftBorder.x / (wxDouble)m_MaxHistogramValue;
-	m_RightBorderOnCanvas.x = m_CanvasSize.GetWidth() * m_RightBorder.x / (wxDouble)m_MaxHistogramValue;
-	m_RightBorderOnCanvas.x = m_RightBorderOnCanvas.x >= m_CanvasSize.GetWidth() ? m_CanvasSize.GetWidth() - 1 : m_RightBorderOnCanvas.x;
+
+	// Respect current zoom:
+	m_LeftBorderOnCanvas.x = ValueToCanvasX((unsigned int)m_LeftBorder.x);
+	m_RightBorderOnCanvas.x = ValueToCanvasX((unsigned int)m_RightBorder.x);
+
+	// Clamp to canvas and bail if inverted
+	m_LeftBorderOnCanvas.x = std::clamp(m_LeftBorderOnCanvas.x, 0.0, (double)m_CanvasSize.GetWidth() - 1.0);
+	m_RightBorderOnCanvas.x = std::clamp(m_RightBorderOnCanvas.x, 0.0, (double)m_CanvasSize.GetWidth() - 1.0);
 	if (m_LeftBorderOnCanvas.x >= m_RightBorderOnCanvas.x) return;
 
 	gc->SetPen(wxPen(wxColour(1, 45, 222), 1, wxPENSTYLE_SOLID));
 	gc->SetBrush(wxBrush(wxColour(1, 157, 222, 32)));
 
-	wxDouble widthTransRect{ (wxDouble)m_RightBorderOnCanvas.x - (wxDouble)m_LeftBorderOnCanvas.x }, 
-		heightTransRect{ (wxDouble)m_CanvasSize.GetHeight() - 1.0 };
+	const wxDouble widthTransRect = (wxDouble)m_RightBorderOnCanvas.x - (wxDouble)m_LeftBorderOnCanvas.x;
+	const wxDouble heightTransRect = (wxDouble)m_CanvasSize.GetHeight() - 1.0;
 	gc->DrawRectangle(m_LeftBorderOnCanvas.x, 0.0, widthTransRect, heightTransRect);
 
 	// Draw asterisk if Range was changed
@@ -320,7 +328,7 @@ void cHistogramPanel::OnSize(wxSizeEvent& evt)
 	m_CanvasSize = evt.GetSize();
 
 	ChangeSizeOfImageInDependenceOnCanvasSize();
-	m_IsGraphicsBitmapSet = false;
+	InvalidateGraphicsBitmap();
 	Refresh();
 }
 
@@ -358,29 +366,52 @@ void cHistogramPanel::OnMouseMove(wxMouseEvent& evt)
 	}
 	else if (m_ChangingLeftBorder)
 	{
-		if 
-			(
-			m_CursorPosOnCanvas.x >= 0 && 
-			m_CursorPosOnCanvas.x < m_RightBorderOnCanvas.x - m_RangeWhenMouseReactOnBordersPx / 2
-			)
+		if (m_CursorPosOnCanvas.x >= 0 &&
+			m_CursorPosOnCanvas.x < m_RightBorderOnCanvas.x - m_RangeWhenMouseReactOnBordersPx / 2)
 		{
 			m_LeftBorderOnCanvas.x = m_CursorPosOnCanvas.x;
-			m_LeftBorder.x = m_LeftBorderOnCanvas.x * (wxDouble)m_MaxHistogramValue / (wxDouble)m_CanvasSize.GetWidth();
+			m_LeftBorder.x = (int)CanvasXToValue((int)m_LeftBorderOnCanvas.x); // <- use view mapping
 			Refresh();
 		}
 	}
 	else if (m_ChangingRightBorder)
 	{
-		if 
-			(
-			m_CursorPosOnCanvas.x <= m_CanvasSize.GetWidth() - 1 && 
-			m_CursorPosOnCanvas.x > m_LeftBorderOnCanvas.x + m_RangeWhenMouseReactOnBordersPx / 2
-			)
+		if (m_CursorPosOnCanvas.x <= m_CanvasSize.GetWidth() - 1 &&
+			m_CursorPosOnCanvas.x > m_LeftBorderOnCanvas.x + m_RangeWhenMouseReactOnBordersPx / 2)
 		{
 			m_RightBorderOnCanvas.x = m_CursorPosOnCanvas.x;
-			m_RightBorder.x = m_RightBorderOnCanvas.x * m_MaxHistogramValue / m_CanvasSize.GetWidth();
+			m_RightBorder.x = (int)CanvasXToValue((int)m_RightBorderOnCanvas.x); // <- use view mapping
 			Refresh();
 		}
+	}
+
+	if (m_Panning && evt.Dragging())
+	{
+		const int dx = evt.GetX() - m_PanStartX;
+
+		// bins per pixel for the *frozen-at-drag-start* span:
+		const unsigned int spanAtStart = std::max(1u, m_ViewMaxAtDragStart - m_ViewMinAtDragStart);
+		const double binsPerPixel = (m_CanvasSize.GetWidth() > 1)
+			? double(spanAtStart) / double(m_CanvasSize.GetWidth() - 1)
+			: 0.0;
+
+		const long long deltaBins = (long long)std::llround(-dx * binsPerPixel);
+
+		long long newMinLL = (long long)m_ViewMinAtDragStart + deltaBins;
+		long long newMaxLL = newMinLL + (long long)spanAtStart;
+
+		const long long fullMin = 0;
+		const long long fullMax = (long long)m_MaxHistogramValue;
+
+		if (newMinLL < fullMin) { newMinLL = fullMin; newMaxLL = newMinLL + (long long)spanAtStart; }
+		if (newMaxLL > fullMax) { newMaxLL = fullMax; newMinLL = newMaxLL - (long long)spanAtStart; }
+
+		m_ViewMin = (unsigned int)newMinLL;
+		m_ViewMax = (unsigned int)newMaxLL;
+
+		RebuildHistogramImageForCurrentView();
+		InvalidateGraphicsBitmap();
+		Refresh(false);
 	}
 }
 
@@ -408,6 +439,14 @@ void cHistogramPanel::OnMouseDown(wxMouseEvent& evt)
 		//wxLogDebug("Pressed above Right Border");
 		m_ChangingRightBorder = true;
 	}
+	else if (!m_Panning && evt.LeftDown()) 
+	{
+		m_Panning = true;
+		m_PanStartX = evt.GetX();
+		m_ViewMinAtDragStart = m_ViewMin;
+		m_ViewMaxAtDragStart = m_ViewMax;
+		CaptureMouse();
+	}
 }
 
 auto cHistogramPanel::OnPreviewMouseLeftDoubleClick(wxMouseEvent& evt) -> void
@@ -427,6 +466,12 @@ auto cHistogramPanel::OnPreviewMouseLeftDoubleClick(wxMouseEvent& evt) -> void
 
 void cHistogramPanel::OnMouseUp(wxMouseEvent& evt)
 {
+	if (m_Panning && evt.LeftUp()) 
+	{
+		m_Panning = false;
+		if (HasCapture()) ReleaseMouse();
+	}
+
 	if (!m_ChangingLeftBorder && !m_ChangingRightBorder) return;
 
 	m_ParentLeftBorder->ChangeValue(wxString::Format(wxT("%i"), m_LeftBorder.x));
@@ -459,19 +504,120 @@ auto cHistogramPanel::OnPreviewMouseLeftWindow(wxMouseEvent& evt) -> void
 
 auto cHistogramPanel::OnMouseWheel(wxMouseEvent& evt) -> void
 {
-	const double factor = (evt.GetWheelRotation() > 0) ? 0.8 : 1.25; // zoom in/out
-	const auto px = evt.GetX();
-	const double t = std::clamp(double(px) / GetClientSize().x, 0.0, 1.0);
-	const auto center = m_ViewMin + t * (m_ViewMax - m_ViewMin);
-	auto newHalf = (m_ViewMax - m_ViewMin) * 0.5 * factor;
-	m_ViewMin = (unsigned)std::max(0.0, center - newHalf);
-	m_ViewMax = (unsigned)std::min<double>(USHRT_MAX, center + newHalf);
+	if (m_MaxHistogramValue == 0) return;
 
-	Refresh();
+	const int rot = evt.GetWheelRotation();
+	if (evt.ControlDown()) {
+		if (rot != 0) m_LogScale = !m_LogScale;
+	}
+	else {
+		// Desired zoom factor (in/out)
+		const double zoomIn = 0.80;  // 20% in
+		const double zoomOut = 1.25;  // 25% out
+		const double factor = (rot > 0) ? zoomIn : zoomOut;
+
+		// Full domain [0 .. m_MaxHistogramValue] (inclusive)
+		const unsigned int fullMin = 0;
+		const unsigned int fullMax = (unsigned int)m_MaxHistogramValue;
+		const unsigned int fullSpan = std::max(1u, fullMax - fullMin);
+
+		// Current view and mouse anchor
+		const int mouseX = evt.GetX();
+		const double f = (m_CanvasSize.GetWidth() > 1)
+			? std::clamp(double(mouseX) / double(m_CanvasSize.GetWidth() - 1), 0.0, 1.0)
+			: 0.0;
+		const unsigned int anchor = CanvasXToValue(mouseX); // in value domain
+
+		// Target span (keep >=1, <= fullSpan)
+		unsigned int oldSpan = std::max(1u, DomainSpan());
+		unsigned int newSpan = (unsigned int)std::round(oldSpan * factor);
+		newSpan = std::clamp(newSpan, 1u, fullSpan);
+
+		// Keep anchor under the same canvas fraction:
+		//   f = (anchor - newMin) / newSpan  => newMin = anchor - f*newSpan
+		long long newMinLL = (long long)anchor - (long long)std::llround(f * newSpan);
+		long long newMaxLL = newMinLL + (long long)newSpan;
+
+		// Clamp window to [fullMin, fullMax] while preserving span
+		if (newMinLL < (long long)fullMin) {
+			newMinLL = fullMin;
+			newMaxLL = newMinLL + (long long)newSpan;
+		}
+		if (newMaxLL > (long long)fullMax) {
+			newMaxLL = fullMax;
+			newMinLL = newMaxLL - (long long)newSpan;
+			if (newMinLL < (long long)fullMin) newMinLL = fullMin; // paranoid
+		}
+
+		m_ViewMin = (unsigned int)newMinLL;
+		m_ViewMax = (unsigned int)newMaxLL;
+	}
+
+	RebuildHistogramImageForCurrentView();
+	InvalidateGraphicsBitmap();
+	Refresh(false);
 }
 
 auto cHistogramPanel::OnToggleLogScale(wxMouseEvent& evt) -> void
 {
+	m_LogScale = !m_LogScale;
+	RebuildHistogramImageForCurrentView();
+	InvalidateGraphicsBitmap();
+	Refresh(false);
+}
+
+void cHistogramPanel::RebuildHistogramImageForCurrentView()
+{
+	if (!m_HistogramData || m_CanvasSize.GetWidth() <= 0 || m_CanvasSize.GetHeight() <= 0) return;
+
+	// 1) Prepare a clean canvas
+	m_Image = wxImage(m_CanvasSize);
+	m_ImageSize = m_CanvasSize;
+	m_Image.Clear(m_backgroundColour.GetRed()); // R=G=B is fine for a gray background
+
+	// 2) Find peak in the visible window (for vertical scaling)
+	unsigned long long viewPeak = 0;
+	for (unsigned int v = m_ViewMin; v <= m_ViewMax; ++v)
+		viewPeak = std::max(viewPeak, m_HistogramData[v]);
+
+	// Avoid divide-by-zero
+	const double denom = m_LogScale ? std::log1p((double)std::max(1ULL, viewPeak))
+		: (double)std::max(1ULL, viewPeak);
+
+	// 3) Draw only bins in [m_ViewMin, m_ViewMax], mapped to panel width
+	const int H = m_CanvasSize.GetHeight();
+	const wxColour histColour(180, 29, 47);
+
+	// Optional: draw a base line for the X axis
+	// m_Image.SetRGB(wxRect(wxPoint(0, H-1), wxSize(m_CanvasSize.GetWidth(), 1)), 120,120,120);
+
+	// We draw 1px-wide columns. Multiple values can map to the same X -> keep the tallest.
+	std::vector<int> colHeights(m_CanvasSize.GetWidth(), 0);
+
+	for (unsigned int v = m_ViewMin; v <= m_ViewMax; ++v)
+	{
+		const int x = ValueToCanvasX(v);
+
+		double mag = m_LogScale ? std::log1p((double)m_HistogramData[v])
+			: (double)m_HistogramData[v];
+		const int y = (int)std::round(((denom > 0.0) ? (mag / denom) : 0.0) * (H - 1));
+		if (y > colHeights[x]) colHeights[x] = y;
+	}
+
+	for (int x = 0; x < m_CanvasSize.GetWidth(); ++x)
+	{
+		int y = colHeights[x];
+		if (y <= 0) continue;
+
+		m_Image.SetRGB(
+			wxRect(wxPoint(x, H - y), wxSize(1, y)),
+			histColour.GetRed(), histColour.GetGreen(), histColour.GetBlue()
+		);
+	}
+
+	// 4) Update the on-canvas positions of the left/right borders so they stay accurate in the zoomed view
+	m_LeftBorderOnCanvas.x = ValueToCanvasX((unsigned int)m_LeftBorder.x);
+	m_RightBorderOnCanvas.x = ValueToCanvasX((unsigned int)m_RightBorder.x);
 }
 
 void cHistogramPanel::ChangeCursorInDependenceOfCurrentParameters()
