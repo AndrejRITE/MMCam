@@ -12,6 +12,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, cMain::OnAnnulusButton)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, cMain::OnCrossHairButton)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, cMain::OnValueDisplayingCheck)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_IMAGE_STATISTICS, cMain::OnImageStatisticsDisplayingCheck)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, cMain::OnFWHMButton)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, cMain::OnFocusCenterButton)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, cMain::OnGridMeshButton)
@@ -556,6 +557,9 @@ void cMain::CreateMenuBarOnFrame()
 
 		// Append Value Displaying Check
 		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, wxT("Value Displaying\tV"));
+
+		// Image Statistics Check
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_IMAGE_STATISTICS, wxT("Image Statistics"));
 	}
 
 	// Append Tools Menu to the Menu Bar
@@ -640,10 +644,6 @@ void cMain::CreateMenuBarOnFrame()
 
 void cMain::InitDefaultStateWidgets()
 {
-	//m_MenuBar->menu_tools->Check(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, true);
-	//m_CamPreview->SetValueDisplayingActive(true);
-	//m_IsValueDisplayingChecked = true;
-
 	wxString 
 		defaultAbsoluteValueStr{ CameraPreviewVariables::CreateStringWithPrecision(0.0, m_DecimalDigits) }, 
 		defaultRelativeValueStr{ CameraPreviewVariables::CreateStringWithPrecision(m_Config->default_motors_step_first_tab, m_DecimalDigits) };
@@ -3338,11 +3338,11 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 
 	auto bckgColour = m_DefaultAppearanceColor;
 
-	m_CamPreview->SetBackgroundColor(m_DefaultAppearanceColor);
+	m_CamPreview->SetBackgroundColour(m_DefaultAppearanceColor);
 	
 	if (currState)
 	{
-		m_CamPreview->SetBackgroundColor(m_BlackAppearanceColor);
+		m_CamPreview->SetBackgroundColour(m_BlackAppearanceColor);
 
 		bckgColour = m_BlackAppearanceColor;
 		//bckgColour = wxColour(m_BlackAppearanceColor.GetRed() + 100, m_BlackAppearanceColor.GetGreen() + 100, m_BlackAppearanceColor.GetBlue() + 100);
@@ -3893,6 +3893,15 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 
 		m_MenuBar->menu_tools->Check(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, displayPixelValue);
 		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING);
+		ProcessEvent(artEvt);
+	}
+
+	// Display Image Statistics
+	{
+		auto state = m_Config->display_image_stats;
+
+		m_MenuBar->menu_tools->Check(MainFrameVariables::ID::MENUBAR_TOOLS_IMAGE_STATISTICS, state);
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_TOOLS_IMAGE_STATISTICS);
 		ProcessEvent(artEvt);
 	}
 
@@ -6343,6 +6352,21 @@ void cMain::OnValueDisplayingCheck(wxCommandEvent& evt)
 	Refresh();
 }
 
+auto cMain::OnImageStatisticsDisplayingCheck(wxCommandEvent& evt) -> void
+{
+	auto id = MainFrameVariables::ID::MENUBAR_TOOLS_IMAGE_STATISTICS;
+	auto isChecked = m_MenuBar->menu_tools->IsChecked(id);
+
+	m_IsImageStatisticsDisplayingChecked = isChecked;
+
+	m_Config->display_image_stats = m_IsImageStatisticsDisplayingChecked;
+	RewriteInitializationFile();
+
+	m_CamPreview->SetImageStatisticsDisplayingActive(m_IsImageStatisticsDisplayingChecked);
+
+	Refresh();
+}
+
 void cMain::UpdateAllAxisGlobalPositions()
 {
 	/* Detectors */
@@ -7236,6 +7260,8 @@ auto cMain::EnableControlsAfterCapturing() -> void
 
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, true);
 
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_IMAGE_STATISTICS, true);
+
 	m_ImageColormapComboBox->stylish_combo_box->Enable();
 
 	m_HistogramPanel->Enable();
@@ -7297,6 +7323,8 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, false);
 
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, false);
+
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_IMAGE_STATISTICS, false);
 
 	m_OutDirBtn->Disable();
 	m_FirstStage->DisableAllControls();

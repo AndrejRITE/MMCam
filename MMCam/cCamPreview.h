@@ -79,6 +79,14 @@ namespace CameraPreviewVariables
 		{};
 	};
 
+	struct ImageStats 
+	{ 
+		unsigned short minV{}, maxV{}; 
+		size_t count{}; 
+		double mean{}, stddev{}; 
+		bool valid{ false }; 
+	};
+
 	struct Annulus
 	{
 		Annulus()
@@ -128,8 +136,9 @@ public:
 	(
 		std::unique_ptr<CameraPreviewVariables::InputPreviewPanelArgs> previewPanelArgs
 	);
-	auto SetBackgroundColor(wxColour bckg_colour) -> void;
-	auto SetValueDisplayingActive(bool activate = false) -> void;
+	auto SetValueDisplayingActive(bool activate = false) -> void { m_DisplayPixelValues = activate; };
+
+	auto SetImageStatisticsDisplayingActive(bool activate = false) -> void { m_ShowImageStats = activate; };
 
 	auto SetAnnulusDisplayingActive(const bool activate = false) -> void { m_DisplayAnnulus = activate; };
 
@@ -345,6 +354,8 @@ private:
 	/* Annulus */
 	auto DrawAnnulus(wxGraphicsContext* gc) -> void;
 
+	auto DrawImageStatistics(wxGraphicsContext* gc) -> void;
+
 	/* Key Events */
 	auto OnKeyPressed(wxKeyEvent& evt) -> void;
 	auto OnKeyReleased(wxKeyEvent& evt) -> void;
@@ -354,6 +365,8 @@ private:
 
 	template<typename Func>
 	void ForEachPixelInAnnulus(const CameraPreviewVariables::Annulus& annulus, Func&& callback);
+
+	auto CalculateImageStatistics() -> void;
 
 private:
 	/* Buttons on keyboard */
@@ -431,6 +444,9 @@ private:
 	bool m_DisplayScaleBar{ true };
 
 	std::unique_ptr<CameraPreviewVariables::InputPreviewPanelArgs> m_ParentArguments{};
+
+	CameraPreviewVariables::ImageStats m_LastStats{};
+	bool m_ShowImageStats{};
 
 	DECLARE_EVENT_TABLE();
 };

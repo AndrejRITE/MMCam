@@ -44,7 +44,7 @@
 #define MAJOR_VERSION 1
 #define MINOR_VERSION 25
 
-//#define DEBUG_OPEN
+#define DEBUG_OPEN
 //#define DEBUG_ANNULUS
 
 namespace MainFrameVariables
@@ -63,6 +63,7 @@ namespace MainFrameVariables
 		MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING,
 		MENUBAR_TOOLS_CROSSHAIR,
 		MENUBAR_TOOLS_VALUE_DISPLAYING,
+		MENUBAR_TOOLS_IMAGE_STATISTICS,
 		MENUBAR_WINDOW_ENABLE_DARK_MODE,
 		MENUBAR_WINDOW_FULLSCREEN,
 		MENUBAR_HELP_ABOUT,
@@ -201,6 +202,7 @@ namespace MainFrameVariables
 		bool dark_mode_on{};
 		bool display_histogram{ true };
 		bool display_pixel_value{ true };
+		bool display_image_stats{ true };
 		bool disable_report_generator{};
 		bool crosshair_adaptive_scaling{};
 
@@ -235,6 +237,7 @@ namespace MainFrameVariables
 			dark_mode_on,
 			display_histogram,
 			display_pixel_value,
+			display_image_stats,
 			disable_report_generator,
 			crosshair_adaptive_scaling,
 
@@ -752,6 +755,7 @@ private:
 	void EnableUsedAndDisableNonUsedMotors();
 
 	void OnValueDisplayingCheck(wxCommandEvent& evt);
+	auto OnImageStatisticsDisplayingCheck(wxCommandEvent& evt) -> void;
 
 	void OnFullScreen(wxCommandEvent& evt);
 	void OnMaximizeButton(wxMaximizeEvent& evt);
@@ -1647,6 +1651,9 @@ private:
 
 	/* Value Displaying */
 	bool m_IsValueDisplayingChecked{};
+
+	/* Image Statistics */
+	bool m_IsImageStatisticsDisplayingChecked{};
 
 	/* Live Capturing */
 	//bool m_StopLiveCapturing{};

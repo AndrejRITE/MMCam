@@ -35,11 +35,6 @@ cCamPreview::cCamPreview
 	InitDefaultComponents();
 }
 
-auto cCamPreview::SetBackgroundColor(wxColour bckg_colour) -> void
-{
-	SetBackgroundColour(bckg_colour);
-}
-
 auto cCamPreview::ActivateCrossHairDisplaying(bool activate) -> void
 {
 	m_DisplayCrossHair = activate;
@@ -47,11 +42,6 @@ auto cCamPreview::ActivateCrossHairDisplaying(bool activate) -> void
 	//m_CrossHairTool->SetCursorPosOnCanvas(m_CursorPosOnCanvas);
 	ChangeCursorInDependenceOfCurrentParameters();
 	Refresh();
-}
-
-auto cCamPreview::SetValueDisplayingActive(bool activate) -> void
-{
-	m_DisplayPixelValues = activate;
 }
 
 auto cCamPreview::ActivateFWHMDisplaying(bool activate) -> void
@@ -252,6 +242,8 @@ auto cCamPreview::SetCameraCapturedImage
 	}
 
 	memcpy(m_ImageData.get(), data_ptr, sizeof(unsigned short) * readDataSize);
+
+	CalculateImageStatistics();
 
 	UpdateWXImage(minValue, maxValue);
 
@@ -930,6 +922,32 @@ auto cCamPreview::DrawAnnulus(wxGraphicsContext* gc) -> void
 	}
 }
 
+auto cCamPreview::DrawImageStatistics(wxGraphicsContext* gc) -> void
+{
+	if (!m_ShowImageStats || !m_LastStats.valid) return;
+
+	const auto& s = m_LastStats;
+	wxString txt;
+
+	txt.Printf("Min: %u\nMax: %u\nCount: %zu\nMean: %.2f\nStdDev: %.2f",
+		s.minV, s.maxV, s.count, s.mean, s.stddev);
+
+	wxFont font = wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+	gc->SetFont(font, m_ContrastDefaultColor);
+
+
+	wxDouble widthText{}, heightText{};
+
+	gc->GetTextExtent(txt, &widthText, &heightText);
+
+	gc->DrawText
+	(
+		txt, 
+		5,
+		GetSize().GetHeight() - 5 - heightText
+	);
+}
+
 auto cCamPreview::OnKeyPressed(wxKeyEvent& evt) -> void
 {
 	/* Ctrl */
@@ -1077,6 +1095,30 @@ auto cCamPreview::CalculateHEW() -> void
 	);
 
 	m_HEWDiameter *= 2;
+}
+
+auto cCamPreview::CalculateImageStatistics() -> void
+{
+	// Fast single pass over 16-bit data
+	const auto N = static_cast<size_t>(m_ImageSize.GetWidth()) * m_ImageSize.GetHeight();
+	if (N) {
+		auto* p = m_ImageData.get();
+		unsigned short mn = 0xFFFF, mx = 0;
+		long double sum = 0.0L, sum2 = 0.0L;
+		for (size_t i = 0; i < N; ++i) {
+			const unsigned short v = p[i];
+			if (v < mn) mn = v;
+			if (v > mx) mx = v;
+			sum += v;
+			sum2 += static_cast<long double>(v) * v;
+		}
+		const long double mean = sum / N;
+		const long double var = std::max(0.0L, sum2 / N - mean * mean);
+		m_LastStats = { mn, mx, N, static_cast<double>(mean), std::sqrt(static_cast<double>(var)), true };
+	}
+	else {
+		m_LastStats = {};
+	}
 }
 
 auto cCamPreview::AddAnnulusOnCurrentImage() -> CameraPreviewVariables::Annulus
@@ -1234,6 +1276,8 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 
 		DrawCrossHair(gc);
 		DrawPixelValues(gc);
+
+		DrawImageStatistics(gc);
 
 		DrawAnnulus(gc);
 
