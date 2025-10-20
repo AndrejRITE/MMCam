@@ -153,6 +153,16 @@ auto TucsenControl::Initialize() -> bool
 
         m_Width = m_frame.usWidth;
 		m_Height = m_frame.usHeight;
+
+        TUCAM_PROP_ATTR attrProp;
+
+        attrProp.nIdxChn = 0;
+        attrProp.idProp = TUIDP_EXPOSURETM;
+
+        if (ok(TUCAM_Prop_GetAttr(m_opCam.hIdxTUCam, &attrProp)))
+        {
+           m_ExposureStep = attrProp.dbValStep;
+        }
     }
 
     return true;
@@ -262,9 +272,12 @@ auto TucsenControl::SetExposureTime(int exposure_us) -> void
 
 	auto desired_exposure_ms = toMsFromUs(exposure_us);
 
+	// We need to correct the exposure time to the nearest step supported by the camera.
+	desired_exposure_ms = std::round(desired_exposure_ms / m_ExposureStep) * m_ExposureStep;
+
     TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSURETM, desired_exposure_ms);
 
-    m_ExposureUS = exposure_us;
+    m_ExposureUS = desired_exposure_ms * 1000.0;
 }
 
 auto TucsenControl::SetSensorTemperature(const double requiredTemperature) -> void

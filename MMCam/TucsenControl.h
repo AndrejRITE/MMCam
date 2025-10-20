@@ -10,6 +10,7 @@
 #include <vector>
 #include <cstdint>
 #include <algorithm>
+#include <cmath>
 
 class TucsenControl final : public CameraControl
 {
@@ -77,6 +78,8 @@ private:
 
     // Last read sensor temperature (°C)
     double        m_SensorTemperature{ 0.0 };
+
+    double m_ExposureStep{};
 };
 
 #endif // TUCSEN_CONTROL_H
