@@ -82,7 +82,7 @@ namespace CameraPreviewVariables
 	struct ImageStats 
 	{ 
 		unsigned short minV{}, maxV{}; 
-		size_t count{}; 
+		unsigned long long sum{}; 
 		double mean{}, stddev{}; 
 		bool valid{ false }; 
 	};

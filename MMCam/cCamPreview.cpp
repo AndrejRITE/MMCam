@@ -942,7 +942,7 @@ auto cCamPreview::DrawImageStatistics(wxGraphicsContext* gc) -> void
 		"Min: %s\nMax: %s\nCount: %s\nMean: %.2f\nStdDev: %.2f",
 		format_number(s.minV),
 		format_number(s.maxV),
-		format_number(s.count),
+		format_number(s.sum),
 		s.mean,
 		s.stddev
 	);
@@ -1113,20 +1113,25 @@ auto cCamPreview::CalculateImageStatistics() -> void
 {
 	// Fast single pass over 16-bit data
 	const auto N = static_cast<size_t>(m_ImageSize.GetWidth()) * m_ImageSize.GetHeight();
-	if (N) {
+
+	if (N) 
+	{
 		auto* p = m_ImageData.get();
 		unsigned short mn = 0xFFFF, mx = 0;
 		long double sum = 0.0L, sum2 = 0.0L;
-		for (size_t i = 0; i < N; ++i) {
+
+		for (size_t i = 0; i < N; ++i) 
+		{
 			const unsigned short v = p[i];
 			if (v < mn) mn = v;
 			if (v > mx) mx = v;
 			sum += v;
 			sum2 += static_cast<long double>(v) * v;
 		}
+
 		const long double mean = sum / N;
 		const long double var = std::max(0.0L, sum2 / N - mean * mean);
-		m_LastStats = { mn, mx, N, static_cast<double>(mean), std::sqrt(static_cast<double>(var)), true };
+		m_LastStats = { mn, mx, static_cast<unsigned long long>(sum), static_cast<double>(mean), std::sqrt(static_cast<double>(var)), true };
 	}
 	else {
 		m_LastStats = {};
