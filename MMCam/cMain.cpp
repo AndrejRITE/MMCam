@@ -7521,11 +7521,6 @@ wxThread::ExitCode LiveCapturing::Entry()
 	m_CameraControl->SetExposureTime(m_ExposureUS);
 	m_ImageSize.Set(m_CameraControl->GetWidth() / m_Binning, m_CameraControl->GetHeight() / m_Binning);
 
-	//if (m_CamPreviewWindow->GetImageSize() != m_ImageSize)
-		//m_CamPreviewWindow->SetImageSize(m_ImageSize);
-	//auto image_ptr = m_CamPreviewWindow->GetImagePtr();
-	//auto short_data_ptr = m_CamPreviewWindow->GetDataPtr();
-
 	const auto checkingInterval = m_ExposureUS / 3;
 	const auto interval = std::chrono::microseconds(checkingInterval);  
 
@@ -7554,7 +7549,9 @@ wxThread::ExitCode LiveCapturing::Entry()
 		evt.SetPayload(dataPtr.release());
 		wxQueueEvent(m_MainFrame, evt.Clone());
 	}
+
 	exit_thread();
+
 	return (wxThread::ExitCode)0;
 }
 
@@ -7582,126 +7579,6 @@ auto LiveCapturing::CaptureImage
 
 	return true;
 }
-
-//auto LiveCapturing::BinImageData(unsigned short* inDataPtr, unsigned short* outDataPtr) -> void
-//{
-//	if (!inDataPtr || !outDataPtr) return;
-//
-//	if (m_Binning == 1)
-//	{
-//		memcpy
-//		(
-//			outDataPtr, 
-//			inDataPtr, 
-//			sizeof(unsigned short) * m_ImageSize.GetWidth() * m_ImageSize.GetHeight()
-//		);
-//	}
-//
-//	auto originalImgWidth = m_CameraControl->GetWidth();
-//	auto binningMode = MainFrameVariables::BinningModes::BINNING_AVERAGE;
-//
-//	auto calculatePixelsInsideTheBinning = [&]
-//	(
-//		unsigned short* dataStart,
-//		int currStartX = 0, // Remove after DUBUG
-//		int currStartY = 0 // Remove after DUBUG
-//		)
-//		{
-//			unsigned long long sum{};
-//			unsigned long long position{};
-//			for (auto y{ 0 }; y < m_Binning; ++y)
-//			{
-//				for (auto x{ 0 }; x < m_Binning; ++x)
-//				{
-//					position = y * originalImgWidth + x;
-//					sum += static_cast<unsigned long long>(dataStart[position]);
-//				}
-//			}
-//			auto value = binningMode == MainFrameVariables::BINNING_SUM
-//				? sum
-//				: static_cast<unsigned long long>(sum / pow(m_Binning, 2));
-//			auto valueInBounds = static_cast<unsigned short>(
-//				std::max((unsigned long long)0,
-//					std::min((unsigned long long)std::numeric_limits<unsigned short>::max(), value)
-//				));
-//
-//			return valueInBounds;
-//		};
-//
-//	auto calculateBinningPixelsOnTile = [&]
-//	(
-//		unsigned short* origDataStart,
-//		unsigned short* outDataStart,
-//		wxPoint start,
-//		wxPoint finish
-//		)
-//		{
-//			unsigned long long inPosition{};
-//			unsigned long long outPosition{};
-//
-//			const auto width = finish.x - start.x;
-//			const auto height = finish.y - start.y;
-//			for (auto y{ 0 }; y < height; ++y)
-//			{
-//				for (auto x{ start.x }; x < finish.x; ++x)
-//				{
-//					inPosition = (y * originalImgWidth + x) * m_Binning;
-//					outPosition = y * width + x;
-//					outDataStart[outPosition] = calculatePixelsInsideTheBinning(&origDataStart[inPosition], x, y);
-//				}
-//			}
-//		};
-//
-//	auto applySoftwareBinningMultithread = [&]()
-//		{
-//			// Check number of threads on the current machine
-//			auto numThreads = std::thread::hardware_concurrency();
-//#ifdef _DEBUG
-//			numThreads = 1;
-//#endif // _DEBUG
-//
-//			std::vector<std::thread> threads;
-//			threads.reserve(numThreads);
-//
-//			unsigned int tileSize{};
-//			unsigned int outImgWidth = m_ImageSize.GetWidth();
-//			unsigned int outImgHeight = m_ImageSize.GetHeight();
-//
-//			tileSize = outImgHeight % numThreads > 0 ? outImgHeight / numThreads + 1 : outImgHeight / numThreads;
-//			tileSize = tileSize > 0 ? tileSize : 1;
-//
-//			for (auto i{ 0 }; i < (int)numThreads; ++i)
-//			{
-//				wxPoint start{}, finish{};
-//				start.x = 0;
-//				finish.x = outImgWidth;
-//
-//				start.y = i * tileSize;
-//				finish.y = (i + 1) * tileSize > outImgHeight ? outImgHeight : (i + 1) * tileSize;
-//
-//				unsigned long long position = (start.y * originalImgWidth + start.x) * m_Binning;
-//				threads.emplace_back
-//				(
-//					std::thread
-//					(
-//						calculateBinningPixelsOnTile,
-//						&inDataPtr[position],
-//						&outDataPtr[start.y * outImgWidth + start.x],
-//						start, finish
-//					)
-//				);
-//			}
-//			for (auto& thread : threads)
-//			{
-//				thread.join();
-//			}
-//
-//			// Here we can deallocate input data pointer because it's not necessary to hold this huge amount of memory in buffer
-//			inDataPtr = nullptr;
-//		};
-//
-//	applySoftwareBinningMultithread();
-//}
 
 LiveCapturing::~LiveCapturing()
 {
@@ -7779,7 +7656,6 @@ wxThread::ExitCode WorkerThread::Entry()
 
 
 	m_MainFrame->WorkerThreadFinished(false);
-	//m_Settings->SetCurrentProgress(0, m_FirstAxis->step_number);
 
 	auto now = std::chrono::system_clock::now();
 	auto cur_time = std::chrono::system_clock::to_time_t(now);
@@ -7792,13 +7668,10 @@ wxThread::ExitCode WorkerThread::Entry()
 
 	auto measurementGraphFilePath = graphFileName + wxString(".bmp");
 	wxFileName measurementFileName(measurementGraphFilePath);
-	//m_MeasurementGraphTxtFilePath = graphFileName + wxString(".txt");
+
 	m_ImageSize.Set(m_CameraControl->GetWidth() / m_Binning, m_CameraControl->GetHeight() / m_Binning);
 
 	auto dataSize = m_ImageSize.GetWidth() * m_ImageSize.GetHeight();
-	//dataSize /= pow(m_Binning, 2);
-	//auto cam_preview_data_ptr = m_CameraPreview->GetDataPtr();
-	//auto cam_preview_image_ptr = m_CameraPreview->GetImagePtr();
 
 	if (!m_CameraControl->IsConnected())
 	{
@@ -7824,7 +7697,6 @@ wxThread::ExitCode WorkerThread::Entry()
 			return (wxThread::ExitCode)0;
 		}
 
-		//m_Settings->SetCurrentProgress(i, m_FirstAxis->step_number);
 		/* Here we need to round values, for the correct positioning of motors */
 		auto correctedStart = static_cast<int>(m_FirstAxis->start * 1000.f + .5f);
 		auto correctedStep = static_cast<int>(m_FirstAxis->step * 1000.f + .5f);
@@ -7881,42 +7753,6 @@ wxThread::ExitCode WorkerThread::Entry()
 		evt.SetExtraLong((long)progress);
 		evt.SetPayload(dataPtr.release());
 		wxQueueEvent(m_MainFrame, evt.Clone());
-
-		///* Capture Image */
-		//if (
-		//	CaptureImage
-		//	(
-		//	dataPtr.get()
-		//	) 
-		//	&& SaveImage
-		//	(
-		//		dataPtr.get(), 
-		//		m_CameraControl->GetWidth(), 
-		//		m_CameraControl->GetHeight(), 
-		//		fileName
-		//	) 
-		//	&& CalculateFWHM
-		//	(
-		//		dataPtr.get(), 
-		//		m_CameraControl->GetWidth(), 
-		//		m_CameraControl->GetHeight(),
-		//		i
-		//	)
-		//	)
-		//{
-		//	evt.SetInt(0);
-		//	evt.SetPayload(dataPtr.release());
-		//	wxQueueEvent(m_MainFrame, evt.Clone());
-		//}
-		//else
-		//{
-		//	//raise_exception_msg("XIMEA");
-		//	exit_thread();
-		//	return (wxThread::ExitCode)0;
-		//}
-
-		/* Update Current Progress */
-		//m_Settings->SetCurrentProgress(i, m_FirstAxis->step_number);
 	}
 
 #ifdef ENABLE_SECOND_AXIS
@@ -7950,12 +7786,6 @@ wxThread::ExitCode WorkerThread::Entry()
 	if (m_HorizontalFWHMData && m_VerticalFWHMData)
 	{
 #endif // !_DEBUG
-		//auto message = wxString(
-		//	"The maximum sum value was: " + wxString::Format(wxT("%ld"), m_MaxSumDuringCapturing) + '\n'
-		//	+ "at position: " + wxString::Format(wxT("%.3f"), m_BestFirstAxisPosition) + '\n'
-		//	+ "measurement number: " + wxString::Format(wxT("%i"), (int)m_BestMeasurementNumber + 1)
-		//);
-		//message += "\nDo you want to move stage to the best position?";
 
 		wxDateTime nowDateTime = wxDateTime::Now();
 		// Format the date and time
@@ -8018,32 +7848,6 @@ auto WorkerThread::MoveFirstStage(const float position) -> float
 		static_cast<SettingsVariables::MotorsNames>(m_FirstAxis->axis_number), 
 		position
 	);
-
-	//switch (m_FirstAxis->axis_number)
-	//{
-	//	/* Detector */
-	//case 0:
-	//	firstAxisPos = m_MainFrame->GoStageToAbsPos(SettingsVariables::DETECTOR_X, position);
-	//	break;
-	//case 1:
-	//	firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::DETECTOR_Y, position);
-	//	break;
-	//case 2:
-	//	firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::DETECTOR_Z, position);
-	//	break;
-	//	/* Optics */
-	//case 3:
-	//	firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::OPTICS_X, position);
-	//	break;
-	//case 4:
-	//	firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::OPTICS_Y, position);
-	//	break;
-	//case 5:
-	//	firstAxisPos = m_Settings->GoToAbsPos(SettingsVariables::OPTICS_Z, position);
-	//	break;
-	//default:
-	//	break;
-	//}
 
 	return firstAxisPos;
 }
@@ -8125,7 +7929,7 @@ wxBitmap WorkerThread::CreateGraph
 
 	// Clear the bitmap
 	dc.SetBackground(*wxWHITE_BRUSH);
-	//dc.SetBackground(*wxBLACK_BRUSH);
+
 	dc.Clear();
 
 	if (dataSize <= 1 || !horizontalFWHMData || !verticalFWHMData)
@@ -8269,9 +8073,6 @@ wxBitmap WorkerThread::CreateGraph
 
 	dc.SetPen(wxPen(leftAxisColour));
 	dc.DrawLine(graphRect.GetLeft(), graphRect.GetBottom(), graphRect.GetLeft(), graphRect.GetTop()); // Left Y-axis
-
-	//dc.SetPen(wxPen(sumColour));
-	//dc.DrawLine(graphRect.GetRight(), graphRect.GetBottom(), graphRect.GetRight(), graphRect.GetTop()); // Right Y-axis
 
 	// Label the axes
 	{
@@ -8668,8 +8469,6 @@ ProgressPanel::ProgressPanel(
 	SetBackgroundColour(wxColour(*wxWHITE));
 
 	SetMinSize(size);
-	//SetSize(size);
-	//Refresh();
 }
 
 void ProgressPanel::SetSize(const wxSize& new_size)
