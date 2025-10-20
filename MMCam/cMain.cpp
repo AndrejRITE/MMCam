@@ -4581,6 +4581,7 @@ void cMain::CreateVerticalToolBar()
 	}
 
 	m_VerticalToolBar->tool_bar->AddSeparator();
+	m_VerticalToolBar->tool_bar->AddStretchableSpace();
 
 	/* Grid Mesh */
 	{

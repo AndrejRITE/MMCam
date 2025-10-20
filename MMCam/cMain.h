@@ -44,7 +44,7 @@
 #define MAJOR_VERSION 1
 #define MINOR_VERSION 26
 
-#define DEBUG_OPEN
+//#define DEBUG_OPEN
 //#define DEBUG_ANNULUS
 
 namespace MainFrameVariables

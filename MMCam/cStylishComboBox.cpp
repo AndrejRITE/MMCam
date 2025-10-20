@@ -6,15 +6,50 @@ void cStylishComboBox::OnDrawItem
     const wxRect& rect,
     int item,
     int flags
-) const 
+) const
 {
-    if (item == wxNOT_FOUND) return;
+    const bool paintingControl = (flags & wxODCB_PAINTING_CONTROL) != 0;
+    const bool paintingSelected = (flags & wxODCB_PAINTING_SELECTED) != 0;
+
+    // When there is no selected item yet, draw the current value in control area.
+    if (item == wxNOT_FOUND)
+    {
+        // Draw the control text with normal window text color.
+        wxDCTextColourChanger tcc
+        (
+            dc,
+            wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT)
+        );
+
+        wxRect r(rect);
+        r.Deflate(3);
+        wxSize ts;
+        dc.GetTextExtent(GetValue(), &ts.x, &ts.y);
+        dc.DrawText(GetValue(),
+            r.x + r.width / 2 - ts.x / 2,
+            r.y + r.height / 2 - ts.y / 2);
+        return;
+    }
 
     wxRect r(rect);
     r.Deflate(3);
     r.height -= 2;
 
-    // Get text colour as pen colour
+    // Use highlight text ONLY for selected items in the popup list, not for the control.
+    if (!paintingControl && paintingSelected)
+        dc.SetTextForeground
+        (
+            wxColour(255, 128, 0)
+            //wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT)
+        );
+    else
+        dc.SetTextForeground
+        (
+            wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT)
+        );
+    // or wxColour(30,30,30) if you prefer your custom dark gray
+
+    // Keep pen neutral (used only for rectangles you draw)
     dc.SetPen(*wxBLACK_PEN);
 
     const int num_of_colour_squares{ 7 };
@@ -23,7 +58,8 @@ void cStylishComboBox::OnDrawItem
     wxRect colorful_square{};
     int start_x{}, step_x{};
     start_x = r.x;
-    step_x = (int)(rect.width / (double)num_of_colour_squares);
+    step_x = static_cast<int>(rect.width / static_cast<double>(num_of_colour_squares));
+
     if (!(flags & wxODCB_PAINTING_CONTROL))
     {
         dc.DrawText
@@ -32,14 +68,15 @@ void cStylishComboBox::OnDrawItem
             r.x + 3,
             (r.y + 0) + ((r.height / 2) - dc.GetCharHeight()) / 2
         );
+
         if (GetString(item) == "Grayscale")
         {
             for (auto i{ 0 }; i < num_of_colour_squares; ++i)
             {
                 red = (unsigned char)(i * 255.0 / (num_of_colour_squares - 1));
                 blue = green = red;
-				rect_fill = wxBrush(wxColour(red, green, blue));
-				dc.SetBrush(rect_fill);
+                rect_fill = wxBrush(wxColour(red, green, blue));
+                dc.SetBrush(rect_fill);
                 colorful_square =
                 {
                     start_x,
@@ -47,7 +84,7 @@ void cStylishComboBox::OnDrawItem
                     step_x,
                     (int)(.35 * r.height)
                 };
-				dc.DrawRectangle(colorful_square);
+                dc.DrawRectangle(colorful_square);
                 start_x += step_x - 1;
             }
         }
@@ -57,8 +94,8 @@ void cStylishComboBox::OnDrawItem
             {
                 red = (unsigned char)((num_of_colour_squares - 1 - i) * 255.0 / (num_of_colour_squares - 1));
                 blue = green = red;
-				rect_fill = wxBrush(wxColour(red, green, blue));
-				dc.SetBrush(rect_fill);
+                rect_fill = wxBrush(wxColour(red, green, blue));
+                dc.SetBrush(rect_fill);
                 colorful_square =
                 {
                     start_x,
@@ -66,7 +103,7 @@ void cStylishComboBox::OnDrawItem
                     step_x,
                     (int)(.35 * r.height)
                 };
-				dc.DrawRectangle(colorful_square);
+                dc.DrawRectangle(colorful_square);
                 start_x += step_x - 1;
             }
 
@@ -92,7 +129,7 @@ void cStylishComboBox::OnDrawItem
                     red = 0;
                     green = 215;
                     blue = 255;
-                    break; 
+                    break;
                 case 3:
                     red = 128;
                     green = 255;
@@ -116,8 +153,8 @@ void cStylishComboBox::OnDrawItem
                 default:
                     break;
                 }
-				rect_fill = wxBrush(wxColour(red, green, blue));
-				dc.SetBrush(rect_fill);
+                rect_fill = wxBrush(wxColour(red, green, blue));
+                dc.SetBrush(rect_fill);
                 colorful_square =
                 {
                     start_x,
@@ -125,7 +162,7 @@ void cStylishComboBox::OnDrawItem
                     step_x,
                     (int)(.35 * r.height)
                 };
-				dc.DrawRectangle(colorful_square);
+                dc.DrawRectangle(colorful_square);
                 start_x += step_x - 1;
             }
 
@@ -151,7 +188,7 @@ void cStylishComboBox::OnDrawItem
                     red = 1;
                     green = 254;
                     blue = 1;
-                    break; 
+                    break;
                 case 3:
                     red = 255;
                     green = 255;
@@ -175,8 +212,8 @@ void cStylishComboBox::OnDrawItem
                 default:
                     break;
                 }
-				rect_fill = wxBrush(wxColour(red, green, blue));
-				dc.SetBrush(rect_fill);
+                rect_fill = wxBrush(wxColour(red, green, blue));
+                dc.SetBrush(rect_fill);
                 colorful_square =
                 {
                     start_x,
@@ -184,7 +221,7 @@ void cStylishComboBox::OnDrawItem
                     step_x,
                     (int)(.35 * r.height)
                 };
-				dc.DrawRectangle(colorful_square);
+                dc.DrawRectangle(colorful_square);
                 start_x += step_x - 1;
             }
         }
@@ -209,7 +246,7 @@ void cStylishComboBox::OnDrawItem
                     red = 87;
                     green = 169;
                     blue = 255;
-                    break; 
+                    break;
                 case 3:
                     red = 128;
                     green = 127;
@@ -233,8 +270,8 @@ void cStylishComboBox::OnDrawItem
                 default:
                     break;
                 }
-				rect_fill = wxBrush(wxColour(red, green, blue));
-				dc.SetBrush(rect_fill);
+                rect_fill = wxBrush(wxColour(red, green, blue));
+                dc.SetBrush(rect_fill);
                 colorful_square =
                 {
                     start_x,
@@ -242,7 +279,7 @@ void cStylishComboBox::OnDrawItem
                     step_x,
                     (int)(.35 * r.height)
                 };
-				dc.DrawRectangle(colorful_square);
+                dc.DrawRectangle(colorful_square);
                 start_x += step_x - 1;
             }
         }
@@ -267,7 +304,7 @@ void cStylishComboBox::OnDrawItem
                     red = 214;
                     green = 0;
                     blue = 0;
-                    break; 
+                    break;
                 case 3:
                     red = 254;
                     green = 65;
@@ -291,8 +328,8 @@ void cStylishComboBox::OnDrawItem
                 default:
                     break;
                 }
-				rect_fill = wxBrush(wxColour(red, green, blue));
-				dc.SetBrush(rect_fill);
+                rect_fill = wxBrush(wxColour(red, green, blue));
+                dc.SetBrush(rect_fill);
                 colorful_square =
                 {
                     start_x,
@@ -300,14 +337,14 @@ void cStylishComboBox::OnDrawItem
                     step_x,
                     (int)(.35 * r.height)
                 };
-				dc.DrawRectangle(colorful_square);
+                dc.DrawRectangle(colorful_square);
                 start_x += step_x - 1;
             }
-        } 
+        }
         else if (GetString(item) == "Winter")
         {
             for (auto i{ 0 }; i < num_of_colour_squares; ++i)
-            { 
+            {
                 /* Colors are calculated on the basis of OpenCV colormap pictures */
                 switch (i)
                 {
@@ -325,7 +362,7 @@ void cStylishComboBox::OnDrawItem
                     red = 0;
                     green = 84;
                     blue = 213;
-                    break; 
+                    break;
                 case 3:
                     red = 0;
                     green = 128;
@@ -349,8 +386,8 @@ void cStylishComboBox::OnDrawItem
                 default:
                     break;
                 }
-				rect_fill = wxBrush(wxColour(red, green, blue));
-				dc.SetBrush(rect_fill);
+                rect_fill = wxBrush(wxColour(red, green, blue));
+                dc.SetBrush(rect_fill);
                 colorful_square =
                 {
                     start_x,
@@ -358,14 +395,14 @@ void cStylishComboBox::OnDrawItem
                     step_x,
                     (int)(.35 * r.height)
                 };
-				dc.DrawRectangle(colorful_square);
+                dc.DrawRectangle(colorful_square);
                 start_x += step_x - 1;
             }
-        } 
+        }
         else if (GetString(item) == "Copper")
         {
             for (auto i{ 0 }; i < num_of_colour_squares; ++i)
-            { 
+            {
                 /* Colors are calculated on the basis of OpenCV colormap pictures */
                 switch (i)
                 {
@@ -383,7 +420,7 @@ void cStylishComboBox::OnDrawItem
                     red = 105;
                     green = 66;
                     blue = 42;
-                    break; 
+                    break;
                 case 3:
                     red = 160;
                     green = 100;
@@ -407,8 +444,8 @@ void cStylishComboBox::OnDrawItem
                 default:
                     break;
                 }
-				rect_fill = wxBrush(wxColour(red, green, blue));
-				dc.SetBrush(rect_fill);
+                rect_fill = wxBrush(wxColour(red, green, blue));
+                dc.SetBrush(rect_fill);
                 colorful_square =
                 {
                     start_x,
@@ -416,7 +453,7 @@ void cStylishComboBox::OnDrawItem
                     step_x,
                     (int)(.35 * r.height)
                 };
-				dc.DrawRectangle(colorful_square);
+                dc.DrawRectangle(colorful_square);
                 start_x += step_x - 1;
             }
         }
@@ -436,26 +473,29 @@ void cStylishComboBox::OnDrawItem
 
 void cStylishComboBox::OnDrawBackground
 (
-    wxDC& dc, 
+    wxDC& dc,
     const wxRect& rect,
-    int item, 
+    int item,
     int flags
-) const 
+) const
 {
-
-    // If item is selected or even, or we are painting the
-    // combo control itself, use the default rendering.
-    if ((flags & (wxODCB_PAINTING_CONTROL | wxODCB_PAINTING_SELECTED)) ||
-        (item & 1) == 0)
+    // Keep default look when painting the control itself or the selected item.
+    if ((flags & (wxODCB_PAINTING_CONTROL | wxODCB_PAINTING_SELECTED)))
     {
         wxOwnerDrawnComboBox::OnDrawBackground(dc, rect, item, flags);
         return;
     }
 
-    // Otherwise, draw every other background with different colour.
-    wxColour bgCol(240, 240, 250);
-    dc.SetBrush(wxBrush(bgCol));
-    dc.SetPen(wxPen(bgCol));
+    auto isDarkModeOn = wxSystemSettings::GetAppearance().IsDark();
+
+    // Two gentle shades: even = very light tint, odd = a bit darker (your current color).
+    const wxColour evenBg = isDarkModeOn ? wxColour(50, 50, 50) : wxColour(246, 246, 252);  // slightly darker than white, lighter than odd
+    const wxColour oddBg = wxColour(evenBg.GetRed() - 30, evenBg.GetGreen() - 30, evenBg.GetRed() - 30);  // your existing alternate-row color
+
+    const wxColour bg = (item & 1) == 0 ? evenBg : oddBg;
+
+    dc.SetBrush(wxBrush(bg));
+    dc.SetPen(wxPen(bg));
     dc.DrawRectangle(rect);
 }
 
