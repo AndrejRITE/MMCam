@@ -927,22 +927,34 @@ auto cCamPreview::DrawImageStatistics(wxGraphicsContext* gc) -> void
 	if (!m_ShowImageStats || !m_LastStats.valid) return;
 
 	const auto& s = m_LastStats;
+
+	// Format integers with thousands separator using single quote as separator
+	auto format_number = [](auto value) 
+		{
+			std::string str = std::format(std::locale("en_US.UTF-8"), "{:L}", value); // localized format
+			for (auto& ch : str)
+				if (ch == ',') ch = '\''; // replace comma with apostrophe
+			return str;
+		};
+
 	wxString txt;
+	txt.Printf(
+		"Min: %s\nMax: %s\nCount: %s\nMean: %.2f\nStdDev: %.2f",
+		format_number(s.minV),
+		format_number(s.maxV),
+		format_number(s.count),
+		s.mean,
+		s.stddev
+	);
 
-	txt.Printf("Min: %u\nMax: %u\nCount: %zu\nMean: %.2f\nStdDev: %.2f",
-		s.minV, s.maxV, s.count, s.mean, s.stddev);
-
-	wxFont font = wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+	wxFont font(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
 	gc->SetFont(font, m_ContrastDefaultColor);
 
-
 	wxDouble widthText{}, heightText{};
-
 	gc->GetTextExtent(txt, &widthText, &heightText);
 
-	gc->DrawText
-	(
-		txt, 
+	gc->DrawText(
+		txt,
 		5,
 		GetSize().GetHeight() - 5 - heightText
 	);

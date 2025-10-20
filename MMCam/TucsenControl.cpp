@@ -250,11 +250,19 @@ auto TucsenControl::GetImage() -> unsigned short*
 // ---------- Properties ----------
 auto TucsenControl::SetExposureTime(int exposure_us) -> void
 {
-	double exposure_ms = 0.0;
-    if (TUCAMRET_SUCCESS != TUCAM_Prop_GetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSURETM, &exposure_ms)) return;
+    int nVal;
+    if (ok(TUCAM_Capa_GetValue(m_opCam.hIdxTUCam, TUIDC_ATEXPOSURE, &nVal)))
+    {
+        if (nVal != 0)
+        {
+            // Close auto exposure
+            TUCAM_Capa_SetValue(m_opCam.hIdxTUCam, TUIDC_ATEXPOSURE, 0);
+        }
+    }
 
 	auto desired_exposure_ms = toMsFromUs(exposure_us);
-    if (desired_exposure_ms != exposure_ms) TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSURETM, desired_exposure_ms);
+
+    TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSURETM, desired_exposure_ms);
 
     m_ExposureUS = exposure_us;
 }
