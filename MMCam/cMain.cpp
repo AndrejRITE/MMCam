@@ -3232,7 +3232,7 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 		CreateCameraPage(m_CameraControlNotebook), 
 		"Camera",
 #ifdef _DEBUG
-		false,
+		true,
 #else
 		true,
 #endif // _DEBUG
@@ -3257,7 +3257,7 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 		CreatePostprocessingPage(m_CameraControlNotebook), 
 		"Postprocessing",
 #ifdef _DEBUG
-		true,
+		false,
 #else
 		false,
 #endif // _DEBUG
@@ -3790,8 +3790,10 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 	auto minimumCount = 5;
 	unsigned short minValue{}, maxValue{};
 	
-	auto histogram = std::make_unique<unsigned long long[]>(USHRT_MAX + 1);
-	
+	const size_t histSize =
+		(dataType == CameraControlVariables::ImageDataTypes::RAW_12BIT) ? 4096 : 65536;
+	auto histogram = std::make_unique<unsigned long long[]>(histSize);
+
 	if (!CalculateHistogram
 	(
 		(unsigned short*)dataPtr.get(),
@@ -3800,7 +3802,8 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 		minimumCount,
 		histogram.get(),
 		&minValue,
-		&maxValue
+		&maxValue,
+		dataType
 	))
 		return;
 
@@ -4303,7 +4306,8 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 		minimumCount,
 		histogram.get(),
 		&minValue,
-		&maxValue
+		&maxValue,
+		dataType == HistogramPanelVariables::ImageDataTypes::RAW_12BIT ? CameraControlVariables::ImageDataTypes::RAW_12BIT : CameraControlVariables::ImageDataTypes::RAW_16BIT
 	))
 		return;
 
@@ -5611,128 +5615,76 @@ void cMain::UpdateProgress(wxThreadEvent& evt)
 auto cMain::CalculateHistogram
 (
 	unsigned short* data, 
-	const int imgWidth, 
-	const int imgHeight, 
-	const int minimumCount, 
-	unsigned long long* const histogramPtr, 
-	unsigned short* const minValue, 
-	unsigned short* const maxValue
+	int w, int h, 
+	int minimumCount,
+	unsigned long long* histogram, 
+	unsigned short* minValue, 
+	unsigned short* maxValue,
+	CameraControlVariables::ImageDataTypes type
 ) -> bool
 {
-	if (!data || !histogramPtr || !imgWidth || !imgHeight) return false;
+	if (!data || w <= 0 || h <= 0 || !histogram || !minValue || !maxValue) return false;
 
-	//#ifdef _DEBUG
-	//	auto lastValue = data[imgWidth * imgHeight - 1];
-	//
-	//#endif // _DEBUG
+	const unsigned short cap = (type == CameraControlVariables::ImageDataTypes::RAW_12BIT) ? 4095u : 65535u;
 
-	auto calculateHistogram = [](const unsigned short* data, const int dataSize, unsigned long long* histogram, std::mutex& mutex)
-		{
-			const auto numThreads = std::thread::hardware_concurrency(); // Get number of available threads
+	// Zero only the active range
+	std::fill(histogram, histogram + (size_t)cap + 1, 0ull);
 
-			std::vector<std::thread> threads;
-			const int bins = USHRT_MAX;
+#if defined(__cpp_lib_execution)
+	// Parallel histogram with thread-local bins then reduce
+	const size_t N = (size_t)w * (size_t)h;
+	const unsigned hw = std::max(1u, std::thread::hardware_concurrency());
+	std::vector<std::vector<uint32_t>> locals(hw, std::vector<uint32_t>(cap + 1, 0));
 
-			// Split data among threads
-			const int chunkSize = dataSize / numThreads;
-			int start = 0;
-			int end = chunkSize;
-
-			for (int i = 0; i < (int)numThreads; ++i)
+	const size_t chunk = (N + hw - 1) / hw;
+	std::vector<std::thread> ts;
+	ts.reserve(hw);
+	for (unsigned t = 0; t < hw; ++t) {
+		size_t begin = t * chunk;
+		if (begin >= N) break;
+		size_t end = std::min(N, begin + chunk);
+		ts.emplace_back([&, data, begin, end, t]()
 			{
-				threads.emplace_back([&, start, end]()
-					{
-						for (int j = start; j < end; ++j)
-						{
-							mutex.lock();
-							++histogram[data[j]];
-							mutex.unlock();
-						}
-					}
-				);
-				start = end;
-				end = std::min(end + chunkSize, dataSize);
-			}
-
-			// Join threads
-			for (auto& thread : threads) {
-				thread.join();
-			}
-		};
-
-#ifdef _DEBUG
-	auto startCalculation = std::chrono::high_resolution_clock::now();
-#endif // _DEBUG
-
-
-	//std::mutex mutex; // Mutex to synchronize access to histogram
-	//calculateHistogram(data, (int)imgWidth * imgHeight, histogramPtr, mutex);
-
-
-	// Calculate histogram
-	for (int i = 0; i < imgWidth * imgHeight; ++i)
-		++histogramPtr[data[i]];
-
-#ifdef _DEBUG
-	auto finishCalculation = std::chrono::high_resolution_clock::now();
-	auto deltaTime = std::chrono::duration_cast<std::chrono::microseconds>
-		(finishCalculation - startCalculation).count();
-	LOGI("Calculation time: ", (int)deltaTime);
-#endif // _DEBUG
-
-	int firstGreaterThanMinimumCount = -1;
-	int lastGreaterThanMinimumCount = -1;
-
-	for (int i = 0; i <= USHRT_MAX; ++i)
-	{
-		if (histogramPtr[i] > minimumCount)
-		{
-			if (firstGreaterThanMinimumCount == -1)
-			{
-				firstGreaterThanMinimumCount = i;
-			}
-			lastGreaterThanMinimumCount = i;
-		}
+				auto& H = locals[t];
+				for (size_t i = begin; i < end; ++i) {
+					unsigned v = data[i];
+					if (v > cap) v = cap;      // safety
+					++H[v];
+				}
+			});
 	}
+	for (auto& th : ts) th.join();
 
-	// Checking if firstGreaterThanMinimumCount is a number from data array
-	if (firstGreaterThanMinimumCount == -1)
-	{
-		for (auto i = 0; i <= USHRT_MAX; ++i)
-		{
-			if (histogramPtr[i])
-			{
-				firstGreaterThanMinimumCount = i;
-				break;
-			}
-		}
-		firstGreaterThanMinimumCount = firstGreaterThanMinimumCount == USHRT_MAX ? 0 : firstGreaterThanMinimumCount;
-
-		for (auto i = USHRT_MAX; i >= 0; --i)
-		{
-			if (histogramPtr[i])
-			{
-				lastGreaterThanMinimumCount = i;
-				break;
-			}
-		}
-
-		lastGreaterThanMinimumCount = lastGreaterThanMinimumCount == 0 ? firstGreaterThanMinimumCount + 1 : lastGreaterThanMinimumCount;
+	// Reduce into the output histogram
+	for (unsigned v = 0; v <= cap; ++v) {
+		uint64_t s = 0;
+		for (unsigned t = 0; t < locals.size(); ++t) s += locals[t][v];
+		histogram[v] = s;
 	}
+#else
+	// Single-threaded fallback
+	const size_t N = (size_t)w * (size_t)h;
+	for (size_t i = 0; i < N; ++i) {
+		unsigned v = data[i];
+		if (v > cap) v = cap;
+		++histogram[v];
+	}
+#endif
 
-	firstGreaterThanMinimumCount = firstGreaterThanMinimumCount > lastGreaterThanMinimumCount ? lastGreaterThanMinimumCount : firstGreaterThanMinimumCount;
-	firstGreaterThanMinimumCount = firstGreaterThanMinimumCount == USHRT_MAX ? 0 : firstGreaterThanMinimumCount;
-	lastGreaterThanMinimumCount = lastGreaterThanMinimumCount == firstGreaterThanMinimumCount ? lastGreaterThanMinimumCount + 1 : lastGreaterThanMinimumCount;
+	// Find min/max bins that meet minimumCount
+	unsigned short minv = 0, maxv = 0;
+	bool foundMin = false;
+	for (unsigned v = 0; v <= cap; ++v) if (histogram[v] >= (uint64_t)minimumCount) { minv = (unsigned short)v; foundMin = true; break; }
+	bool foundMax = false;
+	for (int v = (int)cap; v >= 0; --v) if (histogram[v] >= (uint64_t)minimumCount) { maxv = (unsigned short)v; foundMax = true; break; }
 
-#ifdef _DEBUG
-	auto firstMessage = "First greater than " + wxString::Format(wxT("%i"), minimumCount) + ": ";
-	auto secondMessage = " Last greater than " + wxString::Format(wxT("%i"), minimumCount) + ": ";
+	if (!foundMin || !foundMax) { *minValue = 0; *maxValue = cap; return true; }
 
-	LOG2I(firstMessage, firstGreaterThanMinimumCount, secondMessage, lastGreaterThanMinimumCount);
-#endif // _DEBUG
+	// Uniform image -> force full range for rendering
+	if (minv == maxv) { *minValue = 0; *maxValue = cap; return true; }
 
-	* minValue = firstGreaterThanMinimumCount;
-	*maxValue = lastGreaterThanMinimumCount;
+	*minValue = minv;
+	*maxValue = maxv;
 
 	return true;
 }

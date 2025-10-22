@@ -1106,13 +1106,13 @@ private:
 
 	auto CalculateHistogram
 	(
-		unsigned short* data = nullptr,
-		const int imgWidth = 0,
-		const int imgHeight = 0,
-		const int minimumCount = 1,
-		unsigned long long* const histogramPtr = nullptr,
-		unsigned short* const minValue = nullptr,
-		unsigned short* const maxValue = nullptr
+		unsigned short* data,
+		int w, int h, 
+		int minimumCount,
+		unsigned long long* histogram, 
+		unsigned short* minValue, 
+		unsigned short* maxValue,
+		CameraControlVariables::ImageDataTypes type
 	) -> bool;
 
 	auto CreateMetadataFile() -> void;

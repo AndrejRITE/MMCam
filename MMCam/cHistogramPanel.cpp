@@ -48,14 +48,19 @@ auto cHistogramPanel::SetHistogram
 
 	m_DataType = data_type;
 	m_HistogramData.reset(data);
+
+	m_MaxHistogramValue = m_DataType == HistogramPanelVariables::ImageDataTypes::RAW_12BIT ? 4'095UL : 65'535UL;
+
 	MedianBlur1D(
 		m_HistogramData.get(),
-		(m_DataType == HistogramPanelVariables::ImageDataTypes::RAW_12BIT) ? 4096 : (size_t)USHRT_MAX + 1,
+		m_MaxHistogramValue + 1,
 		5
 	);
 
 	// Find Global Minimum and Maximum values inside the Histogram values
-	auto minMaxElement = std::minmax_element(m_HistogramData.get(), m_HistogramData.get() + USHRT_MAX + 1);
+	const size_t histSize = m_MaxHistogramValue + 1;
+
+	auto minMaxElement = std::minmax_element(m_HistogramData.get(), m_HistogramData.get() + histSize);
 
 	m_GlobalMin = *minMaxElement.first;
 	m_GlobalMax = *minMaxElement.second;
@@ -63,7 +68,6 @@ auto cHistogramPanel::SetHistogram
 	m_AutoLeftBorder.x = min_value;
 	m_AutoRightBorder.x = max_value;
 
-	m_MaxHistogramValue = m_DataType == HistogramPanelVariables::ImageDataTypes::RAW_12BIT ? 4'095UL : 65'535UL;
 
 	SetWXImage();
 
@@ -73,6 +77,7 @@ auto cHistogramPanel::SetHistogram
 
 	m_ViewMin = (unsigned int)std::max<unsigned long long>(0, min_value);
 	m_ViewMax = (unsigned int)std::min<unsigned long long>(m_MaxHistogramValue, max_value);
+
 	RebuildHistogramImageForCurrentView();
 	InvalidateGraphicsBitmap();
 
