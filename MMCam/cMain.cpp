@@ -7599,6 +7599,10 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 		
 		m_StartStopMeasurementTglBtn->Disable();
 
+		m_BackgroundSubtractionCheckBox->Disable();
+		m_BackgroundSubtractionLoadFileBtn->Disable();
+		m_MedianBlurCheckBox->Disable();
+
 		StartLiveCapturing();
 
 		m_CameraTabControls->startStopLiveCapturingTglBtn->SetLabel(wxT("Stop Live (L)"));
@@ -7641,6 +7645,10 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 		m_HistogramPanel->Enable();
 
 		m_StartStopMeasurementTglBtn->Enable();
+
+		m_BackgroundSubtractionCheckBox->Enable();
+		m_BackgroundSubtractionLoadFileBtn->Enable();
+		m_MedianBlurCheckBox->Enable();
 
 		m_CameraTabControls->startStopLiveCapturingTglBtn->SetLabel(wxT("Start Live (L)"));
 		if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
