@@ -98,6 +98,10 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 
 	EVT_BUTTON(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
 
+	/* Postprocessing */
+	EVT_CHECKBOX(MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_CHECKBOX, cMain::OnBackgroundSubtractionCheckBox)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_LOAD_FILE_BTN, cMain::OnBackgroundSubtractionLoadFileBtn)
+
 	/* Histogram */
 	EVT_TEXT(MainFrameVariables::ID::HISTOGRAM_LEFT_BORDER_TXT_CTRL, cMain::OnHistogramLeftBorderPosChanged)
 	EVT_TEXT(MainFrameVariables::ID::HISTOGRAM_RIGHT_BORDER_TXT_CTRL, cMain::OnHistogramRightBorderPosChanged)
@@ -2214,6 +2218,56 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 	return page;
 }
 
+auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
+{
+	wxPanel* page = new wxPanel(parent);
+	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+
+	auto horSizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Background Subtraction");
+	{
+		m_BackgroundSubtractionCheckBox = std::make_unique<wxCheckBox>
+			(
+				page,
+				MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_CHECKBOX,
+				wxT("Enable")
+			);
+
+		m_BackgroundSubtractionCheckBox->Disable();
+
+		horSizer->Add(m_BackgroundSubtractionCheckBox.get(), 0, wxALIGN_CENTER | wxALL, 5);
+
+		m_BackgroundSubtractionFileNameTxtCtrl = std::make_unique<wxTextCtrl>
+			(
+				page,
+				MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_FILENAME_TXT_CTRL,
+				wxT("No file selected"), 
+				wxDefaultPosition, 
+				wxDefaultSize, 
+				wxTE_READONLY
+			);
+
+		horSizer->Add(m_BackgroundSubtractionFileNameTxtCtrl.get(), 1, wxALIGN_CENTER);
+
+		m_BackgroundSubtractionLoadFileBtn = std::make_unique<wxButton>
+			(
+				page,
+				MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_LOAD_FILE_BTN,
+				wxT("Open"), 
+				wxDefaultPosition, 
+				wxDefaultSize
+			);
+
+		m_BackgroundSubtractionLoadFileBtn->Disable();
+
+		horSizer->Add(m_BackgroundSubtractionLoadFileBtn.get(), 0, wxALIGN_CENTER | wxALL, 5);
+	}
+
+	sizerPage->Add(horSizer, 0, wxEXPAND);
+
+	page->SetSizer(sizerPage);
+	return page;
+}
+
 auto cMain::CreateGridMeshPage(wxWindow* parent) -> wxWindow*
 {
 	if (!m_ToolsControls) return nullptr;
@@ -3097,38 +3151,58 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 	auto size = wxSize(16, 16);
 	wxImageList* imageList = new wxImageList(size.GetWidth(), size.GetHeight(), true);
 
-	wxBitmap cameraBitmap{};
+	int imgIndexCamera{}, imgIndexCameraParameters{}, imgIndexPostprocessing{};
+
 	{
 		auto bitmap = wxART_CAMERA;
 		auto client = wxART_CLIENT_FLUENTUI_FILLED;
 		auto color = wxColour(255, 128, 0);
 		auto size = wxSize(16, 16);
-		cameraBitmap = wxMaterialDesignArtProvider::GetBitmap
+
+		auto bmp = wxMaterialDesignArtProvider::GetBitmap
 		(
 			bitmap,
 			client,
 			size,
 			color
 		);
+
+		imgIndexCamera = imageList->Add(bmp);
 	}
 
-	wxBitmap cameraParametersBitmap{};
 	{
 		auto bitmap = wxART_TEXTBOX_SETTINGS;
 		auto client = wxART_CLIENT_FLUENTUI_FILLED;
 		auto color = wxColour(128, 255, 255);
 		auto size = wxSize(16, 16);
-		cameraParametersBitmap = wxMaterialDesignArtProvider::GetBitmap
+
+		auto bmp = wxMaterialDesignArtProvider::GetBitmap
 		(
 			bitmap,
 			client,
 			size,
 			color
 		);
+
+		imgIndexCameraParameters = imageList->Add(bmp);
 	}
 
-	auto imgIndexCamera = imageList->Add(cameraBitmap);
-	auto imgIndexCameraParameters = imageList->Add(cameraParametersBitmap);
+	{
+		auto bitmap = wxART_QUEUE_PLAY_NEXT;
+		auto client = wxART_CLIENT_MATERIAL_ROUND;
+		auto color = wxColour(181, 230, 29);
+		auto size = wxSize(16, 16);
+
+		auto bmp = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			size,
+			color
+		);
+
+		imgIndexPostprocessing = imageList->Add(bmp);
+	}
 
 	m_CameraControlNotebook = new wxNotebook(right_side_panel, MainFrameVariables::ID::RIGHT_CAM_NOTEBOOK);
 
@@ -3139,7 +3213,7 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 		CreateCameraPage(m_CameraControlNotebook), 
 		"Camera",
 #ifdef _DEBUG
-		true,
+		false,
 #else
 		true,
 #endif // _DEBUG
@@ -3157,6 +3231,19 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 #endif // _DEBUG
 
 		imgIndexCameraParameters
+	);
+
+	m_CameraControlNotebook->AddPage
+	(
+		CreatePostprocessingPage(m_CameraControlNotebook), 
+		"Postprocessing",
+#ifdef _DEBUG
+		true,
+#else
+		false,
+#endif // _DEBUG
+
+		imgIndexPostprocessing
 	);
 
 	right_side_panel_sizer->Add(m_CameraControlNotebook, 0, wxEXPAND | wxALL, 5);
@@ -6467,6 +6554,63 @@ auto cMain::OnColormapComboBox(wxCommandEvent& evt) -> void
 	ProcessEvent(artLeftBorderHostogramChanged);
 }
 
+auto cMain::OnBackgroundSubtractionCheckBox(wxCommandEvent& evt) -> void
+{
+}
+
+auto cMain::OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void
+{
+	std::string filePath{};
+
+#ifdef _DEBUG
+	filePath = ".\\src\\dbg_fld\\black_6252x4176.tif";
+#else
+	wxFileDialog dlg
+	(
+		this,
+		"Open TIF File",
+		wxEmptyString,
+		wxEmptyString,
+		"TIF Files (*.tif)|*.tif",
+		wxFD_OPEN | wxFD_FILE_MUST_EXIST
+	);
+
+	if (dlg.ShowModal() != wxID_OK) return;
+
+	filePath = std::string(dlg.GetPath().mbc_str());
+#endif // _DEBUG
+
+	wxBusyCursor busy;
+
+	wxFileName fileName(filePath);
+
+	if (!wxFileExists(fileName.GetFullPath()))
+		return;
+
+	cv::Mat image = cv::imread(filePath, cv::IMREAD_UNCHANGED);
+
+	if (image.empty())
+		return;
+
+	auto dataType = HistogramPanelVariables::ImageDataTypes::RAW_12BIT;
+
+	dataType = image.type() == CV_16U ? HistogramPanelVariables::ImageDataTypes::RAW_16BIT : dataType;
+
+	// If the image size is not equal to the camera image size, show error and return
+
+	m_BackgroundSubtractionFileNameTxtCtrl->SetValue(fileName.GetFullName());
+
+	auto dataPtr = std::make_unique<unsigned short[]>(image.rows * image.cols);
+
+	for (auto y{ 0 }; y < image.rows; ++y)
+	{
+		for (auto x{ 0 }; x < image.cols; ++x)
+			dataPtr[y * image.cols + x] = image.at<unsigned short>(y, x);
+	}
+
+	m_BackgroundSubtractionData = std::move(dataPtr);
+}
+
 auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 {
 	constexpr auto raise_exception_msg = [](wxString disallowedCharacters) 
@@ -7294,6 +7438,9 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 	
 	if (!m_VerticalToolBar->tool_bar->GetToolState(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING))
 		m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
+
+	m_BackgroundSubtractionCheckBox->Enable();
+	m_BackgroundSubtractionLoadFileBtn->Enable();
 }
 
 auto cMain::DisableControlsAfterUnsuccessfulCameraInitialization() -> void
@@ -7331,6 +7478,9 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 	m_FirstStage->DisableAllControls();
 
 	m_HistogramPanel->Disable();
+
+	m_BackgroundSubtractionCheckBox->Disable();
+	m_BackgroundSubtractionLoadFileBtn->Disable();
 }
 
 void cMain::OnStartStopLiveCapturingMenu(wxCommandEvent& evt)

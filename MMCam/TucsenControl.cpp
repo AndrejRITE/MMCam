@@ -283,12 +283,9 @@ auto TucsenControl::SetExposureTime(int exposure_us) -> void
 auto TucsenControl::SetSensorTemperature(const double requiredTemperature) -> void
 {
     // Manual states 0..100 maps to –50..+50 °C. Clamp and convert. :contentReference[oaicite:18]{index=18}
-    double target = requiredTemperature;
-    if (target < -50.0) target = -50.0;
-    if (target > 50.0) target = 50.0;
+    double target = std::clamp(requiredTemperature, -50.0, 50.0);
 
     const int sdkVal = static_cast<int>(target + 50.0); // –50->0, +50->100
-    //const int sdkVal = static_cast<int>(target); // –50->0, +50->100
     auto ret = TUCAM_Capa_SetValue(m_opCam.hIdxTUCam, TUIDC_ENABLETEC, 1);
     ret = TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_TEMPERATURE_TARGET, sdkVal);
 }

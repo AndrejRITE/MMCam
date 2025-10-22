@@ -42,7 +42,7 @@
 #include "src/img/logo.xpm"
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 26
+#define MINOR_VERSION 27
 
 //#define DEBUG_OPEN
 //#define DEBUG_ANNULUS
@@ -156,6 +156,11 @@ namespace MainFrameVariables
 		RIGHT_TOOLS_ANNULUS_ADD_TO_LIST_BTN,
 		RIGHT_TOOLS_ANNULUS_REMOVE_FROM_LIST_BTN,
 
+		/* Postprocessing */
+		RIGHT_TOOLS_BACKGROUND_SUBTRACTION_CHECKBOX,
+		RIGHT_TOOLS_BACKGROUND_SUBTRACTION_FILENAME_TXT_CTRL,
+		RIGHT_TOOLS_BACKGROUND_SUBTRACTION_LOAD_FILE_BTN,
+
 		/* Camera */
 		RIGHT_CAM_NOTEBOOK,
 		RIGHT_CAM_TEMPERATURE_TXT_CTL,
@@ -169,9 +174,11 @@ namespace MainFrameVariables
 		RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL,
 		RIGHT_CAM_CROSS_HAIR_SET_POS_TGL_BTN,
 		RIGHT_CAM_ACTUAL_PARAMETERS_PROPERTY_GRID,
+
 		/* Histogram */
 		HISTOGRAM_LEFT_BORDER_TXT_CTRL,
 		HISTOGRAM_RIGHT_BORDER_TXT_CTRL,
+
 		/* Measurement */
 		RIGHT_MT_OUT_FLD_TEXT_CTRL,
 		RIGHT_MT_OUT_FLD_BTN,
@@ -185,8 +192,10 @@ namespace MainFrameVariables
 		RIGHT_MT_SECOND_STAGE_FINISH,
 		RIGHT_MY_GENERATE_REPORT_BTN,
 		RIGHT_MT_START_STOP_MEASUREMENT,
+
 		/* Live Capturing */
 		THREAD_LIVE_CAPTURING,
+
 		/* Progress */
 		THREAD_PROGRESS_CAPTURING,
 	};
@@ -665,6 +674,11 @@ private:
 		wxWindow* parent
 	) -> wxWindow*;
 
+	auto CreatePostprocessingPage
+	(
+		wxWindow* parent
+	) -> wxWindow*;
+
 	auto CreateGridMeshPage
 	(
 		wxWindow* parent
@@ -901,6 +915,10 @@ private:
 	auto OnCameraNotebookPageChanged(wxBookCtrlEvent& evt) -> void;
 	auto OnBinningChoice(wxCommandEvent& evt) -> void;
 	auto OnColormapComboBox(wxCommandEvent& evt) -> void;
+
+	/* Postprocessing */
+	auto OnBackgroundSubtractionCheckBox(wxCommandEvent& evt) -> void;
+	auto OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void;
 
 	/* Generate Report */
 	auto OnGenerateReportBtn(wxCommandEvent& evt) -> void;
@@ -1696,6 +1714,13 @@ private:
 	int m_DecimalDigits = 4;
 
 	bool m_IsDark{};
+
+	/* Postprocessing */
+	std::unique_ptr<wxCheckBox> m_BackgroundSubtractionCheckBox{};
+	std::unique_ptr<wxTextCtrl> m_BackgroundSubtractionFileNameTxtCtrl{};
+	std::unique_ptr<wxButton> m_BackgroundSubtractionLoadFileBtn{};
+
+	std::unique_ptr<unsigned short[]> m_BackgroundSubtractionData{};
 
 	wxDECLARE_EVENT_TABLE();
 };
