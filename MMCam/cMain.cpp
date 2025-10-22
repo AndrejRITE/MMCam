@@ -2982,10 +2982,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 		horizontal_sizer->Add(capturing_sizer);
 		capturing_sizer->Add(m_StartStopMeasurementTglBtn.get());
 	}
-	sizerPage->AddStretchSpacer();
 	sizerPage->Add(horizontal_sizer, 0, wxEXPAND);
-
-	//sizerPage->Add(mmt_static_box_sizer, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
 
 	page->SetSizer(sizerPage);
 	return page;
@@ -7493,6 +7490,10 @@ auto cMain::EnableControlsAfterCapturing() -> void
 	m_HistogramPanel->Enable();
 	
 	EnableUsedAndDisableNonUsedMotors();
+
+	m_BackgroundSubtractionCheckBox->Enable();
+	m_BackgroundSubtractionLoadFileBtn->Enable();
+	m_MedianBlurCheckBox->Enable();
 }
 
 auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
