@@ -3853,7 +3853,7 @@ void cMain::OnSetOutDirectoryBtn(wxCommandEvent& evt)
 {
 	wxString outDirPath{};
 #ifdef _DEBUG
-	outDirPath = "D:\\Projects\\RIGAKU\\MMCam\\MMCam\\src\\dbg_fld";
+	outDirPath = ".\\src\\dbg_fld";
 #else
 	wxDirDialog save_dialog(NULL, "Choose save directory", "",
 		wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);

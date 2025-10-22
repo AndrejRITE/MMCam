@@ -51,14 +51,29 @@ auto cHistogramPanel::SetHistogram
 
 	m_MaxHistogramValue = m_DataType == HistogramPanelVariables::ImageDataTypes::RAW_12BIT ? 4'095UL : 65'535UL;
 
-	MedianBlur1D(
+	const size_t histSize = m_MaxHistogramValue + 1;
+	auto firstNonZeroFromLeft = std::find_if
+	(
+		m_HistogramData.get(),
+		m_HistogramData.get() + histSize,
+		[](unsigned long long val) { return val > 0; }
+	);
+
+	auto firstNonZeroFromRight = std::find_if
+	(
+		std::make_reverse_iterator(m_HistogramData.get() + histSize),
+		std::make_reverse_iterator(m_HistogramData.get()),
+		[](unsigned long long val) { return val > 0; }
+	);
+
+	MedianBlur1D
+	(
 		m_HistogramData.get(),
 		m_MaxHistogramValue + 1,
 		5
 	);
 
 	// Find Global Minimum and Maximum values inside the Histogram values
-	const size_t histSize = m_MaxHistogramValue + 1;
 
 	auto minMaxElement = std::minmax_element(m_HistogramData.get(), m_HistogramData.get() + histSize);
 
@@ -68,15 +83,14 @@ auto cHistogramPanel::SetHistogram
 	m_AutoLeftBorder.x = min_value;
 	m_AutoRightBorder.x = max_value;
 
-
 	SetWXImage();
 
 	m_LeftBorder = m_AutoLeftBorder;
 	m_RightBorder = m_AutoRightBorder;
 	m_WasRangeChanged = false;
 
-	m_ViewMin = (unsigned int)std::max<unsigned long long>(0, min_value);
-	m_ViewMax = (unsigned int)std::min<unsigned long long>(m_MaxHistogramValue, max_value);
+	m_ViewMin = (unsigned int)std::max<unsigned long long>(0, std::distance(m_HistogramData.get(), firstNonZeroFromLeft));
+	m_ViewMax = (unsigned int)std::min<unsigned long long>(m_MaxHistogramValue, histSize - 1 - std::distance(std::make_reverse_iterator(m_HistogramData.get() + histSize), firstNonZeroFromRight));
 
 	RebuildHistogramImageForCurrentView();
 	InvalidateGraphicsBitmap();
