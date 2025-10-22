@@ -3431,7 +3431,7 @@ void cMain::CreateMeasurement(wxWindow* right_side_panel, wxSizer* right_side_pa
 		imgIndexMeasurement
 	);
 
-	right_side_panel_sizer->Add(m_MeasurementNotebook, 1, wxEXPAND | wxALL, 5);
+	right_side_panel_sizer->Add(m_MeasurementNotebook, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
 }
 
 auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
