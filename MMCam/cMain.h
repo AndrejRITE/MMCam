@@ -161,6 +161,7 @@ namespace MainFrameVariables
 		RIGHT_TOOLS_BACKGROUND_SUBTRACTION_CHECKBOX,
 		RIGHT_TOOLS_BACKGROUND_SUBTRACTION_FILENAME_TXT_CTRL,
 		RIGHT_TOOLS_BACKGROUND_SUBTRACTION_LOAD_FILE_BTN,
+		RIGHT_TOOLS_MEDIAN_BLUR_CHECKBOX,
 
 		/* Camera */
 		RIGHT_CAM_NOTEBOOK,
@@ -217,6 +218,7 @@ namespace MainFrameVariables
 		bool crosshair_adaptive_scaling{};
 
 		bool binning_sum_mode{ false };
+		bool median_blur_on{ false };
 
 		double crop_size_mm = 0.5;
 		double crop_size_circle_mm = 1.5;
@@ -254,6 +256,7 @@ namespace MainFrameVariables
 			crosshair_adaptive_scaling,
 
 			binning_sum_mode,
+			median_blur_on,
 
 			crop_size_mm, 
 			crop_size_circle_mm, 
@@ -967,6 +970,7 @@ private:
 	/* Postprocessing */
 	auto OnBackgroundSubtractionCheckBox(wxCommandEvent& evt) -> void;
 	auto OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void;
+	auto OnMedianBlueCheckBox(wxCommandEvent& evt) -> void;
 
 	/* Generate Report */
 	auto OnGenerateReportBtn(wxCommandEvent& evt) -> void;
@@ -1768,6 +1772,9 @@ private:
 	std::unique_ptr<wxTextCtrl> m_BackgroundSubtractionFileNameTxtCtrl{};
 	std::unique_ptr<wxButton> m_BackgroundSubtractionLoadFileBtn{};
 
+	std::unique_ptr<wxCheckBox> m_MedianBlurCheckBox{};
+
+
 	std::unique_ptr<unsigned short[]> m_BackgroundSubtractionData{};
 
 	wxDECLARE_EVENT_TABLE();
@@ -1786,9 +1793,10 @@ public:
 		const int& exposure_us,
 		const unsigned short& binning,
 		const MainFrameVariables::BinningModes& binningMode,
+		const int& medianBlurRadius,
 		wxString* uniqueThreadKey,
 		bool* aliveOrDeadThread,
-		bool* isDrawExecutionFinished
+		std::atomic<bool>* isDrawExecutionFinished
 	);
 	~LiveCapturing();
 
@@ -1808,6 +1816,7 @@ protected:
 	unsigned short* m_BackgroundSubtractionDataPtr{};
 	unsigned short m_Binning{ 1 };
 	MainFrameVariables::BinningModes m_BinningMode{ MainFrameVariables::BinningModes::BINNING_AVERAGE };
+	int m_MedianBlurRadius{ 0 };
 
 	int m_ExposureUS{};
 	wxSize m_ImageSize{};
@@ -1816,7 +1825,7 @@ protected:
 	wxString* m_UniqueThreadKey{};
 	bool* m_AliveOrDeadThread{};
 
-	bool* m_IsDrawExecutionFinished{};
+	std::atomic<bool>* m_IsDrawExecutionFinished{};
 
 	std::unique_ptr<unsigned short[]> m_BinnedBg;
 	wxSize m_BgSize{};
@@ -1837,9 +1846,10 @@ public:
 		const int& exposure_us,
 		const unsigned short& binning,
 		const MainFrameVariables::BinningModes& binningMode,
+		const int& medianBlurRadius,
 		wxString* uniqueThreadKey,
 		bool* aliveOrDeadThread,
-		bool* isDrawExecutionFinished,
+		std::atomic<bool>* isDrawExecutionFinished,
 		const wxString& path, 
 		MainFrameVariables::AxisMeasurement* first_axis, 
 		MainFrameVariables::AxisMeasurement* second_axis,

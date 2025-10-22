@@ -101,6 +101,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	/* Postprocessing */
 	EVT_CHECKBOX(MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_CHECKBOX, cMain::OnBackgroundSubtractionCheckBox)
 	EVT_BUTTON(MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_LOAD_FILE_BTN, cMain::OnBackgroundSubtractionLoadFileBtn)
+	EVT_CHECKBOX(MainFrameVariables::ID::RIGHT_TOOLS_MEDIAN_BLUR_CHECKBOX, cMain::OnMedianBlueCheckBox)
 
 	/* Histogram */
 	EVT_TEXT(MainFrameVariables::ID::HISTOGRAM_LEFT_BORDER_TXT_CTRL, cMain::OnHistogramLeftBorderPosChanged)
@@ -2223,48 +2224,67 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 	wxPanel* page = new wxPanel(parent);
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
 
-	auto horSizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Background Subtraction");
 	{
-		m_BackgroundSubtractionCheckBox = std::make_unique<wxCheckBox>
-			(
-				page,
-				MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_CHECKBOX,
-				wxT("Enable")
-			);
+		auto horSizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Background Subtraction");
+		{
+			m_BackgroundSubtractionCheckBox = std::make_unique<wxCheckBox>
+				(
+					page,
+					MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_CHECKBOX,
+					wxT("Enable")
+				);
 
-		m_BackgroundSubtractionCheckBox->Disable();
+			m_BackgroundSubtractionCheckBox->Disable();
 
-		horSizer->Add(m_BackgroundSubtractionCheckBox.get(), 0, wxALIGN_CENTER | wxALL, 5);
+			horSizer->Add(m_BackgroundSubtractionCheckBox.get(), 0, wxALIGN_CENTER | wxALL, 5);
 
-		m_BackgroundSubtractionFileNameTxtCtrl = std::make_unique<wxTextCtrl>
-			(
-				page,
-				MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_FILENAME_TXT_CTRL,
-				wxT("No file selected"), 
-				wxDefaultPosition, 
-				wxDefaultSize, 
-				wxTE_READONLY
-			);
+			m_BackgroundSubtractionFileNameTxtCtrl = std::make_unique<wxTextCtrl>
+				(
+					page,
+					MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_FILENAME_TXT_CTRL,
+					wxT("No file selected"),
+					wxDefaultPosition,
+					wxDefaultSize,
+					wxTE_READONLY
+				);
 
-		m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(wxColour(237, 28, 36));
+			m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(wxColour(237, 28, 36));
 
-		horSizer->Add(m_BackgroundSubtractionFileNameTxtCtrl.get(), 1, wxALIGN_CENTER);
+			horSizer->Add(m_BackgroundSubtractionFileNameTxtCtrl.get(), 1, wxALIGN_CENTER);
 
-		m_BackgroundSubtractionLoadFileBtn = std::make_unique<wxButton>
-			(
-				page,
-				MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_LOAD_FILE_BTN,
-				wxT("Open"), 
-				wxDefaultPosition, 
-				wxDefaultSize
-			);
+			m_BackgroundSubtractionLoadFileBtn = std::make_unique<wxButton>
+				(
+					page,
+					MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_LOAD_FILE_BTN,
+					wxT("Open"),
+					wxDefaultPosition,
+					wxDefaultSize
+				);
 
-		m_BackgroundSubtractionLoadFileBtn->Disable();
+			m_BackgroundSubtractionLoadFileBtn->Disable();
 
-		horSizer->Add(m_BackgroundSubtractionLoadFileBtn.get(), 0, wxALIGN_CENTER | wxALL, 5);
+			horSizer->Add(m_BackgroundSubtractionLoadFileBtn.get(), 0, wxALIGN_CENTER | wxALL, 5);
+		}
+
+		sizerPage->Add(horSizer, 0, wxEXPAND);
 	}
 
-	sizerPage->Add(horSizer, 0, wxEXPAND);
+	{
+		auto horSizer = new wxStaticBoxSizer(wxVERTICAL, page, "&Smooth");
+
+		m_MedianBlurCheckBox = std::make_unique<wxCheckBox>
+			(
+				page,
+				MainFrameVariables::ID::RIGHT_TOOLS_MEDIAN_BLUR_CHECKBOX,
+				wxT("Enable Median Blur")
+			);
+
+		m_MedianBlurCheckBox->Disable();
+
+		horSizer->Add(m_MedianBlurCheckBox.get(), 0, wxALIGN_CENTER | wxALL, 5);
+
+		sizerPage->Add(horSizer, 0, wxEXPAND);
+	}
 
 	page->SetSizer(sizerPage);
 	return page;
@@ -4020,6 +4040,13 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 		ProcessEvent(artEvt);
 	}
 
+	// Enable Median Blur
+	{
+		auto enable = m_Config->median_blur_on;
+
+		m_MedianBlurCheckBox->SetValue(enable);
+	}
+
 	// Display Histogram
 	{
 		auto displayHistogram = m_Config->display_histogram;
@@ -5321,6 +5348,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			exposure_time,
 			binning,
 			binningMode,
+			m_MedianBlurCheckBox->IsChecked() ? 2 : 0,
 			&m_StartedThreads.back().first,
 			&m_StartedThreads.back().second,
 			isDrawExecutionFinished,
@@ -5390,6 +5418,7 @@ void cMain::StartLiveCapturing()
 		exposure_time,
 		binning,
 		binningMode,
+		m_MedianBlurCheckBox->IsChecked() ? 2 : 0,
 		&m_StartedThreads.back().first,
 		&m_StartedThreads.back().second,
 		isDrawExecutionFinished
@@ -5515,43 +5544,8 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 		if (!imgPtr) return;
 		LOG("Set camera captured image");
 
-		//auto minimumCount = 5;
-		//unsigned short minValue{}, maxValue{};
-
-		//auto histogram = std::make_unique<unsigned long long[]>(USHRT_MAX + 1);
-		//if (!CalculateHistogram
-		//(
-		//	(unsigned short*)imgPtr,
-		//	m_OutputImageSize.GetWidth(),
-		//	m_OutputImageSize.GetHeight(),
-		//	minimumCount,
-		//	histogram.get(),
-		//	&minValue,
-		//	&maxValue
-		//))
-		//{
-		//	stopCapturing();
-		//	delete[] imgPtr;
-		//	return;
-		//}
-
-		//if (*m_CamPreview->GetExecutionFinishedPtr())
-		//{
-		//	m_CamPreview->SetCameraCapturedImage
-		//	(
-		//		imgPtr,
-		//		m_OutputImageSize,
-		//		minValue,
-		//		maxValue
-		//	);
-
-		//}
-
 		if (m_StartStopMeasurementTglBtn->GetValue())
 			m_ProgressBar->SetValue(progress);
-		
-		//int binning{ 1 };
-		//m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 		
 		if (*m_CamPreview->GetExecutionFinishedPtr())
 			DisplayAndSaveImageFromTheCamera
@@ -6681,6 +6675,12 @@ auto cMain::OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void
 	m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(wxColour(34, 177, 76));
 }
 
+auto cMain::OnMedianBlueCheckBox(wxCommandEvent& evt) -> void
+{
+	m_Config->median_blur_on = evt.IsChecked();
+	RewriteInitializationFile();
+}
+
 auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 {
 	constexpr auto raise_exception_msg = [](wxString disallowedCharacters) 
@@ -7511,6 +7511,7 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 
 	m_BackgroundSubtractionCheckBox->Enable();
 	m_BackgroundSubtractionLoadFileBtn->Enable();
+	m_MedianBlurCheckBox->Enable();
 }
 
 auto cMain::DisableControlsAfterUnsuccessfulCameraInitialization() -> void
@@ -7551,6 +7552,7 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 
 	m_BackgroundSubtractionCheckBox->Disable();
 	m_BackgroundSubtractionLoadFileBtn->Disable();
+	m_MedianBlurCheckBox->Disable();
 }
 
 void cMain::OnStartStopLiveCapturingMenu(wxCommandEvent& evt)
@@ -7690,9 +7692,10 @@ LiveCapturing::LiveCapturing
 	const int& exposure_us,
 	const unsigned short& binning,
 	const MainFrameVariables::BinningModes& binningMode,
+	const int& medianBlurRadius,
 	wxString* uniqueThreadKey,
 	bool* aliveOrDeadThread,
-	bool* isDrawExecutionFinished
+	std::atomic<bool>* isDrawExecutionFinished
 ) 
 	: m_MainFrame(main_frame), 
 	m_CameraControl(cameraControl),
@@ -7700,6 +7703,7 @@ LiveCapturing::LiveCapturing
 	m_ExposureUS(exposure_us),
 	m_Binning(binning),
 	m_BinningMode(binningMode),
+	m_MedianBlurRadius(medianBlurRadius),
 	m_UniqueThreadKey(uniqueThreadKey),
 	m_AliveOrDeadThread(aliveOrDeadThread),
 	m_IsDrawExecutionFinished(isDrawExecutionFinished)
@@ -7748,8 +7752,6 @@ wxThread::ExitCode LiveCapturing::Entry()
 	const auto checkingInterval = m_ExposureUS / 3;
 	const auto interval = std::chrono::microseconds(checkingInterval);  
 
-	m_MainFrame->LiveCapturingFinishedCapturingAndDrawing(false);
-
 	while (m_MainFrame && *m_AliveOrDeadThread)
 	{
 		auto dataPtr = std::make_unique<unsigned short[]>(m_ImageSize.GetWidth() * m_ImageSize.GetHeight());
@@ -7762,7 +7764,14 @@ wxThread::ExitCode LiveCapturing::Entry()
 			return (wxThread::ExitCode)0;
 		}
 
-		if (!*m_IsDrawExecutionFinished) continue; // try next capture without sleeping
+		const auto interval = std::chrono::microseconds(std::max(1000, m_ExposureUS / 3));
+		int spins = 0;
+
+		while (*m_AliveOrDeadThread && !m_IsDrawExecutionFinished->load(std::memory_order_acquire) && spins++ < 100)
+		{
+			LOG("Waiting for the Execution finishing.");
+			std::this_thread::sleep_for(interval);
+		}
 
 		evt.SetInt(0);
 		evt.SetPayload(dataPtr.release());
@@ -7843,9 +7852,10 @@ WorkerThread::WorkerThread
 	const int& exposure_us,
 	const unsigned short& binning,
 	const MainFrameVariables::BinningModes& binningMode,
+	const int& medianBlurRadius,
 	wxString* uniqueThreadKey,
 	bool* aliveOrDeadThread,
-	bool* isDrawExecutionFinished,
+	std::atomic<bool>* isDrawExecutionFinished,
 	const wxString& path, 
 	MainFrameVariables::AxisMeasurement* first_axis, 
 	MainFrameVariables::AxisMeasurement* second_axis,
@@ -7860,6 +7870,7 @@ WorkerThread::WorkerThread
 		exposure_us,
 		binning,
 		binningMode,
+		medianBlurRadius,
 		uniqueThreadKey, 
 		aliveOrDeadThread, 
 		isDrawExecutionFinished
@@ -7992,8 +8003,10 @@ wxThread::ExitCode WorkerThread::Entry()
 			return (wxThread::ExitCode)0;
 		}
 
-		// Waiting for the finishing calculation of the PreviewPanel
-		while (*m_AliveOrDeadThread && !*m_IsDrawExecutionFinished)
+		const auto interval = std::chrono::microseconds(std::max(1000, m_ExposureUS / 3));
+		int spins = 0;
+
+		while (*m_AliveOrDeadThread && !m_IsDrawExecutionFinished->load(std::memory_order_acquire) && spins++ < 100)
 		{
 			LOG("Waiting for the Execution finishing.");
 			std::this_thread::sleep_for(interval);

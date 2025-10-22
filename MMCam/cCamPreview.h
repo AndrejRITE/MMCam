@@ -257,7 +257,11 @@ public:
 			m_ROIWindowWidth = static_cast<int>(std::ceil(m_CropSizeMM / (m_PixelSizeUM / 1000.0)));
 	};
 
-	auto GetExecutionFinishedPtr() -> bool* { return &m_ExecutionFinished; };
+	bool IsExecutionFinished() const noexcept { return m_ExecutionFinished.load(std::memory_order_acquire); };
+
+	void SetExecutionFinished(bool v) noexcept { m_ExecutionFinished.store(v, std::memory_order_release); };
+
+	std::atomic<bool>* GetExecutionFinishedPtr() noexcept { return &m_ExecutionFinished; };
 
 	auto SetCrossHairAveragingWidthPX(const int& avgWidth)
 	{
@@ -374,7 +378,8 @@ private:
 
 	CameraPreviewVariables::Colormaps m_ColormapMode{ CameraPreviewVariables::Colormaps::GRAYSCALE_COLORMAP };
 
-	bool m_ExecutionFinished{ true };
+	std::atomic<bool> m_ExecutionFinished{ true };
+
 	int m_Width{}, m_Height{};
 	bool m_IsGraphicsBitmapSet{}, m_IsImageSet{};
 	wxGraphicsBitmap m_GraphicsBitmapImage{};

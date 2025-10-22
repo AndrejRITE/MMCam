@@ -23,7 +23,6 @@ cCamPreview::cCamPreview
 
 	m_ParentArguments.reset(previewPanelArgs.release());
 
-	//m_XimeaCameraControl = std::make_unique<XimeaControl>();
 	SetDoubleBuffered(true);
 #ifdef _DEBUG
 	SetBackgroundColour(wxColor(210, 185, 155));
@@ -229,7 +228,7 @@ auto cCamPreview::SetCameraCapturedImage
 
 	LOG("Started: " + wxString(__FUNCSIG__));
 
-	m_ExecutionFinished = false;
+	SetExecutionFinished(false);
 
 	unsigned long long readDataSize = m_ImageSize.GetWidth() * m_ImageSize.GetHeight();
 
@@ -258,12 +257,11 @@ auto cCamPreview::SetCameraCapturedImage
 		event.m_x = m_CursorPosOnCanvas.x / m_ZoomOnOriginalSizeImage;
 		event.m_y = m_CursorPosOnCanvas.y / m_ZoomOnOriginalSizeImage;
 
-		wxPostEvent(this, event); // Queue the event
 		ProcessEvent(event);
 	}
 
 	LOG("Image was updated: " + wxString(__FUNCSIG__))
-	m_ExecutionFinished = true;
+	SetExecutionFinished(true);
 }
 
 auto cCamPreview::UpdateBlackAndWhiteRange(const int black, const int white) -> std::optional<int>
@@ -1253,7 +1251,7 @@ void cCamPreview::PaintEvent(wxPaintEvent& evt)
 
 void cCamPreview::Render(wxBufferedPaintDC& dc)
 {
-	m_ExecutionFinished = false;
+	SetExecutionFinished(false);
 
 	dc.Clear();
 
@@ -1267,7 +1265,7 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 
 	if (!m_IsImageSet)
 	{
-		m_ExecutionFinished = true;
+		SetExecutionFinished(true);
 		return;
 	}
 
@@ -1275,7 +1273,7 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 		auto gc = wxGraphicsContext::Create(dc);
 		if (!gc)
 		{
-			m_ExecutionFinished = true;
+			SetExecutionFinished(true);
 			return;
 		}
 
@@ -1316,14 +1314,14 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 		auto gc = wxGraphicsContext::Create(dc);
 		if (!gc)
 		{
-			m_ExecutionFinished = true;
+			SetExecutionFinished(true);
 			return;
 		}
 
 		DrawActualImageSize(gc);
 		delete gc;
 	}
-	m_ExecutionFinished = true;
+	SetExecutionFinished(true);
 }
 
 auto cCamPreview::UpdateWXImage(int black, int white) -> void
