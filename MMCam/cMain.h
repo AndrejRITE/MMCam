@@ -235,6 +235,8 @@ namespace MainFrameVariables
 		int default_colormap = 0;
 		int default_binning = 1;
 		int default_exposure_ms = 100;
+
+		int median_blur_ksize = 3;
 		
 		std::string default_motors_name_first_tab{ "Detector" };
 		std::string default_motors_name_second_tab{ "Optics" };
@@ -273,6 +275,8 @@ namespace MainFrameVariables
 			default_colormap,
 			default_binning,
 			default_exposure_ms,
+
+			median_blur_ksize,
 
 			default_motors_name_first_tab,
 			default_motors_name_second_tab,
@@ -646,6 +650,101 @@ namespace MainFrameVariables
 		}
 		for (auto& th : ts) th.join();
 #endif
+	}
+
+	static auto ApplyMedianFilter
+	(
+		unsigned short* const imgDataPtr,
+		const wxSize& imgSize,
+		const CameraControlVariables::ImageDataTypes& imgDataType,
+		int ksize // odd >= 1
+	) -> void
+	{
+		if (!imgDataPtr || ksize < 1 || (ksize % 2) == 0) return;
+
+		unsigned short max_value = imgDataType == CameraControlVariables::ImageDataTypes::RAW_12BIT ? 4'095 : USHRT_MAX;
+
+		const int W = imgSize.GetWidth();
+		const int H = imgSize.GetHeight();
+		if (W <= 0 || H <= 0) return;
+
+		const size_t total = static_cast<size_t>(W) * static_cast<size_t>(H);
+		std::vector<uint16_t> out(total);
+
+		const int r = ksize / 2;
+		const uint32_t target = static_cast<uint32_t>((ksize * ksize) / 2);
+
+		auto clamp = [](int v, int lo, int hi) -> int {
+			return v < lo ? lo : (v > hi ? hi : v);
+			};
+
+		const unsigned hw = std::max(1u, std::thread::hardware_concurrency());
+		const int rows_per = (H + static_cast<int>(hw) - 1) / static_cast<int>(hw);
+
+		auto worker = [&](int y0, int y1) {
+			std::vector<uint32_t> hist(max_value + 1);
+
+			auto find_median = [&]() -> uint16_t {
+				uint32_t acc = 0;
+				for (int v = 0; v < max_value + 1; ++v) {
+					acc += hist[static_cast<size_t>(v)];
+					if (acc > target) return static_cast<uint16_t>(v);
+				}
+				return max_value;
+				};
+
+			for (int y = y0; y < y1; ++y) {
+				std::fill(hist.begin(), hist.end(), 0u);
+
+				const int wy0 = y - r;
+				const int wy1 = y + r;
+
+				// Build initial histogram for x = 0 window
+				for (int yy = wy0; yy <= wy1; ++yy) {
+					const int cy = clamp(yy, 0, H - 1);
+					for (int xx = -r; xx <= r; ++xx) {
+						const int cx = clamp(xx, 0, W - 1);
+						const uint16_t v = imgDataPtr[static_cast<size_t>(cy) * W + cx];
+						++hist[v];
+					}
+				}
+
+				// x = 0
+				out[static_cast<size_t>(y) * W + 0] = find_median();
+
+				// Slide window across x
+				for (int x = 1; x < W; ++x) {
+					const int x_remove = x - 1 - r;
+					const int x_add = x + r;
+
+					for (int yy = wy0; yy <= wy1; ++yy) {
+						const int cy = clamp(yy, 0, H - 1);
+
+						const int cxr = clamp(x_remove, 0, W - 1);
+						const uint16_t vr = imgDataPtr[static_cast<size_t>(cy) * W + cxr];
+						--hist[vr];
+
+						const int cxa = clamp(x_add, 0, W - 1);
+						const uint16_t va = imgDataPtr[static_cast<size_t>(cy) * W + cxa];
+						++hist[va];
+					}
+
+					out[static_cast<size_t>(y) * W + x] = find_median();
+				}
+			}
+			};
+
+		std::vector<std::thread> ts;
+		ts.reserve(hw);
+		for (unsigned t = 0; t < hw; ++t) {
+			const int y_begin = static_cast<int>(t) * rows_per;
+			if (y_begin >= H) break;
+			const int y_end = std::min(H, y_begin + rows_per);
+			ts.emplace_back(worker, y_begin, y_end);
+		}
+		for (auto& th : ts) th.join();
+
+		std::copy(out.begin(), out.end(), imgDataPtr);
 	}
 }
 

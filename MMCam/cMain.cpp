@@ -3778,6 +3778,17 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 			imageSize
 		);
 	}
+
+	if (m_MedianBlurCheckBox->IsChecked())
+	{
+		MainFrameVariables::ApplyMedianFilter
+		(
+			dataPtr.get(),
+			imageSize, 
+			dataType, 
+			m_Config->median_blur_ksize
+		);
+	}
 	
 	auto minimumCount = 5;
 	unsigned short minValue{}, maxValue{};
@@ -5348,7 +5359,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			exposure_time,
 			binning,
 			binningMode,
-			m_MedianBlurCheckBox->IsChecked() ? 2 : 0,
+			m_MedianBlurCheckBox->IsChecked() ? m_Config->median_blur_ksize : 0,
 			&m_StartedThreads.back().first,
 			&m_StartedThreads.back().second,
 			isDrawExecutionFinished,
@@ -5418,7 +5429,7 @@ void cMain::StartLiveCapturing()
 		exposure_time,
 		binning,
 		binningMode,
-		m_MedianBlurCheckBox->IsChecked() ? 2 : 0,
+		m_MedianBlurCheckBox->IsChecked() ? m_Config->median_blur_ksize : 0,
 		&m_StartedThreads.back().first,
 		&m_StartedThreads.back().second,
 		isDrawExecutionFinished
@@ -7794,6 +7805,7 @@ auto LiveCapturing::CaptureImage
 
 	const auto imgWidth = m_CameraControl->GetWidth();
 	const auto imgHeight = m_CameraControl->GetHeight();
+	const auto imgDataType = m_CameraControl->GetCameraDataType();
 	const auto outSize = wxSize( imgWidth / m_Binning, imgHeight / m_Binning );
 
 	MainFrameVariables::BinImageData
@@ -7810,6 +7822,17 @@ auto LiveCapturing::CaptureImage
 	{
 		UpdateCachedBackground(imgWidth, imgHeight);
 		if (m_BinnedBg) MainFrameVariables::SubtractImages(dataPtr, m_BinnedBg.get(), outSize);
+	}
+
+	if (m_MedianBlurRadius > 0)
+	{
+		MainFrameVariables::ApplyMedianFilter
+		(
+			dataPtr, 
+			outSize, 
+			imgDataType, 
+			m_MedianBlurRadius
+		);
 	}
 	return true;
 }
