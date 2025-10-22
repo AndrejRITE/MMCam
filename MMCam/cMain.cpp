@@ -3735,6 +3735,29 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 		imageSize,
 		binningMode
 	);
+
+	/* Postprocessing */
+	if (m_BackgroundSubtractionCheckBox->IsChecked() && m_BackgroundSubtractionData)
+	{
+		auto binBackground = std::make_unique<unsigned short[]>(imageSize.GetWidth() * imageSize.GetHeight());
+
+		MainFrameVariables::BinImageData
+		(
+			m_BackgroundSubtractionData.get(),
+			binBackground.get(),
+			binning,
+			originalImgSize.GetWidth(),
+			imageSize,
+			binningMode
+		);
+
+		MainFrameVariables::SubtractImages
+		(
+			dataPtr.get(),
+			binBackground.get(),
+			imageSize
+		);
+	}
 	
 	auto minimumCount = 5;
 	unsigned short minValue{}, maxValue{};
@@ -5294,6 +5317,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		(
 			this,
 			m_CameraControl.get(),
+			m_BackgroundSubtractionCheckBox->GetValue() ? m_BackgroundSubtractionData.get() : nullptr,
 			exposure_time,
 			binning,
 			binningMode,
@@ -5362,6 +5386,7 @@ void cMain::StartLiveCapturing()
 	(
 		this, 
 		m_CameraControl.get(),
+		m_BackgroundSubtractionCheckBox->GetValue() ? m_BackgroundSubtractionData.get() : nullptr,
 		exposure_time,
 		binning,
 		binningMode,
@@ -7661,6 +7686,7 @@ LiveCapturing::LiveCapturing
 (
 	cMain* main_frame,
 	CameraControl* cameraControl,
+	unsigned short* backgroundSubtractionDataPtr,
 	const int& exposure_us,
 	const unsigned short& binning,
 	const MainFrameVariables::BinningModes& binningMode,
@@ -7670,6 +7696,7 @@ LiveCapturing::LiveCapturing
 ) 
 	: m_MainFrame(main_frame), 
 	m_CameraControl(cameraControl),
+	m_BackgroundSubtractionDataPtr(backgroundSubtractionDataPtr),
 	m_ExposureUS(exposure_us),
 	m_Binning(binning),
 	m_BinningMode(binningMode),
@@ -7735,12 +7762,7 @@ wxThread::ExitCode LiveCapturing::Entry()
 			return (wxThread::ExitCode)0;
 		}
 
-		// Waiting for the finishing calculation of the PreviewPanel
-		while (*m_AliveOrDeadThread && !*m_IsDrawExecutionFinished)
-		{
-			LOG("Waiting for the Execution finishing.");
-			std::this_thread::sleep_for(interval);
-		}
+		if (!*m_IsDrawExecutionFinished) continue; // try next capture without sleeping
 
 		evt.SetInt(0);
 		evt.SetPayload(dataPtr.release());
@@ -7758,24 +7780,52 @@ auto LiveCapturing::CaptureImage
 ) -> bool
 {
 	if (!dataPtr) return false;
-
-	auto imgPtr = m_CameraControl->GetImage();
+	auto* imgPtr = m_CameraControl->GetImage();
 	if (!imgPtr) return false;
 
-	auto imgWidth = m_CameraControl->GetWidth();
-	auto outImgSize = wxSize(imgWidth / m_Binning, m_CameraControl->GetHeight() / m_Binning);
-	
+	const auto imgWidth = m_CameraControl->GetWidth();
+	const auto imgHeight = m_CameraControl->GetHeight();
+	const auto outSize = wxSize( imgWidth / m_Binning, imgHeight / m_Binning );
+
 	MainFrameVariables::BinImageData
 	(
 		imgPtr, 
-		dataPtr,
-		m_Binning,
-		imgWidth,
-		outImgSize,
+		dataPtr, 
+		m_Binning, 
+		imgWidth, 
+		outSize, 
 		m_BinningMode
 	);
 
+	if (m_BackgroundSubtractionDataPtr) 
+	{
+		UpdateCachedBackground(imgWidth, imgHeight);
+		if (m_BinnedBg) MainFrameVariables::SubtractImages(dataPtr, m_BinnedBg.get(), outSize);
+	}
 	return true;
+}
+
+auto LiveCapturing::UpdateCachedBackground(int imgWidth, int imgHeight) -> void
+{
+	if (!m_BackgroundSubtractionDataPtr) { m_BinnedBg.reset(); return; }
+	if (m_BinnedBg && m_BgSize == wxSize(imgWidth / m_Binning, imgHeight / m_Binning)
+		&& m_BgBinning == m_Binning && m_BgMode == m_BinningMode) return;
+
+	m_BgSize = { imgWidth / m_Binning, imgHeight / m_Binning };
+	m_BinnedBg = std::make_unique<unsigned short[]>(m_BgSize.GetWidth() * m_BgSize.GetHeight());
+
+	MainFrameVariables::BinImageData
+	(
+		m_BackgroundSubtractionDataPtr,
+		m_BinnedBg.get(),
+		m_Binning,
+		imgWidth,
+		m_BgSize,
+		m_BinningMode
+	);
+
+	m_BgBinning = m_Binning;
+	m_BgMode = m_BinningMode;
 }
 
 LiveCapturing::~LiveCapturing()
@@ -7789,6 +7839,7 @@ WorkerThread::WorkerThread
 (
 	cMain* main_frame,
 	CameraControl* cameraControl,
+	unsigned short* backgroundSubtractionDataPtr,
 	const int& exposure_us,
 	const unsigned short& binning,
 	const MainFrameVariables::BinningModes& binningMode,
@@ -7805,6 +7856,7 @@ WorkerThread::WorkerThread
 	(
 		main_frame, 
 		cameraControl, 
+		backgroundSubtractionDataPtr,
 		exposure_us,
 		binning,
 		binningMode,

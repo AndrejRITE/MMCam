@@ -26,6 +26,7 @@
 #include <chrono>
 #include <regex>
 #include <algorithm>
+#include <execution>
 
 #include <nlohmann/json.hpp>
 
@@ -598,6 +599,51 @@ namespace MainFrameVariables
 		applySoftwareBinningMultithread();
 	}
 
+	static auto SubtractImages
+	(
+		unsigned short* const imgDataPtr,
+		unsigned short* const backgroundImgDataPtr,
+		const wxSize& imgSize
+	) -> void
+	{
+		if (!imgDataPtr || !backgroundImgDataPtr) return;
+		const auto total = static_cast<size_t>(imgSize.GetWidth()) * static_cast<size_t>(imgSize.GetHeight());
+
+#if defined(__cpp_lib_execution) // C++17 parallel algorithms
+		std::transform
+		(
+			std::execution::par_unseq,
+			imgDataPtr, imgDataPtr + total,
+			backgroundImgDataPtr,
+			imgDataPtr,
+			[](unsigned short a, unsigned short b) -> unsigned short 
+			{
+				int v = static_cast<int>(a) - static_cast<int>(b);
+				return static_cast<unsigned short>(v > 0 ? v : 0);
+			}
+		);
+#else
+		const unsigned hw = std::max(1u, std::thread::hardware_concurrency());
+		const size_t chunk = (total + hw - 1) / hw;
+
+		auto worker = [&](size_t begin, size_t end) {
+			for (size_t i = begin; i < end; ++i) {
+				int v = static_cast<int>(imgDataPtr[i]) - static_cast<int>(backgroundImgDataPtr[i]);
+				imgDataPtr[i] = static_cast<unsigned short>(v > 0 ? v : 0);
+			}
+			};
+
+		std::vector<std::thread> ts;
+		ts.reserve(hw);
+		for (unsigned t = 0; t < hw; ++t) {
+			size_t begin = t * chunk;
+			if (begin >= total) break;
+			size_t end = std::min(total, begin + chunk);
+			ts.emplace_back(worker, begin, end);
+		}
+		for (auto& th : ts) th.join();
+#endif
+	}
 }
 
 class ProgressBar;
@@ -1736,6 +1782,7 @@ public:
 	(
 		cMain* main_frame,
 		CameraControl* cameraControl,
+		unsigned short* backgroundSubtractionDataPtr,
 		const int& exposure_us,
 		const unsigned short& binning,
 		const MainFrameVariables::BinningModes& binningMode,
@@ -1753,9 +1800,12 @@ protected:
 		unsigned short* dataPtr
 	) -> bool;
 
+	auto UpdateCachedBackground(int imgWidth, int imgHeight) -> void;
+
 protected:
 	cMain* m_MainFrame{};
 	CameraControl* m_CameraControl{};
+	unsigned short* m_BackgroundSubtractionDataPtr{};
 	unsigned short m_Binning{ 1 };
 	MainFrameVariables::BinningModes m_BinningMode{ MainFrameVariables::BinningModes::BINNING_AVERAGE };
 
@@ -1767,10 +1817,15 @@ protected:
 	bool* m_AliveOrDeadThread{};
 
 	bool* m_IsDrawExecutionFinished{};
+
+	std::unique_ptr<unsigned short[]> m_BinnedBg;
+	wxSize m_BgSize{};
+	unsigned short m_BgBinning{};
+	MainFrameVariables::BinningModes m_BgMode{};
 };
 /* ___ End Worker Thread ___ */
 
-/* ___ Start Worker Theread ___ */
+/* ___ Start Worker Thread ___ */
 class WorkerThread final: public LiveCapturing
 {
 public:
@@ -1778,6 +1833,7 @@ public:
 	(
 		cMain* main_frame,
 		CameraControl* cameraControl,
+		unsigned short* backgroundSubtractionDataPtr,
 		const int& exposure_us,
 		const unsigned short& binning,
 		const MainFrameVariables::BinningModes& binningMode,
