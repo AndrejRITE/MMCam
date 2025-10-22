@@ -2246,6 +2246,8 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 				wxTE_READONLY
 			);
 
+		m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(wxColour(237, 28, 36));
+
 		horSizer->Add(m_BackgroundSubtractionFileNameTxtCtrl.get(), 1, wxALIGN_CENTER);
 
 		m_BackgroundSubtractionLoadFileBtn = std::make_unique<wxButton>
@@ -3722,13 +3724,16 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 
 	auto dataPtr = std::make_unique<unsigned short[]>(imageSize.GetWidth() * imageSize.GetHeight());
 
+	auto binningMode = m_Config->binning_sum_mode ? MainFrameVariables::BinningModes::BINNING_SUM : MainFrameVariables::BinningModes::BINNING_AVERAGE;
+
 	MainFrameVariables::BinImageData
 	(
 		imgPtr, 
 		dataPtr.get(),
 		binning,
 		originalImgSize.GetWidth(),
-		imageSize
+		imageSize,
+		binningMode
 	);
 	
 	auto minimumCount = 5;
@@ -5264,6 +5269,8 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 	int binning{ 1 };
 	m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 
+	auto binningMode = m_Config->binning_sum_mode ? MainFrameVariables::BinningModes::BINNING_SUM : MainFrameVariables::BinningModes::BINNING_AVERAGE;
+
 	m_OutputImageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
 
 	/* Worker and Progress Threads */
@@ -5289,6 +5296,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			m_CameraControl.get(),
 			exposure_time,
 			binning,
+			binningMode,
 			&m_StartedThreads.back().first,
 			&m_StartedThreads.back().second,
 			isDrawExecutionFinished,
@@ -5340,9 +5348,7 @@ void cMain::StartLiveCapturing()
 
 	auto currThreadTimeStamp = timePointToWxString();
 	m_StartedThreads.push_back(std::make_pair(currThreadTimeStamp, true));
-	//m_XimeaControl->SetExposureTime(exposure_time);
 
-	//auto curr_camera = m_Settings->GetSelectedCamera();
 	auto isDrawExecutionFinished = m_CamPreview->GetExecutionFinishedPtr();
 
 	int binning{ 1 };
@@ -5350,12 +5356,15 @@ void cMain::StartLiveCapturing()
 	
 	m_OutputImageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
 
+	auto binningMode = m_Config->binning_sum_mode ? MainFrameVariables::BinningModes::BINNING_SUM : MainFrameVariables::BinningModes::BINNING_AVERAGE;
+
 	LiveCapturing* live_capturing = new LiveCapturing
 	(
 		this, 
 		m_CameraControl.get(),
 		exposure_time,
 		binning,
+		binningMode,
 		&m_StartedThreads.back().first,
 		&m_StartedThreads.back().second,
 		isDrawExecutionFinished
@@ -6550,16 +6559,40 @@ auto cMain::OnColormapComboBox(wxCommandEvent& evt) -> void
 
 	//if (!m_CameraParametersControls->startCapturing->GetValue())
 
-	wxCommandEvent artLeftBorderHostogramChanged(wxEVT_TEXT, MainFrameVariables::ID::HISTOGRAM_LEFT_BORDER_TXT_CTRL);
-	ProcessEvent(artLeftBorderHostogramChanged);
+	wxCommandEvent artEvt(wxEVT_TEXT, MainFrameVariables::ID::HISTOGRAM_LEFT_BORDER_TXT_CTRL);
+	ProcessEvent(artEvt);
 }
 
 auto cMain::OnBackgroundSubtractionCheckBox(wxCommandEvent& evt) -> void
 {
+	if (!m_BackgroundSubtractionData)
+	{
+		wxCommandEvent evt(wxEVT_BUTTON, MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_LOAD_FILE_BTN);
+		ProcessEvent(evt);
+
+		if (!m_BackgroundSubtractionData) return;
+	}
 }
 
 auto cMain::OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void
 {
+	constexpr auto imageSizeIsNotEqualToTheCameraSensorSize = []() 
+		{
+			wxString title = "Incompatible image size";
+			wxMessageBox(
+				wxT
+				(
+					"Selected image size is not equal to the initialized camera sensor size."
+				),
+				title,
+				wxICON_ERROR);
+		};
+
+	m_BackgroundSubtractionFileNameTxtCtrl->SetValue("No file selected");
+	m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(wxColour(237, 28, 36));
+
+	m_BackgroundSubtractionData.reset();
+
 	std::string filePath{};
 
 #ifdef _DEBUG
@@ -6597,8 +6630,17 @@ auto cMain::OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void
 	dataType = image.type() == CV_16U ? HistogramPanelVariables::ImageDataTypes::RAW_16BIT : dataType;
 
 	// If the image size is not equal to the camera image size, show error and return
+	wxAny value = m_CurrentCameraSettingsPropertyGrid->GetPropertyValue(m_PropertiesNames->sensor_width_px);
+	auto sensorWidth = value.As<int>();
 
-	m_BackgroundSubtractionFileNameTxtCtrl->SetValue(fileName.GetFullName());
+	value = m_CurrentCameraSettingsPropertyGrid->GetPropertyValue(m_PropertiesNames->sensor_height_px);
+	auto sensorHeight = value.As<int>();
+
+	if (sensorWidth != image.cols || sensorHeight != image.rows)
+	{
+		imageSizeIsNotEqualToTheCameraSensorSize();
+		return;
+	}
 
 	auto dataPtr = std::make_unique<unsigned short[]>(image.rows * image.cols);
 
@@ -6609,6 +6651,9 @@ auto cMain::OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void
 	}
 
 	m_BackgroundSubtractionData = std::move(dataPtr);
+
+	m_BackgroundSubtractionFileNameTxtCtrl->SetValue(fileName.GetFullName());
+	m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(wxColour(34, 177, 76));
 }
 
 auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
@@ -7618,6 +7663,7 @@ LiveCapturing::LiveCapturing
 	CameraControl* cameraControl,
 	const int& exposure_us,
 	const unsigned short& binning,
+	const MainFrameVariables::BinningModes& binningMode,
 	wxString* uniqueThreadKey,
 	bool* aliveOrDeadThread,
 	bool* isDrawExecutionFinished
@@ -7626,6 +7672,7 @@ LiveCapturing::LiveCapturing
 	m_CameraControl(cameraControl),
 	m_ExposureUS(exposure_us),
 	m_Binning(binning),
+	m_BinningMode(binningMode),
 	m_UniqueThreadKey(uniqueThreadKey),
 	m_AliveOrDeadThread(aliveOrDeadThread),
 	m_IsDrawExecutionFinished(isDrawExecutionFinished)
@@ -7724,7 +7771,8 @@ auto LiveCapturing::CaptureImage
 		dataPtr,
 		m_Binning,
 		imgWidth,
-		outImgSize
+		outImgSize,
+		m_BinningMode
 	);
 
 	return true;
@@ -7743,6 +7791,7 @@ WorkerThread::WorkerThread
 	CameraControl* cameraControl,
 	const int& exposure_us,
 	const unsigned short& binning,
+	const MainFrameVariables::BinningModes& binningMode,
 	wxString* uniqueThreadKey,
 	bool* aliveOrDeadThread,
 	bool* isDrawExecutionFinished,
@@ -7758,6 +7807,7 @@ WorkerThread::WorkerThread
 		cameraControl, 
 		exposure_us,
 		binning,
+		binningMode,
 		uniqueThreadKey, 
 		aliveOrDeadThread, 
 		isDrawExecutionFinished

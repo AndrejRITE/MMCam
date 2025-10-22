@@ -215,6 +215,8 @@ namespace MainFrameVariables
 		bool disable_report_generator{};
 		bool crosshair_adaptive_scaling{};
 
+		bool binning_sum_mode{ false };
+
 		double crop_size_mm = 0.5;
 		double crop_size_circle_mm = 1.5;
 		double default_sensor_temperature_degC = 25.0;
@@ -249,6 +251,8 @@ namespace MainFrameVariables
 			display_image_stats,
 			disable_report_generator,
 			crosshair_adaptive_scaling,
+
+			binning_sum_mode,
 
 			crop_size_mm, 
 			crop_size_circle_mm, 
@@ -475,7 +479,8 @@ namespace MainFrameVariables
 		unsigned short* outDataPtr, 
 		const unsigned short binning, 
 		const int originalImgWidth,
-		const wxSize outImgSize
+		const wxSize outImgSize,
+		const BinningModes binningMode
 	) -> void
 	{
 		if (!inDataPtr || !outDataPtr) return;
@@ -489,8 +494,6 @@ namespace MainFrameVariables
 				sizeof(unsigned short) * outImgSize.GetWidth() * outImgSize.GetHeight()
 			);
 		}
-
-		auto binningMode = MainFrameVariables::BinningModes::BINNING_AVERAGE;
 
 		auto calculatePixelsInsideTheBinning = [&]
 		(
@@ -609,7 +612,6 @@ class cMain final : public wxFrame
 {
 public:
 	cMain(const wxString& title_);
-	//auto StopLiveCapturing() -> bool;
 	auto LiveCapturingFinishedCapturingAndDrawing(bool is_finished) -> void;
 	auto WorkerThreadFinished(bool is_finished) -> void;
 	auto UpdateStagePositions() -> void;
@@ -1736,6 +1738,7 @@ public:
 		CameraControl* cameraControl,
 		const int& exposure_us,
 		const unsigned short& binning,
+		const MainFrameVariables::BinningModes& binningMode,
 		wxString* uniqueThreadKey,
 		bool* aliveOrDeadThread,
 		bool* isDrawExecutionFinished
@@ -1750,12 +1753,12 @@ protected:
 		unsigned short* dataPtr
 	) -> bool;
 
-	//auto BinImageData(unsigned short* inDataPtr, unsigned short* outDataPtr) -> void;
-
 protected:
 	cMain* m_MainFrame{};
 	CameraControl* m_CameraControl{};
 	unsigned short m_Binning{ 1 };
+	MainFrameVariables::BinningModes m_BinningMode{ MainFrameVariables::BinningModes::BINNING_AVERAGE };
+
 	int m_ExposureUS{};
 	wxSize m_ImageSize{};
 
@@ -1777,6 +1780,7 @@ public:
 		CameraControl* cameraControl,
 		const int& exposure_us,
 		const unsigned short& binning,
+		const MainFrameVariables::BinningModes& binningMode,
 		wxString* uniqueThreadKey,
 		bool* aliveOrDeadThread,
 		bool* isDrawExecutionFinished,
