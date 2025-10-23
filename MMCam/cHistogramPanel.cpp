@@ -66,12 +66,12 @@ auto cHistogramPanel::SetHistogram
 		[](unsigned long long val) { return val > 0; }
 	);
 
-	MedianBlur1D
-	(
-		m_HistogramData.get(),
-		m_MaxHistogramValue + 1,
-		5
-	);
+	//MedianBlur1D
+	//(
+	//	m_HistogramData.get(),
+	//	m_MaxHistogramValue + 1,
+	//	5
+	//);
 
 	// Find Global Minimum and Maximum values inside the Histogram values
 
@@ -113,15 +113,14 @@ auto cHistogramPanel::SetWXImage() -> void
 	m_Image = wxImage(m_CanvasSize);
 	m_ImageSize = m_CanvasSize;
 	
-	//m_Image.InitAlpha();
-	
 	m_Image.Clear(m_backgroundColour.GetRed());
 
-	auto histColor = wxColour(180, 29, 47);
 	int curr_x{}, curr_y{};
 
 	auto maxHistogramValue = static_cast<double>(m_MaxHistogramValue);
 	auto globalMax = static_cast<double>(m_GlobalMax);
+
+	auto step = static_cast<int>(maxHistogramValue / static_cast<double>(m_CanvasSize.GetWidth() - 1));
 
 	for (auto i{ 0 }; i <= (int)m_MaxHistogramValue; ++i)
 	{
@@ -135,11 +134,11 @@ auto cHistogramPanel::SetWXImage() -> void
 			wxRect
 			(
 				wxPoint(curr_x, m_CanvasSize.GetHeight() - curr_y),
-				wxSize(1, curr_y)
+				wxSize(step, curr_y)
 			),
-			histColor.GetRed(),
-			histColor.GetGreen(),
-			histColor.GetBlue()
+			m_HistogramDataColor.GetRed(),
+			m_HistogramDataColor.GetGreen(),
+			m_HistogramDataColor.GetBlue()
 		);
 	}
 
@@ -619,34 +618,26 @@ void cHistogramPanel::RebuildHistogramImageForCurrentView()
 		: (double)std::max(1ULL, viewPeak);
 
 	// 3) Draw only bins in [m_ViewMin, m_ViewMax], mapped to panel width
+	const int W = m_CanvasSize.GetWidth();
 	const int H = m_CanvasSize.GetHeight();
-	const wxColour histColour(180, 29, 47);
-
-	// Optional: draw a base line for the X axis
-	// m_Image.SetRGB(wxRect(wxPoint(0, H-1), wxSize(m_CanvasSize.GetWidth(), 1)), 120,120,120);
-
-	// We draw 1px-wide columns. Multiple values can map to the same X -> keep the tallest.
-	std::vector<int> colHeights(m_CanvasSize.GetWidth(), 0);
 
 	for (unsigned int v = m_ViewMin; v <= m_ViewMax; ++v)
 	{
-		const int x = ValueToCanvasX(v);
+		const auto cnt = m_HistogramData[v];
+		if (cnt == 0) continue; // avoid 1px bar at baseline
 
-		double mag = m_LogScale ? std::log1p((double)m_HistogramData[v])
-			: (double)m_HistogramData[v];
-		const int y = (int)std::round(((denom > 0.0) ? (mag / denom) : 0.0) * (H - 1));
-		if (y > colHeights[x]) colHeights[x] = y;
-	}
+		const int x0 = ValueToCanvasX(v);
+		int x1 = (v < m_ViewMax) ? ValueToCanvasX(v + 1) : (W - 1);
+		if (x1 <= x0) x1 = x0 + 1;
 
-	for (int x = 0; x < m_CanvasSize.GetWidth(); ++x)
-	{
-		int y = colHeights[x];
-		if (y <= 0) continue;
+		const int yTop = CountToCanvasY(cnt);
+		const int h = (H - 1) - yTop;     // note: -1 fixes the off-by-one
+		if (h <= 0) continue;
 
-		m_Image.SetRGB(
-			wxRect(wxPoint(x, H - y), wxSize(1, y)),
-			histColour.GetRed(), histColour.GetGreen(), histColour.GetBlue()
-		);
+		m_Image.SetRGB(wxRect(wxPoint(x0, yTop), wxSize(x1 - x0, h)),
+			m_HistogramDataColor.GetRed(),
+			m_HistogramDataColor.GetGreen(),
+			m_HistogramDataColor.GetBlue());
 	}
 
 	// 4) Update the on-canvas positions of the left/right borders so they stay accurate in the zoomed view

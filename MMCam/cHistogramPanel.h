@@ -136,6 +136,8 @@ private:
 	}
 
 private:
+	wxColour m_HistogramDataColor = wxColour(180, 29, 47);
+
 	int m_Width{}, m_Height{};
 	bool m_IsGraphicsBitmapSet{}, m_IsImageSet{};
 	wxGraphicsBitmap m_GraphicsBitmapImage{};
