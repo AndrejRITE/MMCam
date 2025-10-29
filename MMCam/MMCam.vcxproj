@@ -172,11 +172,13 @@
     <ClInclude Include="cPreviewTools.h" />
     <ClInclude Include="cSettings.h" />
     <ClInclude Include="cStylishComboBox.h" />
+    <ClInclude Include="Logging.h" />
     <ClInclude Include="MoravianInstrumentsControl.h" />
     <ClInclude Include="PostprocessingAlgorithms.h" />
     <ClInclude Include="IMotor.h" />
     <ClInclude Include="IMotorArray.h" />
     <ClInclude Include="json.hpp" />
+    <ClInclude Include="Profiler.h" />
     <ClInclude Include="SerialPortCommunication.h" />
     <ClInclude Include="StandaMotor.h" />
     <ClInclude Include="resource.h" />

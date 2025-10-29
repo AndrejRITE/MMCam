@@ -3,6 +3,7 @@
     "wxwidgets",
     "opencv",
 	"nlohmann-json",
-	"rapidxml"
+	"rapidxml",
+	"spdlog"
   ]
 }

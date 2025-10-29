@@ -1,5 +1,8 @@
 #include "cMain.h"
 
+#include "Logging.h"
+#include "Profiler.h"
+
 wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_FILE_OPEN, cMain::OnOpen)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_FILE_SAVE, cMain::OnSave)
@@ -259,6 +262,8 @@ void cMain::InitComponents()
 
 	// Restore the previous DPI awareness
 	SetProcessDpiAwarenessContext(oldContext);
+
+	InitLogging();
 }
 
 auto cMain::InitializeAboutHTML() -> void
@@ -3669,6 +3674,9 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 		// Start/Stop the acquisition
 		ProcessEvent(artStartStopLiveCapturing);
 	}
+
+	InitLogging();
+
 	{
 		auto now = std::chrono::system_clock::now();
 		auto cur_time = std::chrono::system_clock::to_time_t(now);
@@ -3696,6 +3704,7 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 			int binning{ 1 };
 			m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 
+			SCOPE_TIMER("CaptureAndDisplayAndSaveImageFromTheCamera");
 			auto imgPtr = m_CameraControl->GetImage();
 			if (!imgPtr)
 			{
@@ -3737,47 +3746,63 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 	const std::string outFilePath
 ) -> void
 {
+	SCOPE_TIMER("DisplayAndSaveImageFromTheCamera");
+
 	auto imageSize = wxSize{ (int)originalImgSize.GetWidth() / binning, (int)originalImgSize.GetHeight() / binning };
 
 	auto dataPtr = std::make_unique<unsigned short[]>(imageSize.GetWidth() * imageSize.GetHeight());
 
 	auto binningMode = m_Config->binning_sum_mode ? MainFrameVariables::BinningModes::BINNING_SUM : MainFrameVariables::BinningModes::BINNING_AVERAGE;
 
-	MainFrameVariables::BinImageData
-	(
-		imgPtr, 
-		dataPtr.get(),
-		binning,
-		originalImgSize.GetWidth(),
-		imageSize,
-		binningMode
-	);
+	{
+		SCOPE_TIMER("BinImageData");
+
+		MainFrameVariables::BinImageData
+		(
+			imgPtr,
+			dataPtr.get(),
+			binning,
+			originalImgSize.GetWidth(),
+			imageSize,
+			binningMode
+		);
+	}
 
 	/* Postprocessing */
 	if (m_BackgroundSubtractionCheckBox->IsChecked() && m_BackgroundSubtractionData)
 	{
 		auto binBackground = std::make_unique<unsigned short[]>(imageSize.GetWidth() * imageSize.GetHeight());
 
-		MainFrameVariables::BinImageData
-		(
-			m_BackgroundSubtractionData.get(),
-			binBackground.get(),
-			binning,
-			originalImgSize.GetWidth(),
-			imageSize,
-			binningMode
-		);
+		{
+			SCOPE_TIMER("BinImageData");
 
-		MainFrameVariables::SubtractImages
-		(
-			dataPtr.get(),
-			binBackground.get(),
-			imageSize
-		);
+			MainFrameVariables::BinImageData
+			(
+				m_BackgroundSubtractionData.get(),
+				binBackground.get(),
+				binning,
+				originalImgSize.GetWidth(),
+				imageSize,
+				binningMode
+			);
+		}
+
+		{
+			SCOPE_TIMER("SubtractImages");
+
+			MainFrameVariables::SubtractImages
+			(
+				dataPtr.get(),
+				binBackground.get(),
+				imageSize
+			);
+		}
 	}
 
 	if (m_MedianBlurCheckBox->IsChecked())
 	{
+		SCOPE_TIMER("ApplyMedianFilter");
+
 		MainFrameVariables::ApplyMedianFilter
 		(
 			dataPtr.get(),
@@ -7760,6 +7785,10 @@ auto LiveCapturing::CaptureImage
 	unsigned short* dataPtr
 ) -> bool
 {
+	InitLogging();
+
+	SCOPE_TIMER("CaptureImage");
+
 	if (!dataPtr) return false;
 	auto* imgPtr = m_CameraControl->GetImage();
 	if (!imgPtr) return false;
@@ -7769,24 +7798,35 @@ auto LiveCapturing::CaptureImage
 	const auto imgDataType = m_CameraControl->GetCameraDataType();
 	const auto outSize = wxSize( imgWidth / m_Binning, imgHeight / m_Binning );
 
-	MainFrameVariables::BinImageData
-	(
-		imgPtr, 
-		dataPtr, 
-		m_Binning, 
-		imgWidth, 
-		outSize, 
-		m_BinningMode
-	);
+	// Software Binning
+	{
+		SCOPE_TIMER("BinImageData");
 
+		MainFrameVariables::BinImageData
+		(
+			imgPtr,
+			dataPtr,
+			m_Binning,
+			imgWidth,
+			outSize,
+			m_BinningMode
+		);
+	}
+
+	// Subtract Background
 	if (m_BackgroundSubtractionDataPtr) 
 	{
+		SCOPE_TIMER("Background Subtraction");
+
 		UpdateCachedBackground(imgWidth, imgHeight);
 		if (m_BinnedBg) MainFrameVariables::SubtractImages(dataPtr, m_BinnedBg.get(), outSize);
 	}
 
+	// Median Blur
 	if (m_MedianBlurRadius > 0)
 	{
+		SCOPE_TIMER("ApplyMedianFilter");
+
 		MainFrameVariables::ApplyMedianFilter
 		(
 			dataPtr, 
