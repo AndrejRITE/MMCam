@@ -43,7 +43,7 @@
 #include "src/img/logo.xpm"
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 27
+#define MINOR_VERSION 28
 
 //#define DEBUG_OPEN
 //#define DEBUG_ANNULUS
