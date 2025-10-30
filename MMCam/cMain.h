@@ -200,6 +200,9 @@ namespace MainFrameVariables
 
 		/* Progress */
 		THREAD_PROGRESS_CAPTURING,
+
+		/* Temperature polling */
+		THREAD_TEMPERATURE,
 	};
 
 	enum BinningModes
@@ -752,6 +755,7 @@ class ProgressBar;
 class ProgressPanel;
 class WorkerThread;
 class ProgressThread;
+class TemperatureThread;
 
 #define USE_MULTITHREAD
 
@@ -1092,6 +1096,9 @@ private:
 	/* Progress */
 	void UpdateProgress(wxThreadEvent& evt);
 	bool Cancelled();
+
+	/* Camera temperature update (from TemperatureThread) */
+	void OnTemperatureUpdate(wxThreadEvent& evt);
 
 	void UpdateAllAxisGlobalPositions();
 
@@ -1882,6 +1889,8 @@ private:
 	unsigned short m_BgBinningSS{};
 	MainFrameVariables::BinningModes m_BgModeSS{};
 
+	std::unique_ptr<TemperatureThread> m_TemperatureThread{};
+
 	wxDECLARE_EVENT_TABLE();
 };
 /* ___ End cMain ___ */
@@ -2077,6 +2086,56 @@ private:
 	double m_PixelSizeUM{};
 };
 /* ___ End Worker Thread ___ */
+
+/* ___ Start Temperature Thread ___ */
+class TemperatureThread final : public wxThread
+{
+public:
+	TemperatureThread(cMain* frame, CameraControl* camera, int interval_ms = 300)
+		: wxThread(wxTHREAD_JOINABLE), m_Frame(frame), m_Camera(camera), m_IntervalMS(interval_ms) {
+	}
+
+	~TemperatureThread() override { Stop(); }
+
+	bool Start()
+	{
+		if (Create() != wxTHREAD_NO_ERROR) return false;
+		SetPriority(WXTHREAD_MIN_PRIORITY);
+		return Run() == wxTHREAD_NO_ERROR;
+	}
+
+	void Stop()
+	{
+		if (IsRunning())
+		{
+			Delete();  // signals TestDestroy()
+			Wait();    // join
+		}
+	}
+
+protected:
+	ExitCode Entry() override
+	{
+		while (!TestDestroy())
+		{
+			if (m_Frame && m_Camera)
+			{
+				const double t = m_Camera->GetSensorTemperature();
+				wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_TEMPERATURE);
+				evt.SetPayload<double>(t);
+				wxQueueEvent(m_Frame, evt.Clone());
+			}
+			wxThread::Sleep(m_IntervalMS);
+		}
+		return (ExitCode)0;
+	}
+
+private:
+	cMain* m_Frame{};
+	CameraControl* m_Camera{};
+	int m_IntervalMS{ 300 };
+};
+/* ___ End Temperature Thread ___ */
 
 /* ___ Start Progress Thread ___ */
 class ProgressThread final : public wxThreadHelper

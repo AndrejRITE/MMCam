@@ -145,6 +145,8 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_THREAD(MainFrameVariables::ID::THREAD_LIVE_CAPTURING, cMain::LiveCapturingThread)
 	/* Progress */
 	EVT_THREAD(MainFrameVariables::ID::THREAD_PROGRESS_CAPTURING, cMain::UpdateProgress)
+	/* Temperature checking */
+	EVT_THREAD(MainFrameVariables::ID::THREAD_TEMPERATURE, cMain::OnTemperatureUpdate)
 
 wxEND_EVENT_TABLE()
 
@@ -3986,6 +3988,17 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 
 	InitializeSelectedCamera();
 
+	// Stop previous thread if any (e.g., user re-initialized camera)
+	if (m_TemperatureThread) { m_TemperatureThread->Stop(); m_TemperatureThread.reset(); }
+
+	if (m_CameraControl)
+	{
+		m_TemperatureThread = std::make_unique<TemperatureThread>(this, m_CameraControl.get(), 300);
+
+		if (!m_TemperatureThread->Start())
+			m_TemperatureThread.reset();
+	}
+
 	// Data Type
 	{
 		auto cameraDataType = m_CameraControl->GetCameraDataType();
@@ -4463,6 +4476,12 @@ void cMain::OnExit(wxCloseEvent& evt)
 			m_StartStopMeasurementTglBtn->SetValue(!m_StartStopMeasurementTglBtn->GetValue());
 			wxCommandEvent artStopMeasurement(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT);
 			ProcessEvent(artStopMeasurement);
+		}
+
+		if (m_TemperatureThread)
+		{
+			m_TemperatureThread->Stop();
+			m_TemperatureThread.reset();
 		}
 
 		m_CameraControl->SetSensorTemperature(m_Config->default_sensor_temperature_degC);
@@ -6481,6 +6500,24 @@ auto cMain::OnImageStatisticsDisplayingCheck(wxCommandEvent& evt) -> void
 	m_CamPreview->SetImageStatisticsDisplayingActive(m_IsImageStatisticsDisplayingChecked);
 
 	Refresh();
+}
+
+void cMain::OnTemperatureUpdate(wxThreadEvent& evt)
+{
+	const double temperature = evt.GetPayload<double>();
+
+	if (!m_CurrentCameraSettingsPropertyGrid || !m_PropertiesNames) return;
+
+	// Format using your existing helper and update the property grid.
+	const auto tempString = CameraPreviewVariables::CreateStringWithPrecision(temperature, 1);
+
+	if (auto* prop = m_CurrentCameraSettingsPropertyGrid->GetProperty(m_PropertiesNames->temperature))
+	{
+		// Use SetPropertyValue to avoid flicker and keep editors consistent
+		m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(prop, tempString);
+		// Optionally force a refresh if you want immediate visual commit:
+		 m_CurrentCameraSettingsPropertyGrid->RefreshProperty(prop);
+	}
 }
 
 void cMain::UpdateAllAxisGlobalPositions()
