@@ -142,6 +142,7 @@ auto TucsenControl::Initialize() -> bool
 
 	m_CameraOpened = true;
     m_CameraSN = GetCameraName();
+	m_CameraSerialNumber = m_CameraSN;
 
     // Get Sensor Parameters
     {
