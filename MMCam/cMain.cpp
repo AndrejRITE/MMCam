@@ -3771,29 +3771,44 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 	/* Postprocessing */
 	if (m_BackgroundSubtractionCheckBox->IsChecked() && m_BackgroundSubtractionData)
 	{
-		auto binBackground = std::make_unique<unsigned short[]>(imageSize.GetWidth() * imageSize.GetHeight());
+		// Rebuild cache only if needed
+		const bool cache_miss =
+			!m_BinnedBgSS ||
+			m_BgSizeSS != imageSize ||
+			m_BgBinningSS != static_cast<unsigned short>(binning) ||
+			m_BgModeSS != binningMode;
 
+		if (cache_miss)
 		{
-			SCOPE_TIMER("BinImageData");
+			SCOPE_TIMER("BinImageData (BG cache rebuild)");
+			m_BgSizeSS = imageSize;
+			m_BinnedBgSS = std::make_unique<unsigned short[]>
+				(
+				static_cast<size_t>(imageSize.GetWidth()) * imageSize.GetHeight()
+				);
 
 			MainFrameVariables::BinImageData
 			(
 				m_BackgroundSubtractionData.get(),
-				binBackground.get(),
-				binning,
-				originalImgSize.GetWidth(),
+				m_BinnedBgSS.get(),
+				static_cast<unsigned short>(binning),
+				/* original width of the *source* background image (!) */
+				/* We must pass the *full sensor* width here, not imageSize.GetWidth(). */
+				originalImgSize.GetWidth() * binning,  // see note below
 				imageSize,
 				binningMode
 			);
+
+			m_BgBinningSS = static_cast<unsigned short>(binning);
+			m_BgModeSS = binningMode;
 		}
 
 		{
 			SCOPE_TIMER("SubtractImages");
-
 			MainFrameVariables::SubtractImages
 			(
 				dataPtr.get(),
-				binBackground.get(),
+				m_BinnedBgSS.get(),
 				imageSize
 			);
 		}
@@ -6596,6 +6611,10 @@ auto cMain::OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void
 	m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(wxColour(237, 28, 36));
 
 	m_BackgroundSubtractionData.reset();
+	m_BinnedBgSS.reset();
+	m_BgSizeSS = {};
+	m_BgBinningSS = 0;
+	m_BgModeSS = MainFrameVariables::BinningModes::BINNING_AVERAGE;
 
 	std::string filePath{};
 

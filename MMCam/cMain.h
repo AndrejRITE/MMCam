@@ -1876,6 +1876,12 @@ private:
 
 	std::unique_ptr<unsigned short[]> m_BackgroundSubtractionData{};
 
+	// Cached (binned) background for single-shot / DisplayAndSaveImageFromTheCamera()
+	std::unique_ptr<unsigned short[]> m_BinnedBgSS{};
+	wxSize m_BgSizeSS{};
+	unsigned short m_BgBinningSS{};
+	MainFrameVariables::BinningModes m_BgModeSS{};
+
 	wxDECLARE_EVENT_TABLE();
 };
 /* ___ End cMain ___ */
