@@ -16,6 +16,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, cMain::OnCrossHairButton)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, cMain::OnValueDisplayingCheck)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_IMAGE_STATISTICS, cMain::OnImageStatisticsDisplayingCheck)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_FPS, cMain::OnLiveViewFPSCheck)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FWHM_DISPLAYING, cMain::OnFWHMButton)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, cMain::OnFocusCenterButton)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, cMain::OnGridMeshButton)
@@ -572,6 +573,9 @@ void cMain::CreateMenuBarOnFrame()
 
 		// Image Statistics Check
 		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_IMAGE_STATISTICS, wxT("Image Statistics"));
+
+		// Live View FPS
+		m_MenuBar->menu_tools->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_FPS, wxT("FPS"));
 	}
 
 	// Append Tools Menu to the Menu Bar
@@ -4104,6 +4108,15 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 		ProcessEvent(artEvt);
 	}
 
+	// Display FPS
+	{
+		auto state = m_Config->display_live_view_fps;
+
+		m_MenuBar->menu_tools->Check(MainFrameVariables::ID::MENUBAR_TOOLS_FPS, state);
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_TOOLS_FPS);
+		ProcessEvent(artEvt);
+	}
+
 	// Enable Median Blur
 	{
 		auto enable = m_Config->median_blur_on;
@@ -6509,6 +6522,21 @@ auto cMain::OnImageStatisticsDisplayingCheck(wxCommandEvent& evt) -> void
 	Refresh();
 }
 
+auto cMain::OnLiveViewFPSCheck(wxCommandEvent& evt) -> void
+{
+	auto id = MainFrameVariables::ID::MENUBAR_TOOLS_FPS;
+	auto isChecked = m_MenuBar->menu_tools->IsChecked(id);
+
+	m_IsLiveViewFPSChecked = isChecked;
+
+	m_Config->display_live_view_fps = m_IsLiveViewFPSChecked;
+	RewriteInitializationFile();
+
+	m_CamPreview->ActivateFPSDisplaying(m_IsLiveViewFPSChecked);
+
+	Refresh();
+}
+
 void cMain::OnTemperatureUpdate(wxThreadEvent& evt)
 {
 	const double temperature = evt.GetPayload<double>();
@@ -7564,6 +7592,8 @@ auto cMain::EnableControlsAfterCapturing() -> void
 
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_IMAGE_STATISTICS, true);
 
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_FPS, true);
+
 	m_ImageColormapComboBox->stylish_combo_box->Enable();
 
 	m_HistogramPanel->Enable();
@@ -7635,6 +7665,8 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_VALUE_DISPLAYING, false);
 
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_IMAGE_STATISTICS, false);
+
+	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_FPS, false);
 
 	m_OutDirBtn->Disable();
 	m_FirstStage->DisableAllControls();

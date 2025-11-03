@@ -291,6 +291,7 @@ public:
 	auto SetAnnulusIDSelected(const long& id) -> CameraPreviewVariables::Annulus;
 	auto UpdateAnnulusValues(CameraPreviewVariables::Annulus& annulus) -> void;
 
+	void ActivateFPSDisplaying(bool show = true) { m_ShowFPS = show; Refresh(); }
 
 private:
 	void InitDefaultComponents();
@@ -373,6 +374,9 @@ private:
 
 	auto CalculateImageStatistics() -> void;
 
+	void TickFPS();
+	void DrawFPS(wxGraphicsContext* gc);
+
 private:
 	/* Buttons on keyboard */
 	bool m_CTRLPressed{};
@@ -407,7 +411,6 @@ private:
 
 	const wxColour m_ContrastDefaultColor = wxColour(255, 127, 39);
 
-	//std::unique_ptr<XimeaControl> m_XimeaCameraControl{};
 	std::string m_SelectedCameraSN{};
 
 	/* CrossHair Tool */
@@ -453,6 +456,12 @@ private:
 
 	CameraPreviewVariables::ImageStats m_LastStats{};
 	bool m_ShowImageStats{};
+
+	// FPS state
+	bool m_ShowFPS{ true };
+	double m_FPSInstant{ 0.0 };
+	double m_FPSEMA{ 0.0 };
+	std::chrono::steady_clock::time_point m_LastFrameTS{};
 
 	DECLARE_EVENT_TABLE();
 };

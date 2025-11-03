@@ -260,6 +260,8 @@ auto cCamPreview::SetCameraCapturedImage
 		ProcessEvent(event);
 	}
 
+	TickFPS();
+
 	LOG("Image was updated: " + wxString(__FUNCSIG__))
 	SetExecutionFinished(true);
 }
@@ -1229,6 +1231,54 @@ auto cCamPreview::CalculateImageStatistics() -> void
 	}
 }
 
+void cCamPreview::TickFPS()
+{
+	const auto now = std::chrono::steady_clock::now();
+
+	if (m_LastFrameTS.time_since_epoch().count() != 0) {
+		const double dt = std::chrono::duration<double>(now - m_LastFrameTS).count();
+		if (dt > 0.0) {
+			const double fps = 1.0 / dt;
+			// warm start EMA with first value
+			if (m_FPSEMA == 0.0) m_FPSEMA = fps;
+			// smoother EMA: keep history (alpha ~ 0.2 feels good)
+			m_FPSEMA = 0.2 * fps + 0.8 * m_FPSEMA;
+			m_FPSInstant = fps;
+		}
+	}
+	m_LastFrameTS = now;
+}
+
+void cCamPreview::DrawFPS(wxGraphicsContext* gc)
+{
+	if (!m_ShowFPS) return;
+
+	// Text
+	wxString txt = wxString::Format("FPS: %.1f (avg %.1f)", m_FPSInstant, m_FPSEMA);
+
+	// Font & metrics
+	wxFont font(11, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+	gc->SetFont(font, *wxWHITE);
+	wxDouble tw{}, th{};
+	gc->GetTextExtent(txt, &tw, &th);
+
+	// Badge rect (top-left)
+	const wxDouble pad = 6.0;
+	const wxDouble rx = 8.0; // rounded corners
+	wxDouble x = pad, y = pad;
+	wxDouble w = tw + 2 * pad, h = th + 2 * pad;
+
+	// Background with slight transparency
+	gc->SetBrush(wxBrush(wxColour(0, 0, 0, 120)));
+	gc->SetPen(*wxTRANSPARENT_PEN);
+	wxGraphicsPath path = gc->CreatePath();
+	path.AddRoundedRectangle(x, y, w, h, rx);
+	gc->FillPath(path);
+
+	// Text
+	gc->DrawText(txt, x + pad, y + pad);
+}
+
 auto cCamPreview::AddAnnulusOnCurrentImage() -> CameraPreviewVariables::Annulus
 {
 	CameraPreviewVariables::Annulus annulus{};
@@ -1387,6 +1437,8 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 		DrawPixelValues(gc);
 
 		DrawImageStatistics(gc);
+
+		DrawFPS(gc);
 
 		DrawAnnulus(gc);
 

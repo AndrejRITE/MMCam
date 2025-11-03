@@ -65,6 +65,7 @@ namespace MainFrameVariables
 		MENUBAR_TOOLS_CROSSHAIR,
 		MENUBAR_TOOLS_VALUE_DISPLAYING,
 		MENUBAR_TOOLS_IMAGE_STATISTICS,
+		MENUBAR_TOOLS_FPS,
 		MENUBAR_WINDOW_ENABLE_DARK_MODE,
 		MENUBAR_WINDOW_FULLSCREEN,
 		MENUBAR_HELP_ABOUT,
@@ -217,6 +218,7 @@ namespace MainFrameVariables
 		bool display_histogram{ true };
 		bool display_pixel_value{ true };
 		bool display_image_stats{ true };
+		bool display_live_view_fps{ true };
 		bool disable_report_generator{};
 		bool crosshair_adaptive_scaling{};
 
@@ -924,6 +926,7 @@ private:
 
 	void OnValueDisplayingCheck(wxCommandEvent& evt);
 	auto OnImageStatisticsDisplayingCheck(wxCommandEvent& evt) -> void;
+	auto OnLiveViewFPSCheck(wxCommandEvent& evt) -> void;
 
 	void OnFullScreen(wxCommandEvent& evt);
 	void OnMaximizeButton(wxMaximizeEvent& evt);
@@ -1830,6 +1833,9 @@ private:
 
 	/* Image Statistics */
 	bool m_IsImageStatisticsDisplayingChecked{};
+
+	/* Live View FPS */
+	bool m_IsLiveViewFPSChecked{};
 
 	/* Live Capturing */
 	//bool m_StopLiveCapturing{};
