@@ -353,6 +353,7 @@ private:
 
 	/* CrossHair */
 	void DrawCrossHair(wxGraphicsContext* graphics_context);
+	void DrawCrossHairAveragingOverlay(wxGraphicsContext* gc_);
 	auto DrawPixelValues(wxGraphicsContext* gc) -> void;
 
 	/* Annulus */

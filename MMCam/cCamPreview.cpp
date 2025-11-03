@@ -691,6 +691,90 @@ void cCamPreview::DrawCrossHair(wxGraphicsContext* graphics_context)
 	m_CrossHairTool->DrawCrossHair(graphics_context, m_ImageData.get());
 }
 
+void cCamPreview::DrawCrossHairAveragingOverlay(wxGraphicsContext* gc_)
+{
+	if (!m_DisplayCrossHair) return;
+	if (!m_ImageData) return;
+
+	// Only at maximum zoom
+	if ((m_Zoom / m_ZoomOnOriginalSizeImage) < m_MaxZoom) return;
+
+	// Pixel geometry on canvas
+	const wxRealPoint half =
+	{
+		m_Zoom / m_ZoomOnOriginalSizeImage / 2.0,
+		m_Zoom / m_ZoomOnOriginalSizeImage / 2.0
+	};
+	if (half.x < 0.5 || half.y < 0.5) return; // degenerate guard
+
+	const double pw = half.x * 2.0;
+	const double ph = half.y * 2.0;
+
+	// Image top-left on canvas
+	const wxRealPoint img0 =
+	{
+		m_StartDrawPos.x * m_Zoom / m_ZoomOnOriginalSizeImage,
+		m_StartDrawPos.y * m_Zoom / m_ZoomOnOriginalSizeImage
+	};
+
+	// Crosshair center in image coords
+	const int cx = std::clamp(m_CrossHairPos.x, 0, m_ImageSize.GetWidth() - 1);
+	const int cy = std::clamp(m_CrossHairPos.y, 0, m_ImageSize.GetHeight() - 1);
+
+	// Averaging width in pixels
+	const int W = std::clamp(m_CrossHairAveragingWidthPX, 1, std::max(m_ImageSize.GetWidth(), m_ImageSize.GetHeight()));
+
+	// Band extents (inclusive) around center
+	const int hx0 = std::max(0, cx - (W - 1) / 2);
+	const int hx1 = std::min(m_ImageSize.GetWidth() - 1, cx + W / 2);
+	const int hy0 = std::max(0, cy - (W - 1) / 2);
+	const int hy1 = std::min(m_ImageSize.GetHeight() - 1, cy + W / 2);
+
+	// Semi-transparent brush using contrast color
+	wxColour c = m_ContrastDefaultColor;
+	c.Set(c.Red(), c.Green(), c.Blue(), 90);
+	gc_->SetBrush(wxBrush(c, wxBRUSHSTYLE_SOLID));
+	gc_->SetPen(*wxTRANSPARENT_PEN);
+
+	// Vertical band: columns [hx0..hx1], all rows
+	for (int x = hx0; x <= hx1; ++x)
+	{
+		const double canvasX = img0.x + x * pw;
+		if (canvasX > m_CanvasSize.GetWidth()) break;
+		if (canvasX + pw < 0) continue;
+
+		// Clip to visible rows by canvas Y
+		// Compute the first and last visible row roughly by canvas bounds
+		int yStart = 0, yEnd = m_ImageSize.GetHeight() - 1;
+		// Quick cull using canvas bounds
+		// Per-pixel check is still cheap but this avoids work when fully off-screen
+		for (int y = yStart; y <= yEnd; ++y)
+		{
+			const double canvasY = img0.y + y * ph;
+			if (canvasY + ph < 0) continue;
+			if (canvasY > m_CanvasSize.GetHeight()) break;
+			gc_->DrawRectangle(canvasX, canvasY, pw, ph);
+		}
+	}
+
+	// Horizontal band: rows [hy0..hy1], all columns
+	for (int y = hy0; y <= hy1; ++y)
+	{
+		const double canvasY = img0.y + y * ph;
+		if (canvasY > m_CanvasSize.GetHeight()) break;
+		if (canvasY + ph < 0) continue;
+
+		int xStart = 0, xEnd = m_ImageSize.GetWidth() - 1;
+		for (int x = xStart; x <= xEnd; ++x)
+		{
+			const double canvasX = img0.x + x * pw;
+			if (canvasX + pw < 0) continue;
+			if (canvasX > m_CanvasSize.GetWidth()) break;
+			gc_->DrawRectangle(canvasX, canvasY, pw, ph);
+		}
+	}
+}
+
 auto cCamPreview::DrawPixelValues(wxGraphicsContext* gc) -> void
 {
 	if (!m_DisplayPixelValues) return;
@@ -935,12 +1019,21 @@ auto cCamPreview::DrawImageStatistics(wxGraphicsContext* gc) -> void
 			return str;
 		};
 
+	auto format_scientific10 = [](unsigned long long v) -> wxString
+		{
+			if (v == 0ull) return "0";
+			std::ostringstream os;
+			os.setf(std::ios::scientific | std::ios::uppercase);
+			os << std::setprecision(3) << static_cast<long double>(v);
+			return wxString::FromUTF8(os.str());
+		};
+
 	wxString txt;
 	txt.Printf(
 		"Min: %s\nMax: %s\nCount: %s\nMean: %.2f\nStdDev: %.2f",
 		format_number(s.minV),
 		format_number(s.maxV),
-		format_number(s.sum),
+		format_scientific10(s.sum),
 		s.mean,
 		s.stddev
 	);
@@ -1290,6 +1383,7 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 		DrawScaleBar(gc);
 
 		DrawCrossHair(gc);
+		DrawCrossHairAveragingOverlay(gc);
 		DrawPixelValues(gc);
 
 		DrawImageStatistics(gc);
