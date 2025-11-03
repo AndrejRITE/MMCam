@@ -259,6 +259,7 @@ namespace MainFrameVariables
 			display_histogram,
 			display_pixel_value,
 			display_image_stats,
+			display_live_view_fps,
 			disable_report_generator,
 			crosshair_adaptive_scaling,
 
