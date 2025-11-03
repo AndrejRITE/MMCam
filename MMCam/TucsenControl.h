@@ -38,6 +38,9 @@ public:
     auto SetSensorTemperature(const double requiredTemperature) -> void override;
     auto GetSensorTemperature() -> double override;
 
+    auto BeginContinuousAcquisition() -> bool override;
+    auto EndContinuousAcquisition() -> void override;
+
 private:
     // Helpers
     auto parseIndexOrDefault() const -> unsigned int;

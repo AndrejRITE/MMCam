@@ -1891,6 +1891,11 @@ private:
 
 	std::unique_ptr<TemperatureThread> m_TemperatureThread{};
 
+	// --- Cooling state ---
+	bool   m_IsCoolingDown{ false };
+	double m_TargetSensorTempDegC{ 0.0 };
+	double m_TempReachedToleranceDegC{ 0.2 }; // adjust as you like (0.2–0.5 is typical)
+
 	wxDECLARE_EVENT_TABLE();
 };
 /* ___ End cMain ___ */

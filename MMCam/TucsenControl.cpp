@@ -298,3 +298,15 @@ auto TucsenControl::GetSensorTemperature() -> double
     m_SensorTemperature = v;
     return m_SensorTemperature;
 }
+
+auto TucsenControl::BeginContinuousAcquisition() -> bool
+{
+    // Start once in sequence mode; stays running until Cap_Stop.
+    return StartAcquisition();  // sets m_Capturing=true on success
+}
+
+auto TucsenControl::EndContinuousAcquisition() -> void
+{
+    // Stop once after the loop finishes.
+    StopAcquisition();
+}

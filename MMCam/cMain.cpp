@@ -4246,29 +4246,36 @@ auto cMain::CoolDownTheCamera() -> void
 
 	m_CameraControlNotebook->SetSelection(1);
 
-	m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(m_PropertiesNames->temperature, wxColour(0, 162, 232));
+	auto propertyColor = wxColour(0, 162, 232);
+
+	auto currentTemperature = m_CameraControl->GetSensorTemperature();
+
+	double requestedTemperature{};
+	m_CameraTabControls->camSensorTemperature->GetValue().ToDouble(&requestedTemperature);
+	m_CameraControl->SetSensorTemperature(requestedTemperature);
+
+	if (currentTemperature < requestedTemperature)
+		propertyColor = wxColour(237, 28, 36); // Red
+
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(m_PropertiesNames->temperature, propertyColor);
 
 	{
-		double requestedTemperature{};
-		m_CameraTabControls->camSensorTemperature->GetValue().ToDouble(&requestedTemperature);
-		m_CameraControl->SetSensorTemperature(requestedTemperature);
+		//auto currentTemperature = m_CameraControl->GetSensorTemperature();
 
-		auto currentTemperature = m_CameraControl->GetSensorTemperature();
+		//auto thresholdDegC = 0.1;
+		//while (currentTemperature > requestedTemperature + thresholdDegC || currentTemperature < requestedTemperature - thresholdDegC)
+		//{
+		//	std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		//	currentTemperature = m_CameraControl->GetSensorTemperature();
 
-		auto thresholdDegC = 0.1;
-		while (currentTemperature > requestedTemperature + thresholdDegC || currentTemperature < requestedTemperature - thresholdDegC)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
-			currentTemperature = m_CameraControl->GetSensorTemperature();
-
-			auto tempString = CameraPreviewVariables::CreateStringWithPrecision(currentTemperature, 1);
-			m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->temperature, tempString);
-		}
+		//	auto tempString = CameraPreviewVariables::CreateStringWithPrecision(currentTemperature, 1);
+		//	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->temperature, tempString);
+		//}
 	}
 
-	m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(m_PropertiesNames->temperature, m_DefaultCellColor);
+	//m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(m_PropertiesNames->temperature, m_DefaultCellColor);
 
-	m_CameraControlNotebook->SetSelection(0);
+	//m_CameraControlNotebook->SetSelection(0);
 }
 
 void cMain::OnFullScreen(wxCommandEvent& evt)
@@ -4303,7 +4310,7 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 
 #ifdef _DEBUG
 	//filePath = ".\\src\\dbg_fld\\goodSmooth.tif";
-	filePath = ".\\src\\dbg_fld\\ss_14H_00M_18S_1500000us.tif";
+	filePath = ".\\src\\dbg_fld\\ss_14H_38M_40S_100000us.tif";
 	//filePath = ".\\src\\dbg_fld\\badSmooth.tif";
 	//filePath = ".\\src\\dbg_fld\\ss_14H_01M_23S_1500000us.tif";
 #else
@@ -6518,6 +6525,29 @@ void cMain::OnTemperatureUpdate(wxThreadEvent& evt)
 		// Optionally force a refresh if you want immediate visual commit:
 		 m_CurrentCameraSettingsPropertyGrid->RefreshProperty(prop);
 	}
+
+	// If we're cooling, check if we've reached target within tolerance
+	if (m_IsCoolingDown)
+	{
+		const bool reached = std::fabs(temperature - m_TargetSensorTempDegC) <= m_TempReachedToleranceDegC;
+
+		// Consider "reached" when current <= target + tol (most sensors overshoot slightly, tweak logic if heating)
+		if (reached)
+		{
+			m_IsCoolingDown = false;
+
+			// End busy cursor + re-enable UI
+			if (wxIsBusy()) wxEndBusyCursor();
+			m_CameraTabControls->EnableAllControls();
+			SetStatusText(wxString::Format("Temperature stable at %.1f °C.", temperature));
+			m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(m_PropertiesNames->temperature, m_DefaultCellColor);
+		}
+		else
+		{
+			// still cooling – optional UI pulse/update text here
+			 SetStatusText(wxString::Format("Cooling: %.1f → %.1f °C", temperature, m_TargetSensorTempDegC));
+		}
+	}
 }
 
 void cMain::UpdateAllAxisGlobalPositions()
@@ -6562,14 +6592,30 @@ auto cMain::OnSensorTemperatureChanged(wxCommandEvent& evt) -> void
 {
 	wxBusyCursor busy;
 
-	double temperature{};
-	m_CameraTabControls->camSensorTemperature->GetValue().ToDouble(&temperature);
+	double desiredDegC{};
+	if (!m_CameraTabControls->camSensorTemperature->GetValue().ToDouble(&desiredDegC))
+		return;
 
-	m_Config->default_cooled_sensor_temperature_degC = temperature;
+	// 1) Tell the camera about the new target (whatever your API is)
+	// Example: m_CameraControl->SetSensorTargetTemperature(desiredDegC);
+	// Or if you only have "CoolDownTheCamera()" you can pass/remember target here.
+	CoolDownTheCamera();
+
+	m_TargetSensorTempDegC = desiredDegC;
+	m_IsCoolingDown = true;
+
+	// 3) UI feedback but NON-BLOCKING
+	wxBeginBusyCursor();                  // stays until wxEndBusyCursor() is called later
+	wxWindowDisabler disabler(this);      // optional: temporarily disable clicks
+	m_CameraTabControls->DisableAllControls(true); // keep Live toggle if you want
+
+	// If you have a status bar/progress text:
+	SetStatusText(wxString::Format("Cooling to %.1f °C…", desiredDegC));
+
+	m_Config->default_cooled_sensor_temperature_degC = m_TargetSensorTempDegC;
 	RewriteInitializationFile();
 	//m_Settings->SetTemperature(temperature);
 
-	CoolDownTheCamera();
 }
 
 auto cMain::OnCameraNotebookPageChanged(wxBookCtrlEvent& evt) -> void
@@ -7802,6 +7848,16 @@ wxThread::ExitCode LiveCapturing::Entry()
 	m_CameraControl->SetExposureTime(m_ExposureUS);
 	m_ImageSize.Set(m_CameraControl->GetWidth() / m_Binning, m_CameraControl->GetHeight() / m_Binning);
 
+	const bool began = m_CameraControl->BeginContinuousAcquisition();
+	if (!began) 
+	{
+		// fail gracefully if camera refuses to begin
+		evt.SetInt(-1);
+		wxQueueEvent(m_MainFrame, evt.Clone());
+		exit_thread();
+		return (wxThread::ExitCode)0;
+	}
+
 	const auto checkingInterval = m_ExposureUS / 3;
 	const auto interval = std::chrono::microseconds(checkingInterval);  
 
@@ -7830,6 +7886,8 @@ wxThread::ExitCode LiveCapturing::Entry()
 		evt.SetPayload(dataPtr.release());
 		wxQueueEvent(m_MainFrame, evt.Clone());
 	}
+
+	m_CameraControl->EndContinuousAcquisition();
 
 	exit_thread();
 
