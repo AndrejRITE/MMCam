@@ -1046,11 +1046,29 @@ auto cCamPreview::DrawImageStatistics(wxGraphicsContext* gc) -> void
 	wxDouble widthText{}, heightText{};
 	gc->GetTextExtent(txt, &widthText, &heightText);
 
-	gc->DrawText(
-		txt,
-		5,
-		GetSize().GetHeight() - 5 - heightText
-	);
+	// Render background badge
+	{
+		// Badge rect (bottom-left)
+		const wxDouble pad = 6.0;
+		const wxDouble rx = 6.0; // rounded corners
+
+		wxDouble x = pad, y = GetSize().GetHeight() - pad - heightText - 2 * pad;
+		wxDouble w = widthText + 2 * pad, h = heightText + 2 * pad;
+
+		// Background with slight transparency
+		gc->SetBrush(wxBrush(wxColour(0, 0, 0, 120)));
+		gc->SetPen(*wxTRANSPARENT_PEN);
+		wxGraphicsPath path = gc->CreatePath();
+		path.AddRoundedRectangle(x, y, w, h, rx);
+		gc->FillPath(path);
+
+		gc->DrawText
+		(
+			txt,
+			x + pad,
+			y + pad
+		);
+	}
 }
 
 auto cCamPreview::OnKeyPressed(wxKeyEvent& evt) -> void
