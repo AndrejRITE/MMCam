@@ -3857,6 +3857,8 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 			m_Config->median_blur_ksize
 		);
 	}
+
+	ApplyTransformationsU16(dataPtr.get(), imageSize);
 	
 	auto minimumCount = 5;
 	unsigned short minValue{}, maxValue{};
@@ -7722,6 +7724,7 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, enableWidget);
 
 	m_VerticalToolBar->tool_bar->Enable();
+	m_HorizontalToolBar->tool_bar->Enable();
 
 	m_OutDirBtn->Enable();
 	
@@ -9148,11 +9151,11 @@ void cMain::CreateTransformationMenu()
 {
 	// ensure Tools menu exists
 	wxMenu* transform = new wxMenu();
-	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90, "Rotate 90° CW\tCtrl+R");
-	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90, "Rotate 90° CCW\tCtrl+Shift+R");
+	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90, "Rotate 90° Left\tCtrl+Shift+R");
+	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90, "Rotate 90° Right\tCtrl+R");
 	transform->AppendSeparator();
-	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_H, "Mirror horizontally");
-	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_V, "Mirror vertically");
+	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_H, "Mirror Horizontally");
+	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_V, "Mirror Vertically");
 
 	m_MenuBar->menu_tools->AppendSubMenu(transform, "Transformation");
 	m_MenuBar->menu_bar->Refresh(); // optional
@@ -9162,13 +9165,42 @@ void cMain::AddTransformationTools(const wxSize& size)
 {
 	auto* tb = m_HorizontalToolBar->tool_bar;
 
+	// Rotate 90 [deg] CCW
+	{
+		wxBitmap toolBitmap{};
+		{
+			auto bitmap = wxART_ROTATE_LEFT;
+			auto client = wxART_CLIENT_MATERIAL_ROUND;
+			auto color = m_DefaultWidgetsColor;
+
+			toolBitmap = wxMaterialDesignArtProvider::GetBitmap
+			(
+				bitmap,
+				client,
+				size,
+				color
+			);
+		}
+
+		// Replace wxArtIDs with your bitmaps if you have them
+		tb->AddCheckTool
+		(
+			MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90,
+			"Rot CCW",
+			toolBitmap,
+			wxNullBitmap,
+			"Rotate 90° CCW"
+		);
+	}
+
 	// Rotate 90 [deg] CW
 	{
 		wxBitmap toolBitmap{};
 		{
 			auto bitmap = wxART_ROTATE_RIGHT;
 			auto client = wxART_CLIENT_MATERIAL_ROUND;
-			auto color = wxColour(255, 128, 64);
+			auto color = m_DefaultWidgetsColor;
+
 			toolBitmap = wxMaterialDesignArtProvider::GetBitmap
 			(
 				bitmap,
@@ -9189,25 +9221,63 @@ void cMain::AddTransformationTools(const wxSize& size)
 		);
 	}
 
-	tb->AddTool
-	(
-		MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90,
-		"Rot CCW", wxArtProvider::GetBitmap(wxART_UNDO, wxART_TOOLBAR), wxNullBitmap, wxITEM_CHECK, "Rotate 90° CCW"
-	);
-
 	tb->AddSeparator();
 
-	tb->AddTool
-	(
-		MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_H,
-		"Mirror H", wxArtProvider::GetBitmap(wxART_GO_BACK, wxART_TOOLBAR), wxNullBitmap, wxITEM_CHECK, "Mirror horizontally"
-	);
+	// Mirror horizontally
+	{
+		wxBitmap toolBitmap{};
+		{
+			auto bitmap = wxART_FLIP_HORIZONTAL;
+			auto client = wxART_CLIENT_FLUENTUI_FILLED;
+			auto color = m_DefaultWidgetsColor;
 
-	tb->AddTool
-	(
-		MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_V,
-		"Mirror V", wxArtProvider::GetBitmap(wxART_GO_DOWN, wxART_TOOLBAR), wxNullBitmap, wxITEM_CHECK, "Mirror vertically"
-	);
+			toolBitmap = wxMaterialDesignArtProvider::GetBitmap
+			(
+				bitmap,
+				client,
+				size,
+				color
+			);
+		}
+
+		// Replace wxArtIDs with your bitmaps if you have them
+		tb->AddCheckTool
+		(
+			MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_H,
+			"Mirror H",
+			toolBitmap,
+			wxNullBitmap,
+			"Mirror Horizontally"
+		);
+	}
+
+	// Mirror vertically
+	{
+		wxBitmap toolBitmap{};
+		{
+			auto bitmap = wxART_FLIP_VERTICAL;
+			auto client = wxART_CLIENT_FLUENTUI_FILLED;
+			auto color = m_DefaultWidgetsColor;
+
+			toolBitmap = wxMaterialDesignArtProvider::GetBitmap
+			(
+				bitmap,
+				client,
+				size,
+				color
+			);
+		}
+
+		// Replace wxArtIDs with your bitmaps if you have them
+		tb->AddCheckTool
+		(
+			MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_V,
+			"Mirror V",
+			toolBitmap,
+			wxNullBitmap,
+			"Mirror Vertically"
+		);
+	}
 
 	// route toolbar clicks via the same handlers
 	tb->Bind(wxEVT_TOOL, &cMain::OnRotateCW90, this, MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90);
@@ -9275,28 +9345,40 @@ void cMain::OnMirrorV(wxCommandEvent& evt)
 	Refresh(); Update();
 }
 
-void cMain::ApplyTransformationsU16(unsigned short*& data, int& w, int& h)
+void cMain::ApplyTransformationsU16(unsigned short* data, wxSize& size)
 {
-	if (!data || w <= 0 || h <= 0) return;
+	if (!data || size.GetWidth() <= 0 || size.GetHeight() <= 0)
+		return;
 
-	cv::Mat m(h, w, CV_16UC1, data);
+	const int width = size.GetWidth();
+	const int height = size.GetHeight();
+	cv::Mat src(height, width, CV_16UC1, data);
 	cv::Mat tmp;
 
-	// rotation
-	if (m_Rotation == Rotation90::CW)      cv::rotate(m, tmp, cv::ROTATE_90_CLOCKWISE);
-	else if (m_Rotation == Rotation90::CCW) cv::rotate(m, tmp, cv::ROTATE_90_COUNTERCLOCKWISE);
-	else                                    m.copyTo(tmp);
+	// Apply rotation
+	if (m_Rotation == Rotation90::CW)
+		cv::rotate(src, tmp, cv::ROTATE_90_CLOCKWISE);
+	else if (m_Rotation == Rotation90::CCW)
+		cv::rotate(src, tmp, cv::ROTATE_90_COUNTERCLOCKWISE);
+	else
+		src.copyTo(tmp);
 
-	// mirroring
-	if (m_MirrorH) cv::flip(tmp, tmp, 1);  // horizontal
-	if (m_MirrorV) cv::flip(tmp, tmp, 0);  // vertical
+	// Apply mirroring
+	if (m_MirrorH)
+		cv::flip(tmp, tmp, 1);  // horizontal
+	if (m_MirrorV)
+		cv::flip(tmp, tmp, 0);  // vertical
 
-	// hand back ownership in a linear buffer
-	const int newW = tmp.cols, newH = tmp.rows;
-	auto out = std::make_unique<unsigned short[]>(static_cast<size_t>(newW) * newH);
-	std::memcpy(out.get(), tmp.ptr<unsigned short>(), sizeof(unsigned short) * newW * newH);
+	// Copy transformed data back to original buffer (same pointer)
+	const int newWidth = tmp.cols;
+	const int newHeight = tmp.rows;
+	const size_t totalPixels = static_cast<size_t>(newWidth) * newHeight;
 
-	// replace caller buffer
-	data = out.release();
-	w = newW; h = newH;
+	// If the rotation changed dimensions, you must ensure your buffer is large enough.
+	// Here we just overwrite up to the original allocated space.
+	std::memcpy(data, tmp.ptr<unsigned short>(), totalPixels * sizeof(unsigned short));
+
+	// Update size to reflect new dimensions
+	size.SetWidth(newWidth);
+	size.SetHeight(newHeight);
 }

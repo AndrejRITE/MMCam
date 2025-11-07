@@ -1806,7 +1806,7 @@ private:
 	void OnMirrorH(wxCommandEvent& evt);
 	void OnMirrorV(wxCommandEvent& evt);
 
-	void ApplyTransformationsU16(unsigned short*& data, int& w, int& h);
+	void ApplyTransformationsU16(unsigned short* data, wxSize& size);
 
 private:
 	/* Initialization file */
@@ -1878,6 +1878,8 @@ private:
 	/* Appearance Colors */
 	const wxColour m_DefaultAppearanceColor = wxColour(180, 180, 180);
 	const wxColour m_BlackAppearanceColor = wxColour(75, 75, 75);
+
+	const wxColour m_DefaultWidgetsColor = wxColour(255, 128, 64);
 
 	std::unique_ptr<wxStatusBar> m_StatusBar{};
 	std::unique_ptr<wxGauge> m_ProgressBar{};
