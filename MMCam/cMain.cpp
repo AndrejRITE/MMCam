@@ -7664,6 +7664,7 @@ auto cMain::EnableControlsAfterCapturing() -> void
 {
 	if (m_CameraControl && m_CameraControl->IsConnected())
 	{
+		m_CameraTabControls->camSensorTemperature->Enable();
 		m_CameraTabControls->camExposure->Enable();
 
 		if (m_OutDirTextCtrl->GetValue() != "Save directory...")
