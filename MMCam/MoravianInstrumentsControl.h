@@ -71,8 +71,9 @@ namespace MoravianInstrumentsVariables
 class MoravianInstrumentsControl final : public CameraControl
 {
 public:
-	explicit MoravianInstrumentsControl(std::string cameraSN) : m_CameraSN(std::move(cameraSN)) 
+	explicit MoravianInstrumentsControl(std::string cameraSN)
 	{
+		m_CameraSerialNumber = std::move(cameraSN);
 		m_ImageDataType = CameraControlVariables::ImageDataTypes::RAW_16BIT;
 
 		m_ActualCameraParameters = std::make_unique<MoravianInstrumentsVariables::ActualCameraParameters>();
@@ -89,6 +90,8 @@ public:
 	auto SetExposureTime(int exposure_us) -> void override;
     auto SetSensorTemperature(const double requiredTemperature) -> void override;
 	auto GetSensorTemperature() -> double override;
+
+	auto GetSupplyVoltage() -> double override;
 
 	auto GetWidth() const -> unsigned long override { return m_CameraHandler == nullptr || m_ActualCameraParameters == nullptr ? 0 : m_ActualCameraParameters->sensor_width; };
 	auto GetHeight() const -> unsigned long override { return m_CameraHandler == nullptr || m_ActualCameraParameters == nullptr ? 0 : m_ActualCameraParameters->sensor_height; };
@@ -110,7 +113,6 @@ private:
 
 protected:
 	bool m_IsCameraOpen{ false };
-	std::string m_CameraSN{};
 	gxetha::CCamera* m_CameraHandler{};
 	std::unique_ptr<MoravianInstrumentsVariables::ActualCameraParameters> m_ActualCameraParameters{};
 	std::unique_ptr<MoravianInstrumentsVariables::CapturingParameters> m_CapturingParameters{};

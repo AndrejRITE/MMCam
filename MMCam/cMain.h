@@ -480,6 +480,7 @@ namespace MainFrameVariables
 	{
 		wxString id{ "ID" };
 		wxString temperature{ "Sensor Temperature [degC]" };
+		wxString voltage{ "Supply Voltage [V]" };
 		wxString depth{ "Depth [bit]" };
 		wxString sensor_width_px{ "Sensor Width [px]" };
 		wxString sensor_height_px{ "Sensor Height [px]" };
@@ -2133,8 +2134,9 @@ protected:
 			if (m_Frame && m_Camera)
 			{
 				const double t = m_Camera->GetSensorTemperature();
+				const double voltage = m_Camera->GetSupplyVoltage();
 				wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_TEMPERATURE);
-				evt.SetPayload<double>(t);
+				evt.SetPayload<std::pair<double, double>>({ t, voltage });
 				wxQueueEvent(m_Frame, evt.Clone());
 			}
 			wxThread::Sleep(m_IntervalMS);

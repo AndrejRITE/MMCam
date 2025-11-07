@@ -2,7 +2,7 @@
 
 auto MoravianInstrumentsControl::Initialize() -> bool 
 {
-	auto cameraSN = std::stoi(m_CameraSN);
+	auto cameraSN = std::stoi(m_CameraSerialNumber);
 	m_CameraHandler = gxetha::Initialize(cameraSN);
 
 	auto isConnected = IsConnected();
@@ -11,8 +11,6 @@ auto MoravianInstrumentsControl::Initialize() -> bool
 		m_CameraHandler = nullptr;
 		return isConnected;
 	}
-
-	m_CameraSerialNumber = m_CameraSN;
 
 	GetCameraParameters(m_ActualCameraParameters.get());
 
@@ -118,10 +116,19 @@ auto MoravianInstrumentsControl::SetSensorTemperature(const double requiredTempe
 auto MoravianInstrumentsControl::GetSensorTemperature() -> double 
 {
 	if (!m_CameraHandler) return 0.0;
-	gxetha::REAL sensorTemperature;
-	gxetha::GetValue(m_CameraHandler, gvChipTemperature, &sensorTemperature);
-	m_SensorTemperature = static_cast<double>(sensorTemperature);
+	gxetha::REAL value;
+	gxetha::GetValue(m_CameraHandler, gvChipTemperature, &value);
+	m_SensorTemperature = static_cast<double>(value);
 	return m_SensorTemperature;
+}
+
+auto MoravianInstrumentsControl::GetSupplyVoltage() -> double
+{
+	if (!m_CameraHandler) return 0.0;
+	gxetha::REAL value;
+	gxetha::GetValue(m_CameraHandler, gvSupplyVoltage, &value);
+	m_SupplyVoltage = static_cast<double>(value);
+	return m_SupplyVoltage;
 }
 
 auto MoravianInstrumentsControl::IsConnected() const -> bool 

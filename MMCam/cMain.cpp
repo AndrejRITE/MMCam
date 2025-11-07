@@ -2101,10 +2101,6 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		wxPG_SPLITTER_AUTO_CENTER
 	);
 
-	//wxFont boldFont = m_CurrentCameraSettingsPropertyGrid->GetFont();
-	//boldFont.SetWeight(wxFONTWEIGHT_BOLD);
-
-	//m_CurrentCameraSettingsPropertyGrid->SetFont(boldFont);
 	auto property = m_CurrentCameraSettingsPropertyGrid->Append
 	(
 		new wxStringProperty
@@ -2117,8 +2113,6 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 
 	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
-	//boldFont.SetWeight(wxFONTWEIGHT_NORMAL);
-
 	property = m_CurrentCameraSettingsPropertyGrid->Append
 	(
 		new wxStringProperty
@@ -2129,7 +2123,6 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		)
 	);
 
-	//property->ChangeFlag(wxPG_PROP_READONLY, true);
 	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
 	property = m_CurrentCameraSettingsPropertyGrid->Append
@@ -2142,7 +2135,18 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		)
 	);
 
-	//property->ChangeFlag(wxPG_PROP_READONLY, true);
+	property->ChangeFlag(wxPGFlags::ReadOnly, true);
+
+	property = m_CurrentCameraSettingsPropertyGrid->Append
+	(
+		new wxFloatProperty
+		(
+			m_PropertiesNames->voltage, 
+			m_PropertiesNames->voltage, 
+			0.0
+		)
+	);
+
 	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
 	auto pixelGroup = m_CurrentCameraSettingsPropertyGrid->Append(new wxPropertyCategory("Sensor Size [px]", "SensorSizePixels"));
@@ -2158,7 +2162,6 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		)
 	);
 
-	//property->ChangeFlag(wxPG_PROP_READONLY, true);
 	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
 	property = m_CurrentCameraSettingsPropertyGrid->AppendIn
@@ -2172,7 +2175,6 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		)
 	);
 
-	//property->ChangeFlag(wxPG_PROP_READONLY, true);
 	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
 	auto micronsGroup = m_CurrentCameraSettingsPropertyGrid->Append(new wxPropertyCategory("Sensor Size [um]", "SensorSizeMicrons"));
@@ -2188,7 +2190,6 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		)
 	);
 
-	//property->ChangeFlag(wxPG_PROP_READONLY, true);
 	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
 	property = m_CurrentCameraSettingsPropertyGrid->AppendIn
@@ -4228,6 +4229,9 @@ auto cMain::UpdateCameraParameters() -> void
 
 	auto tempString = CameraPreviewVariables::CreateStringWithPrecision(m_CameraControl->GetSensorTemperature(), 1);
 	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->temperature, tempString);
+
+	auto supplyVoltageString = CameraPreviewVariables::CreateStringWithPrecision(m_CameraControl->GetSupplyVoltage(), 1);
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->voltage, supplyVoltageString);
 
 	auto depth = m_CameraControl->GetCameraDataType() == CameraControlVariables::ImageDataTypes::RAW_12BIT ? wxString("12") : wxString("16");
 	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->depth, depth);
@@ -6539,19 +6543,30 @@ auto cMain::OnLiveViewFPSCheck(wxCommandEvent& evt) -> void
 
 void cMain::OnTemperatureUpdate(wxThreadEvent& evt)
 {
-	const double temperature = evt.GetPayload<double>();
+	const auto tv = evt.GetPayload<std::pair<double, double>>();
+	const double temperature = tv.first;
+	const double voltage = tv.second;
 
 	if (!m_CurrentCameraSettingsPropertyGrid || !m_PropertiesNames) return;
 
 	// Format using your existing helper and update the property grid.
 	const auto tempString = CameraPreviewVariables::CreateStringWithPrecision(temperature, 1);
 
+	// Update Temperature property
 	if (auto* prop = m_CurrentCameraSettingsPropertyGrid->GetProperty(m_PropertiesNames->temperature))
 	{
 		// Use SetPropertyValue to avoid flicker and keep editors consistent
 		m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(prop, tempString);
 		// Optionally force a refresh if you want immediate visual commit:
 		 m_CurrentCameraSettingsPropertyGrid->RefreshProperty(prop);
+	}
+
+	// Update supply voltage
+	const auto voltString = CameraPreviewVariables::CreateStringWithPrecision(voltage, 1);
+	if (auto* pV = m_CurrentCameraSettingsPropertyGrid->GetProperty(m_PropertiesNames->voltage))
+	{
+		m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(pV, voltString);
+		m_CurrentCameraSettingsPropertyGrid->RefreshProperty(pV);
 	}
 
 	// If we're cooling, check if we've reached target within tolerance
