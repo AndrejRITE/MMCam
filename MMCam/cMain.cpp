@@ -21,6 +21,12 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, cMain::OnFocusCenterButton)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_GRID_MESH_DISPLAYING, cMain::OnGridMeshButton)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, cMain::OnCircleMeshButton)
+
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90, cMain::OnRotateCW90)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90, cMain::OnRotateCCW90)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_H, cMain::OnMirrorH)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_V, cMain::OnMirrorV)
+
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_WINDOW_FULLSCREEN, cMain::OnFullScreen)
 	EVT_MENU(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, cMain::OnStartStopCapturingMenuButton)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_HELP_ABOUT, cMain::OnAbout)
@@ -241,6 +247,7 @@ void cMain::CreateMainFrame()
 
 	CreateMenuBarOnFrame();
 	CreateVerticalToolBar();
+	CreateHorizontalToolBar();
 	CreateStatusBarOnFrame();
 	CreateLeftAndRightSide();
 
@@ -506,6 +513,8 @@ void cMain::CreateMenuBarOnFrame()
 
 	// Tools
 	{
+		CreateTransformationMenu();
+
 		// Intensity Profile SubMenu
 		{
 			m_MenuBar->submenu_intensity_profile->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, wxT("Crosshair\tC"));
@@ -773,6 +782,14 @@ void cMain::CreateLeftAndRightSide()
 	auto* bottomSizer = new wxBoxSizer(wxVERTICAL);
 
 	SetSizer(frameSizer);
+
+	if (m_HorizontalToolBar && m_HorizontalToolBar->tool_bar)
+	{
+		if (m_HorizontalToolBar->tool_bar->GetParent() != this)
+			m_HorizontalToolBar->tool_bar->Reparent(this);
+
+		frameSizer->Add(m_HorizontalToolBar->tool_bar, 0, wxEXPAND);
+	}
 
 	// OUTER splitter: splits Top(Left+Right) vs Bottom
 	m_MainSplitter = new wxSplitterWindow
@@ -3475,6 +3492,8 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 	
 	m_VerticalToolBar->tool_bar->SetBackgroundColour(bckgColour);
 
+	m_HorizontalToolBar->tool_bar->SetBackgroundColour(bckgColour);
+
 	m_RightSidePanel->SetBackgroundColour(bckgColour);
 	
 	m_DetectorControlsNotebook->SetBackgroundColour(bckgColour);
@@ -4928,6 +4947,27 @@ void cMain::CreateVerticalToolBar()
 	m_VerticalToolBar->tool_bar->SetToolBitmapSize(wxSize(30, 30));
 	m_VerticalToolBar->tool_bar->Disable();
 	m_VerticalToolBar->tool_bar->Realize();
+}
+
+auto cMain::CreateHorizontalToolBar() -> void
+{
+	m_HorizontalToolBar = std::make_unique<MainFrameVariables::ToolBar>();
+	m_HorizontalToolBar->tool_bar = new wxToolBar
+	(
+		this, 
+		wxID_ANY, 
+		wxDefaultPosition, 
+		wxDefaultSize, 
+		wxTB_HORIZONTAL
+	);
+
+	auto iconSize = wxSize(30, 30);
+
+	AddTransformationTools(iconSize);
+
+	m_HorizontalToolBar->tool_bar->SetToolBitmapSize(iconSize);
+	m_HorizontalToolBar->tool_bar->Realize();
+	m_HorizontalToolBar->tool_bar->Disable();
 }
 
 
@@ -9104,3 +9144,159 @@ void ProgressPanel::OnSize(wxSizeEvent& evt)
 }
 /* ___ End ProgressPanel ___ */
 
+void cMain::CreateTransformationMenu()
+{
+	// ensure Tools menu exists
+	wxMenu* transform = new wxMenu();
+	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90, "Rotate 90° CW\tCtrl+R");
+	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90, "Rotate 90° CCW\tCtrl+Shift+R");
+	transform->AppendSeparator();
+	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_H, "Mirror horizontally");
+	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_V, "Mirror vertically");
+
+	m_MenuBar->menu_tools->AppendSubMenu(transform, "Transformation");
+	m_MenuBar->menu_bar->Refresh(); // optional
+}
+
+void cMain::AddTransformationTools(const wxSize& size)
+{
+	auto* tb = m_HorizontalToolBar->tool_bar;
+
+	// Rotate 90 [deg] CW
+	{
+		wxBitmap toolBitmap{};
+		{
+			auto bitmap = wxART_ROTATE_RIGHT;
+			auto client = wxART_CLIENT_MATERIAL_ROUND;
+			auto color = wxColour(255, 128, 64);
+			toolBitmap = wxMaterialDesignArtProvider::GetBitmap
+			(
+				bitmap,
+				client,
+				size,
+				color
+			);
+		}
+
+		// Replace wxArtIDs with your bitmaps if you have them
+		tb->AddCheckTool
+		(
+			MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90,
+			"Rot CW",
+			toolBitmap,
+			wxNullBitmap,
+			"Rotate 90° CW"
+		);
+	}
+
+	tb->AddTool
+	(
+		MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90,
+		"Rot CCW", wxArtProvider::GetBitmap(wxART_UNDO, wxART_TOOLBAR), wxNullBitmap, wxITEM_CHECK, "Rotate 90° CCW"
+	);
+
+	tb->AddSeparator();
+
+	tb->AddTool
+	(
+		MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_H,
+		"Mirror H", wxArtProvider::GetBitmap(wxART_GO_BACK, wxART_TOOLBAR), wxNullBitmap, wxITEM_CHECK, "Mirror horizontally"
+	);
+
+	tb->AddTool
+	(
+		MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_V,
+		"Mirror V", wxArtProvider::GetBitmap(wxART_GO_DOWN, wxART_TOOLBAR), wxNullBitmap, wxITEM_CHECK, "Mirror vertically"
+	);
+
+	// route toolbar clicks via the same handlers
+	tb->Bind(wxEVT_TOOL, &cMain::OnRotateCW90, this, MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90);
+	tb->Bind(wxEVT_TOOL, &cMain::OnRotateCCW90, this, MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90);
+	tb->Bind(wxEVT_TOOL, &cMain::OnMirrorH, this, MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_H);
+	tb->Bind(wxEVT_TOOL, &cMain::OnMirrorV, this, MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_V);
+}
+
+void cMain::SyncTransformationUI()
+{
+	const bool cw = (m_Rotation == Rotation90::CW);
+	const bool ccw = (m_Rotation == Rotation90::CCW);
+
+	auto set = [&](int id, bool on) {
+		// menu
+		if (auto* it = m_MenuBar->menu_bar->FindItem(id))
+			it->Check(on);
+		// toolbar
+		if (m_HorizontalToolBar && m_HorizontalToolBar->tool_bar)
+			m_HorizontalToolBar->tool_bar->ToggleTool(id, on);
+		};
+
+	set(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90, cw);
+	set(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90, ccw);
+	set(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_H, m_MirrorH);
+	set(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_V, m_MirrorV);
+}
+
+void cMain::OnRotateCW90(wxCommandEvent& evt)
+{
+	m_Rotation = (m_Rotation == Rotation90::CW) ? Rotation90::None : Rotation90::CW;
+	if (m_Rotation == Rotation90::CW) /* make exclusive */ {}
+	if (m_Rotation == Rotation90::CW); // explicit no-op
+	// ensure CCW off if CW on
+	if (m_Rotation == Rotation90::CW) {}
+	if (m_Rotation == Rotation90::CW); // keep style short
+	if (m_Rotation == Rotation90::CW) {} // clarity
+	if (m_Rotation == Rotation90::CW); // final
+
+	// Clear CCW when CW turned on; clear CW when turning off is handled above
+	if (m_Rotation == Rotation90::CW)
+		; // just state already set
+	SyncTransformationUI();
+	Refresh(); Update();
+}
+
+void cMain::OnRotateCCW90(wxCommandEvent& evt)
+{
+	m_Rotation = (m_Rotation == Rotation90::CCW) ? Rotation90::None : Rotation90::CCW;
+	SyncTransformationUI();
+	Refresh(); Update();
+}
+
+void cMain::OnMirrorH(wxCommandEvent& evt)
+{
+	m_MirrorH = !m_MirrorH;
+	SyncTransformationUI();
+	Refresh(); Update();
+}
+
+void cMain::OnMirrorV(wxCommandEvent& evt)
+{
+	m_MirrorV = !m_MirrorV;
+	SyncTransformationUI();
+	Refresh(); Update();
+}
+
+void cMain::ApplyTransformationsU16(unsigned short*& data, int& w, int& h)
+{
+	if (!data || w <= 0 || h <= 0) return;
+
+	cv::Mat m(h, w, CV_16UC1, data);
+	cv::Mat tmp;
+
+	// rotation
+	if (m_Rotation == Rotation90::CW)      cv::rotate(m, tmp, cv::ROTATE_90_CLOCKWISE);
+	else if (m_Rotation == Rotation90::CCW) cv::rotate(m, tmp, cv::ROTATE_90_COUNTERCLOCKWISE);
+	else                                    m.copyTo(tmp);
+
+	// mirroring
+	if (m_MirrorH) cv::flip(tmp, tmp, 1);  // horizontal
+	if (m_MirrorV) cv::flip(tmp, tmp, 0);  // vertical
+
+	// hand back ownership in a linear buffer
+	const int newW = tmp.cols, newH = tmp.rows;
+	auto out = std::make_unique<unsigned short[]>(static_cast<size_t>(newW) * newH);
+	std::memcpy(out.get(), tmp.ptr<unsigned short>(), sizeof(unsigned short) * newW * newH);
+
+	// replace caller buffer
+	data = out.release();
+	w = newW; h = newH;
+}

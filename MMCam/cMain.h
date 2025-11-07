@@ -66,6 +66,12 @@ namespace MainFrameVariables
 		MENUBAR_TOOLS_VALUE_DISPLAYING,
 		MENUBAR_TOOLS_IMAGE_STATISTICS,
 		MENUBAR_TOOLS_FPS,
+		
+		MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90,
+		MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90,
+		MENUBAR_TOOLS_TRANSFORM_MIRROR_H,
+		MENUBAR_TOOLS_TRANSFORM_MIRROR_V,
+
 		MENUBAR_WINDOW_ENABLE_DARK_MODE,
 		MENUBAR_WINDOW_FULLSCREEN,
 		MENUBAR_HELP_ABOUT,
@@ -791,6 +797,7 @@ private:
 	void InitDefaultStateWidgets();
 	void CreateMenuBarOnFrame();
 	void CreateVerticalToolBar();
+	auto CreateHorizontalToolBar() -> void;
 	void CreateLeftAndRightSide();
 	void CreateLeftSide(wxWindow* parent, wxSizer* left_side_sizer);
 	void CreateRightSide(wxWindow* parent, wxSizer* right_side_sizer);
@@ -1788,6 +1795,19 @@ private:
 		if (m_MainSplitter)    m_MainSplitter->SendSizeEvent();
 	}
 
+	// menu/toolbar wiring
+	void CreateTransformationMenu();      // called from CreateMenuBarOnFrame()
+	void AddTransformationTools(const wxSize& size);        // called from CreateHorizontalToolBar()
+	void SyncTransformationUI();          // keep menu+toolbar in sync
+
+	// handlers
+	void OnRotateCW90(wxCommandEvent& evt);
+	void OnRotateCCW90(wxCommandEvent& evt);
+	void OnMirrorH(wxCommandEvent& evt);
+	void OnMirrorV(wxCommandEvent& evt);
+
+	void ApplyTransformationsU16(unsigned short*& data, int& w, int& h);
+
 private:
 	/* Initialization file */
 	wxString m_AppName{}, m_InitializationFilePath{};
@@ -1801,7 +1821,7 @@ private:
 	/* Menu Bar */
 	std::unique_ptr<MainFrameVariables::MenuBar> m_MenuBar{};
 	/* Tool Bar */
-	std::unique_ptr<MainFrameVariables::ToolBar> m_VerticalToolBar{};
+	std::unique_ptr<MainFrameVariables::ToolBar> m_VerticalToolBar{}, m_HorizontalToolBar{};
 	/* Preview Panel */
 	std::unique_ptr<cCamPreview> m_CamPreview{};
 	/* Steppers Control */
@@ -1915,6 +1935,12 @@ private:
 	bool   m_IsCoolingDown{ false };
 	double m_TargetSensorTempDegC{ 0.0 };
 	double m_TempReachedToleranceDegC{ 0.2 }; // adjust as you like (0.2–0.5 is typical)
+
+	// Transformation
+	enum class Rotation90 { None, CW, CCW };
+	Rotation90 m_Rotation{ Rotation90::None };
+	bool m_MirrorH{ false };
+	bool m_MirrorV{ false };
 
 	wxDECLARE_EVENT_TABLE();
 };
