@@ -165,9 +165,19 @@ namespace MainFrameVariables
 		RIGHT_TOOLS_ANNULUS_REMOVE_FROM_LIST_BTN,
 
 		/* Postprocessing */
+		// Background Subtraction
 		RIGHT_TOOLS_BACKGROUND_SUBTRACTION_CHECKBOX,
 		RIGHT_TOOLS_BACKGROUND_SUBTRACTION_FILENAME_TXT_CTRL,
 		RIGHT_TOOLS_BACKGROUND_SUBTRACTION_LOAD_FILE_BTN,
+
+		// Flat Field Correction
+		RIGHT_TOOLS_FLAT_FIELD_CORRECTION_CHECKBOX,
+		RIGHT_TOOLS_HI_GAIN_FLAT_FIELD_FILENAME_TXT_CTRL,
+		RIGHT_TOOLS_LO_GAIN_FLAT_FIELD_FILENAME_TXT_CTRL,
+		RIGHT_TOOLS_HI_GAIN_FLAT_FIELD_LOAD_FILE_BTN,
+		RIGHT_TOOLS_LO_GAIN_FLAT_FIELD_LOAD_FILE_BTN,
+
+		// Filtering
 		RIGHT_TOOLS_MEDIAN_BLUR_CHECKBOX,
 
 		/* Camera */
@@ -1921,6 +1931,10 @@ private:
 	std::unique_ptr<wxCheckBox> m_BackgroundSubtractionCheckBox{};
 	std::unique_ptr<wxTextCtrl> m_BackgroundSubtractionFileNameTxtCtrl{};
 	std::unique_ptr<wxButton> m_BackgroundSubtractionLoadFileBtn{};
+
+	std::unique_ptr<wxCheckBox> m_FlatFieldCorrectionCheckBox{};
+	std::unique_ptr<wxTextCtrl> m_HiGainFlatFieldFileNameTxtCtrl{}, m_LoGainFlatFieldFileNameTxtCtrl{};
+	std::unique_ptr<wxButton> m_HiGainFlatFieldLoadFileBtn{}, m_LoGainFlatFieldLoadFileBtn{};
 
 	std::unique_ptr<wxCheckBox> m_MedianBlurCheckBox{};
 

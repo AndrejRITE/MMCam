@@ -2255,6 +2255,7 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 	wxPanel* page = new wxPanel(parent);
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
 
+	// Background Subtraction
 	{
 		auto horSizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Background Subtraction");
 		{
@@ -2299,6 +2300,118 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 
 		sizerPage->Add(horSizer, 0, wxEXPAND);
 	}
+
+	// Flat Field Correction
+	{
+		auto verSizer = new wxStaticBoxSizer(wxVERTICAL, page, "&Flat Field Correction");
+		{
+			m_FlatFieldCorrectionCheckBox = std::make_unique<wxCheckBox>
+				(
+					page,
+					MainFrameVariables::ID::RIGHT_TOOLS_FLAT_FIELD_CORRECTION_CHECKBOX,
+					wxT("Enable")
+				);
+
+			m_FlatFieldCorrectionCheckBox->Disable();
+
+			verSizer->Add(m_FlatFieldCorrectionCheckBox.get(), 0, wxALIGN_CENTER | wxALL, 5);
+
+			auto gridSizer = new wxFlexGridSizer(0, 3, FromDIP(5), FromDIP(5));
+			gridSizer->SetFlexibleDirection(wxHORIZONTAL);
+			gridSizer->AddGrowableCol(1);
+
+			// Hi-Gain Flat Field
+			{
+				gridSizer->Add
+				(
+					new wxStaticText
+					(
+						page,
+						wxID_ANY,
+						wxT("Hi-Gain Flat Field:")
+					),
+					0,
+					wxALIGN_CENTER_VERTICAL | wxRIGHT,
+					FromDIP(5)
+				);
+
+				m_HiGainFlatFieldFileNameTxtCtrl = std::make_unique<wxTextCtrl>
+					(
+						page,
+						MainFrameVariables::ID::RIGHT_TOOLS_HI_GAIN_FLAT_FIELD_FILENAME_TXT_CTRL,
+						wxT("No file selected"),
+						wxDefaultPosition,
+						wxDefaultSize,
+						wxTE_READONLY
+					);
+
+				m_HiGainFlatFieldFileNameTxtCtrl->SetForegroundColour(wxColour(237, 28, 36));
+
+				gridSizer->Add(m_HiGainFlatFieldFileNameTxtCtrl.get(), 1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
+
+				m_HiGainFlatFieldLoadFileBtn = std::make_unique<wxButton>
+					(
+						page,
+						MainFrameVariables::ID::RIGHT_TOOLS_HI_GAIN_FLAT_FIELD_LOAD_FILE_BTN,
+						wxT("Open"),
+						wxDefaultPosition,
+						wxDefaultSize
+					);
+
+				m_HiGainFlatFieldLoadFileBtn->Disable();
+
+				gridSizer->Add(m_HiGainFlatFieldLoadFileBtn.get(), 0, wxALIGN_CENTER_VERTICAL);
+			}
+
+			// Lo-Gain Flat Field
+			{
+				gridSizer->Add
+				(
+					new wxStaticText
+					(
+						page,
+						wxID_ANY,
+						wxT("Lo-Gain Flat Field:")
+					),
+					0,
+					wxALIGN_CENTER_VERTICAL | wxRIGHT,
+					FromDIP(5)
+				);
+
+				m_LoGainFlatFieldFileNameTxtCtrl = std::make_unique<wxTextCtrl>
+					(
+						page,
+						MainFrameVariables::ID::RIGHT_TOOLS_LO_GAIN_FLAT_FIELD_FILENAME_TXT_CTRL,
+						wxT("No file selected"),
+						wxDefaultPosition,
+						wxDefaultSize,
+						wxTE_READONLY
+					);
+
+				m_LoGainFlatFieldFileNameTxtCtrl->SetForegroundColour(wxColour(237, 28, 36));
+
+				gridSizer->Add(m_LoGainFlatFieldFileNameTxtCtrl.get(), 1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
+
+				m_LoGainFlatFieldLoadFileBtn = std::make_unique<wxButton>
+					(
+						page,
+						MainFrameVariables::ID::RIGHT_TOOLS_LO_GAIN_FLAT_FIELD_LOAD_FILE_BTN,
+						wxT("Open"),
+						wxDefaultPosition,
+						wxDefaultSize
+					);
+
+				m_LoGainFlatFieldLoadFileBtn->Disable();
+
+				gridSizer->Add(m_LoGainFlatFieldLoadFileBtn.get(), 0, wxALIGN_CENTER_VERTICAL);
+			}
+			verSizer->Add(gridSizer, 0, wxEXPAND);
+		}
+
+		sizerPage->Add(verSizer, 0, wxEXPAND);
+	}
+
+	sizerPage->AddStretchSpacer();
 
 	{
 		auto horSizer = new wxStaticBoxSizer(wxVERTICAL, page, "&Smooth");
