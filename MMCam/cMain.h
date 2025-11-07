@@ -26,7 +26,6 @@
 #include <chrono>
 #include <regex>
 #include <algorithm>
-#include <execution>
 
 #include <nlohmann/json.hpp>
 
@@ -649,20 +648,6 @@ namespace MainFrameVariables
 		if (!imgDataPtr || !backgroundImgDataPtr) return;
 		const auto total = static_cast<size_t>(imgSize.GetWidth()) * static_cast<size_t>(imgSize.GetHeight());
 
-#if defined(__cpp_lib_execution) // C++17 parallel algorithms
-		std::transform
-		(
-			std::execution::par_unseq,
-			imgDataPtr, imgDataPtr + total,
-			backgroundImgDataPtr,
-			imgDataPtr,
-			[](unsigned short a, unsigned short b) -> unsigned short 
-			{
-				int v = static_cast<int>(a) - static_cast<int>(b);
-				return static_cast<unsigned short>(v > 0 ? v : 0);
-			}
-		);
-#else
 		const unsigned hw = std::max(1u, std::thread::hardware_concurrency());
 		const size_t chunk = (total + hw - 1) / hw;
 
@@ -682,7 +667,6 @@ namespace MainFrameVariables
 			ts.emplace_back(worker, begin, end);
 		}
 		for (auto& th : ts) th.join();
-#endif
 	}
 
 	static auto ApplyMedianFilter
@@ -778,6 +762,23 @@ namespace MainFrameVariables
 		for (auto& th : ts) th.join();
 
 		std::copy(out.begin(), out.end(), imgDataPtr);
+	}
+
+	static bool LoadU16TiffToMat(const wxString& path, cv::Mat& out)
+	{
+		// wxImage can't read 16-bit grayscale well; use OpenCV
+		// imread with IMREAD_UNCHANGED to keep 16UC1
+		cv::Mat m = cv::imread(std::string(path.mb_str()), cv::IMREAD_UNCHANGED);
+		if (m.empty() || m.type() != CV_16UC1) return false;
+		out = m;
+		return true;
+	}
+
+	static double MeanU16(const cv::Mat& m)
+	{
+		// fast mean on 16-bit
+		cv::Scalar meanV = cv::mean(m);
+		return meanV[0];
 	}
 }
 
@@ -1820,6 +1821,18 @@ private:
 
 	inline void ensureMat(cv::Mat& m, int h, int w) { if (m.rows != h || m.cols != w || m.type() != CV_16UC1) m.create(h, w, CV_16UC1); }
 
+	/* Flat Field */
+	auto OnFlatFieldCorrectionCheckBox(wxCommandEvent& evt) -> void;
+	auto OnHiGainFlatFieldLoadFileBtn(wxCommandEvent& evt) -> void;
+	auto OnLoGainFlatFieldLoadFileBtn(wxCommandEvent& evt) -> void;
+
+	auto LoadSingleFlat
+	(
+		const wxString& title,
+		wxTextCtrl* targetTxtCtrl,
+		cv::Mat& dstFull
+	) -> bool;
+
 private:
 	/* Initialization file */
 	wxString m_AppName{}, m_InitializationFilePath{};
@@ -1965,6 +1978,14 @@ private:
 	cv::Mat m_bgMat;         // full-res loaded background
 	cv::Mat m_bgBinnedMat;   // cached binned background
 	cv::Mat m_work1, m_work2; // scratch buffers for ops (median, subtract, rotate)
+
+	// --- Flat Field Correction state ---
+	cv::Mat m_ffHiFull, m_ffLoFull;
+	cv::Mat m_ffHiBinned, m_ffLoBinned;
+
+	unsigned short m_ffBinningSS{ 0 };
+	MainFrameVariables::BinningModes m_ffModeSS{ MainFrameVariables::BINNING_AVERAGE };
+	double m_ffMeanDenom{ 1.0 }; // mean(white-black) at full res for normalization
 
 	wxDECLARE_EVENT_TABLE();
 };

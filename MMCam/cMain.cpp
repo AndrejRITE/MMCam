@@ -109,8 +109,16 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_BUTTON(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
 
 	/* Postprocessing */
+	// Background Subtraction
 	EVT_CHECKBOX(MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_CHECKBOX, cMain::OnBackgroundSubtractionCheckBox)
 	EVT_BUTTON(MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_LOAD_FILE_BTN, cMain::OnBackgroundSubtractionLoadFileBtn)
+
+	// Flat Field Correction
+	EVT_CHECKBOX(MainFrameVariables::ID::RIGHT_TOOLS_FLAT_FIELD_CORRECTION_CHECKBOX, cMain::OnFlatFieldCorrectionCheckBox)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_TOOLS_HI_GAIN_FLAT_FIELD_LOAD_FILE_BTN, cMain::OnHiGainFlatFieldLoadFileBtn)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_TOOLS_LO_GAIN_FLAT_FIELD_LOAD_FILE_BTN, cMain::OnLoGainFlatFieldLoadFileBtn)
+
+	// Median Filtering
 	EVT_CHECKBOX(MainFrameVariables::ID::RIGHT_TOOLS_MEDIAN_BLUR_CHECKBOX, cMain::OnMedianBlueCheckBox)
 
 	/* Histogram */
@@ -3885,35 +3893,34 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 {
 	SCOPE_TIMER("DisplayAndSaveImageFromTheCamera");
 
+	// raw view of camera buffer
 	m_rawMat = cv::Mat(originalImgSize.GetHeight(), originalImgSize.GetWidth(), CV_16UC1, imgPtr);
 
-	auto binningMode = m_Config->binning_sum_mode ? MainFrameVariables::BinningModes::BINNING_SUM : MainFrameVariables::BinningModes::BINNING_AVERAGE;
-
-	const int bin = binning;                    // existing param
-	const bool sumMode = (binningMode == MainFrameVariables::BINNING_SUM);
+	const auto binningMode = m_Config->binning_sum_mode ? MainFrameVariables::BINNING_SUM
+		: MainFrameVariables::BINNING_AVERAGE;
+	const int bin = binning;
+	const bool sum = (binningMode == MainFrameVariables::BINNING_SUM);
 	const int outW = originalImgSize.GetWidth() / bin;
 	const int outH = originalImgSize.GetHeight() / bin;
 
 	ensureMat(m_binnedMat, outH, outW);
 
-	// average binning (area resample preserves average)
+	// Foreground binning
 	cv::resize(m_rawMat, m_binnedMat, m_binnedMat.size(), 0, 0, cv::INTER_AREA);
-
-	// sum mode = average * (bin*bin) but clamp to 16U
-	if (sumMode) {
+	if (sum) {
 		m_binnedMat.convertTo(m_binnedMat, CV_32F);
 		m_binnedMat *= static_cast<float>(bin * bin);
 		cv::min(m_binnedMat, 65535.0f, m_binnedMat);
 		m_binnedMat.convertTo(m_binnedMat, CV_16U);
 	}
 
-	// Build m_bgMat once when background file is loaded.
-	// Then for current binning:
-	if (m_BackgroundSubtractionCheckBox->IsChecked() && (m_bgBinnedMat.empty() || m_bgBinnedMat.size() != m_binnedMat.size())) 
+	// Background: cached to current size
+	if (m_BackgroundSubtractionCheckBox->IsChecked()
+		&& (m_bgBinnedMat.empty() || m_bgBinnedMat.size() != m_binnedMat.size()))
 	{
-		ensureMat(m_bgBinnedMat, m_binnedMat.rows, m_binnedMat.cols);
+		ensureMat(m_bgBinnedMat, outH, outW);
 		cv::resize(m_bgMat, m_bgBinnedMat, m_bgBinnedMat.size(), 0, 0, cv::INTER_AREA);
-		if (sumMode) { // sum vs avg parity with foreground
+		if (sum) {
 			m_bgBinnedMat.convertTo(m_bgBinnedMat, CV_32F);
 			m_bgBinnedMat *= static_cast<float>(bin * bin);
 			cv::min(m_bgBinnedMat, 65535.0f, m_bgBinnedMat);
@@ -3921,42 +3928,123 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 		}
 	}
 
-	/* Postprocessing */
-	if (m_BackgroundSubtractionCheckBox->IsChecked() && !m_bgBinnedMat.empty())
-	{
-		ensureMat(m_work1, m_binnedMat.rows, m_binnedMat.cols);
-		// saturating subtract to zero for unsigned 16-bit
+	// Background subtraction
+	if (m_BackgroundSubtractionCheckBox->IsChecked() && !m_bgBinnedMat.empty()) {
+		ensureMat(m_work1, outH, outW);
 		cv::subtract(m_binnedMat, m_bgBinnedMat, m_work1, cv::noArray(), CV_16U);
 	}
+	else {
+		m_work1.release();
+	}
 
-	if (m_Config && m_Config->median_blur_on && m_Config->median_blur_ksize > 1) 
+	// -------- Flat Field Correction (pure OpenCV) --------
+	if (m_FlatFieldCorrectionCheckBox && m_FlatFieldCorrectionCheckBox->IsChecked()
+		&& !m_ffLoFull.empty() && !m_ffHiFull.empty())
 	{
-		const int k = (m_Config->median_blur_ksize % 2) ? m_Config->median_blur_ksize : m_Config->median_blur_ksize + 1;
-		ensureMat(m_work2, m_work1.rows, m_work1.cols);
+		// Build binned refs to match output size
+		const bool needRebin =
+			m_ffLoBinned.empty() || m_ffHiBinned.empty() ||
+			m_ffLoBinned.cols != outW || m_ffLoBinned.rows != outH ||
+			(m_ffBinningSS != static_cast<unsigned short>(binning)) ||
+			(m_ffModeSS != binningMode);
+
+		if (needRebin) {
+			m_ffLoBinned.create(outH, outW, CV_16UC1);
+			m_ffHiBinned.create(outH, outW, CV_16UC1);
+
+			cv::resize(m_ffLoFull, m_ffLoBinned, m_ffLoBinned.size(), 0, 0, cv::INTER_AREA);
+			cv::resize(m_ffHiFull, m_ffHiBinned, m_ffHiBinned.size(), 0, 0, cv::INTER_AREA);
+
+			if (sum) {
+				// keep parity with foreground
+				m_ffLoBinned.convertTo(m_ffLoBinned, CV_32F);
+				m_ffHiBinned.convertTo(m_ffHiBinned, CV_32F);
+				const float s = static_cast<float>(bin * bin);
+				m_ffLoBinned *= s;
+				m_ffHiBinned *= s;
+				cv::min(m_ffLoBinned, 65535.0f, m_ffLoBinned);
+				cv::min(m_ffHiBinned, 65535.0f, m_ffHiBinned);
+				m_ffLoBinned.convertTo(m_ffLoBinned, CV_16U);
+				m_ffHiBinned.convertTo(m_ffHiBinned, CV_16U);
+			}
+
+			m_ffBinningSS = static_cast<unsigned short>(binning);
+			m_ffModeSS = binningMode;
+		}
+
+		// src to correct
+		cv::Mat src16 = m_work1.empty() ? m_binnedMat : m_work1;
+
+		// Convert to float
+		cv::Mat src32, blk32, wht32;
+		src16.convertTo(src32, CV_32F);
+		m_ffLoBinned.convertTo(blk32, CV_32F);
+		m_ffHiBinned.convertTo(wht32, CV_32F);
+
+		// num = max(src - black, 0)
+		cv::Mat num32;
+		cv::subtract(src32, blk32, num32);
+		cv::max(num32, 0.0f, num32);
+
+		// denom = max(white - black, 1)
+		cv::Mat denom32;
+		cv::subtract(wht32, blk32, denom32);
+		cv::max(denom32, 1.0f, denom32);
+
+		// normalization: scale so "white" maps to mean(denom)
+		double meanDen = m_ffMeanDenom;
+		if (meanDen <= 0.0) {
+			meanDen = cv::mean(denom32)[0];
+			if (meanDen <= 0.0) meanDen = 1.0;
+		}
+
+		// gain = meanDen / denom
+		cv::Mat gain32;
+		denom32.convertTo(gain32, CV_32F, 0.0); // just allocate same size/type
+		cv::divide(static_cast<float>(meanDen), denom32, gain32);
+
+		// corrected = num * gain, clamp to 16U
+		cv::Mat corr32;
+		cv::multiply(num32, gain32, corr32);
+		cv::min(corr32, 65535.0f, corr32);
+
+		ensureMat(m_work1, outH, outW);
+		corr32.convertTo(m_work1, CV_16U);
+	}
+
+	// Median blur
+	if (m_Config && m_Config->median_blur_on && m_Config->median_blur_ksize > 1) {
+		const int k = (m_Config->median_blur_ksize % 2) ? m_Config->median_blur_ksize
+			: m_Config->median_blur_ksize + 1;
+		ensureMat(m_work2, outH, outW);
 		cv::medianBlur(m_work1.empty() ? m_binnedMat : m_work1, m_work2, k);
 	}
-	else 
-	{
+	else {
 		m_work2 = (m_work1.empty() ? m_binnedMat : m_work1);
 	}
 
 	cv::Mat m_final = m_work2;
+
 	// mirror
 	if (m_MirrorH) cv::flip(m_final, m_final, 1);
 	if (m_MirrorV) cv::flip(m_final, m_final, 0);
 	// rotation 90
-	if (m_Rotation == Rotation90::CW)    cv::rotate(m_final, m_final, cv::ROTATE_90_CLOCKWISE);
-	if (m_Rotation == Rotation90::CCW)   cv::rotate(m_final, m_final, cv::ROTATE_90_COUNTERCLOCKWISE);
+	if (m_Rotation == Rotation90::CW)  cv::rotate(m_final, m_final, cv::ROTATE_90_CLOCKWISE);
+	if (m_Rotation == Rotation90::CCW) cv::rotate(m_final, m_final, cv::ROTATE_90_COUNTERCLOCKWISE);
 
+	// If source is 12-bit packed into 16U, keep 12-bit range for downstream UI
+	if (dataType == CameraControlVariables::ImageDataTypes::RAW_12BIT) 
+	{
+		cv::min(m_final, 4095, m_final); // saturate to 12-bit max
+	}
+
+	// histogram
 	auto minimumCount = 5;
 	unsigned short minValue{}, maxValue{};
-	
-	const size_t histSize =
-		(dataType == CameraControlVariables::ImageDataTypes::RAW_12BIT) ? 4096 : 65536;
+	const size_t histSize = (dataType == CameraControlVariables::ImageDataTypes::RAW_12BIT) ? 4096 : 65536;
 	auto histogram = std::make_unique<unsigned long long[]>(histSize);
 
-	if (!CalculateHistogram
-	(
+	if (!CalculateHistogram(
 		(unsigned short*)m_final.data,
 		m_final.cols,
 		m_final.rows,
@@ -3964,17 +4052,18 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 		histogram.get(),
 		&minValue,
 		&maxValue,
-		dataType
-	))
+		dataType)) {
 		return;
+	}
 
-	auto wasHistogramRangeChanged = m_HistogramPanel->GetWasHistogramRangeChanged();
-	auto actLeftBorder = m_HistogramPanel->GetLeftBorderValue();
-	auto actRightBorder = m_HistogramPanel->GetRightBorderValue();
+	const bool wasHistogramRangeChanged = m_HistogramPanel->GetWasHistogramRangeChanged();
+	const auto actLeftBorder = m_HistogramPanel->GetLeftBorderValue();
+	const auto actRightBorder = m_HistogramPanel->GetRightBorderValue();
 
-	m_HistogramPanel->SetHistogram
-	(
-		dataType == CameraControlVariables::ImageDataTypes::RAW_12BIT ? HistogramPanelVariables::ImageDataTypes::RAW_12BIT : HistogramPanelVariables::ImageDataTypes::RAW_16BIT,
+	m_HistogramPanel->SetHistogram(
+		dataType == CameraControlVariables::ImageDataTypes::RAW_12BIT
+		? HistogramPanelVariables::ImageDataTypes::RAW_12BIT
+		: HistogramPanelVariables::ImageDataTypes::RAW_16BIT,
 		std::move(histogram.release()),
 		minValue,
 		maxValue
@@ -3985,16 +4074,13 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 
 	m_HistogramPanel->SetAutoBordersPos(minValue, maxValue);
 
-	if (!outFilePath.empty())
-	{
+	if (!outFilePath.empty()) {
 		wxFileName file(outFilePath);
-
 		if (wxDir::Exists(file.GetPath()))
 			cv::imwrite(file.GetFullPath().ToStdString(), m_final);
 	}
 
-	m_CamPreview->SetCameraCapturedImage
-	(
+	m_CamPreview->SetCameraCapturedImage(
 		(unsigned short*)m_final.data,
 		wxSize(m_final.cols, m_final.rows),
 		wasHistogramRangeChanged ? m_HistogramPanel->GetLeftBorderValue() : minValue,
@@ -6266,17 +6352,49 @@ auto cMain::ApplyFFCOnData
 	const int imgWidth
 ) -> void
 {
-	for (auto i{ 0 }; i < imgWidth * imgWidth; ++i)
-	{
-		double numerator = (double)inRawData[i] - (double)inBlackData[i];
-		//double denominator = std::max(1.0, (double)inWhiteData[i] - (double)inBlackData[i]);
-		//auto outValue = std::max(0.0, numerator / denominator);
-		auto outValue = std::max(0.0, numerator);
-		outValue = std::min(outValue, (double)USHRT_MAX);
-		inRawData[i] = static_cast<unsigned short>(outValue);
-	}
-}
+	if (!inRawData || !inBlackData || !inWhiteData) return;
+	if (imgWidth <= 0) return;
 
+	const size_t N = static_cast<size_t>(imgWidth) * static_cast<size_t>(imgWidth);
+	const double meanDen = (m_ffMeanDenom > 0.0) ? m_ffMeanDenom : 1.0;
+
+	auto worker = [&](size_t begin, size_t end) noexcept {
+		for (size_t i = begin; i < end; ++i) {
+			const int raw = static_cast<int>(inRawData[i]);
+			const int black = static_cast<int>(inBlackData[i]);
+			const int white = static_cast<int>(inWhiteData[i]);
+
+			const int denom = white - black;      // flat − dark
+			const int num = raw - black;       // signal − dark
+
+			if (denom <= 0 || num <= 0) {
+				inRawData[i] = 0;
+				continue;
+			}
+
+			double v = (static_cast<double>(num) * meanDen) / static_cast<double>(denom);
+			if (v < 0.0)      v = 0.0;
+			if (v > 65535.0)  v = 65535.0;
+			inRawData[i] = static_cast<unsigned short>(v + 0.5);
+		}
+		};
+
+	// Single-thread for small buffers
+	const unsigned hw = std::max(1u, std::thread::hardware_concurrency());
+	if (N < 65536 || hw == 1) { worker(0, N); return; }
+
+	// Multi-thread for larger buffers
+	const size_t chunk = (N + hw - 1) / hw;
+	std::vector<std::thread> ts;
+	ts.reserve(hw);
+	for (unsigned t = 0; t < hw; ++t) {
+		const size_t b = t * chunk;
+		if (b >= N) break;
+		const size_t e = std::min(N, b + chunk);
+		ts.emplace_back(worker, b, e);
+	}
+	for (auto& th : ts) th.join();
+}
 
 auto cMain::RemoveBackgroundFromTheImage(wxString imagePath) -> void
 {
@@ -9500,4 +9618,62 @@ void cMain::ApplyTransformationsU16(unsigned short* data, wxSize& size)
 	// Update size to reflect new dimensions
 	size.SetWidth(newWidth);
 	size.SetHeight(newHeight);
+}
+
+auto cMain::OnFlatFieldCorrectionCheckBox(wxCommandEvent& evt) -> void
+{
+	const bool enabled = m_FlatFieldCorrectionCheckBox && m_FlatFieldCorrectionCheckBox->IsChecked();
+
+	if (!enabled) {
+		m_ffHiFull.release();   m_ffLoFull.release();
+		m_ffHiBinned.release(); m_ffLoBinned.release();
+		return;
+	}
+
+	// Ask for Hi first
+	LoadSingleFlat("Select Hi-Gain flat", m_HiGainFlatFieldFileNameTxtCtrl.get(), m_ffHiFull);
+
+	// Then ask for Lo
+	LoadSingleFlat("Select Lo-Gain flat", m_LoGainFlatFieldFileNameTxtCtrl.get(), m_ffLoFull);
+}
+
+auto cMain::OnHiGainFlatFieldLoadFileBtn(wxCommandEvent& evt) -> void
+{
+	LoadSingleFlat("Select Hi-Gain flat", m_HiGainFlatFieldFileNameTxtCtrl.get(), m_ffHiFull);
+}
+
+auto cMain::OnLoGainFlatFieldLoadFileBtn(wxCommandEvent& evt) -> void
+{
+	LoadSingleFlat("Select Lo-Gain flat", m_LoGainFlatFieldFileNameTxtCtrl.get(), m_ffLoFull);
+}
+
+auto cMain::LoadSingleFlat(const wxString& title, wxTextCtrl* targetTxtCtrl, cv::Mat& dstFull) -> bool
+{
+	wxFileDialog dlg(
+		this, title,
+		wxEmptyString, wxEmptyString,
+		"TIFF images (*.tif;*.tiff)|*.tif;*.tiff|All files (*.*)|*.*",
+		wxFD_OPEN | wxFD_FILE_MUST_EXIST
+	);
+	if (dlg.ShowModal() != wxID_OK) return false;
+
+	const wxString path = dlg.GetPath();
+	cv::Mat tmp;
+	if (!MainFrameVariables::LoadU16TiffToMat(path, tmp)) {
+		wxMessageBox("Failed to load 16-bit TIFF.", "Error", wxOK | wxICON_ERROR);
+		return false;
+	}
+	dstFull = std::move(tmp);
+
+	wxFileName fn(path);
+	if (targetTxtCtrl)
+	{
+		targetTxtCtrl->ChangeValue(fn.GetFullName());
+		targetTxtCtrl->SetForegroundColour(wxColour(34, 177, 76));
+	}
+
+	// Invalidate cached binned copy
+	if (&dstFull == &m_ffHiFull) m_ffHiBinned.release();
+	if (&dstFull == &m_ffLoFull) m_ffLoBinned.release();
+	return true;
 }
