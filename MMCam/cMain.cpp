@@ -760,6 +760,8 @@ void cMain::InitDefaultStateWidgets()
 		m_StartStopMeasurementTglBtn->Disable();
 		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, false);
 	}
+
+	UpdateMotorTabNamesAndStageChoices();
 }
 
 void cMain::CreateLeftAndRightSide()
@@ -2864,12 +2866,15 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 			/* Stage */
 			{
 				wxSizer* const stage_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Stage");
-				m_FirstStage->stage = new wxChoice(
+				m_FirstStage->stage = new wxChoice
+				(
 					page, 
 					MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_CHOICE, 
 					wxDefaultPosition, 
 					wxDefaultSize, 
-					m_FirstStage->motors);
+					m_FirstStage->motors
+				);
+
 				m_FirstStage->stage->SetSelection(0);
 				stage_static_box_sizer->Add(m_FirstStage->stage, 0, wxEXPAND);
 				first_axis_static_box_sizer->Add(stage_static_box_sizer, 0, wxEXPAND);
@@ -3967,6 +3972,44 @@ auto cMain::RewriteInitializationFile() -> void
 
 	file << std::setw(4) << j << std::endl;  // Pretty-print the JSON with an indent of 4 spaces
 	file.close();
+}
+
+auto cMain::UpdateMotorTabNamesAndStageChoices() -> void
+{
+	if (!m_Config) return;
+
+	const wxString n1 = wxString(m_Config->default_motors_name_first_tab);
+	const wxString n2 = wxString(m_Config->default_motors_name_second_tab);
+	const wxString n3 = wxString(m_Config->default_motors_name_third_tab);
+
+	// If these three notebooks are themselves pages inside a parent wxNotebook,
+	// retitle their page tabs via the parent.
+	auto relabel_page_if_any = [](wxWindow* page, const wxString& label) {
+		if (!page) return;
+		if (auto* parent_nb = wxDynamicCast(page->GetParent(), wxNotebook)) {
+			const int idx = parent_nb->FindPage(page);
+			if (idx != wxNOT_FOUND) parent_nb->SetPageText(idx, label);
+		}
+		};
+
+	relabel_page_if_any(m_DetectorControlsNotebook, n1);
+	relabel_page_if_any(m_OpticsControlsNotebook, n2);
+	relabel_page_if_any(m_AuxControlsNotebook, n3);
+
+	// Rebuild First Stage choice list with custom base names
+	if (m_FirstStage && m_FirstStage->stage) 
+	{
+		wxArrayString items;
+		items.Add("None");
+		items.Add(n1 + " X"); items.Add(n1 + " Y"); items.Add(n1 + " Z");
+		items.Add(n2 + " X"); items.Add(n2 + " Y"); items.Add(n2 + " Z");
+		items.Add(n3 + " X"); items.Add(n3 + " Y"); items.Add(n3 + " Z");
+
+		m_FirstStage->motors = items;           // keep the cache in struct
+		m_FirstStage->stage->Set(items);         // update the UI
+		if (m_FirstStage->stage->GetSelection() == wxNOT_FOUND)
+			m_FirstStage->stage->SetSelection(0);
+	}
 }
 
 void cMain::OnOpenSettings(wxCommandEvent& evt)

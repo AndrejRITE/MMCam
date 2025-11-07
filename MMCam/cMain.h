@@ -444,6 +444,16 @@ namespace MainFrameVariables
 			motors.Add("Aux Z");
 		};
 
+		void SetMotorBaseNames(const wxString& n1, const wxString& n2, const wxString& n3)
+		{
+			motors.Clear();
+			motors.Add("None");
+			motors.Add(n1 + " X"); motors.Add(n1 + " Y"); motors.Add(n1 + " Z");
+			motors.Add(n2 + " X"); motors.Add(n2 + " Y"); motors.Add(n2 + " Z");
+			motors.Add(n3 + " X"); motors.Add(n3 + " Y"); motors.Add(n3 + " Z");
+			if (stage) { stage->Set(motors); if (stage->GetSelection() == wxNOT_FOUND) stage->SetSelection(0); }
+		}
+
 		void DisableAllControls()
 		{
 			stage->Disable();
@@ -918,6 +928,8 @@ private:
 
 	auto ReadInitializationFile() -> void;
 	auto RewriteInitializationFile() -> void;
+
+	auto UpdateMotorTabNamesAndStageChoices() -> void;
 
 	void OnOpenSettings(wxCommandEvent& evt);
 	auto InitializeSelectedCamera() -> void;
