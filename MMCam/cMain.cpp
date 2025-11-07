@@ -3651,17 +3651,11 @@ void cMain::CreateProgressBar()
 	wxPoint start_point_progress_bar
 	{ 
 		0, 0
-		//this->GetPosition().x + this->GetSize().x - size_of_progress_bar.x, 
-		//this->GetPosition().y + this->GetSize().y - size_of_progress_bar.y 
 	};
-	//m_ProgressBar = std::make_unique<ProgressBar>(this, start_point_progress_bar, size_of_progress_bar);
 
 #ifdef _DEBUG
 	//m_ProgressBar->Show();
 #endif // _DEBUG
-
-	//m_ProgressBar = new ProgressBar(this, start_point_progress_bar, size_of_progress_bar);
-	//m_ProgressBar->SetIcon(logo_xpm);
 }
 
 void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
@@ -3727,7 +3721,6 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 
 		/* Camera */
 		{
-			//m_XimeaControl->SetExposureTime(exposure_time);
 			m_CameraControl->SetExposureTime(exposure_time);
 			
 			auto cameraDataType = m_CameraControl->GetCameraDataType();
@@ -3779,87 +3772,69 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 {
 	SCOPE_TIMER("DisplayAndSaveImageFromTheCamera");
 
-	auto imageSize = wxSize{ (int)originalImgSize.GetWidth() / binning, (int)originalImgSize.GetHeight() / binning };
-
-	auto dataPtr = std::make_unique<unsigned short[]>(imageSize.GetWidth() * imageSize.GetHeight());
+	m_rawMat = cv::Mat(originalImgSize.GetHeight(), originalImgSize.GetWidth(), CV_16UC1, imgPtr);
 
 	auto binningMode = m_Config->binning_sum_mode ? MainFrameVariables::BinningModes::BINNING_SUM : MainFrameVariables::BinningModes::BINNING_AVERAGE;
 
-	{
-		SCOPE_TIMER("BinImageData");
+	const int bin = binning;                    // existing param
+	const bool sumMode = (binningMode == MainFrameVariables::BINNING_SUM);
+	const int outW = originalImgSize.GetWidth() / bin;
+	const int outH = originalImgSize.GetHeight() / bin;
 
-		MainFrameVariables::BinImageData
-		(
-			imgPtr,
-			dataPtr.get(),
-			binning,
-			originalImgSize.GetWidth(),
-			imageSize,
-			binningMode
-		);
+	ensureMat(m_binnedMat, outH, outW);
+
+	// average binning (area resample preserves average)
+	cv::resize(m_rawMat, m_binnedMat, m_binnedMat.size(), 0, 0, cv::INTER_AREA);
+
+	// sum mode = average * (bin*bin) but clamp to 16U
+	if (sumMode) {
+		m_binnedMat.convertTo(m_binnedMat, CV_32F);
+		m_binnedMat *= static_cast<float>(bin * bin);
+		cv::min(m_binnedMat, 65535.0f, m_binnedMat);
+		m_binnedMat.convertTo(m_binnedMat, CV_16U);
+	}
+
+	// Build m_bgMat once when background file is loaded.
+	// Then for current binning:
+	if (m_BackgroundSubtractionCheckBox->IsChecked() && (m_bgBinnedMat.empty() || m_bgBinnedMat.size() != m_binnedMat.size())) 
+	{
+		ensureMat(m_bgBinnedMat, m_binnedMat.rows, m_binnedMat.cols);
+		cv::resize(m_bgMat, m_bgBinnedMat, m_bgBinnedMat.size(), 0, 0, cv::INTER_AREA);
+		if (sumMode) { // sum vs avg parity with foreground
+			m_bgBinnedMat.convertTo(m_bgBinnedMat, CV_32F);
+			m_bgBinnedMat *= static_cast<float>(bin * bin);
+			cv::min(m_bgBinnedMat, 65535.0f, m_bgBinnedMat);
+			m_bgBinnedMat.convertTo(m_bgBinnedMat, CV_16U);
+		}
 	}
 
 	/* Postprocessing */
-	if (m_BackgroundSubtractionCheckBox->IsChecked() && m_BackgroundSubtractionData)
+	if (m_BackgroundSubtractionCheckBox->IsChecked() && !m_bgBinnedMat.empty())
 	{
-		// Rebuild cache only if needed
-		const bool cache_miss =
-			!m_BinnedBgSS ||
-			m_BgSizeSS != imageSize ||
-			m_BgBinningSS != static_cast<unsigned short>(binning) ||
-			m_BgModeSS != binningMode;
-
-		if (cache_miss)
-		{
-			SCOPE_TIMER("BinImageData (BG cache rebuild)");
-			m_BgSizeSS = imageSize;
-			m_BinnedBgSS = std::make_unique<unsigned short[]>
-				(
-				static_cast<size_t>(imageSize.GetWidth()) * imageSize.GetHeight()
-				);
-
-			MainFrameVariables::BinImageData
-			(
-				m_BackgroundSubtractionData.get(),
-				m_BinnedBgSS.get(),
-				static_cast<unsigned short>(binning),
-				/* original width of the *source* background image (!) */
-				/* We must pass the *full sensor* width here, not imageSize.GetWidth(). */
-				originalImgSize.GetWidth() * binning,  // see note below
-				imageSize,
-				binningMode
-			);
-
-			m_BgBinningSS = static_cast<unsigned short>(binning);
-			m_BgModeSS = binningMode;
-		}
-
-		{
-			SCOPE_TIMER("SubtractImages");
-			MainFrameVariables::SubtractImages
-			(
-				dataPtr.get(),
-				m_BinnedBgSS.get(),
-				imageSize
-			);
-		}
+		ensureMat(m_work1, m_binnedMat.rows, m_binnedMat.cols);
+		// saturating subtract to zero for unsigned 16-bit
+		cv::subtract(m_binnedMat, m_bgBinnedMat, m_work1, cv::noArray(), CV_16U);
 	}
 
-	if (m_MedianBlurCheckBox->IsChecked())
+	if (m_Config && m_Config->median_blur_on && m_Config->median_blur_ksize > 1) 
 	{
-		SCOPE_TIMER("ApplyMedianFilter");
-
-		MainFrameVariables::ApplyMedianFilter
-		(
-			dataPtr.get(),
-			imageSize, 
-			dataType, 
-			m_Config->median_blur_ksize
-		);
+		const int k = (m_Config->median_blur_ksize % 2) ? m_Config->median_blur_ksize : m_Config->median_blur_ksize + 1;
+		ensureMat(m_work2, m_work1.rows, m_work1.cols);
+		cv::medianBlur(m_work1.empty() ? m_binnedMat : m_work1, m_work2, k);
+	}
+	else 
+	{
+		m_work2 = (m_work1.empty() ? m_binnedMat : m_work1);
 	}
 
-	ApplyTransformationsU16(dataPtr.get(), imageSize);
-	
+	cv::Mat m_final = m_work2;
+	// mirror
+	if (m_MirrorH) cv::flip(m_final, m_final, 1);
+	if (m_MirrorV) cv::flip(m_final, m_final, 0);
+	// rotation 90
+	if (m_Rotation == Rotation90::CW)    cv::rotate(m_final, m_final, cv::ROTATE_90_CLOCKWISE);
+	if (m_Rotation == Rotation90::CCW)   cv::rotate(m_final, m_final, cv::ROTATE_90_COUNTERCLOCKWISE);
+
 	auto minimumCount = 5;
 	unsigned short minValue{}, maxValue{};
 	
@@ -3869,9 +3844,9 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 
 	if (!CalculateHistogram
 	(
-		(unsigned short*)dataPtr.get(),
-		imageSize.GetWidth(),
-		imageSize.GetHeight(),
+		(unsigned short*)m_final.data,
+		m_final.cols,
+		m_final.rows,
 		minimumCount,
 		histogram.get(),
 		&minValue,
@@ -3899,24 +3874,16 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 
 	if (!outFilePath.empty())
 	{
-		cv::Mat cv_img
-		(
-			cv::Size(imageSize.GetWidth(), imageSize.GetHeight()),
-			CV_16U,
-			dataPtr.get(),
-			cv::Mat::AUTO_STEP
-		);
-
 		wxFileName file(outFilePath);
 
 		if (wxDir::Exists(file.GetPath()))
-			cv::imwrite(file.GetFullPath().ToStdString(), cv_img);
+			cv::imwrite(file.GetFullPath().ToStdString(), m_final);
 	}
 
 	m_CamPreview->SetCameraCapturedImage
 	(
-		dataPtr.get(),
-		imageSize,
+		(unsigned short*)m_final.data,
+		wxSize(m_final.cols, m_final.rows),
 		wasHistogramRangeChanged ? m_HistogramPanel->GetLeftBorderValue() : minValue,
 		wasHistogramRangeChanged ? m_HistogramPanel->GetRightBorderValue() : maxValue
 	);
@@ -5727,12 +5694,15 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 		if (m_StartStopMeasurementTglBtn->GetValue())
 			m_ProgressBar->SetValue(progress);
 		
+		int binning{ 1 };
+		m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
+
 		if (*m_CamPreview->GetExecutionFinishedPtr())
 			DisplayAndSaveImageFromTheCamera
 			(
 				imgPtr, 
 				m_OutputImageSize,
-				1,
+				binning,
 				m_CameraControl->GetCameraDataType()
 			);
 
@@ -6806,87 +6776,82 @@ auto cMain::OnBackgroundSubtractionCheckBox(wxCommandEvent& evt) -> void
 
 auto cMain::OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void
 {
-	constexpr auto imageSizeIsNotEqualToTheCameraSensorSize = []() 
-		{
-			wxString title = "Incompatible image size";
-			wxMessageBox(
-				wxT
-				(
-					"Selected image size is not equal to the initialized camera sensor size."
-				),
-				title,
-				wxICON_ERROR);
+	constexpr auto sizeError = []() {
+		wxMessageBox("Selected image size is not equal to the initialized camera sensor size.",
+			"Incompatible image size", wxICON_ERROR);
 		};
 
+	// Reset UI + old buffers
 	m_BackgroundSubtractionFileNameTxtCtrl->SetValue("No file selected");
 	m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(wxColour(237, 28, 36));
 
-	m_BackgroundSubtractionData.reset();
-	m_BinnedBgSS.reset();
+	m_BackgroundSubtractionData.reset();   // legacy buffer, no longer used
+	m_BinnedBgSS.reset();                  // legacy single-shot cache
 	m_BgSizeSS = {};
 	m_BgBinningSS = 0;
 	m_BgModeSS = MainFrameVariables::BinningModes::BINNING_AVERAGE;
 
-	std::string filePath{};
+	// Clear OpenCV background mats so they rebuild on next frame
+	m_bgMat.release();
+	m_bgBinnedMat.release();
+
+	std::string filePath;
 
 #ifdef _DEBUG
-	filePath = ".\\src\\dbg_fld\\black_6252x4176.tif";
+	filePath = ".\\src\\dbg_fld\\black_9576x6388.tif";
 #else
 	wxFileDialog dlg
 	(
-		this,
-		"Open TIF File",
+		this, 
+		"Open TIF File", 
+		wxEmptyString, 
 		wxEmptyString,
-		wxEmptyString,
-		"TIF Files (*.tif)|*.tif",
+		"TIF Files (*.tif)|*.tif", 
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST
 	);
 
 	if (dlg.ShowModal() != wxID_OK) return;
-
 	filePath = std::string(dlg.GetPath().mbc_str());
-#endif // _DEBUG
+#endif
 
 	wxBusyCursor busy;
 
-	wxFileName fileName(filePath);
+	wxFileName fn(filePath);
+	if (!wxFileExists(fn.GetFullPath())) return;
 
-	if (!wxFileExists(fileName.GetFullPath()))
-		return;
+	cv::Mat img = cv::imread(filePath, cv::IMREAD_UNCHANGED);
+	if (img.empty()) return;
 
-	cv::Mat image = cv::imread(filePath, cv::IMREAD_UNCHANGED);
+	// Force single-channel 16-bit
+	if (img.channels() == 3 || img.channels() == 4) {
+		cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
+	}
+	if (img.type() != CV_16U) {
+		// Scale common types into 16U range
+		if (img.type() == CV_8U)      img.convertTo(img, CV_16U, 257.0);     // 255->65535
+		else if (img.type() == CV_32F) img.convertTo(img, CV_16U, 1.0);       // assume already in range
+		else if (img.type() == CV_32S) img.convertTo(img, CV_16U, 1.0);
+		else                           img.convertTo(img, CV_16U);
+	}
 
-	if (image.empty())
-		return;
+	// Check exact sensor size
+	wxAny v = m_CurrentCameraSettingsPropertyGrid->GetPropertyValue(m_PropertiesNames->sensor_width_px);
+	int sensorW = v.As<int>();
+	v = m_CurrentCameraSettingsPropertyGrid->GetPropertyValue(m_PropertiesNames->sensor_height_px);
+	int sensorH = v.As<int>();
 
-	auto dataType = HistogramPanelVariables::ImageDataTypes::RAW_12BIT;
-
-	dataType = image.type() == CV_16U ? HistogramPanelVariables::ImageDataTypes::RAW_16BIT : dataType;
-
-	// If the image size is not equal to the camera image size, show error and return
-	wxAny value = m_CurrentCameraSettingsPropertyGrid->GetPropertyValue(m_PropertiesNames->sensor_width_px);
-	auto sensorWidth = value.As<int>();
-
-	value = m_CurrentCameraSettingsPropertyGrid->GetPropertyValue(m_PropertiesNames->sensor_height_px);
-	auto sensorHeight = value.As<int>();
-
-	if (sensorWidth != image.cols || sensorHeight != image.rows)
-	{
-		imageSizeIsNotEqualToTheCameraSensorSize();
+	if (img.cols != sensorW || img.rows != sensorH) {
+		sizeError();
+		m_BackgroundSubtractionCheckBox->SetValue(false);
 		return;
 	}
 
-	auto dataPtr = std::make_unique<unsigned short[]>(image.rows * image.cols);
+	// Store full-resolution background
+	m_bgMat = img.clone();     // CV_16UC1
+	m_bgBinnedMat.release();   // force rebuild for current binning next frame
 
-	for (auto y{ 0 }; y < image.rows; ++y)
-	{
-		for (auto x{ 0 }; x < image.cols; ++x)
-			dataPtr[y * image.cols + x] = image.at<unsigned short>(y, x);
-	}
-
-	m_BackgroundSubtractionData = std::move(dataPtr);
-
-	m_BackgroundSubtractionFileNameTxtCtrl->SetValue(fileName.GetFullName());
+	// Update UI
+	m_BackgroundSubtractionFileNameTxtCtrl->SetValue(fn.GetFullName());
 	m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(wxColour(34, 177, 76));
 }
 

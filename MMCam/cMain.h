@@ -1808,6 +1808,8 @@ private:
 
 	void ApplyTransformationsU16(unsigned short* data, wxSize& size);
 
+	inline void ensureMat(cv::Mat& m, int h, int w) { if (m.rows != h || m.cols != w || m.type() != CV_16UC1) m.create(h, w, CV_16UC1); }
+
 private:
 	/* Initialization file */
 	wxString m_AppName{}, m_InitializationFilePath{};
@@ -1943,6 +1945,12 @@ private:
 	Rotation90 m_Rotation{ Rotation90::None };
 	bool m_MirrorH{ false };
 	bool m_MirrorV{ false };
+
+	cv::Mat m_rawMat;        // wrapped camera buffer (no-own)
+	cv::Mat m_binnedMat;     // software-binned frame
+	cv::Mat m_bgMat;         // full-res loaded background
+	cv::Mat m_bgBinnedMat;   // cached binned background
+	cv::Mat m_work1, m_work2; // scratch buffers for ops (median, subtract, rotate)
 
 	wxDECLARE_EVENT_TABLE();
 };
