@@ -7779,8 +7779,16 @@ auto cMain::EnableControlsAfterCapturing() -> void
 	
 	EnableUsedAndDisableNonUsedMotors();
 
+	// Background Subtraction
 	m_BackgroundSubtractionCheckBox->Enable();
 	m_BackgroundSubtractionLoadFileBtn->Enable();
+
+	// Flat Field
+	m_FlatFieldCorrectionCheckBox->Enable();
+	m_HiGainFlatFieldLoadFileBtn->Enable();
+	m_LoGainFlatFieldLoadFileBtn->Enable();
+
+	// Median Blur
 	m_MedianBlurCheckBox->Enable();
 }
 
@@ -7810,8 +7818,16 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 	if (!m_VerticalToolBar->tool_bar->GetToolState(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING))
 		m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 
+	// Background Subtraction
 	m_BackgroundSubtractionCheckBox->Enable();
 	m_BackgroundSubtractionLoadFileBtn->Enable();
+
+	// Flat Field
+	m_FlatFieldCorrectionCheckBox->Enable();
+	m_HiGainFlatFieldLoadFileBtn->Enable();
+	m_LoGainFlatFieldLoadFileBtn->Enable();
+
+	// Median Blur
 	m_MedianBlurCheckBox->Enable();
 }
 
@@ -7853,8 +7869,16 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 
 	m_HistogramPanel->Disable();
 
+	// Background Subtraction
 	m_BackgroundSubtractionCheckBox->Disable();
 	m_BackgroundSubtractionLoadFileBtn->Disable();
+
+	// Flat Field
+	m_FlatFieldCorrectionCheckBox->Disable();
+	m_HiGainFlatFieldLoadFileBtn->Disable();
+	m_LoGainFlatFieldLoadFileBtn->Disable();
+
+	// Median Blur
 	m_MedianBlurCheckBox->Disable();
 }
 
@@ -7890,8 +7914,16 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 		
 		m_StartStopMeasurementTglBtn->Disable();
 
+		// Background Subtraction
 		m_BackgroundSubtractionCheckBox->Disable();
 		m_BackgroundSubtractionLoadFileBtn->Disable();
+
+		// Flat Field
+		m_FlatFieldCorrectionCheckBox->Disable();
+		m_HiGainFlatFieldLoadFileBtn->Disable();
+		m_LoGainFlatFieldLoadFileBtn->Disable();
+
+		// Median Blur
 		m_MedianBlurCheckBox->Disable();
 
 		StartLiveCapturing();
@@ -7937,8 +7969,16 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 
 		m_StartStopMeasurementTglBtn->Enable();
 
+		// Background Subtraction
 		m_BackgroundSubtractionCheckBox->Enable();
 		m_BackgroundSubtractionLoadFileBtn->Enable();
+
+		// Flat Field
+		m_FlatFieldCorrectionCheckBox->Enable();
+		m_HiGainFlatFieldLoadFileBtn->Enable();
+		m_LoGainFlatFieldLoadFileBtn->Enable();
+
+		// Median Blur
 		m_MedianBlurCheckBox->Enable();
 
 		m_CameraTabControls->startStopLiveCapturingTglBtn->SetLabel(wxT("Start Live (L)"));
