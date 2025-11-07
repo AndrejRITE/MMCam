@@ -1,0 +1,21 @@
+{
+  "camera": "21122",
+  "camera_manufacturer": "MORAVIAN_INSTRUMENTS",
+  "pixel_size_um": 3.76,
+  "station": "VACUUM CHAMBER",
+  "detector": [
+    { "SerialNumber": "6783", "StepsPerMM": 800, "Manufacturer": "STANDA" },
+    { "SerialNumber": "5064", "StepsPerMM": 800, "Manufacturer": "STANDA" },
+    { "SerialNumber": "32857", "StepsPerMM": 200, "Manufacturer": "STANDA" }
+  ],
+  "optics": [
+    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" },
+    { "SerialNumber": "32815", "StepsPerMM": 200, "Manufacturer": "STANDA" },
+    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" }
+  ],
+  "aux": [
+    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" },
+    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" },
+    { "SerialNumber": "None",  "StepsPerMM": 800, "Manufacturer": "STANDA" }
+  ]
+}
