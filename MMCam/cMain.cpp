@@ -7007,6 +7007,12 @@ auto cMain::OnBackgroundSubtractionCheckBox(wxCommandEvent& evt) -> void
 
 auto cMain::OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void
 {
+	const auto fail = [&](const wxString& msg)
+		{
+			wxMessageBox(msg, "Background Subtraction Load Error", wxICON_ERROR);
+			m_BackgroundSubtractionCheckBox->SetValue(false);
+		};
+
 	constexpr auto sizeError = []() {
 		wxMessageBox("Selected image size is not equal to the initialized camera sensor size.",
 			"Incompatible image size", wxICON_ERROR);
@@ -7041,17 +7047,21 @@ auto cMain::OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST
 	);
 
-	if (dlg.ShowModal() != wxID_OK) return;
+	if (dlg.ShowModal() != wxID_OK)
+	{
+		m_BackgroundSubtractionCheckBox->SetValue(false);
+		return;
+	}
 	filePath = std::string(dlg.GetPath().mbc_str());
 #endif
 
 	wxBusyCursor busy;
 
 	wxFileName fn(filePath);
-	if (!wxFileExists(fn.GetFullPath())) return;
+	if (!wxFileExists(fn.GetFullPath())) { fail("File not found."); return; }
 
 	cv::Mat img = cv::imread(filePath, cv::IMREAD_UNCHANGED);
-	if (img.empty()) return;
+	if (img.empty()) { fail("Failed to read the image."); return; }
 
 	// Force single-channel 16-bit
 	if (img.channels() == 3 || img.channels() == 4) {
@@ -9624,7 +9634,8 @@ auto cMain::OnFlatFieldCorrectionCheckBox(wxCommandEvent& evt) -> void
 {
 	const bool enabled = m_FlatFieldCorrectionCheckBox && m_FlatFieldCorrectionCheckBox->IsChecked();
 
-	if (!enabled) {
+	if (!enabled) 
+	{
 		m_ffHiFull.release();   m_ffLoFull.release();
 		m_ffHiBinned.release(); m_ffLoBinned.release();
 		return;
@@ -9635,6 +9646,13 @@ auto cMain::OnFlatFieldCorrectionCheckBox(wxCommandEvent& evt) -> void
 
 	// Then ask for Lo
 	LoadSingleFlat("Select Lo-Gain flat", m_LoGainFlatFieldFileNameTxtCtrl.get(), m_ffLoFull);
+
+	if (m_ffHiFull.empty() || m_ffLoFull.empty()) 
+	{
+		if (m_FlatFieldCorrectionCheckBox)
+			m_FlatFieldCorrectionCheckBox->SetValue(false);
+		wxMessageBox("Flat field correction disabled due to missing flat fields.", "Info", wxOK | wxICON_INFORMATION);
+	}
 }
 
 auto cMain::OnHiGainFlatFieldLoadFileBtn(wxCommandEvent& evt) -> void
@@ -9650,16 +9668,21 @@ auto cMain::OnLoGainFlatFieldLoadFileBtn(wxCommandEvent& evt) -> void
 auto cMain::LoadSingleFlat(const wxString& title, wxTextCtrl* targetTxtCtrl, cv::Mat& dstFull) -> bool
 {
 	wxFileDialog dlg(
-		this, title,
-		wxEmptyString, wxEmptyString,
+		this, 
+		title,
+		wxEmptyString, 
+		wxEmptyString,
 		"TIFF images (*.tif;*.tiff)|*.tif;*.tiff|All files (*.*)|*.*",
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST
 	);
+
 	if (dlg.ShowModal() != wxID_OK) return false;
 
 	const wxString path = dlg.GetPath();
 	cv::Mat tmp;
-	if (!MainFrameVariables::LoadU16TiffToMat(path, tmp)) {
+
+	if (!MainFrameVariables::LoadU16TiffToMat(path, tmp)) 
+	{
 		wxMessageBox("Failed to load 16-bit TIFF.", "Error", wxOK | wxICON_ERROR);
 		return false;
 	}
