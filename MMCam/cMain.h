@@ -240,6 +240,11 @@ namespace MainFrameVariables
 		bool binning_sum_mode{ false };
 		bool median_blur_on{ false };
 
+		// image transform persistence
+		int  transform_rotation{ 0 }; // 0=None, 1=CW90, 2=CCW90
+		bool transform_mirror_h{ false };
+		bool transform_mirror_v{ false };
+
 		double crop_size_mm = 0.5;
 		double crop_size_circle_mm = 1.5;
 		double default_sensor_temperature_degC = 25.0;
@@ -280,6 +285,10 @@ namespace MainFrameVariables
 
 			binning_sum_mode,
 			median_blur_on,
+
+			transform_rotation,
+			transform_mirror_h,
+			transform_mirror_v,
 
 			crop_size_mm, 
 			crop_size_circle_mm, 

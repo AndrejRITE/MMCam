@@ -4146,6 +4146,19 @@ auto cMain::ReadInitializationFile() -> void
 	}
 	
 	m_Settings->SetLastInitializedWorkStation(m_Config->work_station);
+
+	// Map stored rotation
+	switch (m_Config->transform_rotation) 
+	{
+		case 1:  m_Rotation = Rotation90::CW;  break;
+		case 2:  m_Rotation = Rotation90::CCW; break;
+		default: m_Rotation = Rotation90::None; break;
+	}
+	m_MirrorH = m_Config->transform_mirror_h;
+	m_MirrorV = m_Config->transform_mirror_v;
+
+	// Reflect state in menu/toolbar so it looks "pressed"
+	SyncTransformationUI();
 }
 
 auto cMain::RewriteInitializationFile() -> void
@@ -5136,6 +5149,8 @@ auto cMain::CreateHorizontalToolBar() -> void
 	m_HorizontalToolBar->tool_bar->SetToolBitmapSize(iconSize);
 	m_HorizontalToolBar->tool_bar->Realize();
 	m_HorizontalToolBar->tool_bar->Disable();
+
+	SyncTransformationUI();
 }
 
 
@@ -9538,13 +9553,15 @@ void cMain::SyncTransformationUI()
 	const bool cw = (m_Rotation == Rotation90::CW);
 	const bool ccw = (m_Rotation == Rotation90::CCW);
 
-	auto set = [&](int id, bool on) {
-		// menu
-		if (auto* it = m_MenuBar->menu_bar->FindItem(id))
-			it->Check(on);
-		// toolbar
-		if (m_HorizontalToolBar && m_HorizontalToolBar->tool_bar)
-			m_HorizontalToolBar->tool_bar->ToggleTool(id, on);
+	auto set = [&](int id, bool on) 
+		{
+			if (!m_MenuBar) return;
+			// menu
+			if (auto* it = m_MenuBar->menu_bar->FindItem(id))
+				it->Check(on);
+			// toolbar
+			if (m_HorizontalToolBar && m_HorizontalToolBar->tool_bar)
+				m_HorizontalToolBar->tool_bar->ToggleTool(id, on);
 		};
 
 	set(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90, cw);
@@ -9567,28 +9584,72 @@ void cMain::OnRotateCW90(wxCommandEvent& evt)
 	// Clear CCW when CW turned on; clear CW when turning off is handled above
 	if (m_Rotation == Rotation90::CW)
 		; // just state already set
+
+	if (m_Config) 
+	{
+		m_Config->transform_rotation = (m_Rotation == Rotation90::CW ? 1 :
+			m_Rotation == Rotation90::CCW ? 2 : 0);
+		m_Config->transform_mirror_h = m_MirrorH;
+		m_Config->transform_mirror_v = m_MirrorV;
+		RewriteInitializationFile();
+	}
+
 	SyncTransformationUI();
+
 	Refresh(); Update();
 }
 
 void cMain::OnRotateCCW90(wxCommandEvent& evt)
 {
 	m_Rotation = (m_Rotation == Rotation90::CCW) ? Rotation90::None : Rotation90::CCW;
+
+	if (m_Config) 
+	{
+		m_Config->transform_rotation = (m_Rotation == Rotation90::CW ? 1 :
+			m_Rotation == Rotation90::CCW ? 2 : 0);
+		m_Config->transform_mirror_h = m_MirrorH;
+		m_Config->transform_mirror_v = m_MirrorV;
+		RewriteInitializationFile();
+	}
+
 	SyncTransformationUI();
+
 	Refresh(); Update();
 }
 
 void cMain::OnMirrorH(wxCommandEvent& evt)
 {
 	m_MirrorH = !m_MirrorH;
+
+	if (m_Config) 
+	{
+		m_Config->transform_rotation = (m_Rotation == Rotation90::CW ? 1 :
+			m_Rotation == Rotation90::CCW ? 2 : 0);
+		m_Config->transform_mirror_h = m_MirrorH;
+		m_Config->transform_mirror_v = m_MirrorV;
+		RewriteInitializationFile();
+	}
+
 	SyncTransformationUI();
+
 	Refresh(); Update();
 }
 
 void cMain::OnMirrorV(wxCommandEvent& evt)
 {
 	m_MirrorV = !m_MirrorV;
+
+	if (m_Config) 
+	{
+		m_Config->transform_rotation = (m_Rotation == Rotation90::CW ? 1 :
+			m_Rotation == Rotation90::CCW ? 2 : 0);
+		m_Config->transform_mirror_h = m_MirrorH;
+		m_Config->transform_mirror_v = m_MirrorV;
+		RewriteInitializationFile();
+	}
+
 	SyncTransformationUI();
+
 	Refresh(); Update();
 }
 
