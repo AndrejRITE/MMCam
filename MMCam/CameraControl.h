@@ -36,6 +36,8 @@ public:
 
     virtual auto GetSupplyVoltage() -> double { return 0.0; }
 
+    virtual auto GetPowerUtilization() -> int { return -1; }
+
     auto GetCameraDataType() const -> CameraControlVariables::ImageDataTypes { return m_ImageDataType; };
     auto GetSerialNumber() const -> std::string { return m_CameraSerialNumber; };
 

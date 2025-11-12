@@ -2176,6 +2176,18 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 
 	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
+	property = m_CurrentCameraSettingsPropertyGrid->Append
+	(
+		new wxIntProperty
+		(
+			m_PropertiesNames->power_utilization, 
+			m_PropertiesNames->power_utilization, 
+			0
+		)
+	);
+
+	property->ChangeFlag(wxPGFlags::ReadOnly, true);
+
 	auto pixelGroup = m_CurrentCameraSettingsPropertyGrid->Append(new wxPropertyCategory("Sensor Size [px]", "SensorSizePixels"));
 
 	property = m_CurrentCameraSettingsPropertyGrid->AppendIn
@@ -4473,8 +4485,11 @@ auto cMain::UpdateCameraParameters() -> void
 	auto tempString = CameraPreviewVariables::CreateStringWithPrecision(m_CameraControl->GetSensorTemperature(), 1);
 	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->temperature, tempString);
 
-	auto supplyVoltageString = CameraPreviewVariables::CreateStringWithPrecision(m_CameraControl->GetSupplyVoltage(), 1);
-	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->voltage, supplyVoltageString);
+	auto supplyVoltage = m_CameraControl->GetSupplyVoltage();
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->voltage, supplyVoltage);
+
+	auto powerUtilization = m_CameraControl->GetPowerUtilization();
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->power_utilization, powerUtilization);
 
 	auto depth = m_CameraControl->GetCameraDataType() == CameraControlVariables::ImageDataTypes::RAW_12BIT ? wxString("12") : wxString("16");
 	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->depth, depth);
@@ -6844,36 +6859,25 @@ auto cMain::OnLiveViewFPSCheck(wxCommandEvent& evt) -> void
 
 void cMain::OnTemperatureUpdate(wxThreadEvent& evt)
 {
-	const auto tv = evt.GetPayload<std::pair<double, double>>();
-	const double temperature = tv.first;
-	const double voltage = tv.second;
+	const auto td = evt.GetPayload<MainFrameVariables::TelemetryData>();
 
 	if (!m_CurrentCameraSettingsPropertyGrid || !m_PropertiesNames) return;
 
-	// Format using your existing helper and update the property grid.
-	const auto tempString = CameraPreviewVariables::CreateStringWithPrecision(temperature, 1);
+	auto* pg = m_CurrentCameraSettingsPropertyGrid;
 
-	// Update Temperature property
-	if (auto* prop = m_CurrentCameraSettingsPropertyGrid->GetProperty(m_PropertiesNames->temperature))
-	{
-		// Use SetPropertyValue to avoid flicker and keep editors consistent
-		m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(prop, tempString);
-		// Optionally force a refresh if you want immediate visual commit:
-		 m_CurrentCameraSettingsPropertyGrid->RefreshProperty(prop);
-	}
+	if (auto* p = pg->GetProperty(m_PropertiesNames->temperature); p)
+		p->SetValue(CameraPreviewVariables::CreateStringWithPrecision(td.temperature_degC, 1));
 
-	// Update supply voltage
-	const auto voltString = CameraPreviewVariables::CreateStringWithPrecision(voltage, 1);
-	if (auto* pV = m_CurrentCameraSettingsPropertyGrid->GetProperty(m_PropertiesNames->voltage))
-	{
-		m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(pV, voltString);
-		m_CurrentCameraSettingsPropertyGrid->RefreshProperty(pV);
-	}
+	if (auto* p = pg->GetProperty(m_PropertiesNames->voltage); p)
+		p->SetValue(td.supply_voltage_V);
+
+	if (auto* p = pg->GetProperty(m_PropertiesNames->power_utilization); p)
+		p->SetValue(td.power_utilization_pct);
 
 	// If we're cooling, check if we've reached target within tolerance
 	if (m_IsCoolingDown)
 	{
-		const bool reached = std::fabs(temperature - m_TargetSensorTempDegC) <= m_TempReachedToleranceDegC;
+		const bool reached = std::fabs(td.temperature_degC - m_TargetSensorTempDegC) <= m_TempReachedToleranceDegC;
 
 		// Consider "reached" when current <= target + tol (most sensors overshoot slightly, tweak logic if heating)
 		if (reached)
@@ -6883,13 +6887,13 @@ void cMain::OnTemperatureUpdate(wxThreadEvent& evt)
 			// End busy cursor + re-enable UI
 			if (wxIsBusy()) wxEndBusyCursor();
 			m_CameraTabControls->EnableAllControls();
-			SetStatusText(wxString::Format("Temperature stable at %.1f °C.", temperature));
+			SetStatusText(wxString::Format("Temperature stable at %.1f °C.", td.temperature_degC));
 			m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(m_PropertiesNames->temperature, m_DefaultCellColor);
 		}
 		else
 		{
 			// still cooling – optional UI pulse/update text here
-			 SetStatusText(wxString::Format("Cooling: %.1f → %.1f °C", temperature, m_TargetSensorTempDegC));
+			 SetStatusText(wxString::Format("Cooling: %.1f → %.1f °C", td.temperature_degC, m_TargetSensorTempDegC));
 		}
 	}
 }

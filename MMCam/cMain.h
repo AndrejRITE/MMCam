@@ -515,11 +515,19 @@ namespace MainFrameVariables
 		wxString id{ "ID" };
 		wxString temperature{ "Sensor Temperature [degC]" };
 		wxString voltage{ "Supply Voltage [V]" };
+		wxString power_utilization{ "Power Utilization [%]" };
 		wxString depth{ "Depth [bit]" };
 		wxString sensor_width_px{ "Sensor Width [px]" };
 		wxString sensor_height_px{ "Sensor Height [px]" };
 		wxString sensor_width_um{ "Sensor Width [um]" };
 		wxString sensor_height_um{ "Sensor Height [um]" };
+	};
+
+	struct TelemetryData
+	{
+		double temperature_degC{};
+		double supply_voltage_V{};
+		int power_utilization_pct{ -1 }; // -1 if unknown/unavailable
 	};
 
 	static auto BinImageData
@@ -2226,9 +2234,17 @@ protected:
 			if (m_Frame && m_Camera)
 			{
 				const double t = m_Camera->GetSensorTemperature();
-				const double voltage = m_Camera->GetSupplyVoltage();
+				const double v = m_Camera->GetSupplyVoltage();
+
+				const int pu = m_Camera->GetPowerUtilization();
+
+				MainFrameVariables::TelemetryData td;
+				td.temperature_degC = t;
+				td.supply_voltage_V = v;
+				td.power_utilization_pct = pu;
+
 				wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_TEMPERATURE);
-				evt.SetPayload<std::pair<double, double>>({ t, voltage });
+				evt.SetPayload(td);
 				wxQueueEvent(m_Frame, evt.Clone());
 			}
 			wxThread::Sleep(m_IntervalMS);

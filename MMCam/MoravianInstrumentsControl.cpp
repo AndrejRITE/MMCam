@@ -131,6 +131,20 @@ auto MoravianInstrumentsControl::GetSupplyVoltage() -> double
 	return m_SupplyVoltage;
 }
 
+auto MoravianInstrumentsControl::GetPowerUtilization() -> int
+{
+	if (!m_CameraHandler) return 0;
+
+	gxetha::BOOLEAN state{};
+	gxetha::GetBooleanParameter(m_CameraHandler, gbpPowerUtilization, &state);
+
+	if (!state) return -1;
+
+	gxetha::REAL value;
+	gxetha::GetValue(m_CameraHandler, gvPowerUtilization, &value);
+	return static_cast<int>(value * 100.0);
+}
+
 auto MoravianInstrumentsControl::IsConnected() const -> bool 
 {
 	if (!m_CameraHandler) return false;

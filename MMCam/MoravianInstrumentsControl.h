@@ -93,6 +93,8 @@ public:
 
 	auto GetSupplyVoltage() -> double override;
 
+	auto GetPowerUtilization() -> int override;
+
 	auto GetWidth() const -> unsigned long override { return m_CameraHandler == nullptr || m_ActualCameraParameters == nullptr ? 0 : m_ActualCameraParameters->sensor_width; };
 	auto GetHeight() const -> unsigned long override { return m_CameraHandler == nullptr || m_ActualCameraParameters == nullptr ? 0 : m_ActualCameraParameters->sensor_height; };
 
