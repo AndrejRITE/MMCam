@@ -4051,7 +4051,15 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 	}
 
 	// histogram
-	auto minimumCount = 5;
+	const size_t totalPx =
+		static_cast<size_t>(m_OutputImageSize.GetWidth()) *
+		static_cast<size_t>(m_OutputImageSize.GetHeight());
+
+	// ~0.002% of pixels, but never below 5.
+	// Example: 1 MP -> 20 counts; 16 MP -> 320 counts.
+	const double frac = 2e-5;
+	const unsigned int minimumCount = std::max(5u, static_cast<unsigned int>(totalPx * frac));
+
 	unsigned short minValue{}, maxValue{};
 	const size_t histSize = (dataType == CameraControlVariables::ImageDataTypes::RAW_12BIT) ? 4096 : 65536;
 	auto histogram = std::make_unique<unsigned long long[]>(histSize);
@@ -4631,7 +4639,14 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 	auto histogram = std::make_unique<unsigned long long[]>(USHRT_MAX + 1);
 
 	unsigned short minValue{}, maxValue{};
-	auto minimumCount = 5;
+	const size_t totalPx =
+		static_cast<size_t>(m_OutputImageSize.GetWidth()) *
+		static_cast<size_t>(m_OutputImageSize.GetHeight());
+
+	// ~0.002% of pixels, but never below 5.
+	// Example: 1 MP -> 20 counts; 16 MP -> 320 counts.
+	const double frac = 2e-5;
+	const unsigned int minimumCount = std::max(5u, static_cast<unsigned int>(totalPx * frac));
 
 	if (!CalculateHistogram
 	(
