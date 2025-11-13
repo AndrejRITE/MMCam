@@ -235,7 +235,7 @@ namespace MainFrameVariables
 		bool display_image_stats{ true };
 		bool display_live_view_fps{ true };
 		bool disable_report_generator{};
-		bool crosshair_adaptive_scaling{};
+		bool crosshair_adaptive_scaling{ true };
 
 		bool binning_sum_mode{ false };
 		bool median_blur_on{ false };
