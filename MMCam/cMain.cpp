@@ -4052,8 +4052,8 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 
 	// histogram
 	const size_t totalPx =
-		static_cast<size_t>(m_OutputImageSize.GetWidth()) *
-		static_cast<size_t>(m_OutputImageSize.GetHeight());
+		static_cast<size_t>(m_final.rows) *
+		static_cast<size_t>(m_final.cols);
 
 	// ~0.002% of pixels, but never below 5.
 	// Example: 1 MP -> 20 counts; 16 MP -> 320 counts.
@@ -4640,8 +4640,8 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 
 	unsigned short minValue{}, maxValue{};
 	const size_t totalPx =
-		static_cast<size_t>(m_OutputImageSize.GetWidth()) *
-		static_cast<size_t>(m_OutputImageSize.GetHeight());
+		static_cast<size_t>(image.cols) *
+		static_cast<size_t>(image.rows);
 
 	// ~0.002% of pixels, but never below 5.
 	// Example: 1 MP -> 20 counts; 16 MP -> 320 counts.

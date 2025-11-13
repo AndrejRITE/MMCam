@@ -1928,78 +1928,108 @@ auto cCamPreview::DrawCircleMesh(wxGraphicsContext* gc_) -> void
 
 auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 {
-	if (!m_ImageData || !m_Image.IsOk() || m_PixelSizeUM == 0.0) return;
+	if (!m_ImageData || !m_Image.IsOk() || m_PixelSizeUM <= 0.0) return;
 
-	auto scale_bar_start_draw = wxRealPoint
-	(
-		m_CanvasSize.GetWidth() - 70,
-		m_CanvasSize.GetHeight() - 20
-	);
-	// Set line color and thickness
-	auto pen_thickness = 4;
+	// --- Placement & style
+	const wxRealPoint anchor(m_CanvasSize.GetWidth() - 70, m_CanvasSize.GetHeight() - 20);
+	const int pen_thickness = 4;
 
-	auto scale_bar_scale_size{ 10 };
-	auto scale_bar_um_array = std::make_unique<unsigned int[]>(scale_bar_scale_size);
-	for (auto i{ 0 }; i < scale_bar_scale_size; ++i)
-		scale_bar_um_array[i] = pow(10, i);
+	// image bin factor (how many sensor pixels per displayed image pixel)
+	const double binFactor =
+		static_cast<double>(m_OriginalImageSize.GetWidth()) /
+		std::max(1, m_ImageSize.GetWidth()); // NOTE: double division
 
-	int selected_scale{ scale_bar_scale_size - 1 };
-	double length_horizontal_line = m_Zoom / m_ZoomOnOriginalSizeImage * scale_bar_um_array[selected_scale] / m_PixelSizeUM;
-	length_horizontal_line /= static_cast<int>(m_OriginalImageSize.GetWidth() / m_ImageSize.GetWidth());
+	// canvas scale: how many canvas pixels per image pixel
+	const double canvasScale = std::max(1e-12, m_Zoom / std::max(1e-12, m_ZoomOnOriginalSizeImage));
 
-	while (length_horizontal_line > m_CanvasSize.GetWidth() / 3.0 && selected_scale > 0)
-	{
-		--selected_scale;
-		length_horizontal_line = m_Zoom / m_ZoomOnOriginalSizeImage * scale_bar_um_array[selected_scale] / m_PixelSizeUM;
-		length_horizontal_line /= static_cast<int>(m_OriginalImageSize.GetWidth() / m_ImageSize.GetWidth());
-	}
+	// µm per canvas pixel = (µm per image pixel) / (canvas px per image px)
+	const double umPerCanvasPixel = (m_PixelSizeUM * binFactor) / canvasScale;
 
-	auto bgColor = GetPixelColorFromImage(m_LastBufferImage, scale_bar_start_draw.x - length_horizontal_line / 2, scale_bar_start_draw.y);
-	wxColour widgetColour(255 - bgColor.Red(), 255 - bgColor.Green(), 255 - bgColor.Blue());
+	// --- Choose a readable target bar length in pixels
+	// Aim for ~1/4 of the canvas width, clamp to [80, 280] px
+	const double targetPx = std::clamp(m_CanvasSize.GetWidth() * 0.25, 80.0, 280.0);
 
-	widgetColour = bgColor.GetRed() == bgColor.GetGreen() && bgColor.GetGreen() == bgColor.GetBlue() && bgColor.GetRed() == bgColor.GetBlue() ? m_ContrastDefaultColor : widgetColour;
-	
-	gc_->SetPen(wxPen(widgetColour, pen_thickness));
+	// --- Convert target pixels to microns, then snap to 1–2–5×10^n
+	auto nice125 = [](double v) -> double {
+		if (v <= 0.0) return 1.0;
+		const double p10 = std::pow(10.0, std::floor(std::log10(v)));
+		const double d = v / p10;
+		double m = 1.0;
+		if (d >= 5.0)      m = 5.0;
+		else if (d >= 2.0) m = 2.0;
+		else              m = 1.0;
+		return m * p10;
+		};
 
-	// Draw the first horizntal line from (x1, y1) to (x2, y2)
-	gc_->StrokeLine
-	(
-		scale_bar_start_draw.x,
-		scale_bar_start_draw.y,
-		scale_bar_start_draw.x - length_horizontal_line,
-		scale_bar_start_draw.y
-	);
+	const double targetUm = targetPx * umPerCanvasPixel;
+	const double scaleUm = nice125(targetUm);
 
-	// Draw the text
-	{
-		wxRealPoint drawPoint{};
-		wxFont font = wxFont(16, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
-		gc_->SetFont(font, widgetColour);
+	// --- Compute final drawn pixel length
+	double lengthPx = scaleUm / std::max(1e-12, umPerCanvasPixel);
 
-		wxDouble widthText{}, heightText{};
-		wxString curr_value{};
-		auto currentScaleValue = scale_bar_um_array[selected_scale];
-		int thousandsCount = 0;
-		while (currentScaleValue % 1'000 == 0)
-		{
-			currentScaleValue /= 1'000;
-			++thousandsCount;
+	// If still too large (tiny zoom), shrink by stepping down the 1–2–5 series
+	if (lengthPx > m_CanvasSize.GetWidth() / 3.0) {
+		double v = scaleUm;
+		while (lengthPx > m_CanvasSize.GetWidth() / 3.0) {
+			// step down: divide by 2, then if not 1–2–5, divide to previous 'nice' decade
+			v /= 2.0;
+			if (std::fmod(v, 5.0) == 0.0) { /* keep */ }
+			else if (std::fmod(v, 2.0) == 0.0) { /* keep */ }
+			else { v = nice125(v / 2.5); }
+			if (v <= 0.0) break;
+			lengthPx = v / std::max(1e-12, umPerCanvasPixel);
 		}
-
-		//curr_value = wxString::Format(wxT("%i"), scale_bar_um_array[selected_scale]);
-		curr_value = wxString::Format(wxT("%i"), currentScaleValue);
-		for (auto i{ 0 }; i < thousandsCount; ++i)
-			curr_value += wxString("'000");
-
-		curr_value += wxString(" [micron");
-		curr_value += scale_bar_um_array[selected_scale] == 1 ? wxString("]") : wxString("s]");
-		gc_->GetTextExtent(curr_value, &widthText, &heightText);
-		drawPoint.x = scale_bar_start_draw.x - length_horizontal_line / 2.0;
-		drawPoint.x -= widthText / 2.0;
-		drawPoint.y = scale_bar_start_draw.y - 25;
-		drawPoint.y -= heightText / 2.0;
-		gc_->DrawText(curr_value, drawPoint.x, drawPoint.y);
 	}
+
+	// If too small to be useful, bail out quietly
+	if (lengthPx < 40.0) return;
+
+	// --- Pick contrast color against the local background (as you already do)
+	const auto bg = GetPixelColorFromImage(m_LastBufferImage, anchor.x - lengthPx / 2.0, anchor.y);
+	wxColour widgetColor(255 - bg.Red(), 255 - bg.Green(), 255 - bg.Blue());
+	if (bg.Red() == bg.Green() && bg.Green() == bg.Blue())
+		widgetColor = m_ContrastDefaultColor;
+
+	gc_->SetPen(wxPen(widgetColor, pen_thickness));
+
+	// --- Draw the bar
+	gc_->StrokeLine(anchor.x, anchor.y, anchor.x - lengthPx, anchor.y);
+
+	// --- Label: use K/M/G for microns (as requested)
+	auto format_um_KMG = [](double um) -> wxString {
+		const double a = std::fabs(um);
+		wxString suff = " [microns]";
+		if (a >= 1e9)  return wxString::Format(wxT("%.0fG"), um / 1e9) + suff;
+		if (a >= 1e6)  return wxString::Format(wxT("%.0fM"), um / 1e6) + suff;
+		if (a >= 1e3)  return wxString::Format(wxT("%.0fK"), um / 1e3) + suff;
+		// fall back to integer µm for small values
+		return wxString::Format(wxT("%.0f"), um) + suff;
+		};
+
+	// Alternative unit auto-switch (optional). If you prefer always µm with K/M/G,
+	// keep the line above and remove this block.
+	// Uncomment to switch units:
+	/*
+	auto format_with_units = [](double um) -> wxString {
+		const double a = std::fabs(um);
+		if (a >= 1e6)  return wxString::Format(wxT("%.2f m"),    um / 1e6);
+		if (a >= 1e3)  return wxString::Format(wxT("%.2f mm"),   um / 1e3);
+		if (a >= 100)  return wxString::Format(wxT("%.0f µm"),   um);
+		if (a >= 1)    return wxString::Format(wxT("%.1f µm"),   um);
+		return wxString::Format(wxT("%.2f µm"), um);
+	};
+	*/
+
+	// --- Draw the text centered above the bar
+	wxFont font(16, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+	gc_->SetFont(font, widgetColor);
+
+	const wxString label = format_um_KMG(scaleUm); // or format_with_units(scaleUm);
+	wxDouble tw{}, th{};
+	gc_->GetTextExtent(label, &tw, &th);
+	const wxDouble tx = anchor.x - lengthPx / 2.0 - tw / 2.0;
+	const wxDouble ty = anchor.y - 25 - th / 2.0;
+	gc_->DrawText(label, tx, ty);
 }
 
 auto cCamPreview::DrawHEWCircle(wxGraphicsContext* gc_) -> void
