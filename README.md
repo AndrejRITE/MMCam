@@ -19,7 +19,7 @@ MMCam is a software application for processing and visualizing raw image data ac
 
 ## Important notes
 
-> [!Cameras]
+> [!WARNING]
 > The application supports only the Ximea, the Moravian Instruments (C1x series), the Tucsen cameras.
-> [!Stages]
+> [!WARNING]
 > The application supports only the Xeryon and Standa stepper motors.
