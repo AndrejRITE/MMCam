@@ -1,16 +1,25 @@
 # MMCam
 ## What is MMCam application?
 
-MMCam is a software application designed for processing and visualizing raw image data with the Ximea and Moravian Instruments (C1x series) scientific cameras.
+MMCam is a software application for processing and visualizing raw image data acquired from various scientific cameras
 
 ## Key Features
 
-- Visualization of captured data
+- Real-time visualization of captured data
+- Built-in tools for data analysis
+- Support utilities for measurement and acquisition workflows
+- Post-processing algorithms including:
+  - Data filtering
+  - Background subtraction
+  - Flat-field correction
+- Automated report generation
+- Integrated camera and stage control (step-capture functionality)
 
 ![Screenshot of the main application window.](/MMCam/src/About/img/main_app_window.png)
 
 ## Important notes
 
-> [!IMPORTANT]
+> [!Cameras]
 > The application supports only the Ximea, the Moravian Instruments (C1x series), the Tucsen cameras.
+> [!Stages]
 > The application supports only the Xeryon and Standa stepper motors.
