@@ -299,6 +299,32 @@ auto TucsenControl::GetSensorTemperature() -> double
     return m_SensorTemperature;
 }
 
+auto TucsenControl::GetShortestExposureMS() -> double
+{
+	TUCAM_PROP_ATTR attrProp;
+
+	attrProp.nIdxChn = 0;
+	attrProp.idProp = TUIDP_EXPOSURETM;
+
+    if (ok(TUCAM_Prop_GetAttr(m_opCam.hIdxTUCam, &attrProp)))
+    {
+       return attrProp.dbValMin;
+	}
+}
+
+auto TucsenControl::GetLongestExposureMS() -> double
+{
+	TUCAM_PROP_ATTR attrProp;
+
+	attrProp.nIdxChn = 0;
+	attrProp.idProp = TUIDP_EXPOSURETM;
+
+    if (ok(TUCAM_Prop_GetAttr(m_opCam.hIdxTUCam, &attrProp)))
+    {
+       return attrProp.dbValMax;
+	}
+}
+
 auto TucsenControl::BeginContinuousAcquisition() -> bool
 {
     // Start once in sequence mode; stays running until Cap_Stop.

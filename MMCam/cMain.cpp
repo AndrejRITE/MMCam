@@ -2244,9 +2244,36 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 
 	property->ChangeFlag(wxPGFlags::ReadOnly, true);
 
+	auto exposureGroup = m_CurrentCameraSettingsPropertyGrid->Append(new wxPropertyCategory("Exposure", "Exposure"));
+
+	property = m_CurrentCameraSettingsPropertyGrid->AppendIn
+	(
+		exposureGroup,
+		new wxFloatProperty
+		(
+			m_PropertiesNames->shortest_exposure_ms, 
+			m_PropertiesNames->shortest_exposure_ms, 
+			0.0
+		)
+	);
+
+	property->ChangeFlag(wxPGFlags::ReadOnly, true);
+
+	property = m_CurrentCameraSettingsPropertyGrid->AppendIn
+	(
+		exposureGroup,
+		new wxFloatProperty
+		(
+			m_PropertiesNames->longest_exposure_ms, 
+			m_PropertiesNames->longest_exposure_ms, 
+			0.0
+		)
+	);
+
+	property->ChangeFlag(wxPGFlags::ReadOnly, true);
+
 	auto it = m_CurrentCameraSettingsPropertyGrid->GetIterator();
 	int i = 0;
-
 
 	for (; !it.AtEnd(); it++)
 	{
@@ -4498,6 +4525,12 @@ auto cMain::UpdateCameraParameters() -> void
 
 	auto powerUtilization = m_CameraControl->GetPowerUtilization();
 	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->power_utilization, powerUtilization);
+
+	auto shortestExposureMS = m_CameraControl->GetShortestExposureMS();
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->shortest_exposure_ms, shortestExposureMS);
+
+	auto longestExposureMS = m_CameraControl->GetLongestExposureMS();
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->longest_exposure_ms, longestExposureMS);
 
 	auto depth = m_CameraControl->GetCameraDataType() == CameraControlVariables::ImageDataTypes::RAW_12BIT ? wxString("12") : wxString("16");
 	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->depth, depth);

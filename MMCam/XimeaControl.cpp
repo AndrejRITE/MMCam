@@ -78,7 +78,6 @@ auto XimeaControl::GetHeight() const -> unsigned long
 	return static_cast<unsigned long>(img_height);
 }
 
-
 auto XimeaControl::IsConnected() const -> bool
 {
 	DWORD numDevices{};

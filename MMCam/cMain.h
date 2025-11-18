@@ -525,6 +525,8 @@ namespace MainFrameVariables
 		wxString voltage{ "Supply Voltage [V]" };
 		wxString power_utilization{ "Power Utilization [%]" };
 		wxString depth{ "Depth [bit]" };
+		wxString shortest_exposure_ms{ "Shortest Exposure [ms]" };
+		wxString longest_exposure_ms{ "Longest Exposure [ms]" };
 		wxString sensor_width_px{ "Sensor Width [px]" };
 		wxString sensor_height_px{ "Sensor Height [px]" };
 		wxString sensor_width_um{ "Sensor Width [um]" };

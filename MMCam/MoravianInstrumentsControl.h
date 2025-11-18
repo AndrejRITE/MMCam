@@ -100,6 +100,9 @@ public:
 
 	auto IsConnected() const -> bool override;
 
+	auto GetShortestExposureMS() -> double override { return m_CameraHandler == nullptr || m_ActualCameraParameters == nullptr ? 0.0 : m_ActualCameraParameters->shortest_exposure / 1000.0; };
+	auto GetLongestExposureMS() -> double override { return m_CameraHandler == nullptr || m_ActualCameraParameters == nullptr ? 0.0 : m_ActualCameraParameters->longest_exposure; };
+
 private:
 	auto GetCameraParameters(MoravianInstrumentsVariables::ActualCameraParameters* cameraParameters) -> void;
 
