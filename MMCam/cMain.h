@@ -378,6 +378,14 @@ namespace MainFrameVariables
 		std::unique_ptr<wxToggleButton> startStopLiveCapturingTglBtn{};
 		std::unique_ptr<wxTextCtrl> crossHairPosXTxtCtrl{}, crossHairPosYTxtCtrl{};
 
+		auto Enable(const bool state) -> void
+		{
+			if (state)
+				EnableAllControls();
+			else
+				DisableAllControls();
+		};
+
 		auto EnableAllControls() -> void
 		{
 			camSensorTemperature->Enable();

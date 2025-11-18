@@ -8060,92 +8060,88 @@ void cMain::OnStartStopLiveCapturingMenu(wxCommandEvent& evt)
 
 void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 {
-	if (m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
+	auto* btn = m_CameraTabControls->startStopLiveCapturingTglBtn.get();
+
+	// Sync button label and corresponding menu item
+	auto setLiveLabelAndMenu = [&](bool live)
+		{
+			btn->SetLabel(live ? wxT("Stop Live (L)") : wxT("Start Live (L)"));
+
+			const auto id = MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN;
+			if (m_MenuBar && m_MenuBar->menu_edit)
+			{
+				if (m_MenuBar->menu_edit->IsChecked(id) != live)
+					m_MenuBar->menu_edit->Check(id, live);
+			}
+		};
+
+	// Enable/disable all controls that depend on live view being off
+	auto setLiveDependentControlsEnabled = [&](bool enable)
+		{
+			// Color map + histogram
+			m_ImageColormapComboBox->stylish_combo_box->Enable(enable);
+			m_HistogramPanel->Enable(enable);
+
+			// Single shot + menu
+			m_CameraTabControls->singleShotBtn->Enable(enable);
+			m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, enable);
+
+			// Measurement controls + menu
+			m_StartStopMeasurementTglBtn->Enable(enable);
+			m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, enable);
+
+			// Background subtraction
+			m_BackgroundSubtractionCheckBox->Enable(enable);
+			m_BackgroundSubtractionLoadFileBtn->Enable(enable);
+
+			// Flat field
+			m_FlatFieldCorrectionCheckBox->Enable(enable);
+			m_HiGainFlatFieldLoadFileBtn->Enable(enable);
+			m_LoGainFlatFieldLoadFileBtn->Enable(enable);
+
+			// Median blur
+			m_MedianBlurCheckBox->Enable(enable);
+
+			m_StartStopMeasurementTglBtn->Enable(enable);
+			m_CameraTabControls->Enable(enable);
+		};
+
+	const bool startLive = btn->GetValue();
+
+	if (startLive)
 	{
+		// Guard: camera must be connected
 		if (!m_CameraControl || !m_CameraControl->IsConnected())
 		{
-			m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
-			m_CameraTabControls->startStopLiveCapturingTglBtn->SetLabel(wxT("Start Live (L)"));
-			if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
-				m_MenuBar->menu_edit->Check(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
+			btn->SetValue(false);
+			setLiveLabelAndMenu(false);
 			return;
 		}
 
-		m_CameraTabControls->DisableAllControls(true);
-		m_ImageColormapComboBox->stylish_combo_box->Disable();
-		
-		m_StartStopMeasurementTglBtn->Disable();
-
-		// Background Subtraction
-		m_BackgroundSubtractionCheckBox->Disable();
-		m_BackgroundSubtractionLoadFileBtn->Disable();
-
-		// Flat Field
-		m_FlatFieldCorrectionCheckBox->Disable();
-		m_HiGainFlatFieldLoadFileBtn->Disable();
-		m_LoGainFlatFieldLoadFileBtn->Disable();
-
-		// Median Blur
-		m_MedianBlurCheckBox->Disable();
+		// Starting live
+		setLiveDependentControlsEnabled(false);
 
 		StartLiveCapturing();
 
-		m_CameraTabControls->startStopLiveCapturingTglBtn->SetLabel(wxT("Stop Live (L)"));
-		if (!m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
-			m_MenuBar->menu_edit->Check(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, true);
+		setLiveLabelAndMenu(true);
 	}
 	else
-	{	
-		if (m_StartedThreads.size())
+	{
+		// Stopping live: coordinate with worker thread(s) if any
+		if (!m_StartedThreads.empty())
 		{
-			LOGI("StartedThreads.size(): ", (int)m_StartedThreads.size());
+			LOGI("StartedThreads.size(): ", static_cast<int>(m_StartedThreads.size()));
 			m_StartedThreads.back().second = false;
 			LOG("StartedThreads.back(): " + m_StartedThreads.back().first);
-
-			// Disabling controls
-			{
-				m_CameraTabControls->DisableAllControls();
-			
-				m_StartStopMeasurementTglBtn->Disable();
-				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, false);
-			}
 
 			while (!m_StartedThreads.back().first.empty())
 				wxThread::This()->Sleep(100);
 
 			m_StartedThreads.pop_back();
-
-			// Enabling controls
-			{
-				m_CameraTabControls->EnableAllControls();
-				
-				m_StartStopMeasurementTglBtn->Enable();
-				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, true);
-			}
 		}
 
-		m_CameraTabControls->EnableAllControls();
-		m_ImageColormapComboBox->stylish_combo_box->Enable();
-
-		m_HistogramPanel->Enable();
-
-		m_StartStopMeasurementTglBtn->Enable();
-
-		// Background Subtraction
-		m_BackgroundSubtractionCheckBox->Enable();
-		m_BackgroundSubtractionLoadFileBtn->Enable();
-
-		// Flat Field
-		m_FlatFieldCorrectionCheckBox->Enable();
-		m_HiGainFlatFieldLoadFileBtn->Enable();
-		m_LoGainFlatFieldLoadFileBtn->Enable();
-
-		// Median Blur
-		m_MedianBlurCheckBox->Enable();
-
-		m_CameraTabControls->startStopLiveCapturingTglBtn->SetLabel(wxT("Start Live (L)"));
-		if (m_MenuBar->menu_edit->IsChecked(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN))
-			m_MenuBar->menu_edit->Check(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
+		setLiveDependentControlsEnabled(true);
+		setLiveLabelAndMenu(false);
 	}
 }
 
