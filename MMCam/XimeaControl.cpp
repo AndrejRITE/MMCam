@@ -96,3 +96,31 @@ auto XimeaControl::IsConnected() const -> bool
 	}
 	return false;
 }
+
+auto XimeaControl::GetFirmwareVersion() -> std::string
+{
+	std::string major{}, minor{}, build{};
+
+	{
+		char value[200] = "";
+
+		xiGetParamString(m_CamHandler, XI_PRM_MCU1_VERSION, &value, sizeof(value));
+		major = std::string(value);
+	}
+
+	{
+		char value[200] = "";
+
+		xiGetParamString(m_CamHandler, XI_PRM_MCU2_VERSION, &value, sizeof(value));
+		minor = std::string(value);
+	}
+
+	{
+		char value[200] = "";
+
+		xiGetParamString(m_CamHandler, XI_PRM_MCU3_VERSION, &value, sizeof(value));
+		build = std::string(value);
+	}
+
+	return major + "." + minor + "." + build;
+}

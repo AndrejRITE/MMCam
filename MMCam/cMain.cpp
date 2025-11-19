@@ -2144,6 +2144,18 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 	(
 		new wxStringProperty
 		(
+			m_PropertiesNames->firmware_version, 
+			m_PropertiesNames->firmware_version, 
+			""
+		)
+	);
+
+	property->ChangeFlag(wxPGFlags::ReadOnly, true);
+
+	property = m_CurrentCameraSettingsPropertyGrid->Append
+	(
+		new wxStringProperty
+		(
 			m_PropertiesNames->depth, 
 			m_PropertiesNames->depth, 
 			"None"
@@ -4554,6 +4566,10 @@ auto cMain::UpdateCameraParameters() -> void
 		auto height_um = m_CameraControl->GetHeight() * pixel_size_um;
 		m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->sensor_height_um, height_um);
 	}
+
+	// Firmware Version
+	auto firmwareVer = wxString(m_CameraControl->GetFirmwareVersion());
+	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->firmware_version, firmwareVer);
 }
 
 auto cMain::CoolDownTheCamera() -> void

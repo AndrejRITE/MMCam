@@ -41,6 +41,8 @@ public:
     virtual auto GetShortestExposureMS() -> double { return 0.0; }
     virtual auto GetLongestExposureMS() -> double { return 0.0; }
 
+    virtual auto GetFirmwareVersion() -> std::string { return std::string(); }
+
     auto GetCameraDataType() const -> CameraControlVariables::ImageDataTypes { return m_ImageDataType; };
     auto GetSerialNumber() const -> std::string { return m_CameraSerialNumber; };
 

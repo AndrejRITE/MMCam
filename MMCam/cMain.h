@@ -531,6 +531,8 @@ namespace MainFrameVariables
 		wxString sensor_height_px{ "Sensor Height [px]" };
 		wxString sensor_width_um{ "Sensor Width [um]" };
 		wxString sensor_height_um{ "Sensor Height [um]" };
+
+		wxString firmware_version{ "Firmware Version" };
 	};
 
 	struct TelemetryData

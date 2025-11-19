@@ -32,6 +32,8 @@ public:
 
 	auto IsConnected() const -> bool override;
 
+	auto GetFirmwareVersion() -> std::string override;
+
 protected:
 	bool m_IsCameraOpen{ false };
 	std::string m_CameraSN{};

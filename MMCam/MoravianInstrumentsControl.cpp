@@ -154,6 +154,18 @@ auto MoravianInstrumentsControl::IsConnected() const -> bool
 	return (bool)cam_connected;
 }
 
+auto MoravianInstrumentsControl::GetFirmwareVersion() -> std::string
+{
+	if (!m_CameraHandler) return std::string();
+
+	gxetha::CARDINAL major{}, minor{}, build{};
+	gxetha::GetIntegerParameter(m_CameraHandler, gipFirmwareMajor, &major);
+	gxetha::GetIntegerParameter(m_CameraHandler, gipFirmwareMinor, &minor);
+	gxetha::GetIntegerParameter(m_CameraHandler, gipFirmwareBuild, &build);
+
+	return std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(build);
+}
+
 auto MoravianInstrumentsControl::GetCameraParameters
 (
 	MoravianInstrumentsVariables::ActualCameraParameters* cameraParameters

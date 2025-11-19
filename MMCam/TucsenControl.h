@@ -44,6 +44,8 @@ public:
     auto BeginContinuousAcquisition() -> bool override;
     auto EndContinuousAcquisition() -> void override;
 
+	auto GetFirmwareVersion() -> std::string override;
+
 private:
     // Helpers
     auto parseIndexOrDefault() const -> unsigned int;

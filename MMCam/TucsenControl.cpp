@@ -336,3 +336,11 @@ auto TucsenControl::EndContinuousAcquisition() -> void
     // Stop once after the loop finishes.
     StopAcquisition();
 }
+
+auto TucsenControl::GetFirmwareVersion() -> std::string
+{
+    TUCAM_VALUE_INFO m_viCam; // Value info object
+    m_viCam.nID = (int)TUIDI_VERSION_FRMW;
+
+    if (ok(TUCAM_Dev_GetInfo(m_opCam.hIdxTUCam, &m_viCam))) return std::to_string(m_viCam.nValue);
+}
