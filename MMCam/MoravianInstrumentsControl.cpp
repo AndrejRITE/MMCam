@@ -163,7 +163,7 @@ auto MoravianInstrumentsControl::GetFirmwareVersion() -> std::string
 	gxetha::GetIntegerParameter(m_CameraHandler, gipFirmwareMinor, &minor);
 	gxetha::GetIntegerParameter(m_CameraHandler, gipFirmwareBuild, &build);
 
-	return std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(build);
+	return std::to_string(build) + "." + std::to_string(minor) + "." + std::to_string(major);
 }
 
 auto MoravianInstrumentsControl::GetCameraParameters
