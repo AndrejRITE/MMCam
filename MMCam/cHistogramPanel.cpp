@@ -291,7 +291,9 @@ auto cHistogramPanel::DrawRectangleRange(wxGraphicsContext* gc) -> void
 	
 		// Draw Value of the Left Border
 		{
-			curr_value = wxString::Format(wxT("%i"), m_LeftBorder.x);
+			//curr_value = wxString::Format(wxT("%i"), m_LeftBorder.x);
+			curr_value = HistogramPanelVariables::FormatNumber(m_LeftBorder.x);
+
 			gc->GetTextExtent(curr_value, &widthText, &heightText);
 			wxRealPoint draw_point = 
 			{ 
@@ -314,7 +316,9 @@ auto cHistogramPanel::DrawRectangleRange(wxGraphicsContext* gc) -> void
 
 		// Draw Value of the Right Border
 		{
-			curr_value = wxString::Format(wxT("%i"), m_RightBorder.x);
+			//curr_value = wxString::Format(wxT("%i"), m_RightBorder.x);
+			curr_value = HistogramPanelVariables::FormatNumber(m_RightBorder.x);
+
 			gc->GetTextExtent(curr_value, &widthText, &heightText);
 			wxRealPoint draw_point = 
 			{ 

@@ -39,6 +39,14 @@ namespace HistogramPanelVariables
 		RAW_12BIT,
 		RAW_16BIT
 	};
+
+	static auto FormatNumber(auto value) -> std::string
+	{
+		std::string str = std::format(std::locale("en_US.UTF-8"), "{:L}", value); // localized format
+		for (auto& ch : str)
+			if (ch == ',') ch = '\''; // replace comma with apostrophe
+		return str;
+	};
 }
 
 class cHistogramPanel final : public wxPanel
