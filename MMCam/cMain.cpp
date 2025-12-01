@@ -203,7 +203,7 @@ cMain::cMain(const wxString& title_)
 
 #ifdef _DEBUG
 
-#ifdef DEBUG_OPEN
+#ifdef OPEN
 	// Press Open Button
 	{
 		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_FILE_OPEN);
@@ -217,7 +217,7 @@ cMain::cMain(const wxString& title_)
 		ProcessEvent(artEvt);
 	}
 
-#ifdef DEBUG_ANNULUS
+#ifdef ANNULUS
 	// Press Enable Annulus Button
 	{
 		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING);

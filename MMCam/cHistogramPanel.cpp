@@ -280,9 +280,9 @@ auto cHistogramPanel::DrawRectangleRange(wxGraphicsContext* gc) -> void
 	// Drawing Text Values above the Rectangle
 	{
 		// Setting up the current font
-		wxColour fontColour(10, 200, 30, 128);
+		wxColour fontColor(10, 200, 30, 128);
 		wxFont font = wxFont(22, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
-		gc->SetFont(font, fontColour);
+		gc->SetFont(font, fontColor);
 
 		wxString curr_value{};
 		wxDouble widthText{}, heightText{};

@@ -42,10 +42,13 @@
 #include "src/img/logo.xpm"
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 31
+#define MINOR_VERSION 32
 
-//#define DEBUG_OPEN
-//#define DEBUG_ANNULUS
+#ifdef _DEBUG
+	//#define OPEN
+	//#define ANNULUS
+#endif // _DEBUG
+
 
 namespace MainFrameVariables
 {
