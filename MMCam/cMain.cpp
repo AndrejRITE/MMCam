@@ -521,7 +521,7 @@ void cMain::CreateMenuBarOnFrame()
 
 	// Tools
 	{
-		CreateTransformationMenu();
+		CreateTransformationMenu(initBitmapSize, color);
 
 		// Intensity Profile SubMenu
 		{
@@ -9475,18 +9475,48 @@ void ProgressPanel::OnSize(wxSizeEvent& evt)
 }
 /* ___ End ProgressPanel ___ */
 
-void cMain::CreateTransformationMenu()
+void cMain::CreateTransformationMenu(const wxSize& initSize, const wxColour& color)
 {
 	// ensure Tools menu exists
-	wxMenu* transform = new wxMenu();
-	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90, "Rotate 90° Left\tCtrl+Shift+R");
-	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90, "Rotate 90° Right\tCtrl+R");
+	auto transform = m_MenuBar->submenu_transformation;
+	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90, "Rotate 90 [deg] Left\tCtrl+Shift+R");
+	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90, "Rotate 90 [deg] Right\tCtrl+R");
 	transform->AppendSeparator();
 	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_H, "Mirror Horizontally");
 	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_V, "Mirror Vertically");
 
-	m_MenuBar->menu_tools->AppendSubMenu(transform, "Transformation");
-	m_MenuBar->menu_bar->Refresh(); // optional
+	wxMenuItem* item = new wxMenuItem
+	(
+		m_MenuBar->menu_tools,
+		wxID_ANY,
+		"Transformation",
+		wxEmptyString,
+		wxITEM_NORMAL,
+		m_MenuBar->submenu_transformation
+	);
+
+	// Setting a bitmap to the Flip menu item
+	{
+		wxVector<wxBitmap> bitmaps;
+		auto bitmap = wxART_SCREEN_ROTATION_ALT;
+		auto client = wxART_CLIENT_MATERIAL_ROUND;
+
+		for (auto i{ 0 }; i < 3; ++i)
+			bitmaps.push_back
+			(
+				wxMaterialDesignArtProvider::GetBitmap
+				(
+					bitmap,
+					client,
+					wxSize(initSize.GetWidth() + i * initSize.GetWidth(), initSize.GetHeight() + i * initSize.GetHeight()),
+					color
+				)
+			);
+
+		item->SetBitmap(wxBitmapBundle::FromBitmaps(bitmaps));
+	}
+
+	m_MenuBar->menu_tools->Append(item);
 }
 
 void cMain::AddTransformationTools(const wxSize& size)

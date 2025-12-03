@@ -327,14 +327,16 @@ namespace MainFrameVariables
 		wxMenu* menu_file{};
 		wxMenu* menu_edit{};
 		wxMenu* menu_tools{};
-		wxMenu* submenu_intensity_profile{};
+		wxMenu* submenu_transformation{}, *submenu_intensity_profile{};
 		wxMenu* menu_window{};
 		wxMenu* menu_help{};
+
 		MenuBar() :
 			menu_bar(new wxMenuBar()),
 			menu_file(new wxMenu()),
 			menu_edit(new wxMenu()),
 			menu_tools(new wxMenu()),
+			submenu_transformation(new wxMenu()),
 			submenu_intensity_profile(new wxMenu()),
 			menu_window(new wxMenu()),
 			menu_help(new wxMenu()) {};
@@ -342,6 +344,7 @@ namespace MainFrameVariables
 		{
 			menu_file->~wxMenu();
 			menu_edit->~wxMenu();
+			submenu_transformation->~wxMenu();
 			submenu_intensity_profile->~wxMenu();
 			menu_tools->~wxMenu();
 			menu_window->~wxMenu();
@@ -1839,7 +1842,7 @@ private:
 	}
 
 	// menu/toolbar wiring
-	void CreateTransformationMenu();      // called from CreateMenuBarOnFrame()
+	void CreateTransformationMenu(const wxSize& initSize, const wxColour& color);      // called from CreateMenuBarOnFrame()
 	void AddTransformationTools(const wxSize& size);        // called from CreateHorizontalToolBar()
 	void SyncTransformationUI();          // keep menu+toolbar in sync
 
