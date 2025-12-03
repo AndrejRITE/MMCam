@@ -2146,7 +2146,7 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 		(
 			m_PropertiesNames->firmware_version, 
 			m_PropertiesNames->firmware_version, 
-			""
+			"None"
 		)
 	);
 
@@ -7035,6 +7035,8 @@ auto cMain::OnCameraNotebookPageChanged(wxBookCtrlEvent& evt) -> void
 	auto pageNum = m_CameraControlNotebook->GetSelection();
 
 	if (pageNum != 1) return;
+
+	if (!m_CameraControl || !m_CameraControl->IsConnected()) return;
 
 	auto currentTemperature = m_CameraControl->GetSensorTemperature();
 

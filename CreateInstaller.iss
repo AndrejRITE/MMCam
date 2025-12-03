@@ -1,5 +1,5 @@
 [Setup]
-AppId={{GUID-1234-5678-RITE-1234567890AB}}
+AppId=Rigaku.MMCam
 AppName={#RepoName}
 AppVersion={#Major}.{#Minor}.{#Build}
 AppVerName={#RepoName} - {#Major}.{#Minor}.{#Build}
@@ -85,40 +85,6 @@ begin
   if RegQueryStringValue(HKCU, 'SOFTWARE\RITE\{#RepoName}', 'InstallPath', InstallPath) then
   begin
     Result := InstallPath;
-  end;
-end;
-
-procedure CurStepChanged(CurStep: TSetupStep);
-var
-  InstallPath, UninstallerPath: string;
-  ResultCode: Integer;
-begin
-  if CurStep = ssInstall then
-  begin
-    InstallPath := GetInstallPath;
-
-    if InstallPath <> '' then
-    begin
-      UninstallerPath := ExpandConstant(InstallPath + '\unins000.exe');
-      if FileExists(UninstallerPath) then
-      begin
-        if Exec(UninstallerPath, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-        begin
-          if ResultCode <> 0 then
-          begin
-            MsgBox('Error during uninstallation. Error code: ' + IntToStr(ResultCode), mbError, MB_OK);
-          end;
-        end
-        else
-        begin
-          MsgBox('Failed to execute uninstallation process. File: ' + UninstallerPath, mbError, MB_OK);
-        end;
-      end
-      else
-      begin
-        MsgBox('Uninstaller not found at: ' + UninstallerPath, mbError, MB_OK);
-      end;
-    end;
   end;
 end;
 

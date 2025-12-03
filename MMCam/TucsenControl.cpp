@@ -278,7 +278,7 @@ auto TucsenControl::SetExposureTime(int exposure_us) -> void
 
     TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSURETM, desired_exposure_ms);
 
-    m_ExposureUS = desired_exposure_ms * 1000.0;
+    m_ExposureUS = static_cast<int>(desired_exposure_ms * 1000.0);
 }
 
 auto TucsenControl::SetSensorTemperature(const double requiredTemperature) -> void
@@ -310,6 +310,8 @@ auto TucsenControl::GetShortestExposureMS() -> double
     {
        return attrProp.dbValMin;
 	}
+
+    return 0.0;
 }
 
 auto TucsenControl::GetLongestExposureMS() -> double
@@ -323,6 +325,8 @@ auto TucsenControl::GetLongestExposureMS() -> double
     {
        return attrProp.dbValMax;
 	}
+
+    return 0.0;
 }
 
 auto TucsenControl::BeginContinuousAcquisition() -> bool
@@ -343,4 +347,6 @@ auto TucsenControl::GetFirmwareVersion() -> std::string
     m_viCam.nID = (int)TUIDI_VERSION_FRMW;
 
     if (ok(TUCAM_Dev_GetInfo(m_opCam.hIdxTUCam, &m_viCam))) return std::to_string(m_viCam.nValue);
+
+    return "";
 }
