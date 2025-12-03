@@ -1,4 +1,5 @@
 # Define package name
+$git_username = "AndrejRITE"
 $repository_name = "MMCam"
 $path_to_repository = "D:\Projects\RIGAKU\${repository_name}"
 Write-Output "-------------------------------------- [$(Get-Date)] --------------------------------------" >> "${path_to_repository}\log.txt"
@@ -215,8 +216,8 @@ $release_notes = @"
 - ${commit_message}
 
 ### Download Links
-- [Download ${installer_name}](https://github.com/AndreiBee/${repository_name}/releases/download/${tag_name}/${installer_name})
-- [Download ${archive_name}](https://github.com/AndreiBee/${repository_name}/releases/download/${tag_name}/${archive_name})
+- [Download ${installer_name}](https://github.com/${git_username}/${repository_name}/releases/download/${tag_name}/${installer_name})
+- [Download ${archive_name}](https://github.com/${git_username}/${repository_name}/releases/download/${tag_name}/${archive_name})
 
 ### SHA256
 ```
