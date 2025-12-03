@@ -1,5 +1,5 @@
 [Setup]
-AppId=Rigaku.MMCam
+AppId=Rigaku.{#RepoName}
 AppName={#RepoName}
 AppVersion={#Major}.{#Minor}.{#Build}
 AppVerName={#RepoName} - {#Major}.{#Minor}.{#Build}
