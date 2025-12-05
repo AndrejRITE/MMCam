@@ -42,7 +42,7 @@
 #include "src/img/logo.xpm"
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 32
+#define MINOR_VERSION 33
 
 #ifdef _DEBUG
 	//#define OPEN
@@ -1868,6 +1868,8 @@ private:
 		cv::Mat& dstFull
 	) -> bool;
 
+	auto HandleCameraDisconnected() -> void;
+
 private:
 	/* Initialization file */
 	wxString m_AppName{}, m_InitializationFilePath{};
@@ -2249,22 +2251,37 @@ protected:
 	{
 		while (!TestDestroy())
 		{
-			if (m_Frame && m_Camera)
+			if (!m_Frame || !m_Camera)
+				break;
+
+			// If camera is gone, notify main and stop this thread
+			if (!m_Camera->IsConnected())
 			{
-				const double t = m_Camera->GetSensorTemperature();
-				const double v = m_Camera->GetSupplyVoltage();
-
-				const int pu = m_Camera->GetPowerUtilization();
-
-				MainFrameVariables::TelemetryData td;
-				td.temperature_degC = t;
-				td.supply_voltage_V = v;
-				td.power_utilization_pct = pu;
-
 				wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_TEMPERATURE);
+				// Use a sentinel: power_utilization_pct = -999 to mean “disconnected”
+				MainFrameVariables::TelemetryData td{};
+				td.temperature_degC = 0.0;
+				td.supply_voltage_V = 0.0;
+				td.power_utilization_pct = -999;
 				evt.SetPayload(td);
 				wxQueueEvent(m_Frame, evt.Clone());
+				break;
 			}
+
+			const double t = m_Camera->GetSensorTemperature();
+			const double v = m_Camera->GetSupplyVoltage();
+
+			const int pu = m_Camera->GetPowerUtilization();
+
+			MainFrameVariables::TelemetryData td;
+			td.temperature_degC = t;
+			td.supply_voltage_V = v;
+			td.power_utilization_pct = pu;
+
+			wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_TEMPERATURE);
+			evt.SetPayload(td);
+			wxQueueEvent(m_Frame, evt.Clone());
+
 			wxThread::Sleep(m_IntervalMS);
 		}
 		return (ExitCode)0;

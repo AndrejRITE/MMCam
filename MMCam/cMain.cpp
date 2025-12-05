@@ -3847,6 +3847,13 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 
 	LOG("Started: " + wxString(__FUNCSIG__));
 
+	if (!m_CameraControl || !m_CameraControl->IsConnected())
+	{
+		raise_exception_msg();
+		HandleCameraDisconnected();
+		return;
+	}
+
 	wxBusyCursor busy_cursor{};
 
 	auto out_dir = m_OutDirTextCtrl->GetValue();
@@ -6005,6 +6012,7 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 	else if (curr_code == -1)
 	{
 		stopCapturing();
+		HandleCameraDisconnected();
 	}
 
 }
@@ -6924,6 +6932,13 @@ auto cMain::OnLiveViewFPSCheck(wxCommandEvent& evt) -> void
 void cMain::OnTemperatureUpdate(wxThreadEvent& evt)
 {
 	const auto td = evt.GetPayload<MainFrameVariables::TelemetryData>();
+
+	// special case: camera got disconnected, stop polling & disable UI
+	if (td.power_utilization_pct == -999)
+	{
+		HandleCameraDisconnected();
+		return;
+	}
 
 	if (!m_CurrentCameraSettingsPropertyGrid || !m_PropertiesNames) return;
 
@@ -8008,6 +8023,9 @@ auto cMain::EnableControlsAfterCapturing() -> void
 auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 {
 	auto enableWidget = true;
+
+	if (m_CameraControlNotebook)
+		m_CameraControlNotebook->Enable(enableWidget);
 
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, enableWidget);
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, enableWidget);
@@ -9668,31 +9686,28 @@ void cMain::SyncTransformationUI()
 
 void cMain::OnRotateCW90(wxCommandEvent& evt)
 {
-	m_Rotation = (m_Rotation == Rotation90::CW) ? Rotation90::None : Rotation90::CW;
-	if (m_Rotation == Rotation90::CW) /* make exclusive */ {}
-	if (m_Rotation == Rotation90::CW); // explicit no-op
-	// ensure CCW off if CW on
-	if (m_Rotation == Rotation90::CW) {}
-	if (m_Rotation == Rotation90::CW); // keep style short
-	if (m_Rotation == Rotation90::CW) {} // clarity
-	if (m_Rotation == Rotation90::CW); // final
+	// Toggle CW: if already CW -> None, otherwise -> CW
+	m_Rotation = (m_Rotation == Rotation90::CW)
+		? Rotation90::None
+		: Rotation90::CW;
 
-	// Clear CCW when CW turned on; clear CW when turning off is handled above
-	if (m_Rotation == Rotation90::CW)
-		; // just state already set
-
-	if (m_Config) 
+	if (m_Config)
 	{
-		m_Config->transform_rotation = (m_Rotation == Rotation90::CW ? 1 :
-			m_Rotation == Rotation90::CCW ? 2 : 0);
+		// 0 = none, 1 = CW, 2 = CCW (keep your existing mapping)
+		m_Config->transform_rotation =
+			(m_Rotation == Rotation90::CW ? 1 :
+				m_Rotation == Rotation90::CCW ? 2 : 0);
+
 		m_Config->transform_mirror_h = m_MirrorH;
 		m_Config->transform_mirror_v = m_MirrorV;
+
 		RewriteInitializationFile();
 	}
 
 	SyncTransformationUI();
 
-	Refresh(); Update();
+	Refresh();
+	Update();
 }
 
 void cMain::OnRotateCCW90(wxCommandEvent& evt)
@@ -9856,4 +9871,52 @@ auto cMain::LoadSingleFlat(const wxString& title, wxTextCtrl* targetTxtCtrl, cv:
 	if (&dstFull == &m_ffHiFull) m_ffHiBinned.release();
 	if (&dstFull == &m_ffLoFull) m_ffLoBinned.release();
 	return true;
+}
+
+auto cMain::HandleCameraDisconnected() -> void
+{
+	// 1) Stop temperature polling
+	if (m_TemperatureThread)
+	{
+		m_TemperatureThread->Stop();   // joins and deletes thread
+		m_TemperatureThread.reset();
+	}
+
+	// 2) Make sure the camera object is not used anymore
+	if (m_CameraControl)
+	{
+		// optional: if API has a disconnect/close, call it here
+		// m_CameraControl->Disconnect();
+		m_CameraControl.reset();
+	}
+
+	// 3) Disable all UI that assumes a live camera
+
+	// Reuse what you already have for “no camera initialized”
+	DisableControlsAfterUnsuccessfulCameraInitialization();
+
+	// Optionally hard-disable the camera notebook itself
+	if (m_CameraControlNotebook)
+		m_CameraControlNotebook->Enable(false);
+
+	// Clear / neutralize camera-dependent widgets
+	if (m_CameraTabControls)
+	{
+		//m_CameraTabControls->camSensorTemperature->ChangeValue("");
+		//m_CameraTabControls->camExposure->ChangeValue("");
+		m_CameraTabControls->DisableAllControls();
+	}
+
+	if (m_CurrentCameraSettingsPropertyGrid)
+	{
+		m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->temperature, 0.0);
+		m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->voltage, 0.0);
+		m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->power_utilization, 0);
+	}
+
+	// Cooling state should not be considered active anymore
+	m_IsCoolingDown = false;
+
+	// Status bar info
+	SetStatusText("Camera disconnected. Reconnect and reinitialize the camera.");
 }
