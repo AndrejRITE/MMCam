@@ -110,7 +110,7 @@ auto MoravianInstrumentsControl::SetExposureTime(int exposure_us) -> void
 auto MoravianInstrumentsControl::SetSensorTemperature(const double requiredTemperature) -> void
 {
 	if (!m_CameraHandler) return;
-	gxetha::SetTemperature(m_CameraHandler, requiredTemperature);
+	gxetha::SetTemperature(m_CameraHandler, static_cast<gxetha::REAL>(requiredTemperature));
 }
 
 auto MoravianInstrumentsControl::GetSensorTemperature() -> double 

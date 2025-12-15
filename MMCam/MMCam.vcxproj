@@ -118,7 +118,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(VcPkgRoot)\installed\$(VcPkgTriplet)\include\opencv4;$(MISDK_LATEST);$(XIMEA_LATEST);$(LIBXIMC_LATEST);$(SolutionDir)include;$(SolutionDir)include\Xeryon\inc;$(SolutionDir)include\Xeryon\src</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/bigobj /utf-8 %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -139,7 +139,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(VcPkgRoot)\installed\$(VcPkgTriplet)\include\opencv4;$(MISDK_LATEST);$(XIMEA_LATEST);$(LIBXIMC_LATEST);$(SolutionDir)include;$(SolutionDir)include\Xeryon\inc;$(SolutionDir)include\Xeryon\src</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/bigobj /utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

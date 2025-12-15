@@ -24,7 +24,7 @@ bool XeryonMotor::GoCenter()
 			file >> currentPosition;  // Read the double value
 			file.close();
 
-			m_MotorSettings->motorPos = currentPosition;
+			m_MotorSettings->motorPos = static_cast<float>(currentPosition);
 
 			return true;  // Success
 		}
@@ -58,7 +58,7 @@ bool XeryonMotor::GoToAbsolutePosition(float stagePosition)
 			file >> currentPosition;  // Read the double value
 			file.close();
 
-			SetCurrentMotorPosition(currentPosition);
+			SetCurrentMotorPosition(static_cast<float>(currentPosition));
 			
 			return true;  // Success
 		}
@@ -113,7 +113,7 @@ void XeryonMotorArray::SetStepsPerMMForTheMotor(const std::string motor_sn, cons
 		[&](const XeryonMotor& motor) { return motor.GetDeviceSerNum() == motor_sn; });
 
 	if (it != m_MotorsArray.end())
-		it->SetStepsPerMMRatio((float)stepsPerMM);
+		it->SetStepsPerMMRatio(stepsPerMM);
 }
 
 void XeryonMotorArray::SetCurrentPositionForTheMotor(const std::string motor_sn, const float currentPosition)

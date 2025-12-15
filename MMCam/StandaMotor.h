@@ -66,7 +66,7 @@ public:
 	{
 		if (!m_MotorSettings) return;
 
-		m_MotorSettings->stepsPerMMRatio = stepsPerMMRatio;
+		m_MotorSettings->stepsPerMMRatio = static_cast<float>(stepsPerMMRatio);
 		UpdateStageRange();
 		UpdateCurrentPosition();
 	};
@@ -75,7 +75,7 @@ public:
 	{
 		if (!m_MotorSettings) return;
 		//m_MotorSettings->motorPos = m_CurrentMotorDeg;
-		m_MotorSettings->motorPos = m_StandaSettings->state.CurPosition;
+		m_MotorSettings->motorPos = static_cast<float>(m_StandaSettings->state.CurPosition);
 		m_MotorSettings->stagePos = m_MotorSettings->motorPos / m_MotorSettings->stepsPerMMRatio;
 	}
 

@@ -47,7 +47,7 @@ auto XimeaControl::GetImage() -> unsigned short*
 
 	if (!StartAcquisition()) return nullptr;
 
-	DWORD timeout = (m_Exposure / 1000.0) + 5000;
+	DWORD timeout = static_cast<DWORD>((m_Exposure / 1000.0) + 5000);
 	m_State = xiGetImage(m_CamHandler, timeout, &m_Image);
 
 	if (!StopAcquisition()) return nullptr;
@@ -84,7 +84,9 @@ auto XimeaControl::IsConnected() const -> bool
 	if (xiGetNumberDevices(&numDevices) != XI_OK || numDevices == 0)
 		return false;
 
-	for (auto i = 0; i < numDevices; ++i)
+	auto iNumDevices = static_cast<unsigned short>(numDevices);
+
+	for (auto i = 0; i < iNumDevices; ++i)
 	{
 		char serial[256]{};
 		if (

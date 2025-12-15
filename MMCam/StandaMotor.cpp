@@ -117,6 +117,8 @@ bool StandaMotor::GoHomeAndZero()
 	close_device(&device_c);
 
 	UpdateCurrentPosition();
+
+	return true;
 }
 
 bool StandaMotor::GoToAbsolutePosition(float stagePosition)
@@ -194,6 +196,8 @@ bool StandaMotor::GoToAbsolutePosition(float stagePosition)
 	close_device(&device_c);
 
 	UpdateCurrentPosition();
+
+	return true;
 }
 
 void StandaMotor::SetRange(const float minMotorDeg, const float maxMotorDeg)
@@ -228,10 +232,10 @@ StandaMotorArray::StandaMotorArray(const std::string& ipAddress)
 
 auto StandaMotorArray::InitAllMotors(const std::string ip_address) -> bool
 {
-	auto appendUnitializedMotor = [&](const std::string motorSN, const int motorNum)
+	auto appendUninitializedMotor = [&](const std::string motorSN, const int motorNum)
 		{
 			m_UninitializedMotors.push_back(motorSN);
-			m_MotorsArray[motorNum].SetMotorSerialNumber(0);
+			m_MotorsArray[motorNum].SetMotorSerialNumber(std::to_string(0));
 		};
 
 	m_UninitializedMotors.clear();
@@ -274,9 +278,7 @@ auto StandaMotorArray::InitAllMotors(const std::string ip_address) -> bool
 	status_calb_t state_calb_c;
 	emf_settings_t emfSettings{};
 	calibration_t calibration_c;
-	stage_settings_t stage_settings_c;
 	edges_settings_calb_t edges_settings_calb_c;
-	stage_information_t stage_information_c;
 	unsigned int device_sn_int{};
 	std::string device_sn{};
 	for (int i = 0; i < names_count; ++i)
@@ -295,14 +297,14 @@ auto StandaMotorArray::InitAllMotors(const std::string ip_address) -> bool
 
 		if ((result_c = get_status(device_c, &state_c)) != result_ok)
 		{
-			appendUnitializedMotor(device_sn, i);
+			appendUninitializedMotor(device_sn, i);
 			continue;
 		}
 
 		// The device_t device parameter in this function is a C pointer, unlike most library functions that use this parameter
 		if ((result_c = set_correction_table(device_c, correction_table)) != result_ok)
 		{
-			appendUnitializedMotor(device_sn, i);
+			appendUninitializedMotor(device_sn, i);
 			continue;
 		}
 
@@ -317,10 +319,10 @@ auto StandaMotorArray::InitAllMotors(const std::string ip_address) -> bool
 		/* Get Status */
 		if ((result_c = get_status_calb(device_c, &state_calb_c, &calibration_c)) != result_ok)
 		{
-			appendUnitializedMotor(device_sn, i);
+			appendUninitializedMotor(device_sn, i);
 			continue;
 		}
-		m_MotorsArray[i].SetCurrentMotorPosition(state_c.CurPosition);
+		m_MotorsArray[i].SetCurrentMotorPosition(static_cast<float>(state_c.CurPosition));
 
 		get_edges_settings_calb(device_c, &edges_settings_calb_c, &calibration_c);
 		m_MotorsArray[i].SetRange(edges_settings_calb_c.LeftBorder, edges_settings_calb_c.RightBorder);
@@ -338,6 +340,8 @@ auto StandaMotorArray::InitAllMotors(const std::string ip_address) -> bool
 
 	free_enumerate_devices(devenum_c);
 	FillNames();
+
+	return true;
 }
 
 
@@ -457,7 +461,7 @@ auto StandaMotorArray::SetStepsPerMMForTheMotor(const std::string motor_sn, cons
 		[&](const StandaMotor& motor) { return motor.GetDeviceSerNum() == motor_sn; });
 
 	if (it != m_MotorsArray.end())
-		it->SetStepsPerMMRatio((float)stepsPerMM);
+		it->SetStepsPerMMRatio(stepsPerMM);
 
 }
 
