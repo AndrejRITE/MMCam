@@ -38,7 +38,7 @@ int cSettings::ShowModal()
 	}
 
 	if (needStanda)  m_StandaMotors = std::make_unique<StandaMotorArray>();
-	if (needXeryon)  InitializeXeryonAndCheckPython(), m_XeryonMotors = std::make_unique<XeryonMotorArray>();
+	if (needXeryon)  m_XeryonMotors = std::make_unique<XeryonMotorArray>(), InitializeXeryonAndCheckPython();
 
 	SetMotorStepsPerMM();
 
@@ -48,10 +48,14 @@ int cSettings::ShowModal()
 auto cSettings::SetMotorStepsPerMM() -> void
 {
 	auto& ws = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num];
-	for (size_t i = 0; i < ws.selected_motors_in_data_file.size(); ++i) {
+
+	for (size_t i = 0; i < ws.selected_motors_in_data_file.size(); ++i) 
+	{
 		const wxString sn = ws.selected_motors_in_data_file[i];
 		const int steps = ws.motors_steps_per_mm[sn];
-		if (sn != "None") {
+
+		if (sn != "None") 
+		{
 			if (auto* arr = WhichArrayFor(sn)) {
 				arr->SetStepsPerMMForTheMotor(sn.ToStdString(), steps);
 			}
@@ -989,6 +993,16 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 		for (const auto& motor : j["optics"]) {
 			const std::string sn = motor["SerialNumber"];
 			const int stepsPerMM = motor["StepsPerMM"];
+
+			SettingsVariables::MotorManufacturers fallback =
+				(j.contains("motor_manufacturer") ? SettingsVariables::ParseVendor(j["motor_manufacturer"].get<std::string>())
+					: SettingsVariables::MotorManufacturers::STANDA);
+
+			SettingsVariables::MotorManufacturers v =
+				(motor.contains("Manufacturer") ? SettingsVariables::ParseVendor(motor["Manufacturer"].get<std::string>())
+					: fallback);
+
+			m_WorkStations->work_station_data[fileNum].motor_vendor_by_sn.emplace(wxString(sn), v);
 			m_WorkStations->work_station_data[fileNum].selected_motors_in_data_file.Add(wxString(sn));
 			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(sn), stepsPerMM));
 		}
@@ -999,6 +1013,16 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 		for (const auto& motor : j["aux"]) {
 			const std::string sn = motor["SerialNumber"];
 			const int stepsPerMM = motor["StepsPerMM"];
+
+			SettingsVariables::MotorManufacturers fallback =
+				(j.contains("motor_manufacturer") ? SettingsVariables::ParseVendor(j["motor_manufacturer"].get<std::string>())
+					: SettingsVariables::MotorManufacturers::STANDA);
+
+			SettingsVariables::MotorManufacturers v =
+				(motor.contains("Manufacturer") ? SettingsVariables::ParseVendor(motor["Manufacturer"].get<std::string>())
+					: fallback);
+
+			m_WorkStations->work_station_data[fileNum].motor_vendor_by_sn.emplace(wxString(sn), v);
 			m_WorkStations->work_station_data[fileNum].selected_motors_in_data_file.Add(wxString(sn));
 			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(sn), stepsPerMM));
 		}
