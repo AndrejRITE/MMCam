@@ -102,7 +102,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_CHOICE(MainFrameVariables::ID::RIGHT_CAM_MANUFACTURER_CHOICE, cMain::ChangeCameraManufacturerChoice)
 	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_TEMPERATURE_TXT_CTL, cMain::OnSensorTemperatureChanged)
 	EVT_NOTEBOOK_PAGE_CHANGED(MainFrameVariables::ID::RIGHT_CAM_NOTEBOOK, cMain::OnCameraNotebookPageChanged)
-	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_EXPOSURE_TXT_CTL, cMain::ExposureValueChanged)
+	EVT_TEXT(MainFrameVariables::ID::RIGHT_CAM_EXPOSURE_TXT_CTL, cMain::ExposureValueChanged)
 	EVT_CHOICE(MainFrameVariables::ID::RIGHT_CAM_BINNING_CHOICE, cMain::OnBinningChoice)
 	EVT_COMBOBOX(MainFrameVariables::ID::RIGHT_CAM_COLORMAP_COMBOBOX, cMain::OnColormapComboBox)
 
@@ -4307,7 +4307,7 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 
 	if (m_CameraControl)
 	{
-		m_TemperatureThread = std::make_unique<TemperatureThread>(this, m_CameraControl.get(), 300);
+		m_TemperatureThread = std::make_unique<TemperatureThread>(this, m_CameraControl, 300);
 
 		if (!m_TemperatureThread->Start())
 			m_TemperatureThread.reset();
@@ -4351,11 +4351,11 @@ auto cMain::InitializeSelectedCamera() -> void
 	if (selectedCamera == defaultCameraName) return;
 
 	if (m_Settings->GetCameraManufacturer() == SettingsVariables::CameraManufacturers::XIMEA)
-		m_CameraControl = std::make_unique<XimeaControl>(selectedCamera.ToStdString());
+		m_CameraControl = std::make_shared<XimeaControl>(selectedCamera.ToStdString());
 	else if (m_Settings->GetCameraManufacturer() == SettingsVariables::CameraManufacturers::MORAVIAN_INSTRUMENTS)
-		m_CameraControl = std::make_unique<MoravianInstrumentsControl>(selectedCamera.ToStdString());
+		m_CameraControl = std::make_shared<MoravianInstrumentsControl>(selectedCamera.ToStdString());
 	else if (m_Settings->GetCameraManufacturer() == SettingsVariables::CameraManufacturers::TUCSEN)
-		m_CameraControl = std::make_unique<TucsenControl>(selectedCamera.ToStdString());
+		m_CameraControl = std::make_shared<TucsenControl>(selectedCamera.ToStdString());
 
 	m_CameraControl->Initialize();
 
@@ -5839,6 +5839,8 @@ void cMain::StartLiveCapturing()
 			return formattedTime;
 		};
 	
+	m_LiveDataType = m_CameraControl ? m_CameraControl->GetCameraDataType()
+		: CameraControlVariables::RAW_12BIT;
 
 	wxString exposure_time_str = m_CameraTabControls->camExposure->GetValue().IsEmpty() 
 		? wxString("0") 
@@ -5989,6 +5991,14 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 	{
 		auto imgPtr = evt.GetPayload<unsigned short*>();
 		if (!imgPtr) return;
+
+		// If camera got reset/disconnected, just drop the frame safely.
+		if (!m_CameraControl)
+		{
+			delete[] imgPtr;
+			return;
+		}
+
 		LOG("Set camera captured image");
 
 		if (m_StartStopMeasurementTglBtn->GetValue())
@@ -6003,7 +6013,7 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 				imgPtr, 
 				m_OutputImageSize,
 				binning,
-				m_CameraControl->GetCameraDataType()
+				m_LiveDataType
 			);
 
 		delete[] imgPtr;
@@ -8172,7 +8182,13 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 			m_MedianBlurCheckBox->Enable(enable);
 
 			m_StartStopMeasurementTglBtn->Enable(enable);
-			m_CameraTabControls->Enable(enable);
+
+			// Don't disable all controls, only those that really affect image acquisition
+			//m_CameraTabControls->Enable(enable);
+			m_CameraTabControls->camExposure->Enable(enable);
+			m_CameraTabControls->camBinning->Enable(enable);
+			m_CameraTabControls->camSensorTemperature->Enable(enable);
+			m_CameraTabControls->singleShotBtn->Enable(enable);
 		};
 
 	const bool startLive = btn->GetValue();

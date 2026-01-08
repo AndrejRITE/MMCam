@@ -1871,6 +1871,8 @@ private:
 	auto HandleCameraDisconnected() -> void;
 
 private:
+	CameraControlVariables::ImageDataTypes m_LiveDataType{ CameraControlVariables::RAW_12BIT };
+
 	/* Initialization file */
 	wxString m_AppName{}, m_InitializationFilePath{};
 	std::unique_ptr<MainFrameVariables::InitializationFileStructure> m_Config{};
@@ -1895,7 +1897,7 @@ private:
 	std::unique_ptr<MainFrameVariables::ImageColormapComboBox> m_ImageColormapComboBox{};
 
 	/* Camera */
-	std::unique_ptr<CameraControl> m_CameraControl{};
+	std::shared_ptr<CameraControl> m_CameraControl{};
 	std::unique_ptr<MainFrameVariables::CameraTabControls> m_CameraTabControls{};
 	//std::unique_ptr<XimeaControl> m_XimeaControl{};
 
@@ -2224,8 +2226,8 @@ private:
 class TemperatureThread final : public wxThread
 {
 public:
-	TemperatureThread(cMain* frame, CameraControl* camera, int interval_ms = 300)
-		: wxThread(wxTHREAD_JOINABLE), m_Frame(frame), m_Camera(camera), m_IntervalMS(interval_ms) {
+	TemperatureThread(cMain* frame, std::shared_ptr<CameraControl> camera, int interval_ms = 300)
+		: wxThread(wxTHREAD_JOINABLE), m_Frame(frame), m_CameraControlW(std::move(camera)), m_IntervalMS(interval_ms) {
 	}
 
 	~TemperatureThread() override { Stop(); }
@@ -2251,11 +2253,13 @@ protected:
 	{
 		while (!TestDestroy())
 		{
-			if (!m_Frame || !m_Camera)
+			auto cam = m_CameraControlW.lock();
+
+			if (!m_Frame || !cam)
 				break;
 
 			// If camera is gone, notify main and stop this thread
-			if (!m_Camera->IsConnected())
+			if (!cam->IsConnected())
 			{
 				wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_TEMPERATURE);
 				// Use a sentinel: power_utilization_pct = -999 to mean “disconnected”
@@ -2268,10 +2272,10 @@ protected:
 				break;
 			}
 
-			const double t = m_Camera->GetSensorTemperature();
-			const double v = m_Camera->GetSupplyVoltage();
+			const double t = cam->GetSensorTemperature();
+			const double v = cam->GetSupplyVoltage();
 
-			const int pu = m_Camera->GetPowerUtilization();
+			const int pu = cam->GetPowerUtilization();
 
 			MainFrameVariables::TelemetryData td;
 			td.temperature_degC = t;
@@ -2289,7 +2293,7 @@ protected:
 
 private:
 	cMain* m_Frame{};
-	CameraControl* m_Camera{};
+	std::weak_ptr<CameraControl> m_CameraControlW{};
 	int m_IntervalMS{ 300 };
 };
 /* ___ End Temperature Thread ___ */
