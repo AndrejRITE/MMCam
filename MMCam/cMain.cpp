@@ -4210,6 +4210,12 @@ auto cMain::ReadInitializationFile() -> void
 		// Fallback to default values
 		m_Config = std::make_unique<MainFrameVariables::InitializationFileStructure>();
 	}
+
+	if (!m_Config->system_appearance_extracted)
+	{
+		m_Config->dark_mode_on = wxSystemSettings::GetAppearance().IsDark();
+		m_Config->system_appearance_extracted = true;
+	}
 	
 	m_Settings->SetLastInitializedWorkStation(m_Config->work_station);
 
@@ -5885,6 +5891,23 @@ void cMain::StartLiveCapturing()
 		live_capturing = nullptr;
 		return;
 	}
+}
+
+void cMain::StopAllCameraThreads()
+{
+	// Stop temperature thread
+	if (m_TemperatureThread)
+	{
+		// If you created it joinable: Wait() is possible.
+		// If detached: you can only request deletion.
+		m_TemperatureThread->Delete();   // request stop
+		m_TemperatureThread = nullptr;
+	}
+
+	// IMPORTANT:
+	// If you have timers that poll camera state, stop them too:
+	// m_CameraStateTimer.Stop();
+	// Unbind events if you have a dedicated handler that continues to fire.
 }
 
 void cMain::ChangeCameraManufacturerChoice(wxCommandEvent& evt)
@@ -9891,6 +9914,8 @@ auto cMain::LoadSingleFlat(const wxString& title, wxTextCtrl* targetTxtCtrl, cv:
 
 auto cMain::HandleCameraDisconnected() -> void
 {
+	StopAllCameraThreads();
+
 	// 1) Stop temperature polling
 	if (m_TemperatureThread)
 	{

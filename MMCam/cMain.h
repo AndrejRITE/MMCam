@@ -42,7 +42,7 @@
 #include "src/img/logo.xpm"
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 33
+#define MINOR_VERSION 34
 
 #ifdef _DEBUG
 	//#define OPEN
@@ -232,7 +232,8 @@ namespace MainFrameVariables
 	
 	struct InitializationFileStructure 
 	{
-		bool dark_mode_on{};
+		bool dark_mode_on{ true };
+		bool system_appearance_extracted{ false };
 		bool display_histogram{ true };
 		bool display_pixel_value{ true };
 		bool display_image_stats{ true };
@@ -279,6 +280,7 @@ namespace MainFrameVariables
 		(
 			InitializationFileStructure, 
 			dark_mode_on,
+			system_appearance_extracted,
 			display_histogram,
 			display_pixel_value,
 			display_image_stats,
@@ -964,6 +966,8 @@ private:
 
 	/* Live Capturing */
 	void StartLiveCapturing();
+
+	void StopAllCameraThreads();
 
 	void ChangeCameraManufacturerChoice(wxCommandEvent& evt);
 	void OnSingleShotCameraImage(wxCommandEvent& evt);
