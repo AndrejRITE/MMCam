@@ -1096,7 +1096,11 @@ auto cSettings::ReadStagePositionsFromJSONFile() -> void
 	for (auto& sn : ws.selected_motors_in_data_file) 
 	{
 		if (sn == "None") continue;
-		if (ws.motor_vendor_by_sn.at(sn) != SettingsVariables::XERYON) continue; // only XERYON
+
+		const auto it = ws.motor_vendor_by_sn.find(sn);
+		if (it == ws.motor_vendor_by_sn.end()) continue; // vendor unknown -> skip
+		if (it->second != SettingsVariables::XERYON) continue; // only XERYON
+
 		for (const auto& stage : stages) {
 			if (stage.SerialNumber == sn.ToStdString()) {
 				if (m_XeryonMotors)
