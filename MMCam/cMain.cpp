@@ -5696,6 +5696,9 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 
 		m_ProgressBar->SetValue(0);
 		m_ProgressBar->Hide();
+
+		if (m_TemperatureThread)
+			m_TemperatureThread->Resume();
 		
 		EnableControlsAfterCapturing();
 		m_StartStopMeasurementTglBtn->SetLabel("Start Measurement (M)");
@@ -5711,6 +5714,9 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		wxCommandEvent evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 		ProcessEvent(evt);
 	}
+
+	if (m_TemperatureThread)
+		m_TemperatureThread->Pause();
 
 	DisableControlsBeforeCapturing();
 	m_StartStopMeasurementTglBtn->SetLabel("Stop Measurement (M)");
@@ -6055,6 +6061,11 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 			auto powerUtilization = payload->telemetry.power_utilization_pct;
 			m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->power_utilization, powerUtilization);
 		}
+	}
+	else if (curr_code == 1)
+	{
+		// Everything is fine, the measurement finished
+		stopCapturing();
 	}
 	// -1 == Camera is disconnected
 	else if (curr_code == -1)
@@ -8604,11 +8615,10 @@ wxThread::ExitCode WorkerThread::Entry()
 			wxICON_ERROR);
 	};
 
-	auto exit_thread = [&]()
+	auto exit_thread = [&](const int exitCode = -1)
 	{
 		*m_UniqueThreadKey = "";
-		//m_Settings->SetCurrentProgress(1, 1);
-		evt.SetInt(-1);
+		evt.SetInt(exitCode);
 		wxQueueEvent(m_MainFrame, evt.Clone());
 	};
 
@@ -8813,7 +8823,7 @@ wxThread::ExitCode WorkerThread::Entry()
 #ifndef _DEBUG
 	}
 #endif // !_DEBUG
-	exit_thread();
+	exit_thread(1);
 	return (wxThread::ExitCode)0;
 }
 
