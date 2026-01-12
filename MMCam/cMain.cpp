@@ -6040,7 +6040,7 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 			(
 				payload->img.get(),
 				m_OutputImageSize,
-				binning,
+				1,
 				m_LiveDataType
 			);
 
