@@ -133,7 +133,7 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 {	
 	m_MainPanel = std::make_unique<wxPanel>(this);
 
-	m_MainPanel->SetBackgroundColour(m_BackgroundColour);
+	//m_MainPanel->SetBackgroundColour(m_BackgroundColour);
 
 	wxBoxSizer* main_panel_sizer = new wxBoxSizer(wxVERTICAL);
 

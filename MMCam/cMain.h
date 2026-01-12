@@ -550,6 +550,15 @@ namespace MainFrameVariables
 		int power_utilization_pct{ -1 }; // -1 if unknown/unavailable
 	};
 
+	struct LiveFramePayload
+	{
+		std::unique_ptr<unsigned short[]> img; // owns image buffer
+		int width = 0;
+		int height = 0;
+
+		TelemetryData telemetry{};
+	};
+
 	static auto BinImageData
 	(
 		unsigned short* inDataPtr, 
@@ -1901,9 +1910,9 @@ private:
 	std::unique_ptr<MainFrameVariables::ImageColormapComboBox> m_ImageColormapComboBox{};
 
 	/* Camera */
+	wxString m_ActiveCameraIdentifier{};
 	std::shared_ptr<CameraControl> m_CameraControl{};
 	std::unique_ptr<MainFrameVariables::CameraTabControls> m_CameraTabControls{};
-	//std::unique_ptr<XimeaControl> m_XimeaControl{};
 
 	wxSize m_OutputImageSize{};
 
@@ -1944,7 +1953,7 @@ private:
 	//bool m_LiveCapturingEndedDrawingOnCamPreview{ true };
 
 	/* Appearance Colors */
-	const wxColour m_DefaultAppearanceColor = wxColour(180, 180, 180);
+	const wxColour m_DefaultAppearanceColor = wxColour(230, 230, 230);
 	const wxColour m_BlackAppearanceColor = wxColour(75, 75, 75);
 
 	const wxColour m_DefaultWidgetsColor = wxColour(255, 128, 64);
@@ -2062,6 +2071,8 @@ protected:
 	) -> bool;
 
 	auto UpdateCachedBackground(int imgWidth, int imgHeight) -> void;
+
+	auto GrabTelemetry(MainFrameVariables::TelemetryData* telemetry) -> void;
 
 protected:
 	cMain* m_MainFrame{};
@@ -2231,8 +2242,13 @@ class TemperatureThread final : public wxThread
 {
 public:
 	TemperatureThread(cMain* frame, std::shared_ptr<CameraControl> camera, int interval_ms = 300)
-		: wxThread(wxTHREAD_JOINABLE), m_Frame(frame), m_CameraControlW(std::move(camera)), m_IntervalMS(interval_ms) {
-	}
+		: 
+		wxThread(wxTHREAD_JOINABLE), 
+		m_Frame(frame), 
+		m_CameraControlW(std::move(camera)), 
+		m_IntervalMS(interval_ms), 
+		m_PauseCond(m_PauseMtx) 
+	{ }
 
 	~TemperatureThread() override { Stop(); }
 
@@ -2245,6 +2261,12 @@ public:
 
 	void Stop()
 	{
+		{
+			wxMutexLocker lock(m_PauseMtx);
+			m_Paused = false;
+			m_PauseCond.Broadcast(); // wake if paused
+		}
+
 		if (IsRunning())
 		{
 			Delete();  // signals TestDestroy()
@@ -2252,11 +2274,44 @@ public:
 		}
 	}
 
+	void Pause()
+	{
+		wxMutexLocker lock(m_PauseMtx);
+		m_Paused = true;
+	}
+
+	void Resume()
+	{
+		wxMutexLocker lock(m_PauseMtx);
+		if (!m_Paused) return;
+		m_Paused = false;
+		m_PauseCond.Broadcast();
+	}
+
+	bool IsPaused() const
+	{
+		wxMutexLocker lock(m_PauseMtx);
+		return m_Paused;
+	}
+
 protected:
 	ExitCode Entry() override
 	{
 		while (!TestDestroy())
 		{
+			// Pause gate
+			{
+				wxMutexLocker lock(m_PauseMtx);
+				while (m_Paused && !TestDestroy())
+				{
+					// timeout keeps responsiveness to Delete()
+					m_PauseCond.WaitTimeout(200);
+				}
+			}
+
+			if (TestDestroy())
+				break;
+
 			auto cam = m_CameraControlW.lock();
 
 			if (!m_Frame || !cam)
@@ -2299,6 +2354,10 @@ private:
 	cMain* m_Frame{};
 	std::weak_ptr<CameraControl> m_CameraControlW{};
 	int m_IntervalMS{ 300 };
+
+	mutable wxMutex m_PauseMtx{};
+	wxCondition m_PauseCond;
+	bool m_Paused{ false };
 };
 /* ___ End Temperature Thread ___ */
 

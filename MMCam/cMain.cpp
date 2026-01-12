@@ -4321,7 +4321,7 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 
 	// Data Type
 	{
-		auto cameraDataType = m_CameraControl->GetCameraDataType();
+		auto cameraDataType = m_CameraControl ? m_CameraControl->GetCameraDataType() : CameraControlVariables::ImageDataTypes::RAW_12BIT;
 		auto imagePanelDataType = cameraDataType == CameraControlVariables::ImageDataTypes::RAW_12BIT ? CameraPreviewVariables::ImageDataTypes::RAW_12BIT : CameraPreviewVariables::ImageDataTypes::RAW_16BIT;
 
 		m_CamPreview->SetCameraDataType(imagePanelDataType);
@@ -4339,14 +4339,28 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 
 auto cMain::InitializeSelectedCamera() -> void
 {
+	// 1) Determine selection
+	const auto selectedId = m_CameraControl ? m_CameraControl->GetSerialNumber() : std::string();
+
+	// 2) If same as active, and camera object exists and is connected -> do nothing
+	{
+		auto cam = m_CameraControl; // shared_ptr copy
+		if (cam && selectedId == m_ActiveCameraIdentifier)
+		{
+			if (cam->IsConnected())   // replace with your actual check
+				return;
+			// If same id but not connected, allow re-init below.
+		}
+	}
+
 	// We don't need to initialize camera twice!
 	if (m_CameraControl && m_CameraControl->IsConnected())
 	{
 		if (m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
 		{
 			m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
-			wxCommandEvent artStopLive(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
-			ProcessEvent(artStopLive);
+			wxCommandEvent evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+			ProcessEvent(evt);
 		}
 
 		m_CameraControl.reset();
@@ -4365,14 +4379,14 @@ auto cMain::InitializeSelectedCamera() -> void
 
 	m_CameraControl->Initialize();
 
-	if (!m_CameraControl->IsConnected())
+	if (!m_CameraControl || !m_CameraControl->IsConnected())
 	{
 		//m_SelectedCameraStaticTXT->SetLabel(defaultCameraName);
 		DisableControlsAfterUnsuccessfulCameraInitialization();
 		return;
 	}
 
-	//m_SelectedCameraStaticTXT->SetLabel(selectedCamera);	
+	m_ActiveCameraIdentifier = selectedCamera;
 	
 	m_OutputImageSize = wxSize(m_CameraControl->GetWidth(), m_CameraControl->GetHeight());
 	m_CamPreview->SetOriginalImageSize(m_OutputImageSize);
@@ -4384,14 +4398,10 @@ auto cMain::InitializeSelectedCamera() -> void
 	UpdateCameraParameters();
 	//CoolDownTheCamera();
 
-	//m_MenuBar->menu_edit->Check(MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_FWHM_DISPLAYING, true);
-	//wxCommandEvent art_fwhm_displaying(wxEVT_MENU, MainFrameVariables::ID_MENUBAR_EDIT_ENABLE_FWHM_DISPLAYING);
-	//ProcessEvent(art_fwhm_displaying);
-
 #ifndef _DEBUG
 	m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(true);
-	wxCommandEvent art_start_live_capturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
-	ProcessEvent(art_start_live_capturing);
+	wxCommandEvent evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+	ProcessEvent(evt);
 #endif // !_DEBUG
 }
 
@@ -5898,10 +5908,8 @@ void cMain::StopAllCameraThreads()
 	// Stop temperature thread
 	if (m_TemperatureThread)
 	{
-		// If you created it joinable: Wait() is possible.
-		// If detached: you can only request deletion.
-		m_TemperatureThread->Delete();   // request stop
-		m_TemperatureThread = nullptr;
+		m_TemperatureThread->Stop();      // Delete + Wait + wake if paused
+		m_TemperatureThread.reset();
 	}
 
 	// IMPORTANT:
@@ -6006,21 +6014,18 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 			}
 		};
 
+	auto payload = evt.GetPayload<std::shared_ptr<MainFrameVariables::LiveFramePayload>>();
+	if (!payload || !payload->img)
+		return;
+
 	auto curr_code = evt.GetInt();
 	auto progress = evt.GetExtraLong();
 
 	// 0 == Camera is Connected and everything is fine
 	if (curr_code == 0)
 	{
-		auto imgPtr = evt.GetPayload<unsigned short*>();
-		if (!imgPtr) return;
-
 		// If camera got reset/disconnected, just drop the frame safely.
-		if (!m_CameraControl)
-		{
-			delete[] imgPtr;
-			return;
-		}
+		if (!m_CameraControl) return;
 
 		LOG("Set camera captured image");
 
@@ -6033,13 +6038,24 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 		if (*m_CamPreview->GetExecutionFinishedPtr())
 			DisplayAndSaveImageFromTheCamera
 			(
-				imgPtr, 
+				payload->img.get(),
 				m_OutputImageSize,
 				binning,
 				m_LiveDataType
 			);
 
-		delete[] imgPtr;
+		// Update property grid values with telemetry
+		if (m_CurrentCameraSettingsPropertyGrid)
+		{
+			auto tempString = CameraPreviewVariables::CreateStringWithPrecision(payload->telemetry.temperature_degC, 1);
+			m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->temperature, tempString);
+
+			auto supplyVoltage = payload->telemetry.supply_voltage_V;
+			m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->voltage, supplyVoltage);
+
+			auto powerUtilization = payload->telemetry.power_utilization_pct;
+			m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->power_utilization, powerUtilization);
+		}
 	}
 	// -1 == Camera is disconnected
 	else if (curr_code == -1)
@@ -8229,6 +8245,9 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 		// Starting live
 		setLiveDependentControlsEnabled(false);
 
+		if (m_TemperatureThread)
+			m_TemperatureThread->Pause();
+
 		StartLiveCapturing();
 
 		setLiveLabelAndMenu(true);
@@ -8247,6 +8266,9 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 
 			m_StartedThreads.pop_back();
 		}
+
+		if (m_TemperatureThread)
+			m_TemperatureThread->Resume();
 
 		setLiveDependentControlsEnabled(true);
 		setLiveLabelAndMenu(false);
@@ -8325,7 +8347,8 @@ LiveCapturing::LiveCapturing
 	m_AliveOrDeadThread(aliveOrDeadThread),
 	m_IsDrawExecutionFinished(isDrawExecutionFinished)
 {
-	m_ImageSize = wxSize(m_CameraControl->GetWidth(), m_CameraControl->GetHeight());
+	if (m_CameraControl)
+		m_ImageSize = wxSize(m_CameraControl->GetWidth(), m_CameraControl->GetHeight());
 }
 
 wxThread::ExitCode LiveCapturing::Entry()
@@ -8354,7 +8377,7 @@ wxThread::ExitCode LiveCapturing::Entry()
 	auto text_id = "LiveCapturing ID: " + *m_UniqueThreadKey;
 	LOG(text_id);
 
-	if (!m_CameraControl->IsConnected())
+	if (!m_CameraControl || !m_CameraControl->IsConnected())
 	{	
 		raise_exception_msg();
 		evt.SetInt(0);
@@ -8379,11 +8402,17 @@ wxThread::ExitCode LiveCapturing::Entry()
 	const auto checkingInterval = m_ExposureUS / 3;
 	const auto interval = std::chrono::microseconds(checkingInterval);  
 
+	const int w = m_ImageSize.GetWidth();
+	const int h = m_ImageSize.GetHeight();
+
 	while (m_MainFrame && *m_AliveOrDeadThread)
 	{
-		auto dataPtr = std::make_unique<unsigned short[]>(m_ImageSize.GetWidth() * m_ImageSize.GetHeight());
+		auto payload = std::make_shared<MainFrameVariables::LiveFramePayload>();
+		payload->width = w;
+		payload->height = h;
+		payload->img = std::make_unique<unsigned short[]>(static_cast<size_t>(w) * h);
 
-		if (!m_CameraControl->IsConnected() || !CaptureImage(dataPtr.get()))
+		if (!m_CameraControl->IsConnected() || !CaptureImage(payload->img.get()))
 		{
 			evt.SetInt(-1);
 			wxQueueEvent(m_MainFrame, evt.Clone());
@@ -8400,8 +8429,10 @@ wxThread::ExitCode LiveCapturing::Entry()
 			std::this_thread::sleep_for(interval);
 		}
 
+		GrabTelemetry(&payload->telemetry);
+
 		evt.SetInt(0);
-		evt.SetPayload(dataPtr.release());
+		evt.SetPayload(payload);
 		wxQueueEvent(m_MainFrame, evt.Clone());
 	}
 
@@ -8421,7 +8452,7 @@ auto LiveCapturing::CaptureImage
 
 	SCOPE_TIMER("CaptureImage");
 
-	if (!dataPtr) return false;
+	if (!dataPtr || !m_CameraControl) return false;
 	auto* imgPtr = m_CameraControl->GetImage();
 	if (!imgPtr) return false;
 
@@ -8491,6 +8522,15 @@ auto LiveCapturing::UpdateCachedBackground(int imgWidth, int imgHeight) -> void
 
 	m_BgBinning = m_Binning;
 	m_BgMode = m_BinningMode;
+}
+
+auto LiveCapturing::GrabTelemetry(MainFrameVariables::TelemetryData* telemetry) -> void
+{
+	if (!telemetry || !m_CameraControl) return;
+
+	telemetry->temperature_degC = m_CameraControl->GetSensorTemperature();
+	telemetry->supply_voltage_V = m_CameraControl->GetSupplyVoltage();
+	telemetry->power_utilization_pct = m_CameraControl->GetPowerUtilization();
 }
 
 LiveCapturing::~LiveCapturing()
@@ -8573,6 +8613,12 @@ wxThread::ExitCode WorkerThread::Entry()
 		wxQueueEvent(m_MainFrame, evt.Clone());
 	};
 
+	if (!m_CameraControl)
+	{
+		raise_exception_msg("current");
+		exit_thread();
+		return (wxThread::ExitCode)0;
+	}
 
 	m_MainFrame->WorkerThreadFinished(false);
 
