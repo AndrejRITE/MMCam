@@ -485,19 +485,12 @@ namespace MainFrameVariables
 			if (stage) { stage->Set(motors); if (stage->GetSelection() == wxNOT_FOUND) stage->SetSelection(0); }
 		}
 
-		void DisableAllControls()
+		void EnableAllControls(const bool enable = true)
 		{
-			stage->Disable();
-			start->Disable();
-			step->Disable();
-			finish->Disable();
-		}
-		void EnableAllControls()
-		{
-			stage->Enable();
-			start->Enable();
-			step->Enable();
-			finish->Enable();
+			stage->Enable(enable);
+			start->Enable(enable);
+			step->Enable(enable);
+			finish->Enable(enable);
 		}
 	};
 	/* Struct to transfer axis data to WorkerThread */

@@ -764,7 +764,7 @@ void cMain::InitDefaultStateWidgets()
 			m_FirstStage->start->ChangeValue(defaultStartStr);
 			m_FirstStage->step->ChangeValue(defaultStepStr);
 			m_FirstStage->finish->ChangeValue(defaultFinishStr);
-			m_FirstStage->DisableAllControls();
+			m_FirstStage->EnableAllControls(false);
 		}
 		/* Second Stage */
 		{
@@ -5015,7 +5015,7 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 
 #ifndef _DEBUG
 	if (!isAnyDetectorActive && !isAnyOpticsActive && !isAnyAuxActive)
-		m_FirstStage->DisableAllControls();
+		m_FirstStage->EnableAllControls(false);
 	else
 		m_FirstStage->EnableAllControls();
 #endif // !_DEBUG
@@ -8155,7 +8155,7 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_FPS, false);
 
 	m_OutDirBtn->Disable();
-	m_FirstStage->DisableAllControls();
+	m_FirstStage->EnableAllControls(false);
 
 	m_HistogramPanel->Disable();
 
