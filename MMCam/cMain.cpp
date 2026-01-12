@@ -4333,7 +4333,6 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 	UpdateStagePositions();
 	EnableUsedAndDisableNonUsedMotors();	
 
-
 	Refresh();
 }
 
@@ -4932,21 +4931,21 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 			isAnyDetectorActive = true;
 			m_Detector[0].EnableAllControls();
 		}
-		else m_Detector[0].DisableAllControls();
+		else m_Detector[0].EnableAllControls(false);
 		/* Y */
 		if (m_Settings->MotorHasSerialNumber(SettingsVariables::DETECTOR_Y))
 		{
 			isAnyDetectorActive = true;
 			m_Detector[1].EnableAllControls();
 		}
-		else m_Detector[1].DisableAllControls();
+		else m_Detector[1].EnableAllControls(false);
 		/* Z */
 		if (m_Settings->MotorHasSerialNumber(SettingsVariables::DETECTOR_Z))
 		{
 			isAnyDetectorActive = true;
 			m_Detector[2].EnableAllControls();
 		}
-		else m_Detector[2].DisableAllControls();
+		else m_Detector[2].EnableAllControls(false);
 
 		if (!isAnyDetectorActive) m_DetectorControlsNotebook->Hide();
 		else m_DetectorControlsNotebook->Show();
@@ -4961,7 +4960,7 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 			m_Optics[0].EnableAllControls();
 			isAnyOpticsActive = true;
 		}
-		else m_Optics[0].DisableAllControls();
+		else m_Optics[0].EnableAllControls(false);
 
 		/* Y */
 		if (m_Settings->MotorHasSerialNumber(SettingsVariables::OPTICS_Y))
@@ -4969,7 +4968,7 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 			m_Optics[1].EnableAllControls();
 			isAnyOpticsActive = true;
 		}
-		else m_Optics[1].DisableAllControls();
+		else m_Optics[1].EnableAllControls(false);
 
 		/* Z */
 		if (m_Settings->MotorHasSerialNumber(SettingsVariables::OPTICS_Z))
@@ -4977,7 +4976,7 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 			m_Optics[2].EnableAllControls();
 			isAnyOpticsActive = true;
 		}
-		else m_Optics[2].DisableAllControls();
+		else m_Optics[2].EnableAllControls(false);
 
 		if (!isAnyOpticsActive) m_OpticsControlsNotebook->Hide();
 		else m_OpticsControlsNotebook->Show();
@@ -4992,7 +4991,7 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 			m_Aux[0].EnableAllControls();
 			isAnyAuxActive = true;
 		}
-		else m_Aux[0].DisableAllControls();
+		else m_Aux[0].EnableAllControls(false);
 
 		/* Y */
 		if (m_Settings->MotorHasSerialNumber(SettingsVariables::AUX_Y))
@@ -5000,7 +4999,7 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 			m_Aux[1].EnableAllControls();
 			isAnyAuxActive = true;
 		}
-		else m_Aux[1].DisableAllControls();
+		else m_Aux[1].EnableAllControls(false);
 
 		/* Z */
 		if (m_Settings->MotorHasSerialNumber(SettingsVariables::AUX_Z))
@@ -5008,7 +5007,7 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 			m_Aux[2].EnableAllControls();
 			isAnyAuxActive = true;
 		}
-		else m_Aux[2].DisableAllControls();
+		else m_Aux[2].EnableAllControls(false);
 
 		if (!isAnyAuxActive) m_AuxControlsNotebook->Hide();
 		else m_AuxControlsNotebook->Show();
@@ -8117,7 +8116,7 @@ auto cMain::DisableControlsAfterUnsuccessfulCameraInitialization() -> void
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, enableWidget);
 
 	m_StartStopMeasurementTglBtn->Disable();
-	DisableControlsBeforeCapturing();
+	//DisableControlsBeforeCapturing();
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::MENUBAR_EDIT_SETTINGS, !enableWidget);
 }
 
@@ -8125,9 +8124,9 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 {
 	for (auto i = 0; i < 3; ++i)
 	{
-		m_Detector[i].DisableAllControls();
-		m_Optics[i].DisableAllControls();
-		m_Aux[i].DisableAllControls();
+		m_Detector[i].EnableAllControls(false);
+		m_Optics[i].EnableAllControls(false);
+		m_Aux[i].EnableAllControls(false);
 	}
 
 	m_ImageColormapComboBox->stylish_combo_box->Disable();

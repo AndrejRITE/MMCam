@@ -442,25 +442,16 @@ namespace MainFrameVariables
 		wxTextCtrl* absolute_text_ctrl{}, *relative_text_ctrl{};
 		wxButton* set_btn{}, * increment_btn{}, * decrement_btn{};
 		wxBitmapButton* center_btn{}, * home_btn{};
-		void DisableAllControls()
+
+		void EnableAllControls(bool enable = true)
 		{
-			absolute_text_ctrl->Disable();
-			relative_text_ctrl->Disable();
-			set_btn->Disable();
-			increment_btn->Disable();
-			decrement_btn->Disable();
-			center_btn->Disable();
-			home_btn->Disable();
-		}
-		void EnableAllControls()
-		{
-			absolute_text_ctrl->Enable();
-			relative_text_ctrl->Enable();
-			set_btn->Enable();
-			increment_btn->Enable();
-			decrement_btn->Enable();
-			center_btn->Enable();
-			home_btn->Enable();
+			absolute_text_ctrl->Enable(enable);
+			relative_text_ctrl->Enable(enable);
+			set_btn->Enable(enable);
+			increment_btn->Enable(enable);
+			decrement_btn->Enable(enable);
+			center_btn->Enable(enable);
+			home_btn->Enable(enable);
 		}
 	};
 
