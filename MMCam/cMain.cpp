@@ -6067,8 +6067,8 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 
 void cMain::UpdateProgress(wxThreadEvent& evt)
 {
-	int progress = evt.GetInt();
-	wxString msg = evt.GetString();
+	auto progress = evt.GetInt();
+	auto msg = evt.GetString();
 	unsigned long long elapsed_seconds{};
 
 	if (progress >= 0)
@@ -8651,6 +8651,9 @@ wxThread::ExitCode WorkerThread::Entry()
 	const auto checkingInterval = m_ExposureUS / 3;
 	const auto interval = std::chrono::microseconds(checkingInterval);  
 
+	auto w = m_CameraControl->GetWidth();
+	auto h = m_CameraControl->GetHeight();
+
 	float first_axis_rounded_go_to{};
 	float first_axis_position{}, second_axis_position{};
 	for (auto i{ 0 }; i < m_FirstAxis->step_number; ++i)
@@ -8679,21 +8682,24 @@ wxThread::ExitCode WorkerThread::Entry()
 			cur_hours, cur_mins, cur_secs
 		);
 
-		auto dataPtr = std::make_unique<unsigned short[]>(dataSize);
+		auto payload = std::make_shared<MainFrameVariables::LiveFramePayload>();
+		payload->width = w;
+		payload->height = h;
+		payload->img = std::make_unique<unsigned short[]>(static_cast<size_t>(w) * h);
 
 		if (
 			!m_CameraControl->IsConnected() || 
-			!CaptureImage(dataPtr.get()) || 
+			!CaptureImage(payload->img.get()) || 
 			!SaveImage
 			(
-				dataPtr.get(), 
+				payload->img.get(), 
 				m_CameraControl->GetWidth() / m_Binning, 
 				m_CameraControl->GetHeight() / m_Binning, 
 				fileName
 			) ||
 			!CalculateFWHM
 			(
-				dataPtr.get(), 
+				payload->img.get(), 
 				m_CameraControl->GetWidth() / m_Binning, 
 				m_CameraControl->GetHeight() / m_Binning,
 				i
@@ -8713,11 +8719,17 @@ wxThread::ExitCode WorkerThread::Entry()
 			std::this_thread::sleep_for(interval);
 		}
 
+		{
+			payload->telemetry.temperature_degC = m_CameraControl->GetSensorTemperature();
+			payload->telemetry.supply_voltage_V = m_CameraControl->GetSupplyVoltage();
+			payload->telemetry.power_utilization_pct = m_CameraControl->GetPowerUtilization();
+		}
+
 		auto progress = (double)(i + 1) / m_FirstAxis->step_number * 100.0;
 
 		evt.SetInt(0);
 		evt.SetExtraLong((long)progress);
-		evt.SetPayload(dataPtr.release());
+		evt.SetPayload(payload);
 		wxQueueEvent(m_MainFrame, evt.Clone());
 	}
 
