@@ -2001,7 +2001,7 @@ auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 		wxString suff = " [microns]";
 		if (a >= 1e9)  return wxString::Format(wxT("%.0fG"), um / 1e9) + suff;
 		if (a >= 1e6)  return wxString::Format(wxT("%.0fM"), um / 1e6) + suff;
-		if (a >= 1e3)  return wxString::Format(wxT("%.0fK"), um / 1e3) + suff;
+		if (a >= 1e3)  return wxString::Format(wxT("%.0fk"), um / 1e3) + suff;
 		// fall back to integer µm for small values
 		return wxString::Format(wxT("%.0f"), um) + suff;
 		};
