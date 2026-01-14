@@ -5564,11 +5564,13 @@ void cMain::OnFirstStageChoice(wxCommandEvent& evt)
 	
 	--motorType;
 	
+#ifndef _DEBUG
 	if (!m_Settings->MotorHasSerialNumber(static_cast<SettingsVariables::MotorsNames>(motorType)))
 	{
 		m_FirstStage->stage->SetSelection(0);
 		return;
 	}
+#endif // !_DEBUG
 
 	double startStageValue{}, stepStageValue{}, finishStageValue{};
 
@@ -6041,9 +6043,6 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 
 		LOG("Set camera captured image");
 
-		if (m_StartStopMeasurementTglBtn->GetValue())
-			m_ProgressBar->SetValue(progress);
-		
 		int binning{ 1 };
 		m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 
@@ -6056,6 +6055,12 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 				m_LiveDataType
 			);
 
+		if (m_StartStopMeasurementTglBtn->GetValue())
+		{
+			m_ProgressBar->SetValue(progress);
+			SetStatusText(wxString::Format("Measurement progress %i.", progress));
+		}
+		
 		// Update property grid values with telemetry
 		if (m_CurrentCameraSettingsPropertyGrid)
 		{
@@ -6095,9 +6100,8 @@ void cMain::UpdateProgress(wxThreadEvent& evt)
 		elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - m_StartCalculationTime).count();
 		m_ProgressBar->SetValue(progress);
 		LOGI("Progress: ", progress);
-		//m_AppProgressIndicator->SetValue(progress <= 100 ? progress : 100);
-		//m_ProgressBar->UpdateElapsedTime(elapsed_seconds);
-		//m_ProgressBar->UpdateEstimatedTime(progress, elapsed_seconds);
+
+		SetStatusText(wxString::Format("Measurement progress %i.", progress));
 	}
 	// Finished
 	else if (progress == -1)
@@ -6105,6 +6109,8 @@ void cMain::UpdateProgress(wxThreadEvent& evt)
 		m_StartStopMeasurementTglBtn->SetValue(false);
 		wxCommandEvent art_evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT);
 		ProcessEvent(art_evt);
+
+		SetStatusText(wxString("Measurement finished."));
 	}
 	// Interrupted
 	else if (progress == -2)
@@ -9388,11 +9394,11 @@ wxThread::ExitCode ProgressThread::Entry()
 {
 	m_Progress = 0;
 	m_ProgressMsg = "";
+
 	wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_PROGRESS_CAPTURING);
+
 	while (!m_Settings->IsCapturingFinished())
 	{
-		//m_Settings->ProvideProgressInfo(&m_ProgressMsg, &m_Progress);
-
 		evt.SetInt(m_Settings->ProvideProgressValue());
 		evt.SetString(m_Settings->ProvideProgressMessage());
 
