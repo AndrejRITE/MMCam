@@ -9,6 +9,8 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_CLOSE(cMain::OnExit)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_FILE_QUIT, cMain::OnExit)
 	EVT_MENU(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
+	EVT_THREAD(MainFrameVariables::ID::THREAD_SINGLE_SHOT_CAPTURE, cMain::OnSingleShotCaptureFinished)
+	EVT_TIMER(MainFrameVariables::ID::SINGLE_SHOT_EXPOSURE_TIMER, cMain::OnSingleShotExposureTimer)
 	EVT_MENU(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, cMain::OnStartStopLiveCapturingMenu)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_WINDOW_ENABLE_DARK_MODE, cMain::OnEnableDarkMode)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_EDIT_SETTINGS, cMain::OnOpenSettings)
@@ -3907,6 +3909,69 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 			int binning{ 1 };
 			m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 
+			m_ResumeLiveAfterSingleShot = start_live_capturing_after_ss;
+
+			// duration in ms for UI timer
+			const int exposureMs = std::max(1, exposure_time / 1000);
+
+			// Show countdown/progress UI BEFORE starting blocking acquisition (in worker thread)
+			StartSingleShotExposureUI(exposureMs);
+
+			// Keep wait cursor if you want
+			wxBusyCursor busy_cursor{};
+
+			// Start the blocking call in background
+			std::thread([this, exposure_time, binning, cameraDataType, file_name]()
+				{
+					MainFrameVariables::SingleShotPayload payload;
+					payload.binning = binning;
+					payload.dataType = cameraDataType;
+					payload.outFilePath = file_name;
+
+					try
+					{
+						if (!m_CameraControl || !m_CameraControl->IsConnected())
+						{
+							payload.ok = false;
+							payload.err = "Camera disconnected.";
+						}
+						else
+						{
+							m_CameraControl->SetExposureTime(exposure_time);
+
+							auto imgPtr = m_CameraControl->GetImage(); // BLOCKS here
+							if (!imgPtr)
+							{
+								payload.ok = false;
+								payload.err = "GetImage() returned null.";
+							}
+							else
+							{
+								payload.w = m_CameraControl->GetWidth();
+								payload.h = m_CameraControl->GetHeight();
+
+								const size_t count = (size_t)payload.w * (size_t)payload.h;
+								payload.img.assign(imgPtr, imgPtr + count);
+
+								payload.ok = true;
+							}
+						}
+					}
+					catch (...)
+					{
+						payload.ok = false;
+						payload.err = "Exception during single shot acquisition.";
+					}
+
+					auto* evt = new wxThreadEvent(wxEVT_THREAD, MainFrameVariables::ID::THREAD_SINGLE_SHOT_CAPTURE);
+					evt->SetPayload(payload);
+					wxQueueEvent(this, evt);
+
+				}).detach();
+
+			// IMPORTANT: return immediately, do not continue with saving/displaying here
+			return;
+
 			SCOPE_TIMER("CaptureAndDisplayAndSaveImageFromTheCamera");
 			auto imgPtr = m_CameraControl->GetImage();
 			if (!imgPtr)
@@ -3941,6 +4006,112 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 	}
 
 	LOG("Finished: " + wxString(__FUNCSIG__));
+}
+
+void cMain::StartSingleShotExposureUI(int durationMs)
+{
+	m_SingleShotDurationMs = std::max(1, durationMs);
+	m_SingleShotStartMs = wxGetUTCTimeMillis();
+
+	// modeless dialog so the UI stays responsive
+	m_SingleShotDlg = new wxDialog(this, wxID_ANY, "Exposure",
+		wxDefaultPosition, wxSize(320, 120),
+		wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP);
+
+	auto* v = new wxBoxSizer(wxVERTICAL);
+
+	m_SingleShotLabel = new wxStaticText(m_SingleShotDlg, wxID_ANY, "Exposing... ");
+	v->Add(m_SingleShotLabel, 0, wxALL | wxEXPAND, 10);
+
+	m_SingleShotGauge = new wxGauge(m_SingleShotDlg, wxID_ANY, 100);
+	v->Add(m_SingleShotGauge, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 10);
+
+	m_SingleShotDlg->SetSizerAndFit(v);
+	m_SingleShotDlg->CentreOnParent();
+	m_SingleShotDlg->Show();
+
+	// 10 Hz update is plenty
+	m_SingleShotExposureTimer.Start(100);
+}
+
+void cMain::StopSingleShotExposureUI()
+{
+	if (m_SingleShotExposureTimer.IsRunning())
+		m_SingleShotExposureTimer.Stop();
+
+	if (m_SingleShotDlg)
+	{
+		m_SingleShotDlg->Destroy();
+		m_SingleShotDlg = nullptr;
+		m_SingleShotLabel = nullptr;
+		m_SingleShotGauge = nullptr;
+	}
+
+	// optional: clear status bar text
+	// SetStatusText("", 0);
+}
+
+void cMain::OnSingleShotExposureTimer(wxTimerEvent& evt)
+{
+	if (!m_SingleShotDlg || !m_SingleShotLabel || !m_SingleShotGauge)
+		return;
+
+	const wxLongLong now = wxGetUTCTimeMillis();
+	const wxLongLong elapsed = now - m_SingleShotStartMs;
+
+	auto elapsedMs = static_cast<int>(std::max<wxLongLong>(0, elapsed.GetValue()).GetValue());
+	const int remainingMs = std::max(0, m_SingleShotDurationMs - elapsedMs);
+
+	const double elapsedS = elapsedMs / 1000.0;
+	const double totalS = m_SingleShotDurationMs / 1000.0;
+	const double remS = remainingMs / 1000.0;
+
+	int pct = (int)(100.0 * (double)elapsedMs / (double)m_SingleShotDurationMs);
+	pct = std::clamp(pct, 0, 100);
+
+	m_SingleShotGauge->SetValue(pct);
+	m_SingleShotLabel->SetLabel(wxString::Format("Exposing... %.1fs / %.1fs (%.1fs left)", elapsedS, totalS, remS));
+
+	// optional: also show in status bar
+	// SetStatusText(wxString::Format("Exposure: %.1fs left", remS), 0);
+}
+
+void cMain::OnSingleShotCaptureFinished(wxThreadEvent& evt)
+{
+	// stop timer/dialog first
+	StopSingleShotExposureUI();
+
+	MainFrameVariables::SingleShotPayload payload = evt.GetPayload<MainFrameVariables::SingleShotPayload>();
+
+	if (!payload.ok)
+	{
+		wxMessageBox(payload.err.IsEmpty() ? wxString("Single shot failed.") : payload.err,
+			wxString("Connection error"), wxICON_ERROR);
+		HandleCameraDisconnected(); // if you want; or be more selective
+		EnableControlsAfterCapturing();
+		return;
+	}
+
+	DisplayAndSaveImageFromTheCamera(
+		payload.img.data(),
+		wxSize(payload.w, payload.h),
+		payload.binning,
+		payload.dataType,
+		payload.outFilePath
+	);
+
+	EnableControlsAfterCapturing();
+
+	if (m_CamPreview)
+		m_CamPreview->ResetFPS();
+
+	// Resume live capturing if it was running before single-shot
+	if (m_ResumeLiveAfterSingleShot)
+	{
+		wxCommandEvent artStartStopLiveCapturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
+		ProcessEvent(artStartStopLiveCapturing);
+	}
 }
 
 auto cMain::DisplayAndSaveImageFromTheCamera

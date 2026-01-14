@@ -1272,7 +1272,8 @@ void cCamPreview::DrawFPS(wxGraphicsContext* gc)
 	if (!m_ShowFPS) return;
 
 	// Text
-	wxString txt = wxString::Format("FPS: %.1f (avg %.1f)", m_FPSInstant, m_FPSEMA);
+	wxString txt = wxString::Format("FPS: %.1f", m_FPSInstant);
+	txt += m_FPSEMA > 0.0 ? wxString::Format(" (avg %.1f)", m_FPSEMA) : wxString("");
 
 	// Font & metrics
 	wxFont font(11, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);

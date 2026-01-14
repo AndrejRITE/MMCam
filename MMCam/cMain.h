@@ -20,6 +20,7 @@
 #include "wx/listctrl.h"
 #include "wx/splitter.h"
 #include "wx/msw/window.h"
+#include "wx/timer.h"
 
 #include <string>
 #include <memory>
@@ -222,6 +223,9 @@ namespace MainFrameVariables
 
 		/* Temperature polling */
 		THREAD_TEMPERATURE,
+
+		THREAD_SINGLE_SHOT_CAPTURE,	
+		SINGLE_SHOT_EXPOSURE_TIMER,
 	};
 
 	enum BinningModes
@@ -541,6 +545,19 @@ namespace MainFrameVariables
 		int height = 0;
 
 		TelemetryData telemetry{};
+	};
+
+	struct SingleShotPayload
+	{
+		bool ok{ false };
+		wxString err;
+
+		std::vector<unsigned short> img; // copied buffer
+		int w{ 0 };
+		int h{ 0 };
+		int binning{ 1 };
+		CameraControlVariables::ImageDataTypes dataType{};
+		std::string outFilePath;
 	};
 
 	static auto BinImageData
@@ -964,6 +981,12 @@ private:
 
 	void ChangeCameraManufacturerChoice(wxCommandEvent& evt);
 	void OnSingleShotCameraImage(wxCommandEvent& evt);
+
+	void StartSingleShotExposureUI(int durationMs);
+	void StopSingleShotExposureUI();
+	void OnSingleShotExposureTimer(wxTimerEvent& evt);
+	void OnSingleShotCaptureFinished(wxThreadEvent& evt);
+
 
 	auto DisplayAndSaveImageFromTheCamera
 	(
@@ -2022,6 +2045,17 @@ private:
 	unsigned short m_ffBinningSS{ 0 };
 	MainFrameVariables::BinningModes m_ffModeSS{ MainFrameVariables::BINNING_AVERAGE };
 	double m_ffMeanDenom{ 1.0 }; // mean(white-black) at full res for normalization
+
+	// Exposure UI
+	wxTimer m_SingleShotExposureTimer{ this, MainFrameVariables::ID::SINGLE_SHOT_EXPOSURE_TIMER };
+	wxLongLong m_SingleShotStartMs{ 0 };
+	int m_SingleShotDurationMs{ 0 };
+
+	wxDialog* m_SingleShotDlg{ nullptr };
+	wxStaticText* m_SingleShotLabel{ nullptr };
+	wxGauge* m_SingleShotGauge{ nullptr };
+
+	bool m_ResumeLiveAfterSingleShot{ false };
 
 	wxDECLARE_EVENT_TABLE();
 };
