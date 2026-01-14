@@ -1392,16 +1392,22 @@ auto cCamPreview::UpdateAnnulusValues(CameraPreviewVariables::Annulus& annulus) 
 	m_AnnulusVec[m_ActivatedAnnulusNum] = annulus;
 }
 
+auto cCamPreview::ResetFPS() -> void
+{
+	m_FPSInstant = 0.0;
+	m_FPSEMA = 0.0;
+	m_LastFrameTS = {};      // important: prevents the next dt from spanning “stopped” time
+	if (m_ShowFPS) Refresh(); // force redraw so the overlay immediately shows 0
+}
+
 void cCamPreview::InitDefaultComponents()
 {
-	//m_GraphicsBitmapImage = std::make_unique<wxGraphicsBitmap>();
 	/* Tools */
 	m_CrossHairTool = std::make_unique<CrossHairTool>
 		(
 			m_ParentArguments->x_pos_crosshair, 
 			m_ParentArguments->y_pos_crosshair
 		);
-	//m_XimeaCameraControl = std::make_unique<XimeaControl>();
 }
 
 void cCamPreview::PaintEvent(wxPaintEvent& evt)

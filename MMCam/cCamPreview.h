@@ -293,6 +293,8 @@ public:
 
 	void ActivateFPSDisplaying(bool show = true) { m_ShowFPS = show; Refresh(); }
 
+	auto ResetFPS() -> void;
+
 private:
 	void InitDefaultComponents();
 	void PaintEvent(wxPaintEvent& evt);

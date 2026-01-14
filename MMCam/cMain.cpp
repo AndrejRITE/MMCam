@@ -3928,6 +3928,9 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 
 	EnableControlsAfterCapturing();
 
+	if (m_CamPreview)
+		m_CamPreview->ResetFPS();
+
 	/* Only if user has already started Live Capturing, continue Live Capturing */
 	if (start_live_capturing_after_ss)
 	{
@@ -5696,6 +5699,10 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 
 		m_ProgressBar->SetValue(0);
 		m_ProgressBar->Hide();
+
+		// Measurement finished: reset FPS overlay to 0
+		if (m_CamPreview)
+			m_CamPreview->ResetFPS();
 
 		if (m_TemperatureThread)
 			m_TemperatureThread->Resume();
@@ -8276,6 +8283,10 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 
 			m_StartedThreads.pop_back();
 		}
+
+		// Live view stopped: reset FPS overlay to 0
+		if (m_CamPreview)
+			m_CamPreview->ResetFPS();
 
 		if (m_TemperatureThread)
 			m_TemperatureThread->Resume();
