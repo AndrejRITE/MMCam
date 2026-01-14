@@ -3157,6 +3157,54 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 		sizerPage->Add(m_ProgressBar.get(), 0, wxEXPAND | wxALL, 5);
 	}
 
+	// Exposure progress static text
+	{
+		m_MeasurementProgressStaticText = std::make_unique<wxStaticText>
+			(
+				page,
+				wxID_ANY,
+				wxT("Measurement Progress: 0%")
+			);
+
+#ifndef _DEBUG
+		m_MeasurementProgressStaticText->Hide();
+#endif
+
+		sizerPage->Add(m_MeasurementProgressStaticText.get(), 0, wxEXPAND | wxALL, 5);
+	}
+
+	// Exposure Gauge
+	{
+		m_ExposureGauge = std::make_unique<wxGauge>
+			(
+				page,
+				wxID_ANY, 
+				100
+			);
+
+#ifndef _DEBUG
+		m_ExposureGauge->Hide();
+#endif
+
+		sizerPage->Add(m_ExposureGauge.get(), 0, wxEXPAND | wxALL, 5);
+	}
+
+	// Exposure progress static text
+	{
+		m_ExposureProgressStaticText = std::make_unique<wxStaticText>
+			(
+				page,
+				wxID_ANY,
+				wxT("Exposure Progress: 0%")
+			);
+
+#ifndef _DEBUG
+		m_ExposureProgressStaticText->Hide();
+#endif
+
+		sizerPage->Add(m_ExposureProgressStaticText.get(), 0, wxEXPAND | wxALL, 5);
+	}
+
 	sizerPage->AddStretchSpacer();
 
 	auto horizontal_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -4013,22 +4061,10 @@ void cMain::StartSingleShotExposureUI(int durationMs)
 	m_SingleShotDurationMs = std::max(1, durationMs);
 	m_SingleShotStartMs = wxGetUTCTimeMillis();
 
-	// modeless dialog so the UI stays responsive
-	m_SingleShotDlg = new wxDialog(this, wxID_ANY, "Exposure",
-		wxDefaultPosition, wxSize(320, 120),
-		wxDEFAULT_DIALOG_STYLE | wxSTAY_ON_TOP);
+	m_ExposureGauge->Show();
+	m_ExposureProgressStaticText->Show();
 
-	auto* v = new wxBoxSizer(wxVERTICAL);
-
-	m_SingleShotLabel = new wxStaticText(m_SingleShotDlg, wxID_ANY, "Exposing... ");
-	v->Add(m_SingleShotLabel, 0, wxALL | wxEXPAND, 10);
-
-	m_SingleShotGauge = new wxGauge(m_SingleShotDlg, wxID_ANY, 100);
-	v->Add(m_SingleShotGauge, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 10);
-
-	m_SingleShotDlg->SetSizerAndFit(v);
-	m_SingleShotDlg->CentreOnParent();
-	m_SingleShotDlg->Show();
+	Layout();
 
 	// 10 Hz update is plenty
 	m_SingleShotExposureTimer.Start(100);
@@ -4039,13 +4075,13 @@ void cMain::StopSingleShotExposureUI()
 	if (m_SingleShotExposureTimer.IsRunning())
 		m_SingleShotExposureTimer.Stop();
 
-	if (m_SingleShotDlg)
-	{
-		m_SingleShotDlg->Destroy();
-		m_SingleShotDlg = nullptr;
-		m_SingleShotLabel = nullptr;
-		m_SingleShotGauge = nullptr;
-	}
+	m_ExposureGauge->Hide();
+	m_ExposureProgressStaticText->Hide();
+
+	m_ExposureGauge->SetValue(0);
+	m_ExposureProgressStaticText->SetLabel(wxString("Exposure finished."));
+
+	Layout();
 
 	// optional: clear status bar text
 	// SetStatusText("", 0);
@@ -4053,9 +4089,6 @@ void cMain::StopSingleShotExposureUI()
 
 void cMain::OnSingleShotExposureTimer(wxTimerEvent& evt)
 {
-	if (!m_SingleShotDlg || !m_SingleShotLabel || !m_SingleShotGauge)
-		return;
-
 	const wxLongLong now = wxGetUTCTimeMillis();
 	const wxLongLong elapsed = now - m_SingleShotStartMs;
 
@@ -4069,8 +4102,8 @@ void cMain::OnSingleShotExposureTimer(wxTimerEvent& evt)
 	int pct = (int)(100.0 * (double)elapsedMs / (double)m_SingleShotDurationMs);
 	pct = std::clamp(pct, 0, 100);
 
-	m_SingleShotGauge->SetValue(pct);
-	m_SingleShotLabel->SetLabel(wxString::Format("Exposing... %.1fs / %.1fs (%.1fs left)", elapsedS, totalS, remS));
+	m_ExposureGauge->SetValue(pct);
+	m_ExposureProgressStaticText->SetLabel(wxString::Format("Exposing... %.1fs / %.1fs (%.1fs left)", elapsedS, totalS, remS));
 
 	// optional: also show in status bar
 	// SetStatusText(wxString::Format("Exposure: %.1fs left", remS), 0);
@@ -5872,6 +5905,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 
 		m_ProgressBar->SetValue(0);
 		m_ProgressBar->Hide();
+		m_MeasurementProgressStaticText->Hide();
 
 		// Measurement finished: reset FPS overlay to 0
 		if (m_CamPreview)
@@ -5955,6 +5989,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 
 		m_ProgressBar->Show();
 		m_ProgressBar->SetValue(0);
+		m_MeasurementProgressStaticText->Show();
 
 		ReLayoutRightPanel();
 
@@ -6230,6 +6265,7 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 		{
 			m_ProgressBar->SetValue(progress);
 			SetStatusText(wxString::Format("Measurement progress %i.", progress));
+			m_MeasurementProgressStaticText->SetLabel(wxString::Format("Progress: %i%%", progress));
 		}
 		
 		// Update property grid values with telemetry
@@ -8858,7 +8894,7 @@ wxThread::ExitCode WorkerThread::Entry()
 	{
 		if (!*m_AliveOrDeadThread)
 		{
-			exit_thread();
+			exit_thread(1);
 			return (wxThread::ExitCode)0;
 		}
 
@@ -8904,7 +8940,7 @@ wxThread::ExitCode WorkerThread::Entry()
 			)
 			)
 		{
-			exit_thread();
+			exit_thread(1);
 			return (wxThread::ExitCode)0;
 		}
 

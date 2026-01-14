@@ -1966,7 +1966,8 @@ private:
 	const wxColour m_DefaultWidgetsColor = wxColour(255, 128, 64);
 
 	std::unique_ptr<wxStatusBar> m_StatusBar{};
-	std::unique_ptr<wxGauge> m_ProgressBar{};
+	std::unique_ptr<wxGauge> m_ProgressBar{}, m_ExposureGauge{};
+	std::unique_ptr<wxStaticText> m_MeasurementProgressStaticText{}, m_ExposureProgressStaticText{};
 
 	// Histogram Variables
 	std::unique_ptr<cHistogramPanel> m_HistogramPanel{};
@@ -2050,10 +2051,6 @@ private:
 	wxTimer m_SingleShotExposureTimer{ this, MainFrameVariables::ID::SINGLE_SHOT_EXPOSURE_TIMER };
 	wxLongLong m_SingleShotStartMs{ 0 };
 	int m_SingleShotDurationMs{ 0 };
-
-	wxDialog* m_SingleShotDlg{ nullptr };
-	wxStaticText* m_SingleShotLabel{ nullptr };
-	wxGauge* m_SingleShotGauge{ nullptr };
 
 	bool m_ResumeLiveAfterSingleShot{ false };
 
