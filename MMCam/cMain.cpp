@@ -8453,7 +8453,7 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 
 	m_CameraTabControls->EnableAllControls();
 
-	m_ImageColormapComboBox->stylish_combo_box->Enable();
+	m_ImageColormapComboBox->stylish_combo_box->Enable(enableWidget);
 
 	m_MenuBar->submenu_intensity_profile->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_CROSSHAIR, enableWidget);
 
@@ -8462,25 +8462,29 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_CIRCLE_MESH_DISPLAYING, enableWidget);
 	m_MenuBar->menu_tools->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_ANNULUS_DISPLAYING, enableWidget);
 
-	m_VerticalToolBar->tool_bar->Enable();
-	m_HorizontalToolBar->tool_bar->Enable();
+	m_VerticalToolBar->tool_bar->Enable(enableWidget);
+	m_HorizontalToolBar->tool_bar->Enable(enableWidget);
 
-	m_OutDirBtn->Enable();
+	m_OutDirBtn->Enable(enableWidget);
 	
 	if (!m_VerticalToolBar->tool_bar->GetToolState(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING))
 		m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 
 	// Background Subtraction
-	m_BackgroundSubtractionCheckBox->Enable();
-	m_BackgroundSubtractionLoadFileBtn->Enable();
+	m_BackgroundSubtractionCheckBox->Enable(enableWidget);
+	m_BackgroundSubtractionLoadFileBtn->Enable(enableWidget);
 
 	// Flat Field
-	m_FlatFieldCorrectionCheckBox->Enable();
-	m_HiGainFlatFieldLoadFileBtn->Enable();
-	m_LoGainFlatFieldLoadFileBtn->Enable();
+	m_FlatFieldCorrectionCheckBox->Enable(enableWidget);
+	m_HiGainFlatFieldLoadFileBtn->Enable(enableWidget);
+	m_LoGainFlatFieldLoadFileBtn->Enable(enableWidget);
 
 	// Median Blur
-	m_MedianBlurCheckBox->Enable();
+	m_MedianBlurCheckBox->Enable(enableWidget);
+
+	// Enable Measurement Controls
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, enableWidget);
+	m_StartStopMeasurementTglBtn->Enable(enableWidget);
 }
 
 auto cMain::DisableControlsAfterUnsuccessfulCameraInitialization() -> void
@@ -8491,6 +8495,8 @@ auto cMain::DisableControlsAfterUnsuccessfulCameraInitialization() -> void
 	m_StartStopMeasurementTglBtn->Disable();
 	//DisableControlsBeforeCapturing();
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::MENUBAR_EDIT_SETTINGS, !enableWidget);
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, enableWidget);
+	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, enableWidget);
 }
 
 auto cMain::DisableControlsBeforeCapturing() -> void
