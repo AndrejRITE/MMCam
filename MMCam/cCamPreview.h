@@ -466,6 +466,7 @@ private:
 	double m_FPSInstant{ 0.0 };
 	double m_FPSEMA{ 0.0 };
 	std::chrono::steady_clock::time_point m_LastFrameTS{};
+	unsigned long long m_FrameCount{ 0 };
 
 	DECLARE_EVENT_TABLE();
 };

@@ -230,6 +230,8 @@ auto cCamPreview::SetCameraCapturedImage
 
 	SetExecutionFinished(false);
 
+	++m_FrameCount;
+
 	unsigned long long readDataSize = m_ImageSize.GetWidth() * m_ImageSize.GetHeight();
 
 	if (!m_ImageData || oldImageSize != m_ImageSize)
@@ -1296,6 +1298,10 @@ void cCamPreview::DrawFPS(wxGraphicsContext* gc)
 	// Text
 	wxString txt = wxString::Format("FPS: %.1f", m_FPSInstant);
 	txt += m_FPSInstant > 0.0 ? wxString::Format(" (avg %.1f)", m_FPSEMA) : wxString("");
+
+	if (m_FPSInstant == 0.0) m_FrameCount = 0;
+
+	txt += m_FPSInstant > 0.0 ? wxString::Format(" | Frames: %llu", m_FrameCount + 1) : wxString("");
 
 	// Font & metrics
 	wxFont font(11, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
