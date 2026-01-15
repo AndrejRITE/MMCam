@@ -84,6 +84,8 @@ namespace CameraPreviewVariables
 		unsigned short minV{}, maxV{}; 
 		unsigned long long sum{}; 
 		double mean{}, stddev{}; 
+		unsigned long long blackClippedPixelsCount{}, saturatedPixelsCount{};
+
 		bool valid{ false }; 
 	};
 
@@ -444,7 +446,7 @@ private:
 
 	int m_HEWDiameter{};
 
-	int m_ImageDataType{};
+	CameraPreviewVariables::ImageDataTypes m_ImageDataType{};
 
 	/* Annulus */
 	bool m_DisplayAnnulus{};

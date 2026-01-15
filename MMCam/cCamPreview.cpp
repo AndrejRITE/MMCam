@@ -1032,12 +1032,14 @@ auto cCamPreview::DrawImageStatistics(wxGraphicsContext* gc) -> void
 
 	wxString txt;
 	txt.Printf(
-		"Min: %s\nMax: %s\nCount: %s\nMean: %.2f\nStdDev: %.2f",
+		"Min: %s\nMax: %s\nSum: %s\nMean: %.2f\nStdDev: %.2f\nBlack-clipped count: %s\nSaturated count: %s",
 		format_number(s.minV),
 		format_number(s.maxV),
 		format_scientific10(s.sum),
 		s.mean,
-		s.stddev
+		s.stddev,
+		format_number(s.blackClippedPixelsCount),
+		format_number(s.saturatedPixelsCount)
 	);
 
 	wxFont font(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
@@ -1225,11 +1227,18 @@ auto cCamPreview::CalculateImageStatistics() -> void
 	// Fast single pass over 16-bit data
 	const auto N = static_cast<size_t>(m_ImageSize.GetWidth()) * m_ImageSize.GetHeight();
 
+	auto minValue = 0;
+	auto maxValue = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 
+		static_cast<unsigned short>(4'095) : 
+		std::numeric_limits<unsigned short>::max();
+
 	if (N) 
 	{
 		auto* p = m_ImageData.get();
 		unsigned short mn = 0xFFFF, mx = 0;
 		long double sum = 0.0L, sum2 = 0.0L;
+
+		unsigned long long blackClippedPixelsCount{}, saturatedPixelsCount{};
 
 		for (size_t i = 0; i < N; ++i) 
 		{
@@ -1238,11 +1247,24 @@ auto cCamPreview::CalculateImageStatistics() -> void
 			if (v > mx) mx = v;
 			sum += v;
 			sum2 += static_cast<long double>(v) * v;
+
+			if (v <= minValue) ++blackClippedPixelsCount;
+			if (v >= maxValue) ++saturatedPixelsCount;
 		}
 
 		const long double mean = sum / N;
 		const long double var = std::max(0.0L, sum2 / N - mean * mean);
-		m_LastStats = { mn, mx, static_cast<unsigned long long>(sum), static_cast<double>(mean), std::sqrt(static_cast<double>(var)), true };
+		m_LastStats = 
+		{ 
+			mn, 
+			mx, 
+			static_cast<unsigned long long>(sum), 
+			static_cast<double>(mean), 
+			std::sqrt(static_cast<double>(var)), 
+			blackClippedPixelsCount,
+			saturatedPixelsCount,
+			true 
+		};
 	}
 	else {
 		m_LastStats = {};
@@ -1556,7 +1578,6 @@ auto cCamPreview::AdjustImageParts
 	auto current_value{ data_ptr[0] };
 	unsigned char red{}, green{}, blue{};
 
-	//white = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
 	unsigned short max_value = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
 
 	const double black_d = static_cast<double>(black == max_value ? max_value - 1 : black);
