@@ -2027,6 +2027,39 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 		}
 	}
 	sizerPage->Add(gridSizer, 0, wxEXPAND | wxALL, 5);
+
+	// Exposure Gauge
+	{
+		m_ExposureGauge = std::make_unique<wxGauge>
+			(
+				page,
+				wxID_ANY, 
+				100
+			);
+
+#ifndef _DEBUG
+		m_ExposureGauge->Hide();
+#endif
+
+		sizerPage->Add(m_ExposureGauge.get(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+	}
+
+	// Exposure progress static text
+	{
+		m_ExposureProgressStaticText = std::make_unique<wxStaticText>
+			(
+				page,
+				wxID_ANY,
+				wxT("Exposure Progress: 0%")
+			);
+
+#ifndef _DEBUG
+		m_ExposureProgressStaticText->Hide();
+#endif
+
+		sizerPage->Add(m_ExposureProgressStaticText.get(), 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
+	}
+
 	sizerPage->AddStretchSpacer();
 
 	/* Preview And Start\Stop Live Capturing */
@@ -3171,38 +3204,6 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 #endif
 
 		sizerPage->Add(m_MeasurementProgressStaticText.get(), 0, wxEXPAND | wxALL, 5);
-	}
-
-	// Exposure Gauge
-	{
-		m_ExposureGauge = std::make_unique<wxGauge>
-			(
-				page,
-				wxID_ANY, 
-				100
-			);
-
-#ifndef _DEBUG
-		m_ExposureGauge->Hide();
-#endif
-
-		sizerPage->Add(m_ExposureGauge.get(), 0, wxEXPAND | wxALL, 5);
-	}
-
-	// Exposure progress static text
-	{
-		m_ExposureProgressStaticText = std::make_unique<wxStaticText>
-			(
-				page,
-				wxID_ANY,
-				wxT("Exposure Progress: 0%")
-			);
-
-#ifndef _DEBUG
-		m_ExposureProgressStaticText->Hide();
-#endif
-
-		sizerPage->Add(m_ExposureProgressStaticText.get(), 0, wxEXPAND | wxALL, 5);
 	}
 
 	sizerPage->AddStretchSpacer();
@@ -6264,7 +6265,7 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 		if (m_StartStopMeasurementTglBtn->GetValue())
 		{
 			m_ProgressBar->SetValue(progress);
-			SetStatusText(wxString::Format("Measurement progress %i.", progress));
+			SetStatusText(wxString::Format("Measurement progress: %i%%", progress));
 			m_MeasurementProgressStaticText->SetLabel(wxString::Format("Progress: %i%%", progress));
 		}
 		
