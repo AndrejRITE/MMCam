@@ -226,6 +226,8 @@ namespace MainFrameVariables
 
 		THREAD_SINGLE_SHOT_CAPTURE,	
 		SINGLE_SHOT_EXPOSURE_TIMER,
+
+		CONTINUOUS_EXPOSURE_TIMER,
 	};
 
 	enum BinningModes
@@ -986,6 +988,11 @@ private:
 	void StopSingleShotExposureUI();
 	void OnSingleShotExposureTimer(wxTimerEvent& evt);
 	void OnSingleShotCaptureFinished(wxThreadEvent& evt);
+
+	auto StartContinuousExposureUI(int durationMs) -> void;
+	auto StopContinuousExposureUI() -> void;
+	auto OnContinuousExposureTimer(wxTimerEvent& evt) -> void;
+	auto RestartContinuousExposureUI() -> void;
 
 
 	auto DisplayAndSaveImageFromTheCamera
@@ -2053,6 +2060,11 @@ private:
 	int m_SingleShotDurationMs{ 0 };
 
 	bool m_ResumeLiveAfterSingleShot{ false };
+
+	wxTimer m_ContinuousExposureTimer{ this, MainFrameVariables::ID::CONTINUOUS_EXPOSURE_TIMER };
+	wxLongLong m_ContinuousStartMs{ 0 };
+	int m_ContinuousDurationMs{ 0 };
+	bool m_ContinuousExposureEnabled{ false };
 
 	wxDECLARE_EVENT_TABLE();
 };

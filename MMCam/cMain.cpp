@@ -10,7 +10,10 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_FILE_QUIT, cMain::OnExit)
 	EVT_MENU(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
 	EVT_THREAD(MainFrameVariables::ID::THREAD_SINGLE_SHOT_CAPTURE, cMain::OnSingleShotCaptureFinished)
+
 	EVT_TIMER(MainFrameVariables::ID::SINGLE_SHOT_EXPOSURE_TIMER, cMain::OnSingleShotExposureTimer)
+	EVT_TIMER(MainFrameVariables::ID::CONTINUOUS_EXPOSURE_TIMER, cMain::OnContinuousExposureTimer)
+
 	EVT_MENU(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, cMain::OnStartStopLiveCapturingMenu)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_WINDOW_ENABLE_DARK_MODE, cMain::OnEnableDarkMode)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_EDIT_SETTINGS, cMain::OnOpenSettings)
@@ -4065,6 +4068,8 @@ void cMain::StartSingleShotExposureUI(int durationMs)
 	m_ExposureGauge->Show();
 	m_ExposureProgressStaticText->Show();
 
+	DisableControlsBeforeCapturing();
+
 	Layout();
 
 	// 10 Hz update is plenty
@@ -4146,6 +4151,122 @@ void cMain::OnSingleShotCaptureFinished(wxThreadEvent& evt)
 		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
 		ProcessEvent(artStartStopLiveCapturing);
 	}
+}
+
+auto cMain::StartContinuousExposureUI(int durationMs) -> void
+{
+	// durationMs is expected in [ms]
+	m_ContinuousDurationMs = std::max(1, durationMs);
+	m_ContinuousStartMs = wxGetUTCTimeMillis();
+	m_ContinuousExposureEnabled = true;
+
+	if (m_ExposureGauge)
+	{
+		m_ExposureGauge->SetRange(100);
+		m_ExposureGauge->SetValue(0);
+		m_ExposureGauge->Show();
+	}
+	if (m_ExposureProgressStaticText)
+	{
+		m_ExposureProgressStaticText->SetLabel(
+			wxString::Format("Exposing... 0.0s / %.1fs", m_ContinuousDurationMs / 1000.0));
+		m_ExposureProgressStaticText->Show();
+	}
+
+	Layout();
+
+	// 10 Hz update is plenty
+	if (!m_ContinuousExposureTimer.IsRunning())
+		m_ContinuousExposureTimer.Start(100);
+}
+
+auto cMain::StopContinuousExposureUI() -> void
+{
+	m_ContinuousExposureEnabled = false;
+
+	if (m_ContinuousExposureTimer.IsRunning())
+		m_ContinuousExposureTimer.Stop();
+
+	if (m_ExposureGauge)
+	{
+		m_ExposureGauge->SetValue(0);
+		m_ExposureGauge->Hide();
+	}
+	if (m_ExposureProgressStaticText)
+	{
+		m_ExposureProgressStaticText->SetLabel(wxString(""));
+		m_ExposureProgressStaticText->Hide();
+	}
+
+	Layout();
+}
+
+auto cMain::OnContinuousExposureTimer(wxTimerEvent& evt) -> void
+{
+	if (!m_ContinuousExposureEnabled)
+		return;
+	if (!m_ExposureGauge || !m_ExposureProgressStaticText)
+		return;
+
+	const wxLongLong now = wxGetUTCTimeMillis();
+	const wxLongLong elapsed = now - m_ContinuousStartMs;
+
+	const auto elapsedMsLL = std::max<wxLongLong>(0, elapsed.GetValue());
+	const auto maxInt = static_cast<wxLongLong>(std::numeric_limits<int>::max());
+	const int elapsedMs = static_cast<int>(std::min<wxLongLong>(elapsedMsLL, maxInt).GetValue());
+
+	LOGI("Elapsed [ms]: ", elapsedMs);
+
+	const int remainingMs = std::max(0, m_ContinuousDurationMs - elapsedMs);
+
+	const double elapsedS = elapsedMs / 1000.0;
+	const double totalS = m_ContinuousDurationMs / 1000.0;
+	const double remS = remainingMs / 1000.0;
+
+	int pct = (int)(100.0 * (double)elapsedMs / (double)m_ContinuousDurationMs);
+	pct = std::clamp(pct, 0, 100);
+	m_ExposureGauge->SetValue(pct);
+
+	LOGI("Progress: ", pct);
+
+	if (elapsedMs <= m_ContinuousDurationMs)
+	{
+		m_ExposureProgressStaticText->SetLabel(
+			wxString::Format("Exposing... %.1fs / %.1fs (%.1fs left)", elapsedS, totalS, remS));
+	}
+	else
+	{
+		// Exposure time is over, waiting for readout/transfer.
+		const double extraS = (elapsedMs - m_ContinuousDurationMs) / 1000.0;
+
+		auto progressText = wxString("Readout");
+		progressText += m_StartStopMeasurementTglBtn->GetValue() ? wxString("+ Stage Movement... ") : wxString("");
+		progressText += wxString::Format
+			(
+				"+%.1fs (exp %.1fs)",
+				extraS,
+				totalS
+			);
+
+		m_ExposureProgressStaticText->SetLabel(progressText);
+	}
+}
+
+auto cMain::RestartContinuousExposureUI() -> void
+{
+	if (!m_ContinuousExposureEnabled)
+		return;
+
+	// Restart countdown from "now".
+	m_ContinuousStartMs = wxGetUTCTimeMillis();
+
+	if (m_ExposureGauge)
+		m_ExposureGauge->SetValue(0);
+
+	if (m_ExposureProgressStaticText)
+		m_ExposureProgressStaticText->SetLabel(
+			wxString::Format("Exposing... 0.0s / %.1fs", m_ContinuousDurationMs / 1000.0));
+
 }
 
 auto cMain::DisplayAndSaveImageFromTheCamera
@@ -5918,6 +6039,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		EnableControlsAfterCapturing();
 		m_StartStopMeasurementTglBtn->SetLabel("Start Measurement (M)");
 
+		StopContinuousExposureUI();
 		ReLayoutRightPanel();
 
 		return;
@@ -6022,6 +6144,8 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			: m_CameraTabControls->camExposure->GetValue();
 		unsigned long exposure_time = abs(wxAtoi(exposure_time_str)) * 1000; // Because user input is in [ms], we need to recalculate the value to [us]
 
+		StartContinuousExposureUI(exposure_time / 1000);
+
 		auto isDrawExecutionFinished = m_CamPreview->GetExecutionFinishedPtr();
 
 		WorkerThread* worker_thread = new WorkerThread
@@ -6083,6 +6207,8 @@ void cMain::StartLiveCapturing()
 		? wxString("0") 
 		: m_CameraTabControls->camExposure->GetValue();
 	unsigned long exposure_time = abs(wxAtoi(exposure_time_str)) * 1000; // Because user input is in [ms], we need to recalculate the value to [us]
+
+	StartContinuousExposureUI(exposure_time / 1000);
 
 	auto currThreadTimeStamp = timePointToWxString();
 	m_StartedThreads.push_back(std::make_pair(currThreadTimeStamp, true));
@@ -6235,11 +6361,18 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 			}
 		};
 
+	auto curr_code = evt.GetInt();
+
+	if (curr_code == 2)
+	{
+		RestartContinuousExposureUI();
+		return;
+	}
+
 	auto payload = evt.GetPayload<std::shared_ptr<MainFrameVariables::LiveFramePayload>>();
 	if (!payload || !payload->img)
 		return;
 
-	auto curr_code = evt.GetInt();
 	auto progress = evt.GetExtraLong();
 
 	// 0 == Camera is Connected and everything is fine
@@ -8252,6 +8385,7 @@ auto cMain::EnableControlsAfterCapturing() -> void
 	{
 		m_CameraTabControls->camSensorTemperature->Enable();
 		m_CameraTabControls->camExposure->Enable();
+		m_CameraTabControls->camBinning->Enable();
 
 		if (m_OutDirTextCtrl->GetValue() != "Save directory...")
 			m_CameraTabControls->singleShotBtn->Enable();
@@ -8505,6 +8639,8 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 		if (m_TemperatureThread)
 			m_TemperatureThread->Resume();
 
+		StopContinuousExposureUI();
+
 		setLiveDependentControlsEnabled(true);
 		setLiveLabelAndMenu(false);
 	}
@@ -8646,6 +8782,13 @@ wxThread::ExitCode LiveCapturing::Entry()
 		payload->width = w;
 		payload->height = h;
 		payload->img = std::make_unique<unsigned short[]>(static_cast<size_t>(w) * h);
+
+		// Updating the Gauge
+		{
+			wxThreadEvent exposureEvt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_LIVE_CAPTURING);
+			exposureEvt.SetInt(2);
+			wxQueueEvent(m_MainFrame, exposureEvt.Clone());
+		}
 
 		if (!m_CameraControl->IsConnected() || !CaptureImage(payload->img.get()))
 		{
@@ -8921,6 +9064,13 @@ wxThread::ExitCode WorkerThread::Entry()
 		payload->width = w;
 		payload->height = h;
 		payload->img = std::make_unique<unsigned short[]>(static_cast<size_t>(w) * h);
+
+		// Updating the Gauge
+		{
+			wxThreadEvent exposureEvt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_LIVE_CAPTURING);
+			exposureEvt.SetInt(2);
+			wxQueueEvent(m_MainFrame, exposureEvt.Clone());
+		}
 
 		if (
 			!m_CameraControl->IsConnected() || 
