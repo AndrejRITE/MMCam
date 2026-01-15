@@ -356,7 +356,10 @@ void cMain::CreateMenuBarOnFrame()
 	auto initBitmapSize = wxSize(16, 16);
 
 	m_IsDark = wxSystemSettings::GetAppearance().IsDark();
-	m_DefaultCellColor = m_IsDark ?  m_DefaultCellColor : wxColour(255 - m_DefaultCellColor.GetRed(), 255 - m_DefaultCellColor.GetGreen(), 255 - m_DefaultCellColor.GetBlue());
+	m_DefaultCellColor = m_DefaultAppearanceColor;
+	m_DefaultCellColor = m_IsDark ? 
+		wxColour(255 - m_DefaultCellColor.GetRed(), 255 - m_DefaultCellColor.GetGreen(), 255 - m_DefaultCellColor.GetBlue()) :
+		m_DefaultCellColor;
 
 	auto color = m_IsDark ? wxColour(200, 200, 200) : wxColour(0, 0, 0);
 

@@ -1998,7 +1998,7 @@ private:
 	wxNotebook* m_MeasurementNotebook{};
 
 	wxPropertyGrid* m_CurrentCameraSettingsPropertyGrid{};
-	wxColour m_DefaultCellColor = wxColour(70, 70, 70);
+	wxColour m_DefaultCellColor{};
 	std::unique_ptr<MainFrameVariables::PropertiesNames> m_PropertiesNames{};
 
 	std::vector<std::pair<wxString, bool>> m_StartedThreads{};
