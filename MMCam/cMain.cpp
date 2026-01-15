@@ -6028,6 +6028,8 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		m_ProgressBar->SetValue(0);
 		m_ProgressBar->Hide();
 		m_MeasurementProgressStaticText->Hide();
+		SetStatusText(wxString(""));
+		m_MeasurementProgressStaticText->SetLabel(wxString::Format("Progress: %i%%", 0));
 
 		// Measurement finished: reset FPS overlay to 0
 		if (m_CamPreview)
@@ -6113,6 +6115,8 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		m_ProgressBar->Show();
 		m_ProgressBar->SetValue(0);
 		m_MeasurementProgressStaticText->Show();
+		SetStatusText(wxString(""));
+		m_MeasurementProgressStaticText->SetLabel(wxString::Format("Progress: %i%%", 0));
 
 		ReLayoutRightPanel();
 
