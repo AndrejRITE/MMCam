@@ -4648,14 +4648,14 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 	InitializeSelectedCamera();
 
 	// Stop previous thread if any (e.g., user re-initialized camera)
-	if (m_TemperatureThread) { m_TemperatureThread->Stop(); m_TemperatureThread.reset(); }
+	if (m_TemperatureThread) { m_TemperatureThread->Stop(); }
 
 	if (m_CameraControl)
 	{
 		m_TemperatureThread = std::make_unique<TemperatureThread>(this, m_CameraControl, 300);
 
-		if (!m_TemperatureThread->Start())
-			m_TemperatureThread.reset();
+		//if (!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue() && !m_TemperatureThread->Start())
+			//m_TemperatureThread.reset();
 	}
 
 	// Data Type
@@ -6046,7 +6046,10 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			m_CamPreview->ResetFPS();
 
 		if (m_TemperatureThread)
-			m_TemperatureThread->Resume();
+		{
+			m_TemperatureThread->Start();
+			//m_TemperatureThread->Resume();
+		}
 		
 		EnableControlsAfterCapturing();
 		m_StartStopMeasurementTglBtn->SetLabel("Start Measurement (M)");
@@ -8657,7 +8660,7 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 			m_CamPreview->ResetFPS();
 
 		if (m_TemperatureThread)
-			m_TemperatureThread->Resume();
+			m_TemperatureThread->Start();
 
 		StopContinuousExposureUI();
 
