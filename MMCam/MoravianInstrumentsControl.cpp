@@ -12,6 +12,7 @@ auto MoravianInstrumentsControl::Initialize() -> bool
 		return isConnected;
 	}
 
+	m_IsCameraOpen = isConnected;
 	GetCameraParameters(m_ActualCameraParameters.get());
 
 	return isConnected;
@@ -22,6 +23,7 @@ auto MoravianInstrumentsControl::Close() -> bool
 	if (!m_CameraHandler) return false;
 	gxetha::Release(m_CameraHandler);
 	m_CameraHandler = nullptr;
+	m_IsCameraOpen = false;
 	return m_CameraHandler == nullptr;
 }
 
