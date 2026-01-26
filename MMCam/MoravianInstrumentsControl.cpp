@@ -122,7 +122,7 @@ auto MoravianInstrumentsControl::SetSensorTemperature(const double requiredTempe
 auto MoravianInstrumentsControl::GetSensorTemperature() -> double 
 {
 	if (!m_CameraHandler || !IsConnected()) return 0.0;
-	gxetha::REAL value;
+	gxetha::REAL value{};
 	gxetha::GetValue(m_CameraHandler, gvChipTemperature, &value);
 	m_SensorTemperature = static_cast<double>(value);
 	return m_SensorTemperature;
@@ -130,8 +130,8 @@ auto MoravianInstrumentsControl::GetSensorTemperature() -> double
 
 auto MoravianInstrumentsControl::GetSupplyVoltage() -> double
 {
-	if (!m_CameraHandler) return 0.0;
-	gxetha::REAL value;
+	if (!m_CameraHandler || !IsConnected()) return 0.0;
+	gxetha::REAL value{};
 	gxetha::GetValue(m_CameraHandler, gvSupplyVoltage, &value);
 	m_SupplyVoltage = static_cast<double>(value);
 	return m_SupplyVoltage;
@@ -139,14 +139,14 @@ auto MoravianInstrumentsControl::GetSupplyVoltage() -> double
 
 auto MoravianInstrumentsControl::GetPowerUtilization() -> int
 {
-	if (!m_CameraHandler) return 0;
+	if (!m_CameraHandler || !IsConnected()) return 0;
 
 	gxetha::BOOLEAN state{};
 	gxetha::GetBooleanParameter(m_CameraHandler, gbpPowerUtilization, &state);
 
 	if (!state) return -1;
 
-	gxetha::REAL value;
+	gxetha::REAL value{};
 	gxetha::GetValue(m_CameraHandler, gvPowerUtilization, &value);
 	return static_cast<int>(value * 100.0);
 }
