@@ -8845,7 +8845,7 @@ auto LiveCapturing::CaptureImage
 
 	if (!dataPtr || !m_CameraControl) return false;
 	auto* imgPtr = m_CameraControl->GetImage();
-	if (!imgPtr) return false;
+	if (!imgPtr || !m_CameraControl->IsConnected()) return false;
 
 	const auto imgWidth = m_CameraControl->GetWidth();
 	const auto imgHeight = m_CameraControl->GetHeight();
