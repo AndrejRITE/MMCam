@@ -87,15 +87,19 @@ auto MoravianInstrumentsControl::GetImage() -> unsigned short*
 
 	auto continueWaiting = true;
 
-	WaitAndCallReadImage
-	(
-		m_CameraHandler,
-		m_CapturingParameters.get(),
-		m_ImageData.get(),
-		5,
-		&continueWaiting,
-		false
-	);
+	try 
+	{
+		WaitAndCallReadImage
+		(
+			m_CameraHandler,
+			m_CapturingParameters.get(),
+			m_ImageData.get(),
+			5,
+			&continueWaiting,
+			false
+		);
+	}
+	catch (...) { }
 
 	return reinterpret_cast<unsigned short*>(m_ImageData.get());
 }
@@ -115,7 +119,7 @@ auto MoravianInstrumentsControl::SetSensorTemperature(const double requiredTempe
 
 auto MoravianInstrumentsControl::GetSensorTemperature() -> double 
 {
-	if (!m_CameraHandler) return 0.0;
+	if (!m_CameraHandler || !IsConnected()) return 0.0;
 	gxetha::REAL value;
 	gxetha::GetValue(m_CameraHandler, gvChipTemperature, &value);
 	m_SensorTemperature = static_cast<double>(value);
@@ -215,6 +219,8 @@ auto MoravianInstrumentsControl::WaitAndCallReadImage
 	const bool continuousReading
 ) -> void
 {
+	if (!m_IsCameraOpen) return;
+
 	gxetha::BOOLEAN image_ready{};
 
 	auto startCheckingTime = std::chrono::high_resolution_clock::now();

@@ -4163,6 +4163,9 @@ auto cMain::StartContinuousExposureUI(int durationMs) -> void
 	m_ContinuousStartMs = wxGetUTCTimeMillis();
 	m_ContinuousExposureEnabled = true;
 
+	m_AppProgressIndicator = std::make_unique<wxAppProgressIndicator>(this, 100);
+	m_AppProgressIndicator->SetValue(0);
+
 	if (m_ExposureGauge)
 	{
 		m_ExposureGauge->SetRange(100);
@@ -4186,6 +4189,9 @@ auto cMain::StartContinuousExposureUI(int durationMs) -> void
 auto cMain::StopContinuousExposureUI() -> void
 {
 	m_ContinuousExposureEnabled = false;
+
+	if (m_AppProgressIndicator)
+		m_AppProgressIndicator->~wxAppProgressIndicator();
 
 	if (m_ContinuousExposureTimer.IsRunning())
 		m_ContinuousExposureTimer.Stop();
@@ -4229,6 +4235,7 @@ auto cMain::OnContinuousExposureTimer(wxTimerEvent& evt) -> void
 	int pct = (int)(100.0 * (double)elapsedMs / (double)m_ContinuousDurationMs);
 	pct = std::clamp(pct, 0, 100);
 	m_ExposureGauge->SetValue(pct);
+	m_AppProgressIndicator->SetValue(pct);
 
 	LOGI("Progress: ", pct);
 
@@ -8917,7 +8924,7 @@ auto LiveCapturing::UpdateCachedBackground(int imgWidth, int imgHeight) -> void
 
 auto LiveCapturing::GrabTelemetry(MainFrameVariables::TelemetryData* telemetry) -> void
 {
-	if (!telemetry || !m_CameraControl) return;
+	if (!telemetry || !m_CameraControl || !m_CameraControl->IsConnected()) return;
 
 	telemetry->temperature_degC = m_CameraControl->GetSensorTemperature();
 	telemetry->supply_voltage_V = m_CameraControl->GetSupplyVoltage();
