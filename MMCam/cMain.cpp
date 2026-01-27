@@ -4654,8 +4654,7 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 	{
 		m_TemperatureThread = std::make_unique<TemperatureThread>(this, m_CameraControl, 300);
 
-		//if (!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue() && !m_TemperatureThread->Start())
-			//m_TemperatureThread.reset();
+		if (!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue()) m_TemperatureThread->Start();
 	}
 
 	// Data Type
