@@ -4553,7 +4553,10 @@ auto cMain::ReadInitializationFile() -> void
 	if (!m_Config->system_appearance_extracted)
 	{
 		m_Config->dark_mode_on = wxSystemSettings::GetAppearance().IsDark();
+
+#ifndef _DEBUG
 		m_Config->system_appearance_extracted = true;
+#endif // !_DEBUG
 	}
 	
 	m_Settings->SetLastInitializedWorkStation(m_Config->work_station);
