@@ -120,21 +120,35 @@ auto cHistogramPanel::SetWXImage() -> void
 	auto maxHistogramValue = static_cast<double>(m_MaxHistogramValue);
 	auto globalMax = static_cast<double>(m_GlobalMax);
 
-	auto step = static_cast<int>(maxHistogramValue / static_cast<double>(m_CanvasSize.GetWidth() - 1));
+	const int W = m_CanvasSize.GetWidth();
+	const int H = m_CanvasSize.GetHeight();
+
+	int step = static_cast<int>(maxHistogramValue / static_cast<double>(W - 1));
+	if (step < 1) step = 1;
 
 	for (auto i{ 0 }; i <= (int)m_MaxHistogramValue; ++i)
 	{
 		curr_y = (m_CanvasSize.GetHeight() - 1) * m_HistogramData[i] / globalMax;
 		if (curr_y <= 0) continue;
 		
-		curr_x = (m_CanvasSize.GetWidth() - 1) * i / maxHistogramValue;
+		curr_x = (W - 1) * i / maxHistogramValue;
+
+		// Clamp height too, just in case
+		if (curr_y > H) curr_y = H;
+
+		int x0 = curr_x;
+		int y0 = H - curr_y;
+
+		// Clamp width so x0 + w <= W
+		int w = std::min(step, W - x0);
+		if (w <= 0) continue; // if x0 already out of range for any reason
 		
 		m_Image.SetRGB
 		(
 			wxRect
 			(
-				wxPoint(curr_x, m_CanvasSize.GetHeight() - curr_y),
-				wxSize(step, curr_y)
+				wxPoint(x0, y0),
+				wxSize(w, curr_y)
 			),
 			m_HistogramDataColor.GetRed(),
 			m_HistogramDataColor.GetGreen(),

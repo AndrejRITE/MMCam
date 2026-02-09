@@ -27,6 +27,14 @@
 		<param name="Name" value="Histogram Panel">
         <param name="Local" value="histogram.html">
 		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Toolbars">
+        <param name="Local" value="toolbars.html">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Vertical Tools Panel">
+        <param name="Local" value="vertical_tools.html">
+		</OBJECT>
 </UL>
 </body>
 </html>

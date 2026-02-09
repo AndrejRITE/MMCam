@@ -2,99 +2,157 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>MMCam — Settings: Work Station</title>
+  <title>MMCam — Application Usage</title>
   <style>
-    body { font-family: sans-serif; margin: 18px; line-height: 1.45; color: #111; }
-    h1 { margin-top: 6px; font-size: 1.4em; }
-    h2 { margin-top: 14px; font-size: 1.1em; }
+    body { font-family: sans-serif; margin: 18px; line-height: 1.5; color: #111; }
+    h1 { margin-top: 6px; font-size: 1.5em; }
+    h2 { margin-top: 16px; font-size: 1.15em; }
     p { margin: 8px 0; }
-    .img { border: 1px solid #ccc; padding: 6px; display: block; max-width: 760px; }
+    ul { margin: 8px 0 16px 22px; }
+    li { margin-bottom: 6px; }
+    a { text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .section { margin-bottom: 18px; }
     .note { background:#fafafa; border-left:4px solid #ddd; padding:8px; margin:12px 0; }
-    .steps { margin:8px 0 16px 18px; }
     .kbd { font-family: monospace; background:#eee; padding:2px 6px; border-radius:3px; }
-    dl { margin-left: 6px; }
-    dt { font-weight: bold; margin-top: 8px; }
-    dd { margin-left: 12px; margin-bottom: 6px; }
   </style>
 </head>
 <body>
 
-<h1>Work Station — Settings</h1>
+<h1>MMCam — Usage Overview</h1>
 
-<p>This dialog defines the current work station preset used by MMCam. Open it with <span class="kbd">F2</span> after the first application initialization to view or change the active preset, reconnect a camera, or reconfigure motor assignments. Use this page to verify the camera ID and the motor serial numbers and steps/mm values supplied by the preset.</p>
-<br>
-<CENTER><img class="img" src="img/settings.png" alt="MMCam Settings — Work Station dialog. Preset selector, tabs for Detector/Optics/Aux, serial number and steps/mm fields, camera ID, OK and Cancel buttons." /></CENTER>
+<p>
+MMCam is an application for camera-based acquisition, live preview, image analysis,
+and measurement workflows involving cameras, optics, and motorized stages.
+This page gives a high-level overview of how the application is used and links
+to detailed descriptions of individual features.
+</p>
 
-<h2>Controls and their meaning</h2>
+<div class="section">
+<h2>Typical workflow</h2>
 
-<dl>
-  <dt>Work Station (preset selector)</dt>
-  <dd>Select a saved preset containing camera, motor and stage assignments. A preset bundles one camera ID and up to nine motor entries grouped into three tabs: <em>Detector</em>, <em>Optics</em> and <em>Aux</em>.</dd>
-
-  <dt>Tabs — Detector / Optics / Aux</dt>
-  <dd>Each tab lists up to three motors assigned to that group. Use these to check or compare serial numbers, and Steps/mm that identify motor behavior and calibration values.</dd>
-
-  <dt>S/N (serial number)</dt>
-  <dd>Hardware serial number for the motor or stage. This must match the physical device connected to the controller. If S/N is missing or does not match, stage connection will fail or the wrong motor may be addressed.</dd>
-
-  <dt>Steps/mm</dt>
-  <dd>Calibration: how many stepper steps equal 1 millimeter of linear motion. Wrong steps/mm produces incorrect positioning and measurement errors — do not change this value unless you have a validated calibration procedure.</dd>
-
-  <dt>Camera ID</dt>
-  <dd>Numeric identifier of the camera used by this preset. This ID is applied when the preset is activated; MMCam uses it to target and reconnect the camera hardware.</dd>
-
-  <dt>OK / Cancel</dt>
-  <dd>Click <strong>OK</strong> to apply the selected preset and close the dialog. Click <strong>Cancel</strong> to close without applying changes.</dd>
-</dl>
-
-<h2>How to use this dialog to reconnect camera and stages (step-by-step)</h2>
-
-<ol class="steps">
-  <li>Press <span class="kbd">F2</span> to open Work Station settings.</li>
-  <li>From the <strong>Work Station</strong> drop-down, choose the preset you want to activate (if not already selected).</li>
-  <li>Confirm the serial numbers (S/N) shown in Detector / Optics / Aux match the physical devices connected to the system.</li>
-  <li>Confirm the <strong>Camera ID</strong> shown matches the camera you expect to use.</li>
-  <li>Click <strong>OK</strong> to apply the preset. MMCam will attempt to (re)connect the camera and stages for that preset immediately after applying it.</li>
-  <li>If a device is not present or fails to connect, consult the Troubleshooting section below before retrying.</li>
+<ol>
+  <li>Select and initialize a <strong>Work Station</strong> preset (camera + stages).</li>
+  <li>Let the application initialize and automatically start <strong>live capture</strong>.</li>
+  <li>Adjust camera parameters (temperature, exposure, binning, colormap).</li>
+  <li>Use preview tools and overlays to align optics and verify signal quality.</li>
+  <li>Optionally configure postprocessing (background, flat-field, smoothing).</li>
+  <li>Inspect histogram and lock display range if stable contrast is required.</li>
+  <li>Run measurements or save data once the setup is verified.</li>
 </ol>
-
-<h2>Best-practice notes</h2>
-
-<ul>
-  <li>Do not change Steps/mm unless you have a validated calibration record. Incorrect values will produce inaccurate motion and measurements.</li>
-  <li>When reconnecting during a live capture, prefer to stop capturing first if possible. If you must reconnect while capturing, be aware that motor commands issued during reconnection may fail or cause unexpected behavior.</li>
-  <li>Keep a copy of your validated presets. Store one reference copy outside the application folder as the canonical backup for reproducible setups.</li>
-</ul>
-
-<h2>Troubleshooting checklist — connection failures</h2>
-
-<p>If the camera or a stage fails to connect after you apply a preset:</p>
-<ol class="steps">
-  <li>Verify physical connections: power, USB/ethernet/cable and any hub devices. Reseat connectors.</li>
-  <li>Confirm the exact hardware serial numbers: compare labels on the device with the S/N fields in the dialog.</li>
-  <li>Confirm camera ID: if multiple cameras are present, the ID must match the physical camera the preset expects.</li>
-  <li>Check that no other application is holding the device (camera or motor controller). Close other applications that may use the device.</li>
-  <li>Inspect logs: collect the most recent `mmcam.log` entries (see Appendix) and include them with bug reports.</li>
-  <li>If a motor repeatedly fails, try connecting one motor at a time to identify which hardware is misbehaving.</li>
-</ol>
-
-<div class="note">
-<strong>Note on "same preset" behaviour:</strong> Selecting the same preset that is already active should not force a disconnect/reconnect cycle. If you need to force a reconnect, change to a different preset and then switch back, or restart the application if hardware remains unresponsive.
 </div>
 
-<h2>When to contact support / what to include</h2>
+<div class="section">
+<h2>Work Station and initialization</h2>
 
-<p>Include the following in your bug report:</p>
+<p>
+The Work Station defines the physical setup: camera ID and motor assignments.
+After the first initialization, the Work Station dialog can be opened at any time
+using <span class="kbd">F2</span> to reconnect the camera or stages if needed.
+</p>
+
 <ul>
-  <li>Preset name and contents (camera ID and motor S/N values).</li>
-  <li>Exact steps you performed (open Settings → selected preset → clicked OK, etc.).</li>
-  <li>Relevant lines from `mmcam.log` (last 200 lines are usually sufficient).</li>
-  <li>One or two sample images captured (if available) and any error dialogs or messages.</li>
+  <li><a href="settings.html">Work Station — Settings</a></li>
+  <li><a href="initialized.html">Initialized Application State</a></li>
 </ul>
+</div>
 
-<hr />
+<div class="section">
+<h2>Live preview and camera control</h2>
 
-<p>End of Work Station — Settings documentation. For related material, see the <a href="ui_tour.html">User Interface Tour</a> and <a href="troubleshooting.html">Troubleshooting</a> pages.</p>
+<p>
+Once initialized, MMCam starts live capture automatically.
+The preview panel shows the image together with overlays such as statistics,
+scale bar, image dimensions, FPS counter, and frame number.
+</p>
+
+<ul>
+  <li><a href="initialized.html">Live Capture and Preview Overlays</a></li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Toolbars and orientation controls</h2>
+
+<p>
+The application provides two toolbars:
+a horizontal toolbar for image orientation and a vertical toolbar for analysis
+and alignment tools.
+</p>
+
+<ul>
+  <li><a href="toolbars.html">Horizontal and Vertical Toolbars</a></li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Vertical tools — analysis and alignment</h2>
+
+<p>
+The vertical tools panel contains analysis and visualization tools used during
+alignment, focusing, and inspection. These tools operate on the preview and do
+not modify raw image data.
+</p>
+
+<ul>
+  <li><a href="vertical_tools.html">Vertical Tools Panel</a></li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Histogram and display range control</h2>
+
+<p>
+The histogram panel at the bottom of the application visualizes pixel-value
+distribution and controls how image intensities are mapped to the preview.
+Users can zoom, pan, and optionally lock a manual display range.
+</p>
+
+<ul>
+  <li><a href="histogram.html">Histogram Panel</a></li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Postprocessing</h2>
+
+<p>
+Postprocessing options such as background subtraction, flat-field correction,
+and smoothing can be configured in advance. These settings are applied when a
+new capture starts and are intended to stabilize or normalize the preview and
+saved data.
+</p>
+
+<ul>
+  <li><a href="initialized.html#postprocessing">Postprocessing Controls</a></li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Keyboard shortcuts</h2>
+
+<p>
+Most frequently used actions are available via keyboard shortcuts, allowing
+efficient operation without leaving the preview.
+</p>
+
+<ul>
+  <li><a href="toolbars.html#quick-reference">Toolbar shortcuts reference</a></li>
+</ul>
+</div>
+
+<div class="note">
+This page is an entry point. Each linked page focuses on one area of functionality
+and describes behavior, limitations, and interaction rules in detail.
+</div>
+
+<h2>Where to go next</h2>
+
+<ul>
+  <li>If you are setting up hardware: start with <a href="settings.html">Work Station — Settings</a>.</li>
+  <li>If you want to understand what you see after startup: read <a href="initialized.html">Initialized Application State</a>.</li>
+  <li>If you are aligning optics or evaluating signal quality: see <a href="vertical_tools.html">Vertical Tools Panel</a> and <a href="histogram.html">Histogram Panel</a>.</li>
+</ul>
 
 </body>
 </html>

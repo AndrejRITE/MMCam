@@ -1,0 +1,195 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MMCam — Vertical Tools Panel</title>
+  <style>
+    body { font-family: sans-serif; margin: 18px; line-height: 1.45; color: #111; }
+    h1 { margin-top: 6px; font-size: 1.4em; }
+    h2 { margin-top: 14px; font-size: 1.1em; }
+    h3 { margin-top: 10px; font-size: 1.0em; }
+    p { margin: 8px 0; }
+    ul { margin: 8px 0 16px 22px; }
+    .img-wrap { text-align: center; margin: 12px 0; }
+    .img-wrap img { border: 1px solid #ccc; padding: 6px; max-width: 760px; }
+    .note { background:#fafafa; border-left:4px solid #ddd; padding:8px; margin:12px 0; }
+    .kbd { font-family: monospace; background:#eee; padding:2px 6px; border-radius:3px; }
+    dl { margin-left: 6px; }
+    dt { font-weight: bold; margin-top: 8px; }
+    dd { margin-left: 14px; margin-bottom: 6px; }
+    table { border-collapse: collapse; margin: 8px 0; }
+    th, td { text-align: left; padding: 6px 8px; border: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+
+<h1>Vertical Tools Panel (Preview Tools)</h1>
+
+<p>
+The vertical tools panel (left of the preview) enables analysis and alignment overlays.
+Each tool has a dedicated tab on the right-side panel where you can configure its parameters.
+These tools do not modify raw pixel data; they provide measurement overlays and visual guidance.
+</p>
+
+<h2>Overview of available tools</h2>
+
+<table>
+  <thead>
+    <tr><th>Tool</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Crosshair</td><td>Line profile visualization (horizontal/vertical) with optional adaptive scaling</td></tr>
+    <tr><td>Focus Tracking</td><td>Focus-assist feature (requires FWHM) used to verify spot detectability during focus adjustment</td></tr>
+    <tr><td>FWHM</td><td>Spot-based measurement; no output if no spot is detected</td></tr>
+    <tr><td>Annulus</td><td>Annular region definition and measurement; supports multiple annuluses</td></tr>
+    <tr><td>Grid Mesh</td><td>Rectangular mesh overlay for optics alignment and centering</td></tr>
+    <tr><td>Circle Mesh</td><td>Concentric circle mesh overlay for optics alignment and centering</td></tr>
+  </tbody>
+</table>
+
+<h2>Crosshair tool</h2>
+
+<div class="img-wrap">
+  <img src="img/tool_crosshair.png" alt="Crosshair tool enabled with horizontal and vertical line profiles" />
+</div>
+
+<p>
+The Crosshair tool draws horizontal and vertical line profiles through the preview and displays the
+corresponding intensity curves. It is used to quickly evaluate alignment, symmetry, gradients, and
+focus-related changes in the signal.
+</p>
+
+<dl>
+  <dt>Averaging Width [px]</dt>
+  <dd>
+    Defines how many neighboring rows/columns are averaged to produce the line profiles.
+    Higher values reduce noise and stabilize the curve (at the cost of spatial specificity).
+  </dd>
+
+  <dt>Adaptive Scaling</dt>
+  <dd>
+    When enabled, the line profile curves are auto-stretched to the available plotting range.
+    This is useful when the signal is very low: the curve becomes readable even when the absolute
+    amplitude is small.
+  </dd>
+</dl>
+
+<div class="note">
+Crosshair profiles are intended for inspection. They do not change exposure, gain, or any image-processing parameters.
+</div>
+
+<h2>Focus Tracking tool (requires FWHM)</h2>
+
+<div class="img-wrap">
+  <img src="img/tool_focus_tracking.png" alt="Focus tracking tool enabled when FWHM is checked" />
+</div>
+
+<p>
+Focus Tracking is a focus-assist feature that operates on top of the FWHM detection logic.
+It is available only when <strong>FWHM</strong> is enabled, because it uses the FWHM algorithm in the background.
+</p>
+
+<ul>
+  <li>Use Focus Tracking while adjusting focus (optics position, distance, or related parameters).</li>
+  <li>If the tool consistently detects the spot, your current setup is typically suitable for other postprocessing algorithms as well.</li>
+  <li>If the tool cannot detect the spot, FWHM-based tools and spot-dependent processing will not produce meaningful results.</li>
+</ul>
+
+<h2>FWHM tool</h2>
+
+<div class="img-wrap">
+  <img src="img/tool_fwhm.png" alt="FWHM tool" />
+</div>
+
+<p>
+The FWHM tool computes spot-based measurements using a Full Width at Half Maximum algorithm.
+It is designed for situations where a distinct spot is present in the image.
+</p>
+
+<ul>
+  <li>If no spot is detected, the tool will not display curve data or meaningful results.</li>
+  <li>For reliable operation, ensure the spot is sufficiently contrasted from background and not saturated.</li>
+</ul>
+
+<h2>Annulus tool</h2>
+
+<div class="img-wrap">
+  <img src="img/tool_annulus.png" alt="Annulus tool enabled with configurable center and inner/outer radius and annulus table" />
+</div>
+
+<p>
+The Annulus tool defines one or more annular regions (two circles: inner radius R1 and outer radius R2)
+used for annulus-based measurements. You can maintain multiple annuluses; only the currently selected annulus
+is shown in the preview.
+</p>
+
+<h3>Create and manage annuluses</h3>
+<ul>
+  <li>Press the green <strong>Plus</strong> button to add an annulus.</li>
+  <li>Select an annulus row in the table to make it the active (displayed) annulus.</li>
+  <li>Press the pink <strong>Minus</strong> button to remove the selected annulus.</li>
+</ul>
+
+<h3>Set the annulus center</h3>
+<ul>
+  <li>Option 1: use the center controls in the Annulus tab (X/Y in pixels).</li>
+  <li>Option 2: hold <span class="kbd">Ctrl</span> and click <strong>Left Mouse Button</strong> in the preview to set the center position.</li>
+</ul>
+
+<h3>Set inner/outer radius</h3>
+<ul>
+  <li>Adjust <strong>R1</strong> and <strong>R2</strong> only using the radius text controls in the Annulus tab.</li>
+  <li>R1 must be smaller than R2 to form a valid annulus.</li>
+</ul>
+
+<div class="note">
+Multiple annuluses can be stored, but only the selected annulus is rendered in the preview at a time.
+</div>
+
+<h2>Grid Mesh tool</h2>
+
+<div class="img-wrap">
+  <img src="img/tool_grid_mesh.png" alt="Grid Mesh tool enabled with adjustable step value" />
+</div>
+
+<p>
+Grid Mesh draws a rectangular grid over the preview. It is primarily used for optics positioning and spot centering,
+especially when you need a stable visual reference during adjustments.
+</p>
+
+<dl>
+  <dt>Step [px]</dt>
+  <dd>
+    Grid spacing in pixels. Smaller step increases grid density; larger step reduces visual clutter.
+  </dd>
+</dl>
+
+<h2>Circle Mesh tool</h2>
+
+<div class="img-wrap">
+  <img src="img/tool_circle_mesh.png" alt="Circle Mesh tool enabled with concentric circles and adjustable step value" />
+</div>
+
+<p>
+Circle Mesh draws concentric circles centered in the preview to support optics positioning and spot centering.
+It is useful for judging radial symmetry and aligning circular features.
+</p>
+
+<dl>
+  <dt>Step [px]</dt>
+  <dd>
+    Distance between circles in pixels. Adjust to match the scale of the spot or pattern you are centering.
+  </dd>
+</dl>
+
+<h2>Practical workflow suggestions</h2>
+
+<ul>
+  <li>Use <strong>Crosshair</strong> first to evaluate gradients and approximate alignment; enable Adaptive Scaling for weak signals.</li>
+  <li>Enable <strong>FWHM</strong> and <strong>Focus Tracking</strong> during focus adjustment. If the spot is not detected, fix illumination/exposure/optics first.</li>
+  <li>Use <strong>Grid Mesh</strong> and <strong>Circle Mesh</strong> as visual guides for precise spot centering and repeatable optics positioning.</li>
+  <li>Use <strong>Annulus</strong> when you need ring-based measurements; keep multiple annuluses for different radii and switch between them via the table.</li>
+</ul>
+
+</body>
+</html>
