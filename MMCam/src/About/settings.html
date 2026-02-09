@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MMCam — Settings: Work Station</title>
+  <style>
+    body { font-family: sans-serif; margin: 18px; line-height: 1.45; color: #111; }
+    h1 { margin-top: 6px; font-size: 1.4em; }
+    h2 { margin-top: 14px; font-size: 1.1em; }
+    p { margin: 8px 0; }
+    .img { border: 1px solid #ccc; padding: 6px; display: block; max-width: 760px; }
+    .note { background:#fafafa; border-left:4px solid #ddd; padding:8px; margin:12px 0; }
+    .steps { margin:8px 0 16px 18px; }
+    .kbd { font-family: monospace; background:#eee; padding:2px 6px; border-radius:3px; }
+    dl { margin-left: 6px; }
+    dt { font-weight: bold; margin-top: 8px; }
+    dd { margin-left: 12px; margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+
+<h1>Work Station — Settings</h1>
+
+<p>This dialog defines the current work station preset used by MMCam. Open it with <span class="kbd">F2</span> after the first application initialization to view or change the active preset, reconnect a camera, or reconfigure motor assignments. Use this page to verify the camera ID and the motor serial numbers and steps/mm values supplied by the preset.</p>
+<br>
+<CENTER><img class="img" src="img/settings.png" alt="MMCam Settings — Work Station dialog. Preset selector, tabs for Detector/Optics/Aux, serial number and steps/mm fields, camera ID, OK and Cancel buttons." /></CENTER>
+
+<h2>Controls and their meaning</h2>
+
+<dl>
+  <dt>Work Station (preset selector)</dt>
+  <dd>Select a saved preset containing camera, motor and stage assignments. A preset bundles one camera ID and up to nine motor entries grouped into three tabs: <em>Detector</em>, <em>Optics</em> and <em>Aux</em>.</dd>
+
+  <dt>Tabs — Detector / Optics / Aux</dt>
+  <dd>Each tab lists up to three motors assigned to that group. Use these to check or compare serial numbers, and Steps/mm that identify motor behavior and calibration values.</dd>
+
+  <dt>S/N (serial number)</dt>
+  <dd>Hardware serial number for the motor or stage. This must match the physical device connected to the controller. If S/N is missing or does not match, stage connection will fail or the wrong motor may be addressed.</dd>
+
+  <dt>Steps/mm</dt>
+  <dd>Calibration: how many stepper steps equal 1 millimeter of linear motion. Wrong steps/mm produces incorrect positioning and measurement errors — do not change this value unless you have a validated calibration procedure.</dd>
+
+  <dt>Camera ID</dt>
+  <dd>Numeric identifier of the camera used by this preset. This ID is applied when the preset is activated; MMCam uses it to target and reconnect the camera hardware.</dd>
+
+  <dt>OK / Cancel</dt>
+  <dd>Click <strong>OK</strong> to apply the selected preset and close the dialog. Click <strong>Cancel</strong> to close without applying changes.</dd>
+</dl>
+
+<h2>How to use this dialog to reconnect camera and stages (step-by-step)</h2>
+
+<ol class="steps">
+  <li>Press <span class="kbd">F2</span> to open Work Station settings.</li>
+  <li>From the <strong>Work Station</strong> drop-down, choose the preset you want to activate (if not already selected).</li>
+  <li>Confirm the serial numbers (S/N) shown in Detector / Optics / Aux match the physical devices connected to the system.</li>
+  <li>Confirm the <strong>Camera ID</strong> shown matches the camera you expect to use.</li>
+  <li>Click <strong>OK</strong> to apply the preset. MMCam will attempt to (re)connect the camera and stages for that preset immediately after applying it.</li>
+  <li>If a device is not present or fails to connect, consult the Troubleshooting section below before retrying.</li>
+</ol>
+
+<h2>Best-practice notes</h2>
+
+<ul>
+  <li>Do not change Steps/mm unless you have a validated calibration record. Incorrect values will produce inaccurate motion and measurements.</li>
+  <li>When reconnecting during a live capture, prefer to stop capturing first if possible. If you must reconnect while capturing, be aware that motor commands issued during reconnection may fail or cause unexpected behavior.</li>
+  <li>Keep a copy of your validated presets. Store one reference copy outside the application folder as the canonical backup for reproducible setups.</li>
+</ul>
+
+<h2>Troubleshooting checklist — connection failures</h2>
+
+<p>If the camera or a stage fails to connect after you apply a preset:</p>
+<ol class="steps">
+  <li>Verify physical connections: power, USB/ethernet/cable and any hub devices. Reseat connectors.</li>
+  <li>Confirm the exact hardware serial numbers: compare labels on the device with the S/N fields in the dialog.</li>
+  <li>Confirm camera ID: if multiple cameras are present, the ID must match the physical camera the preset expects.</li>
+  <li>Check that no other application is holding the device (camera or motor controller). Close other applications that may use the device.</li>
+  <li>Inspect logs: collect the most recent `mmcam.log` entries (see Appendix) and include them with bug reports.</li>
+  <li>If a motor repeatedly fails, try connecting one motor at a time to identify which hardware is misbehaving.</li>
+</ol>
+
+<div class="note">
+<strong>Note on "same preset" behaviour:</strong> Selecting the same preset that is already active should not force a disconnect/reconnect cycle. If you need to force a reconnect, change to a different preset and then switch back, or restart the application if hardware remains unresponsive.
+</div>
+
+<hr />
+
+<p>End of Work Station — Settings documentation. For related material, see the <a href="ui_tour.html">User Interface Tour</a> and <a href="troubleshooting.html">Troubleshooting</a> pages.</p>
+
+</body>
+</html>

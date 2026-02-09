@@ -10,6 +10,18 @@
 		<param name="Name" value="About MMCam">
         <param name="Local" value="about_app.html">
 		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Quick Start">
+        <param name="Local" value="usage.html">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Settings">
+        <param name="Local" value="settings.html">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Initialized Application">
+        <param name="Local" value="initialized.html">
+		</OBJECT>
 </UL>
 </BODY>
 </HTML>

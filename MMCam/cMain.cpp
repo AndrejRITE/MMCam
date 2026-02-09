@@ -248,6 +248,14 @@ cMain::cMain(const wxString& title_)
 		//ProcessEvent(art_start_live_capturing);
 	}
 
+	// Open Help Window
+#ifdef _DEBUG
+	{
+		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_HELP_ABOUT);
+		ProcessEvent(artEvt);
+	}
+#endif // _DEBUG
+
 	ReLayoutRightPanel();
 
 	SetMinClientSize(wxSize(800, 600));
@@ -344,6 +352,8 @@ auto cMain::InitializeAboutHTML() -> void
 		help_zip_not_found(wxString(help_filename));
 		return;
 	}
+
+	m_HelpController->DisplayContents();
 
 	m_MenuBar->menu_help->Enable(MainFrameVariables::ID::MENUBAR_HELP_ABOUT, true);
 }
@@ -2043,11 +2053,11 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 				100
 			);
 
-#ifndef _DEBUG
-		m_ExposureGauge->Hide();
-#endif
-
 		sizerPage->Add(m_ExposureGauge.get(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+
+		m_ExposureGauge->Hide();
+#ifndef _DEBUG
+#endif
 	}
 
 	// Exposure progress static text
@@ -2059,11 +2069,11 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 				wxT("Exposure Progress: 0%")
 			);
 
-#ifndef _DEBUG
-		m_ExposureProgressStaticText->Hide();
-#endif
-
 		sizerPage->Add(m_ExposureProgressStaticText.get(), 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
+
+		m_ExposureProgressStaticText->Hide();
+#ifndef _DEBUG
+#endif
 	}
 
 	sizerPage->AddStretchSpacer();
@@ -3189,8 +3199,8 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 			);
 
 		// Optionally hide the panel in debug mode
-#ifndef _DEBUG
 		m_ProgressBar->Hide();
+#ifndef _DEBUG
 #endif
 
 		sizerPage->Add(m_ProgressBar.get(), 0, wxEXPAND | wxALL, 5);
@@ -3205,8 +3215,8 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 				wxT("Measurement Progress: 0%")
 			);
 
-#ifndef _DEBUG
 		m_MeasurementProgressStaticText->Hide();
+#ifndef _DEBUG
 #endif
 
 		sizerPage->Add(m_MeasurementProgressStaticText.get(), 0, wxEXPAND | wxALL, 5);
@@ -8476,6 +8486,12 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 
 	m_VerticalToolBar->tool_bar->Enable(enableWidget);
 	m_HorizontalToolBar->tool_bar->Enable(enableWidget);
+	{
+		m_MenuBar->submenu_transformation->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90, enableWidget);
+		m_MenuBar->submenu_transformation->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90, enableWidget);
+		m_MenuBar->submenu_transformation->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_H, enableWidget);
+		m_MenuBar->submenu_transformation->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_V, enableWidget);
+	}
 
 	m_OutDirBtn->Enable(enableWidget);
 	
@@ -10004,10 +10020,14 @@ void cMain::CreateTransformationMenu(const wxSize& initSize, const wxColour& col
 	// ensure Tools menu exists
 	auto transform = m_MenuBar->submenu_transformation;
 	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90, "Rotate 90 [deg] Left\tCtrl+Shift+R");
+	transform->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CCW90, false);
 	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90, "Rotate 90 [deg] Right\tCtrl+R");
+	transform->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_ROTATE_CW90, false);
 	transform->AppendSeparator();
 	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_H, "Mirror Horizontally");
+	transform->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_H, false);
 	transform->AppendCheckItem(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_V, "Mirror Vertically");
+	transform->Enable(MainFrameVariables::ID::MENUBAR_TOOLS_TRANSFORM_MIRROR_V, false);
 
 	wxMenuItem* item = new wxMenuItem
 	(
@@ -10071,7 +10091,7 @@ void cMain::AddTransformationTools(const wxSize& size)
 			"Rot CCW",
 			toolBitmap,
 			wxNullBitmap,
-			"Rotate 90° CCW"
+			"Rotate 90° CCW (Ctrl+Shift+R)"
 		);
 	}
 
@@ -10099,7 +10119,7 @@ void cMain::AddTransformationTools(const wxSize& size)
 			"Rot CW",
 			toolBitmap,
 			wxNullBitmap,
-			"Rotate 90° CW"
+			"Rotate 90° CW (Ctrl+R)"
 		);
 	}
 

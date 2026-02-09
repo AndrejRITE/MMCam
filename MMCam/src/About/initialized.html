@@ -1,0 +1,230 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MMCam — Initialized Application</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 18px;
+      line-height: 1.45;
+      color: #111;
+    }
+
+    h1 {
+      margin-top: 6px;
+      font-size: 1.4em;
+    }
+
+    h2 {
+      margin-top: 14px;
+      font-size: 1.1em;
+    }
+
+    p {
+      margin: 8px 0;
+    }
+
+    .img-wrap {
+      text-align: center;
+      margin: 12px 0;
+    }
+
+    .img-wrap img {
+      border: 1px solid #ccc;
+      padding: 6px;
+      max-width: 500px;
+    }
+
+    .note {
+      background: #fafafa;
+      border-left: 4px solid #ddd;
+      padding: 8px;
+      margin: 12px 0;
+    }
+
+    dl {
+      margin-left: 6px;
+    }
+
+    dt {
+      font-weight: bold;
+      margin-top: 8px;
+    }
+
+    dd {
+      margin-left: 14px;
+      margin-bottom: 6px;
+    }
+
+    .kbd {
+      font-family: monospace;
+      background: #eee;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Initialized Application State</h1>
+
+<p>
+After successful initialization, MMCam enters the <em>initialized state</em>.
+All controls are enabled and live image acquisition starts automatically.
+The preview panel is populated with live data and visual overlays describing
+the current acquisition and image properties.
+</p>
+
+<div class="img-wrap">
+  <img src="img/initialized_app_camera_tab.png"
+       alt="MMCam initialized state with Camera tab active and live preview" />
+</div>
+
+<h2>Automatic live capture</h2>
+
+<p>
+Once the camera is initialized, MMCam immediately starts live capturing.
+Frames are continuously acquired and rendered in the preview panel until the
+user stops live view explicitly.
+</p>
+
+<p>
+Live capture can be stopped and restarted using the
+<strong>Stop Live (L)</strong> / <strong>Start Live (L)</strong> button or the
+<span class="kbd">L</span> keyboard shortcut.
+</p>
+
+<h2>Preview panel — visual overlays</h2>
+
+<p>
+The preview panel provides real-time visual feedback about the acquired image
+and the acquisition process. The following overlays are rendered directly on
+top of the image:
+</p>
+
+<dl>
+  <dt>Image statistics (bottom-left)</dt>
+  <dd>
+    Displays per-frame statistics computed from the raw image data:
+    minimum value, maximum value, sum, mean, standard deviation,
+    black-clipped pixel count, and saturated pixel count.
+  </dd>
+
+  <dt>Scale bar</dt>
+  <dd>
+    Shows a physical distance reference in micrometers (µm), derived from
+    the sensor pixel size and current binning.
+  </dd>
+
+  <dt>Image dimensions</dt>
+  <dd>
+    Displays the image size in pixels and the corresponding physical size
+    in micrometers along the horizontal and vertical axes.
+  </dd>
+
+  <dt>FPS and frame counter (top-left)</dt>
+  <dd>
+    Shows the current frames-per-second value, the running average FPS,
+    and the total number of frames acquired since live capture started.
+  </dd>
+</dl>
+
+<div class="img-wrap">
+  <img src="img/initialized_app_parameters_tab.png"
+       alt="Initialized state with Parameters tab showing live camera telemetry" />
+</div>
+
+<h2>Camera tab — live adjustable controls</h2>
+
+<p>
+The <strong>Camera</strong> tab contains controls that affect acquisition and
+preview rendering:
+</p>
+
+<dl>
+  <dt>Set Temperature [°C]</dt>
+  <dd>
+    Sets the target sensor temperature. Cooling or heating is handled by
+    the camera hardware; the measured temperature is shown in the
+    Parameters tab.
+  </dd>
+
+  <dt>Exposure [ms]</dt>
+  <dd>
+    Integration time for each frame. Changes apply to subsequent exposures.
+  </dd>
+
+  <dt>Binning</dt>
+  <dd>
+    Pixel binning factor. Changing binning affects resolution, noise
+    characteristics, and physical scale.
+  </dd>
+
+  <dt>Colormap</dt>
+  <dd>
+    Visualization-only setting that controls how pixel values are mapped
+    to colors in the preview. Raw image data remains unchanged.
+  </dd>
+</dl>
+
+<div class="img-wrap">
+  <img src="img/initialized_app_postprocessing_tab.png"
+       alt="Initialized state with Postprocessing tab" />
+</div>
+
+<h2>Parameters tab — camera state and telemetry</h2>
+
+<p>
+The <strong>Parameters</strong> tab provides a read-only view of the current
+camera configuration and status. Values update automatically during live
+capture.
+</p>
+
+<p>
+Displayed parameters include camera ID, firmware version, bit depth,
+sensor temperature, supply voltage, power utilization, and sensor dimensions
+in both pixels and micrometers.
+</p>
+
+<h2>Postprocessing tab — acquisition preprocessing</h2>
+
+<p>
+The <strong>Postprocessing</strong> tab controls optional preprocessing applied
+to raw images when a new acquisition starts.
+</p>
+
+<dl>
+  <dt>Background subtraction</dt>
+  <dd>
+    Subtracts a reference background image from each acquired frame.
+  </dd>
+
+  <dt>Flat-field correction</dt>
+  <dd>
+    Applies gain-dependent flat-field correction using user-supplied files.
+  </dd>
+
+  <dt>Smoothing</dt>
+  <dd>
+    Optional median filtering to suppress isolated noise.
+  </dd>
+</dl>
+
+<div class="note">
+Postprocessing settings are applied when a new capture begins.
+If live view is already running, stop and restart live capture to apply
+changed postprocessing options.
+</div>
+
+<h2>Summary</h2>
+
+<p>
+In the initialized state, MMCam provides a complete live overview of the
+acquisition process: real-time image data, physical scaling, statistics,
+and camera telemetry. This state is the normal operating mode for preview,
+adjustment, and preparation before starting a measurement sequence.
+</p>
+
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MMCam — Toolbars (Top & Left)</title>
+  <style>
+    body { font-family: sans-serif; margin: 18px; line-height: 1.45; color: #111; }
+    h1 { margin-top: 6px; font-size: 1.4em; }
+    h2 { margin-top: 12px; font-size: 1.05em; }
+    p { margin: 8px 0; }
+    .img-wrap { text-align: center; margin: 12px 0; }
+    .img-wrap img { border: 1px solid #ccc; padding: 6px; max-width: 760px; }
+    dl { margin-left: 6px; }
+    dt { font-weight: bold; margin-top: 8px; }
+    dd { margin-left: 14px; margin-bottom: 6px; }
+    .kbd { font-family: monospace; background: #eee; padding: 2px 6px; border-radius: 3px; }
+    .note { background: #fafafa; border-left: 4px solid #ddd; padding: 8px; margin: 12px 0; }
+    table { border-collapse: collapse; margin: 8px 0; }
+    th, td { text-align: left; padding: 6px 8px; border: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+
+<h1>Toolbars — Top (Horizontal) and Left (Vertical)</h1>
+
+<p>
+This page describes the controls available on the horizontal toolbar (top of the window)
+and on the preview-panel vertical toolbar (left). These controls provide quick access
+to image orientation, overlay toggles and centering helpers used during preview and setup.
+</p>
+
+<h2>Horizontal toolbar — image orientation</h2>
+
+<div class="img-wrap">
+  <img src="img/toolbar_horizontal.png" alt="Horizontal toolbar with rotate and mirror controls" />
+</div>
+
+<p>
+The horizontal toolbar contains image-orientation commands. These change how newly acquired frames are mapped to the preview and saved output. Important: orientation changes are applied to subsequent captures — they do <em>not</em> modify the pixel data of the frame currently displayed in the preview.
+</p>
+
+<table>
+  <thead>
+    <tr><th>Control</th><th>Effect</th><th>Shortcut</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Rotate 90° clockwise</td><td>Rotate image 90 degrees to the right for future captures</td><td><span class="kbd">Ctrl+R</span></td></tr>
+    <tr><td>Rotate 90° counter-clockwise</td><td>Rotate image 90 degrees to the left for future captures</td><td><span class="kbd">Ctrl+Shift+R</span></td></tr>
+    <tr><td>Mirror horizontally</td><td>Flip image left↔right for future captures</td><td>—</td></tr>
+    <tr><td>Mirror vertically</td><td>Flip image top↔bottom for future captures</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+Orientation is applied as a transformation step when new frames are read from the camera. To immediately verify a change, stop live capture and start it again or take a <strong>Single Shot</strong>.
+</div>
+
+<h2>Vertical toolbar (preview panel) — overlays and centering aids</h2>
+
+<div class="img-wrap">
+  <img src="img/toolbar_vertical.png" alt="Vertical toolbar along the left edge of the preview panel" />
+</div>
+
+<p>
+The vertical toolbar toggles visual overlays and tools used to inspect the image and help position targets. Shortcuts are available where shown.
+</p>
+
+<dl>
+  <dt>Crosshair</dt>
+  <dd>
+    Toggles a crosshair overlay centered on the preview. Useful for rough alignment and visual centering.
+    Shortcut: <span class="kbd">C</span>.
+  </dd>
+
+  <dt>FWHM (Full-Width Half-Max) overlay</dt>
+  <dd>
+    Shows measured FWHM contours or markers for the selected peak. Shortcut: <span class="kbd">F</span>.
+    The FWHM tool provides a numerical FWHM measurement in the image statistics when active.
+  </dd>
+
+  <dt>Focus Center</dt>
+  <dd>
+    Moves or highlights the focus-centering marker. This command is available only when the image analysis mode that produces the FWHM Sum is enabled (i.e., when <strong>FWHM (Sum)</strong> is checked). Shortcut: <span class="kbd">Ctrl+F</span>.
+  </dd>
+
+  <dt>Annulus</dt>
+  <dd>
+    Toggles an annular region overlay used for ring-based analysis or for computing radial statistics. Shortcut: <span class="kbd">A</span>.
+  </dd>
+
+  <dt>Grid Mesh</dt>
+  <dd>
+    Draws a grid mesh overlay across the preview to assist manual alignment and visual centering of spots. This overlay is located near the bottom of the vertical toolbar.
+    Shortcut: <span class="kbd">Ctrl+G</span>.
+  </dd>
+
+  <dt>Circle Mesh</dt>
+  <dd>
+    Shows concentric circles over the preview to aid in centering circular features. Useful when aligning round spots or for radial symmetry checks. Shortcut: <span class="kbd">Ctrl+C</span>.
+  </dd>
+</dl>
+
+<h2>Behavior and interaction rules</h2>
+
+<ul>
+  <li>All vertical-toolbar overlays are UI-only drawing layers — they do not modify raw image pixels saved to disk. They are intended as visual aids for alignment and measurement.</li>
+  <li>Focus Center is gated: it is only enabled when the FWHM Sum analysis mode is active. This prevents invoking focus-centering without the underlying measurement available.</li>
+  <li>Changing an overlay state does not interrupt live capture; overlays are toggled in-place and start affecting the preview immediately.</li>
+  <li>Orientation commands on the horizontal toolbar affect subsequent captures. To apply and confirm orientation immediately, either perform a Single Shot or restart live capture.</li>
+</ul>
+
+<h2>Quick reference</h2>
+
+<table>
+  <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
+  <tbody>
+    <tr><td>Toggle Crosshair</td><td><span class="kbd">C</span></td></tr>
+    <tr><td>Toggle FWHM overlay</td><td><span class="kbd">F</span></td></tr>
+    <tr><td>Focus Center (requires FWHM Sum)</td><td><span class="kbd">Ctrl+F</span></td></tr>
+    <tr><td>Toggle Annulus</td><td><span class="kbd">A</span></td></tr>
+    <tr><td>Toggle Grid Mesh</td><td><span class="kbd">Ctrl+G</span></td></tr>
+    <tr><td>Toggle Circle Mesh</td><td><span class="kbd">Ctrl+C</span></td></tr>
+    <tr><td>Rotate 90° CW (applies to next capture)</td><td><span class="kbd">Ctrl+R</span></td></tr>
+    <tr><td>Rotate 90° CCW (applies to next capture)</td><td><span class="kbd">Ctrl+Shift+R</span></td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>
