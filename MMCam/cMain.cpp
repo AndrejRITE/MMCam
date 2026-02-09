@@ -2055,8 +2055,8 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 
 		sizerPage->Add(m_ExposureGauge.get(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
 
-		m_ExposureGauge->Hide();
 #ifndef _DEBUG
+		m_ExposureGauge->Hide();
 #endif
 	}
 
@@ -2071,8 +2071,8 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 
 		sizerPage->Add(m_ExposureProgressStaticText.get(), 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
 
-		m_ExposureProgressStaticText->Hide();
 #ifndef _DEBUG
+		m_ExposureProgressStaticText->Hide();
 #endif
 	}
 

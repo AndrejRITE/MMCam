@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MMCam — Histogram Panel</title>
+  <style>
+    body { font-family: sans-serif; margin: 18px; line-height: 1.45; color: #111; }
+    h1 { margin-top: 6px; font-size: 1.4em; }
+    h2 { margin-top: 14px; font-size: 1.1em; }
+    p { margin: 8px 0; }
+    ul { margin: 8px 0 16px 22px; }
+    .img-wrap { text-align: center; margin: 12px 0; }
+    .img-wrap img { border: 1px solid #ccc; padding: 6px; max-width: 760px; }
+    .note { background:#fafafa; border-left:4px solid #ddd; padding:8px; margin:12px 0; }
+    .kbd { font-family: monospace; background:#eee; padding:2px 6px; border-radius:3px; }
+    dl { margin-left: 6px; }
+    dt { font-weight: bold; margin-top: 8px; }
+    dd { margin-left: 14px; margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+
+<h1>Histogram Panel (Bottom)</h1>
+
+<p>
+The histogram panel visualizes the distribution of pixel values in the current image and controls
+the preview intensity mapping. You can zoom the histogram, pan it, and optionally lock a manual
+display range for subsequent captures.
+</p>
+
+<div class="img-wrap">
+  <img src="img/histogram_normal.png" alt="Histogram panel in normal state" />
+</div>
+
+<h2>What the histogram shows</h2>
+
+<dl>
+  <dt>Histogram plot</dt>
+  <dd>
+    Displays the pixel-value distribution for the current frame. The plot itself is a UI tool:
+    it does not modify raw image data, only how intensities are mapped for display.
+  </dd>
+
+  <dt>Current view range (bottom-right)</dt>
+  <dd>
+    The numeric range in the bottom-right corner shows the currently visible histogram window.
+    When you zoom in/out or drag the histogram view, this range changes accordingly.
+  </dd>
+
+  <dt>Manual-range indicator (*)</dt>
+  <dd>
+    A star (<strong>*</strong>) in the upper-left corner of the histogram panel indicates that a
+    manual display range has been set by the user. When the star is visible, automatic ranging
+    is disabled for new captures.
+  </dd>
+</dl>
+
+<h2>Hover feedback: current range</h2>
+
+<p>
+When the mouse is hovering over the histogram panel, MMCam shows the current selected range directly
+on the histogram, making it clear what will be used for display mapping.
+</p>
+
+<div class="img-wrap">
+  <img src="img/histogram_hover.png" alt="Histogram panel while hovering, showing current range" />
+</div>
+
+<h2>Zoom and pan the histogram view</h2>
+
+<p>
+You can zoom in/out and drag (pan) the histogram. This changes only what part of the histogram is
+currently visible and does not change the image display range by itself.
+</p>
+
+<div class="img-wrap">
+  <img src="img/histogram_zoomed.png" alt="Histogram view zoomed in without changing the display range" />
+</div>
+
+<ul>
+  <li>Zoom changes the visible portion of the histogram (for inspection).</li>
+  <li>Dragging pans the histogram view left/right.</li>
+  <li>The bottom-right numeric range updates to reflect the visible window.</li>
+</ul>
+
+<h2>Set a manual display range (locks range for next captures)</h2>
+
+<p>
+To define a manual display range, drag the left and/or right blue borders on the histogram panel.
+After the manual range is set, a <strong>*</strong> appears in the upper-left corner.
+</p>
+
+<div class="img-wrap">
+  <img src="img/histogram_manual_range.png" alt="Histogram with a manual range set; star indicator visible" />
+</div>
+
+<p>
+Behaviour rule: once a manual range is set, MMCam will keep that range for subsequent captures and
+will not automatically apply a new auto-range when new frames arrive. This is useful when you need
+stable display contrast while adjusting optics, focusing, or comparing frames.
+</p>
+
+<div class="note">
+Manual histogram range is applied for the next capture/update cycle. The currently displayed image may not
+be re-ranged immediately in every situation, but the next acquired frames will use the locked range.
+</div>
+
+<h2>Reset back to automatic range</h2>
+
+<p>
+To return to automatic histogram ranging, double-click the histogram panel.
+The <strong>*</strong> indicator disappears, and the application resumes automatic range selection
+for newly acquired frames.
+</p>
+
+<ul>
+  <li><strong>Double-click</strong> histogram panel → resets to auto range</li>
+  <li><strong>* disappears</strong> → confirms auto range is active again</li>
+</ul>
+
+<h2>Practical guidance</h2>
+
+<ul>
+  <li>Use <em>zoom + pan</em> to inspect distribution details without changing display behaviour.</li>
+  <li>Use <em>manual range</em> when you need consistent contrast across frames (e.g., focusing or alignment).</li>
+  <li>Use <em>auto range</em> for general preview work where brightness varies between frames.</li>
+</ul>
+
+</body>
+</html>

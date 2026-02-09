@@ -23,6 +23,10 @@
 		<param name="Name" value="Initialized Application">
         <param name="Local" value="initialized.html">
 		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Histogram Panel">
+        <param name="Local" value="histogram.html">
+		</OBJECT>
 </UL>
 </body>
 </html>
