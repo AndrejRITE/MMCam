@@ -1,22 +1,46 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome page</title>
-    <style>
-
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MMCam — Welcome</title>
+  <style>
+    body { font-family: sans-serif; margin: 18px; line-height:1.45; color:#111; background:#F5F5F5; }
+    header { text-align:center; margin-bottom:12px; }
+    h1 { margin:6px 0; font-size:1.5em; }
+    .intro { max-width:900px; margin:0 auto 12px; }
+    .img-wrap { text-align:center; margin:12px 0; }
+    nav { margin:12px 0; text-align:center; }
+    a.btn { display:inline-block; margin:6px; padding:8px 12px; background:#fff; border:1px solid #ddd; text-decoration:none; color:#111; border-radius:4px; }
+  </style>
 </head>
-<body BGCOLOR="#F5F5F5">
-    <header>
-        <CENTER><h1>Welcome to the MMCam application</h1>
-        </CENTER>
-    </header>
+<body>
+  <header>
+    <h1>Welcome to MMCam</h1>
+    <p>MMCam — Motor Motion Camera acquisition and analysis software</p>
+  </header>
 
-	<LI>&nbsp;&nbsp;We are thrilled to welcome you to MMCam, a cutting-edge solution designed to seamlessly integrate with the powerful cameras for capturing high-quality images.<BR>
-    <LI>&nbsp;&nbsp;Our software is crafted to enhance your imaging experience, providing a user-friendly interface and advanced features tailored to meet your specific needs.<BR>
+  <div class="intro">
+    <p>MMCam is an application for scientists and engineers that integrates with Ximea and Moravian Instruments cameras and motorized stages. Use MMCam for live preview, alignment, and measurement workflows.</p>
+  </div>
+  <br>
+  <CENTER><div class="img-wrap">
+    <img src="img/index_main.png" alt="MMCam main" style="max-width:760px;border:1px solid #ccc;padding:6px;">
+  </div></CENTER>
+  <br>
+  <nav>
+    <a class="btn" href="usage.html">Usage Overview</a>
+    <a class="btn" href="initialized.html">Initialized State</a>
+    <a class="btn" href="settings.html">Work Station (Settings)</a>
+    <a class="btn" href="histogram.html">Histogram Panel</a>
+    <a class="btn" href="toolbars.html">Toolbars</a>
+    <a class="btn" href="vertical_tools.html">Vertical Tools</a>
+    <a class="btn" href="about_app.html">About MMCam</a>
+  </nav>
 
-    <CENTER><BR><IMG SRC="img/index_main.png" ALT="MMCam"></CENTER>
+<br>
+  <footer style="text-align:center;margin-top:18px;">
+    &copy; {#Year} MMCam_v{#Major}.{#Minor}. All rights reserved.
+  </footer>
 </body>
 </html>

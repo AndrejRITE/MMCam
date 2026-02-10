@@ -1,43 +1,54 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <center><title>MMCam - Motor Motion Camera</title></center>
-    <style></style>
-  </head>
-  <body bgcolor="#F5F5F5">
-    <header>
-      <center>
-        <h1>MMCam v{#Major}.{#Minor}</h1>
-        <p>Motor Motion Camera</p>
-      </center>
-    </header>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MMCam — About</title>
+  <style>
+    body { font-family: sans-serif; margin:18px; line-height:1.45; color:#111; background:#F5F5F5; }
+    header { text-align:center; margin-bottom:12px; }
+    h1 { margin:6px 0; font-size:1.4em; }
+    .img-wrap { text-align:center; margin:12px 0; }
+    .section { max-width:900px; margin:0 auto 12px; }
+    dl { margin-left:6px; }
+    dt { font-weight:bold; margin-top:8px; }
+    dd { margin-left:14px; margin-bottom:6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MMCam — About this application</h1>
+    <p>Motor Motion Camera (MMCam) — brief overview and maintenance notes</p>
+  </header>
+<br>
+  <div class="img-wrap">
+    <img src="img/initialized_app_camera_tab.png" alt="MMCam" style="max-width:760px;border:1px solid #ccc;padding:6px;">
+  </div>
 
-    <section>
-      <h2>What is MMCam?</h2>
-      <p>
-        MMCam is an application developed for scientists to capture
-        images with the Ximea and Moravian Instruments (C1x series) cameras.
-      </p>
-      <br />
-      <center>
-        <br /><img src="img/initialized_app_camera_tab.png" alt="MMCam" />
-      </center>
-    </section>
+  <div class="section">
+    <h2>What is MMCam?</h2>
+    <p>MMCam is a desktop application designed to control scientific cameras and motorized stages, provide live preview with overlays, and run measurement workflows tailored for optics and imaging experiments.</p>
 
-    <section>
-      <h2>Key Features</h2>
-      <ul>
-        <li>High-quality image capturing</li>
-        <li>Intuitive and user-friendly interface</li>
-        <!-- Add more features here -->
-      </ul>
-    </section>
+    <h2>Key features</h2>
+    <ul>
+      <li>Live capture with real-time overlays and statistics</li>
+      <li>Support for Ximea and Moravian Instruments cameras</li>
+      <li>Histogram-based display mapping with manual locking</li>
+      <li>Motorized stage presets and reconnection via Work Station settings</li>
+      <li>Postprocessing: background subtraction, flat-field correction, smoothing</li>
+    </ul>
 
-    <br />
-    <center>
-      <footer>&copy; {#Year} MMCam_v{#Major}.{#Minor}. All rights reserved.</footer>
-    </center>
-  </body>
+    <h2>Maintenance & versioning</h2>
+    <dl>
+      <dt>Version tokens</dt>
+      <dd>The pages use tokens such as <code>{#Major}</code>, <code>{#Minor}</code> and <code>{#Year}</code> that are substituted at build/runtime.</dd>
+      <dt>Logs</dt>
+      <dd>Check the application's log file (mmcam.log) when troubleshooting hardware connection issues.</dd>
+    </dl>
+  </div>
+
+  <footer style="text-align:center;margin-top:18px;">
+    &copy; {#Year} MMCam_v{#Major}.{#Minor}. All rights reserved.
+  </footer>
+</body>
 </html>
