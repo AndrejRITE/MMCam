@@ -9,6 +9,16 @@ Write-Output "Start building the ${repository_name} in Release mode [$(Get-Date)
 # Set the path to your solution file
 $solutionPath = "${path_to_repository}\${repository_name}.sln"
 
+# Define paths
+$temp_folder = "${path_to_repository}\.temp"
+$about_folder = "${path_to_repository}\${repository_name}\src\About"
+$release_folder = "${path_to_repository}\bin\x64\Release"
+$opencv_folder = "$env:OPENCV_LATEST\bin"
+$libximc_folder = "$env:LIBXIMC_LATEST\win64"
+$ximea_folder = "$env:XIMEA_LATEST"
+$misdk_folder = "$env:MISDK_LATEST\x64"
+$other_files_folder = "${path_to_repository}\${repository_name}"
+
 # Set the path to MSBuild (you might need to adjust this depending on your VS installation)
 $msbuildPath = "C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe"
 
@@ -17,26 +27,7 @@ $buildConfiguration = "Release"
 $platform = "x64"
 $operatingSystem = "win"
 
-# Build the solution using MSBuild
-& $msbuildPath $solutionPath `
-    /p:Configuration=$buildConfiguration `
-    /p:Platform=$platform `
-    /t:Build
-	
-Write-Output "Finished building the ${repository_name} in Release mode [$(Get-Date)]" >> "${path_to_repository}\log.txt"
-
-$temp_folder = "${path_to_repository}\.temp"
-# Check if the temp folder exists, and create it if not
-if (-not (Test-Path -Path $temp_folder)) 
-{
-	New-Item -Path $temp_folder -ItemType Directory
-}
-
-# Define Inno Setup parameters
-$inno_setup_script = "${path_to_repository}\CreateInstaller.iss"
-# Copy Inno Setup script
-$inno_setup_script_temp = "${path_to_repository}\CreateInstallerTemp.iss"
-Copy-Item -Path "${inno_setup_script}" -Destination "$inno_setup_script_temp" -Force
+Set-Location ${path_to_repository}
 
 # Define the path to the header file
 $headerFilePath = "${path_to_repository}\${repository_name}\cMain.h"
@@ -52,14 +43,58 @@ $minor_version = [regex]::Match($fileContent, 'MINOR_VERSION\s+(\d+)').Groups[1]
 Write-Host "MAJOR_VERSION: ${major_version}"
 Write-Host "MINOR_VERSION: ${minor_version}"
 
-# Define paths
-$about_folder = "${path_to_repository}\${repository_name}\src\About"
-$release_folder = "${path_to_repository}\bin\x64\Release"
-$opencv_folder = "$env:OPENCV_LATEST\bin"
-$libximc_folder = "$env:LIBXIMC_LATEST\win64"
-$ximea_folder = "$env:XIMEA_LATEST"
-$misdk_folder = "$env:MISDK_LATEST\x64"
-$other_files_folder = "${path_to_repository}\${repository_name}"
+$commit_number = git rev-list --count HEAD  # Get the total number of commits in the repository
+$now = Get-Date
+$current_year  = $now.ToString('yyyy')
+$current_month = $now.ToString('MM')   # zero-padded
+$current_day   = $now.ToString('dd')   # zero-padded
+$build_version = "${major_version}.${minor_version}.${commit_number}"
+$archive_name = "${repository_name}_v${major_version}.${minor_version}.${commit_number}.7z"
+$archive_path = "${release_folder}\${archive_name}"
+
+# Source file to patch
+$src_cpp = "${path_to_repository}\${repository_name}\cMain.cpp"
+$src_bak = "${src_cpp}.bak"
+
+# Backup original
+Copy-Item -Path $src_cpp -Destination $src_bak -Force
+
+try {
+    # Replace all placeholders (use -Raw to preserve file formatting)
+    $content = Get-Content $src_cpp -Raw
+    $content = $content -replace '\{#CommitNumber\}',   [regex]::Escape($commit_number)
+    $content = $content -replace '\{#CurrentYear\}',    [regex]::Escape($current_year)
+    $content = $content -replace '\{#CurrentMonth\}',   [regex]::Escape($current_month)
+    $content = $content -replace '\{#CurrentDay\}',     [regex]::Escape($current_day)
+    Set-Content -Path $src_cpp -Value $content -Encoding UTF8
+
+    # -------- Build the solution (your existing block) --------
+    Write-Output "Start building the ${repository_name} in Release mode [$(Get-Date)]" >> "${path_to_repository}\log.txt"
+    & $msbuildPath $solutionPath `
+        /p:Configuration=$buildConfiguration `
+        /p:Platform=$platform `
+        /t:Build
+    Write-Output "Finished building the ${repository_name} in Release mode [$(Get-Date)]" >> "${path_to_repository}\log.txt"
+}
+finally {
+    # Always restore original file, even on failure, to avoid dirtying the repo
+    if (Test-Path $src_bak) {
+        Move-Item -Force $src_bak $src_cpp
+    }
+}
+
+
+# Check if the temp folder exists, and create it if not
+if (-not (Test-Path -Path $temp_folder)) 
+{
+	New-Item -Path $temp_folder -ItemType Directory
+}
+
+# Define Inno Setup parameters
+$inno_setup_script = "${path_to_repository}\CreateInstaller.iss"
+# Copy Inno Setup script
+$inno_setup_script_temp = "${path_to_repository}\CreateInstallerTemp.iss"
+Copy-Item -Path "${inno_setup_script}" -Destination "$inno_setup_script_temp" -Force
 
 # Create About.zip
 Copy-Item -Path "${about_folder}\*" -Destination "${temp_folder}" -Recurse
@@ -149,11 +184,7 @@ Get-ChildItem -Path $sourceFolder -Recurse -File | Where-Object {
 }
 
 # Preparing name for the output archive
-Set-Location ${path_to_repository}
-$commit_number = git rev-list --count HEAD  # Get the total number of commits in the repository
-$build_version = "${major_version}.${minor_version}.${commit_number}"
-$archive_name = "${repository_name}_v${major_version}.${minor_version}.${commit_number}.7z"
-$archive_path = "${release_folder}\${archive_name}"
+
 
 # Remove all the files inside the temp folder
 Remove-Item -Path "$temp_folder" -Recurse
@@ -163,8 +194,8 @@ $files_to_archive = @(
     "${release_folder}\src",
     "${release_folder}\About.zip",
     "${release_folder}\keyfile.sqlite",
-    "${release_folder}\$repository_name.exe",
-    "${release_folder}\$repository_name.ini",
+    "${release_folder}\${repository_name}.exe",
+    "${release_folder}\${repository_name}.ini",
     "${release_folder}\table.txt",
     "${release_folder}\Xeryon.py",
     "${release_folder}\xeryon_goCenter.py",

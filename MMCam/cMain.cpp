@@ -35,6 +35,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_WINDOW_FULLSCREEN, cMain::OnFullScreen)
 	EVT_MENU(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, cMain::OnStartStopCapturingMenuButton)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_HELP_ABOUT, cMain::OnAbout)
+	EVT_MENU(MainFrameVariables::ID::MENUBAR_HELP_APPS_VERSION, cMain::OnApplicationVersion)
 	EVT_MAXIMIZE(cMain::OnMaximizeButton)
 
 	/* Detector X */
@@ -251,8 +252,8 @@ cMain::cMain(const wxString& title_)
 	// Open Help Window
 #ifdef _DEBUG
 	{
-		wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_HELP_ABOUT);
-		ProcessEvent(artEvt);
+		//wxCommandEvent artEvt(wxEVT_MENU, MainFrameVariables::ID::MENUBAR_HELP_ABOUT);
+		//ProcessEvent(artEvt);
 	}
 #endif // _DEBUG
 
@@ -379,7 +380,7 @@ void cMain::CreateMenuBarOnFrame()
 		{
 			auto itemID = MainFrameVariables::ID::MENUBAR_FILE_OPEN;
 			auto item = new wxMenuItem(m_MenuBar->menu_file, itemID, "Open\tCtrl+O");
-			// Setting a bitmap to the Close menu item
+
 			{
 				wxVector<wxBitmap> bitmaps;
 				auto bitmap = wxART_FILE_OPEN;
@@ -407,7 +408,7 @@ void cMain::CreateMenuBarOnFrame()
 		{
 			auto itemID = MainFrameVariables::ID::MENUBAR_FILE_SAVE;
 			auto item = new wxMenuItem(m_MenuBar->menu_file, itemID, "Save\tCtrl+S");
-			// Setting a bitmap to the Close menu item
+
 			{
 				wxVector<wxBitmap> bitmaps;
 				auto bitmap = wxART_SAVE;
@@ -437,7 +438,7 @@ void cMain::CreateMenuBarOnFrame()
 		{
 			auto itemID = MainFrameVariables::ID::MENUBAR_FILE_QUIT;
 			auto item = new wxMenuItem(m_MenuBar->menu_file, itemID, "Quit\tCtrl+Q");
-			// Setting a bitmap to the Close menu item
+
 			{
 				wxVector<wxBitmap> bitmaps;
 				auto bitmap = wxART_CLOSE;
@@ -472,7 +473,6 @@ void cMain::CreateMenuBarOnFrame()
 			auto itemID = MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN;
 			auto item = new wxMenuItem(m_MenuBar->menu_edit, itemID, "Single Shot\tS");
 
-			// Setting a bitmap to the Close menu item
 			{
 				wxVector<wxBitmap> bitmaps;
 				auto bitmap = wxART_CAMERA_SPARKLES;
@@ -510,7 +510,6 @@ void cMain::CreateMenuBarOnFrame()
 		{
 			auto item = new wxMenuItem(m_MenuBar->menu_edit, MainFrameVariables::ID::MENUBAR_EDIT_SETTINGS, "Settings\tF2");
 
-			// Setting a bitmap to the Close menu item
 			{
 				wxVector<wxBitmap> bitmaps;
 				auto bitmap = wxART_SETTINGS;
@@ -657,37 +656,75 @@ void cMain::CreateMenuBarOnFrame()
 
 	// Help Menu
 	{
-		auto item = new wxMenuItem
-		(
-			m_MenuBar->menu_help,
-			MainFrameVariables::ID::MENUBAR_HELP_ABOUT,
-			"About MMCam\tF1",
-			"Open an HTML Help"
-		);
-
-		// Setting a bitmap to the Binning menu item
 		{
-			wxVector<wxBitmap> bitmaps;
-			auto bitmap = wxART_BOOK_QUESTION_MARK;
-			auto client = wxART_CLIENT_FLUENTUI_FILLED;
+			auto item = new wxMenuItem
+			(
+				m_MenuBar->menu_help,
+				MainFrameVariables::ID::MENUBAR_HELP_ABOUT,
+				"About MMCam\tF1",
+				"Open an HTML Help"
+			);
 
-			for (auto i{ 0 }; i < 3; ++i)
-				bitmaps.push_back
-				(
-					wxMaterialDesignArtProvider::GetBitmap
+			// Setting a bitmap to the Binning menu item
+			{
+				wxVector<wxBitmap> bitmaps;
+				auto bitmap = wxART_BOOK_QUESTION_MARK;
+				auto client = wxART_CLIENT_FLUENTUI_FILLED;
+
+				for (auto i{ 0 }; i < 3; ++i)
+					bitmaps.push_back
 					(
-						bitmap,
-						client,
-						wxSize(initBitmapSize.GetWidth() + i * initBitmapSize.GetWidth(), initBitmapSize.GetHeight() + i * initBitmapSize.GetHeight()),
-						color
-					)
-				);
+						wxMaterialDesignArtProvider::GetBitmap
+						(
+							bitmap,
+							client,
+							wxSize(initBitmapSize.GetWidth() + i * initBitmapSize.GetWidth(), initBitmapSize.GetHeight() + i * initBitmapSize.GetHeight()),
+							color
+						)
+					);
 
-			item->SetBitmap(wxBitmapBundle::FromBitmaps(bitmaps));
+				item->SetBitmap(wxBitmapBundle::FromBitmaps(bitmaps));
+			}
+
+			item->Enable(false);
+
+			m_MenuBar->menu_help->Append(item);
 		}
-		item->Enable(false);
 
-		m_MenuBar->menu_help->Append(item);
+		// Application Version
+		{
+			auto id = MainFrameVariables::ID::MENUBAR_HELP_APPS_VERSION;
+			wxMenuItem* item = new wxMenuItem
+			(
+				m_MenuBar->menu_help,
+				id,
+				"Application Version"
+			);
+
+			// Setting a bitmap to the Close menu item
+			{
+				wxVector<wxBitmap> bitmaps;
+				auto startSize = 16;
+				auto bitmap = wxART_INFO;
+				auto client = wxART_CLIENT_MATERIAL_ROUND;
+
+				for (auto i{ 0 }; i < 3; ++i)
+					bitmaps.push_back
+					(
+						wxMaterialDesignArtProvider::GetBitmap
+						(
+							bitmap,
+							client,
+							wxSize(startSize + i * startSize, startSize + i * startSize),
+							color
+						)
+					);
+
+				item->SetBitmap(wxBitmapBundle::FromBitmaps(bitmaps));
+			}
+			m_MenuBar->menu_help->Append(item);
+		}
+
 	}
 	//m_MenuBar->menu_help->Append(MainFrameVariables::ID_MENUBAR_HELP_ABOUT, wxT("About MMCam\tF1"));
 	m_MenuBar->menu_bar->Append(m_MenuBar->menu_help, wxT("&Help"));
@@ -3756,6 +3793,34 @@ auto cMain::OnAbout(wxCommandEvent& evt) -> void
 {
 	m_HelpController->DisplayContents();
 	m_HelpController->GetFrame()->Maximize();
+}
+
+auto cMain::OnApplicationVersion(wxCommandEvent& evt) -> void
+{
+	wxAboutDialogInfo info;
+	info.SetName(m_AppName);
+	auto majorVerStr = wxString::Format(wxT("%i"), MAJOR_VERSION);
+	auto minorVerStr = wxString::Format(wxT("%i"), MINOR_VERSION);
+	info.SetVersion(majorVerStr + "." + minorVerStr + ".{#CommitNumber}");
+
+	info.SetIcon(logo_xpm);
+
+	wxString description = wxString::Format
+	(
+		"An application for scientists and engineers that integrates with Tucsen, Ximea and Moravian Instruments cameras and motorized stages.\n\n"
+		"Build date: %s-%s-%s",
+		wxT("{#CurrentYear}"),
+		wxT("{#CurrentMonth}"),
+		wxT("{#CurrentDay}")
+	);
+
+	info.SetDescription(description);
+
+	info.SetCopyright("(C) {#CurrentYear} Rigaku Innovative Technologies Europe s.r.o.");
+	info.SetWebSite("https://rigaku.com");
+	info.AddDeveloper("Andrej Pcelovodov");
+
+	wxAboutBox(info);
 }
 
 auto cMain::OnFWHMButton(wxCommandEvent& evt) -> void

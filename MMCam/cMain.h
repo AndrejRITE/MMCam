@@ -21,6 +21,7 @@
 #include "wx/splitter.h"
 #include "wx/msw/window.h"
 #include "wx/timer.h"
+#include "wx/aboutdlg.h"
 
 #include <string>
 #include <memory>
@@ -43,7 +44,7 @@
 #include "src/img/logo.xpm"
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 36
+#define MINOR_VERSION 37
 
 #ifdef _DEBUG
 	//#define OPEN
@@ -78,6 +79,7 @@ namespace MainFrameVariables
 		MENUBAR_WINDOW_ENABLE_DARK_MODE,
 		MENUBAR_WINDOW_FULLSCREEN,
 		MENUBAR_HELP_ABOUT,
+		MENUBAR_HELP_APPS_VERSION,
 
 		/* Detector X */
 		RIGHT_SC_DET_X_ABS_TE_CTL,
@@ -947,6 +949,7 @@ private:
 
 	auto OnEnableDarkMode(wxCommandEvent& evt) -> void;
 	auto OnAbout(wxCommandEvent& evt) -> void;
+	auto OnApplicationVersion(wxCommandEvent& evt) -> void;
 
 	auto OnFWHMButton(wxCommandEvent& evt) -> void;
 	auto OnGridMeshButton(wxCommandEvent& evt) -> void;
