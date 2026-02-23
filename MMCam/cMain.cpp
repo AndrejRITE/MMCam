@@ -1951,7 +1951,8 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 				0, 
 				wxALIGN_CENTER
 			);
-			wxFloatingPointValidator<float>	temp_val(1, NULL, wxNUM_VAL_ZERO_AS_BLANK);
+
+			wxFloatingPointValidator<float>	temp_val(1, NULL);
 			temp_val.SetMin(-50.f);
 			temp_val.SetMax(50.f);
 
