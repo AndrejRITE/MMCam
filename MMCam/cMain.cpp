@@ -114,6 +114,14 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 
 	EVT_BUTTON(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, cMain::OnSingleShotCameraImage)
 
+	/* ROI */
+	EVT_CHECKBOX(MainFrameVariables::ID::RIGHT_CAM_ROI_CENTRICAL_MODE_CHECK_BOX, cMain::OnCentricalModeROICheckBox)
+	EVT_TEXT(MainFrameVariables::ID::RIGHT_CAM_ROI_START_X_TXT_CTRL, cMain::OnROITxtCtrls)
+	EVT_TEXT(MainFrameVariables::ID::RIGHT_CAM_ROI_START_Y_TXT_CTRL, cMain::OnROITxtCtrls)
+	EVT_TEXT(MainFrameVariables::ID::RIGHT_CAM_ROI_WIDTH_TXT_CTRL, cMain::OnROITxtCtrls)
+	EVT_TEXT(MainFrameVariables::ID::RIGHT_CAM_ROI_HEIGHT_TXT_CTRL, cMain::OnROITxtCtrls)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_CAM_ROI_REFRESH_BTN, cMain::OnRefreshROISettingsBtn)
+
 	/* Postprocessing */
 	// Background Subtraction
 	EVT_CHECKBOX(MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_CHECKBOX, cMain::OnBackgroundSubtractionCheckBox)
@@ -2225,6 +2233,7 @@ auto cMain::CreateCameraROIPage(wxWindow* parent) -> wxWindow*
 				);
 
 			m_CameraROIToolsControls->centricalMode->SetValue(true);
+			m_CameraROIToolsControls->centricalMode->SetHelpText("When checked, the ROI start position is adjusted so the ROI is centered on the sensor (symmetrically on both axes)");
 
 			sizerPage->Add(m_CameraROIToolsControls->centricalMode.get(), 0, wxCENTER);
 		}
@@ -2255,6 +2264,7 @@ auto cMain::CreateCameraROIPage(wxWindow* parent) -> wxWindow*
 						wxTE_CENTRE
 					);
 
+				m_CameraROIToolsControls->startX_px->SetHelpText("Horizontal ROI start position relative to the sensor origin");
 				m_CameraROIToolsControls->startX_px->Disable();
 
 				sizer->Add(m_CameraROIToolsControls->startX_px.get(), 0, wxEXPAND);
@@ -2281,6 +2291,7 @@ auto cMain::CreateCameraROIPage(wxWindow* parent) -> wxWindow*
 						wxTE_CENTRE
 					);
 
+				m_CameraROIToolsControls->startY_px->SetHelpText("Vertical ROI start position relative to the sensor origin");
 				m_CameraROIToolsControls->startY_px->Disable();
 
 				sizer->Add(m_CameraROIToolsControls->startY_px.get(), 0, wxEXPAND);
@@ -2313,6 +2324,7 @@ auto cMain::CreateCameraROIPage(wxWindow* parent) -> wxWindow*
 						wxTE_CENTRE
 					);
 
+				m_CameraROIToolsControls->width_px->SetHelpText("ROI width in pixels");
 				m_CameraROIToolsControls->width_px->Disable();
 
 				sizer->Add(m_CameraROIToolsControls->width_px.get(), 0, wxEXPAND);
@@ -2339,6 +2351,7 @@ auto cMain::CreateCameraROIPage(wxWindow* parent) -> wxWindow*
 						wxTE_CENTRE
 					);
 
+				m_CameraROIToolsControls->height_px->SetHelpText("ROI height in pixels");
 				m_CameraROIToolsControls->height_px->Disable();
 
 				sizer->Add(m_CameraROIToolsControls->height_px.get(), 0, wxEXPAND);
@@ -2377,6 +2390,7 @@ auto cMain::CreateCameraROIPage(wxWindow* parent) -> wxWindow*
 				);
 
 			m_CameraROIToolsControls->refresh->Disable();
+			m_CameraROIToolsControls->refresh->SetHelpText("Reset the Region of Interest to the full camera sensor size");
 
 			horSizer->Add(m_CameraROIToolsControls->refresh.get(), 0, wxEXPAND);
 		}
@@ -5184,15 +5198,8 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 
 auto cMain::UpdateCameraROIParameters() -> void
 {
-	auto start_px = CameraPreviewVariables::CreateStringWithPrecision(1, 0);
-	m_CameraROIToolsControls->startX_px->SetValue(start_px);
-	m_CameraROIToolsControls->startY_px->SetValue(start_px);
-
-	auto width_px = CameraPreviewVariables::CreateStringWithPrecision((int)m_CameraControl->GetWidth(), 0);
-	m_CameraROIToolsControls->width_px->SetValue(width_px);
-
-	auto height_px = CameraPreviewVariables::CreateStringWithPrecision((int)m_CameraControl->GetHeight(), 0);
-	m_CameraROIToolsControls->height_px->SetValue(height_px);
+	wxCommandEvent evt(wxEVT_BUTTON, MainFrameVariables::ID::RIGHT_CAM_ROI_REFRESH_BTN);
+	ProcessEvent(evt);
 }
 
 auto cMain::UpdateCameraParameters() -> void
@@ -7834,6 +7841,69 @@ auto cMain::OnColormapComboBox(wxCommandEvent& evt) -> void
 	ProcessEvent(artEvt);
 }
 
+auto cMain::OnCentricalModeROICheckBox(wxCommandEvent& evt) -> void
+{
+	if (!m_CameraControl || !m_CameraControl->IsConnected()) return;
+
+	auto isCentricalModeOn = m_CameraROIToolsControls->centricalMode->GetValue();
+
+	m_CameraROIToolsControls->EnableStartPositionControls(!isCentricalModeOn);
+
+	wxCommandEvent event(wxEVT_TEXT, MainFrameVariables::ID::RIGHT_CAM_ROI_WIDTH_TXT_CTRL);
+	ProcessEvent(event);
+}
+
+auto cMain::OnROITxtCtrls(wxCommandEvent& evt) -> void
+{
+	LOG(__FUNCSIG__)
+
+	if (!m_CameraROIToolsControls) return;
+
+	auto width = 0;
+	m_CameraROIToolsControls->width_px->GetValue().ToInt(&width);
+	if (!width) m_CameraROIToolsControls->width_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(1.0, 0));
+
+	auto height = 0;
+	m_CameraROIToolsControls->height_px->GetValue().ToInt(&height);
+	if (!height) m_CameraROIToolsControls->height_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(1.0, 0));
+
+	auto isCentricalModeOn = m_CameraROIToolsControls->centricalMode->GetValue();
+
+	if (!m_CameraControl || !m_CameraControl->IsConnected()) return;
+
+	if (isCentricalModeOn)
+	{
+		/* Width */
+		const auto sensorWidth = static_cast<int>(m_CameraControl->GetWidth());
+		auto centricalStartX = (sensorWidth - width) / 2;
+		centricalStartX += 1; // Because humans count starting from 1
+
+		m_CameraROIToolsControls->startX_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(centricalStartX, 0));
+
+		/* Height */
+		const auto sensorHeight = static_cast<int>(m_CameraControl->GetHeight());
+		auto centricalStartY = (sensorHeight - height) / 2;
+		centricalStartY += 1; // Because humans count starting from 1
+
+		m_CameraROIToolsControls->startY_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(centricalStartY, 0));
+	}
+}
+
+auto cMain::OnRefreshROISettingsBtn(wxCommandEvent& evt) -> void
+{
+	if (!m_CameraControl || !m_CameraControl->IsConnected()) return;
+
+	auto start_px = CameraPreviewVariables::CreateStringWithPrecision(1, 0);
+	m_CameraROIToolsControls->startX_px->SetValue(start_px);
+	m_CameraROIToolsControls->startY_px->SetValue(start_px);
+
+	auto width_px = CameraPreviewVariables::CreateStringWithPrecision((int)m_CameraControl->GetWidth(), 0);
+	m_CameraROIToolsControls->width_px->SetValue(width_px);
+
+	auto height_px = CameraPreviewVariables::CreateStringWithPrecision((int)m_CameraControl->GetHeight(), 0);
+	m_CameraROIToolsControls->height_px->SetValue(height_px);
+}
+
 auto cMain::OnBackgroundSubtractionCheckBox(wxCommandEvent& evt) -> void
 {
 	if (!m_BackgroundSubtractionData)
@@ -8840,6 +8910,7 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 	}
 
 	m_ImageColormapComboBox->stylish_combo_box->Disable();
+
 	m_CameraTabControls->DisableAllControls();
 
 	m_CameraROIToolsControls->EnableAllControls(false);
@@ -8940,6 +9011,8 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 			m_CameraTabControls->camBinning->Enable(enable);
 			m_CameraTabControls->camSensorTemperature->Enable(enable);
 			m_CameraTabControls->singleShotBtn->Enable(enable);
+
+			m_CameraROIToolsControls->EnableAllControls(enable);
 		};
 
 	const bool startLive = btn->GetValue();

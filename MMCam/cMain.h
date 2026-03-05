@@ -453,6 +453,12 @@ namespace MainFrameVariables
 
 		std::unique_ptr<wxBitmapButton> refresh{};
 
+		auto EnableStartPositionControls(const bool enable = true) -> void
+		{
+			startX_px->Enable(enable);
+			startY_px->Enable(enable);
+		}
+
 		auto EnableAllControls(const bool enable = true) -> void
 		{
 			if (!centricalMode) return;
@@ -1221,6 +1227,11 @@ private:
 	auto OnCameraNotebookPageChanged(wxBookCtrlEvent& evt) -> void;
 	auto OnBinningChoice(wxCommandEvent& evt) -> void;
 	auto OnColormapComboBox(wxCommandEvent& evt) -> void;
+
+	/* ROI */
+	auto OnCentricalModeROICheckBox(wxCommandEvent& evt) -> void;
+	auto OnROITxtCtrls(wxCommandEvent& evt) -> void;
+	auto OnRefreshROISettingsBtn(wxCommandEvent& evt) -> void;
 
 	/* Postprocessing */
 	auto OnBackgroundSubtractionCheckBox(wxCommandEvent& evt) -> void;
