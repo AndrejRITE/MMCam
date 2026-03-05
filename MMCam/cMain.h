@@ -43,8 +43,8 @@
 
 #include "src/img/logo.xpm"
 
-#define MAJOR_VERSION 1
-#define MINOR_VERSION 38
+#define MAJOR_VERSION 2
+#define MINOR_VERSION 0
 
 #ifdef _DEBUG
 	//#define OPEN
@@ -201,6 +201,7 @@ namespace MainFrameVariables
 		RIGHT_CAM_ROI_START_Y_TXT_CTRL,
 		RIGHT_CAM_ROI_WIDTH_TXT_CTRL,
 		RIGHT_CAM_ROI_HEIGHT_TXT_CTRL,
+		RIGHT_CAM_ROI_REFRESH_BTN,
 
 		RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL,
 		RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL,
@@ -449,6 +450,36 @@ namespace MainFrameVariables
 
 		std::unique_ptr<wxTextCtrl> startX_px{}, startY_px{};
 		std::unique_ptr<wxTextCtrl> width_px{}, height_px{};
+
+		std::unique_ptr<wxBitmapButton> refresh{};
+
+		auto EnableAllControls(const bool enable = true) -> void
+		{
+			if (!centricalMode) return;
+			if (!startX_px || !startY_px) return;
+			if (!width_px || !height_px) return;
+			if (!refresh) return;
+
+			centricalMode->Enable(enable);
+
+			auto isCentricalModeOn = centricalMode->GetValue();
+
+			if (isCentricalModeOn)
+			{
+				startX_px->Enable(false);
+				startY_px->Enable(false);
+			}
+			else
+			{
+				startX_px->Enable(enable);
+				startY_px->Enable(enable);
+			}
+
+			width_px->Enable(enable);
+			height_px->Enable(enable);
+
+			refresh->Enable(enable);
+		}
 	};
 
 	struct ToolsTabControls
@@ -1018,7 +1049,6 @@ private:
 	auto OnContinuousExposureTimer(wxTimerEvent& evt) -> void;
 	auto RestartContinuousExposureUI() -> void;
 
-
 	auto DisplayAndSaveImageFromTheCamera
 	(
 		unsigned short* const imgPtr, 
@@ -1038,6 +1068,7 @@ private:
 	void OnOpenSettings(wxCommandEvent& evt);
 	auto InitializeSelectedCamera() -> void;
 	auto UpdateDefaultWidgetParameters() -> void;
+	auto UpdateCameraROIParameters() -> void;
 	auto UpdateCameraParameters() -> void;
 	auto CoolDownTheCamera() -> void;
 	void EnableUsedAndDisableNonUsedMotors();

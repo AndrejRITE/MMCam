@@ -2345,6 +2345,42 @@ auto cMain::CreateCameraROIPage(wxWindow* parent) -> wxWindow*
 			}
 		}
 
+		sizerPage->AddSpacer(5);
+
+		/* Refresh */
+		{
+			auto horSizer = new wxBoxSizer(wxHORIZONTAL);
+			sizerPage->Add(horSizer, 0, wxCENTER);
+
+			auto size = wxSize(32, 32);
+
+			wxBitmap bmp{};
+			{
+				auto bitmap = wxART_REFRESH;
+				auto client = wxART_CLIENT_MATERIAL_ROUND;
+				auto color = wxColour(0, 128, 255);
+
+				bmp = wxMaterialDesignArtProvider::GetBitmap
+				(
+					bitmap,
+					client,
+					size,
+					color
+				);
+			}
+
+			m_CameraROIToolsControls->refresh = std::make_unique<wxBitmapButton>
+				(
+					page, 
+					MainFrameVariables::ID::RIGHT_CAM_ROI_REFRESH_BTN, 
+					bmp
+				);
+
+			m_CameraROIToolsControls->refresh->Disable();
+
+			horSizer->Add(m_CameraROIToolsControls->refresh.get(), 0, wxEXPAND);
+		}
+
 		sizerPage->AddStretchSpacer();
 	}
 
@@ -4993,6 +5029,7 @@ auto cMain::InitializeSelectedCamera() -> void
 	// Enabling controls
 	EnableControlsAfterSuccessfulCameraInitialization();
 
+	UpdateCameraROIParameters();
 	UpdateCameraParameters();
 	//CoolDownTheCamera();
 
@@ -5143,6 +5180,19 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 		auto step_str = CameraPreviewVariables::CreateStringWithPrecision(m_Config->circle_mesh_step_px, 0);
 		m_ToolsControls->circleMeshStepTxtCtrl->SetValue(step_str);
 	}
+}
+
+auto cMain::UpdateCameraROIParameters() -> void
+{
+	auto start_px = CameraPreviewVariables::CreateStringWithPrecision(1, 0);
+	m_CameraROIToolsControls->startX_px->SetValue(start_px);
+	m_CameraROIToolsControls->startY_px->SetValue(start_px);
+
+	auto width_px = CameraPreviewVariables::CreateStringWithPrecision((int)m_CameraControl->GetWidth(), 0);
+	m_CameraROIToolsControls->width_px->SetValue(width_px);
+
+	auto height_px = CameraPreviewVariables::CreateStringWithPrecision((int)m_CameraControl->GetHeight(), 0);
+	m_CameraROIToolsControls->height_px->SetValue(height_px);
 }
 
 auto cMain::UpdateCameraParameters() -> void
@@ -8669,6 +8719,8 @@ auto cMain::EnableControlsAfterCapturing() -> void
 
 		m_CameraTabControls->startStopLiveCapturingTglBtn->Enable();
 
+		m_CameraROIToolsControls->EnableAllControls(true);
+
 		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, true);
 		m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, true);
 
@@ -8746,6 +8798,9 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 	if (!m_VerticalToolBar->tool_bar->GetToolState(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING))
 		m_VerticalToolBar->tool_bar->EnableTool(MainFrameVariables::ID::MENUBAR_TOOLS_ENABLE_FOCUS_CENTER_DISPLAYING, false);
 
+	// ROI
+	m_CameraROIToolsControls->EnableAllControls(true);
+
 	// Background Subtraction
 	m_BackgroundSubtractionCheckBox->Enable(enableWidget);
 	m_BackgroundSubtractionLoadFileBtn->Enable(enableWidget);
@@ -8786,6 +8841,9 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 
 	m_ImageColormapComboBox->stylish_combo_box->Disable();
 	m_CameraTabControls->DisableAllControls();
+
+	m_CameraROIToolsControls->EnableAllControls(false);
+
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, false);
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, false);
 
