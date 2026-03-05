@@ -44,7 +44,7 @@
 #include "src/img/logo.xpm"
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 37
+#define MINOR_VERSION 38
 
 #ifdef _DEBUG
 	//#define OPEN
@@ -194,6 +194,13 @@ namespace MainFrameVariables
 		RIGHT_CAM_MANUFACTURER_CHOICE,
 		RIGHT_CAM_SINGLE_SHOT_BTN,
 		RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN,
+
+		// ROI
+		RIGHT_CAM_ROI_START_X_TXT_CTRL,
+		RIGHT_CAM_ROI_START_Y_TXT_CTRL,
+		RIGHT_CAM_ROI_WIDTH_TXT_CTRL,
+		RIGHT_CAM_ROI_HEIGHT_TXT_CTRL,
+
 		RIGHT_CAM_CROSS_HAIR_POS_X_TXT_CTRL,
 		RIGHT_CAM_CROSS_HAIR_POS_Y_TXT_CTRL,
 		RIGHT_CAM_CROSS_HAIR_SET_POS_TGL_BTN,
@@ -433,6 +440,12 @@ namespace MainFrameVariables
 			crossHairPosYTxtCtrl->Disable();
 		}
 
+	};
+
+	struct CameraROITabControls
+	{
+		std::unique_ptr<wxTextCtrl> startX_px{}, startY_px{};
+		std::unique_ptr<wxTextCtrl> width_px{}, height_px{};
 	};
 
 	struct ToolsTabControls
@@ -902,6 +915,11 @@ private:
 	) -> wxWindow*;
 
 	auto CreateCameraPage
+	(
+		wxWindow* parent
+	) -> wxWindow*;
+
+	auto CreateCameraROIPage
 	(
 		wxWindow* parent
 	) -> wxWindow*;
@@ -1996,6 +2014,8 @@ private:
 	wxNotebook* m_CameraControlNotebook{};
 	
 	wxNotebook* m_ToolsControlsNotebook{};
+
+	std::unique_ptr<MainFrameVariables::CameraROITabControls> m_CameraROIToolsControls{};
 	std::unique_ptr<MainFrameVariables::ToolsTabControls> m_ToolsControls{};
 
 	wxNotebook* m_MeasurementNotebook{};

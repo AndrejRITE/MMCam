@@ -354,7 +354,9 @@ auto cMain::InitializeAboutHTML() -> void
 		return;
 	}
 
-	m_HelpController->DisplayContents();
+#ifdef _DEBUG
+	// m_HelpController->DisplayContents();
+#endif // _DEBUG
 
 	m_MenuBar->menu_help->Enable(MainFrameVariables::ID::MENUBAR_HELP_ABOUT, true);
 }
@@ -2201,6 +2203,80 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 	return page;
 }
 
+auto cMain::CreateCameraROIPage(wxWindow* parent) -> wxWindow*
+{
+	wxPanel* page = new wxPanel(parent);
+	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+
+	wxSize txtCtrlSize = { 64, 20 };
+
+	m_CameraROIToolsControls = std::make_unique<MainFrameVariables::CameraROITabControls>();
+
+	{
+		sizerPage->AddStretchSpacer();
+
+		{
+			auto horSizer = new wxBoxSizer(wxHORIZONTAL);
+			sizerPage->Add(horSizer, 0, wxCENTER);
+
+			/* X Start Position */
+			{
+				auto sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&X");
+				horSizer->Add(sizer, 0, wxEXPAND);
+
+				wxIntegerValidator<int>	val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
+				val.SetMin(1);
+				val.SetMax(100'000);
+
+				m_CameraROIToolsControls->startX_px = std::make_unique<wxTextCtrl>
+					(
+						page,
+						MainFrameVariables::ID::RIGHT_CAM_ROI_START_X_TXT_CTRL,
+						wxT("1"),
+						wxDefaultPosition,
+						txtCtrlSize,
+						wxTE_CENTRE
+					);
+
+				m_CameraROIToolsControls->startX_px->Disable();
+
+				sizer->Add(m_CameraROIToolsControls->startX_px.get(), 0, wxEXPAND);
+			}
+
+			horSizer->AddSpacer(5);
+
+			/* Y Start Position */
+			{
+				auto sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Y");
+				horSizer->Add(sizer, 0, wxEXPAND);
+
+				wxIntegerValidator<int>	val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
+				val.SetMin(1);
+				val.SetMax(100'000);
+
+				m_CameraROIToolsControls->startY_px = std::make_unique<wxTextCtrl>
+					(
+						page,
+						MainFrameVariables::ID::RIGHT_CAM_ROI_START_Y_TXT_CTRL,
+						wxT("1"),
+						wxDefaultPosition,
+						txtCtrlSize,
+						wxTE_CENTRE
+					);
+
+				m_CameraROIToolsControls->startY_px->Disable();
+
+				sizer->Add(m_CameraROIToolsControls->startY_px.get(), 0, wxEXPAND);
+			}
+		}
+
+		sizerPage->AddStretchSpacer();
+	}
+
+	page->SetSizer(sizerPage);
+	return page;
+}
+
 auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 {
 	wxPanel* page = new wxPanel(parent);
@@ -3135,7 +3211,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 	wxSize start_text_ctrl_size = { 54, 20 }, step_text_ctrl_size = {start_text_ctrl_size}, finish_text_ctrl_size{start_text_ctrl_size};
 
 	auto defaultText = CameraPreviewVariables::CreateStringWithPrecision(123.456789, m_DecimalDigits);
-	wxSizer* const directions_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, page, "&Directions");
+	wxSizer* const directions_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, page, "&Handling");
 	{
 		/* First axis */
 		{
@@ -3280,7 +3356,8 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 		horizontal_sizer->Add(report_sizer);
 
 		/* Start/Stop Capturing */
-		wxSizer* const capturing_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Measurement");
+		wxSizer* const capturing_sizer = new wxStaticBoxSizer(wxVERTICAL, page, "&Measurement");
+
 		m_StartStopMeasurementTglBtn = std::make_unique<wxToggleButton>
 			(
 				page,
@@ -3291,6 +3368,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 
 		horizontal_sizer->AddStretchSpacer();
 		horizontal_sizer->Add(capturing_sizer);
+
 		capturing_sizer->Add(m_StartStopMeasurementTglBtn.get());
 	}
 	sizerPage->Add(horizontal_sizer, 0, wxEXPAND);
@@ -3481,7 +3559,7 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 	auto size = wxSize(16, 16);
 	wxImageList* imageList = new wxImageList(size.GetWidth(), size.GetHeight(), true);
 
-	int imgIndexCamera{}, imgIndexCameraParameters{}, imgIndexPostprocessing{};
+	int imgIndexCamera{}, imgIndexCameraROI{}, imgIndexCameraParameters{}, imgIndexPostprocessing{};
 
 	{
 		auto bitmap = wxART_CAMERA;
@@ -3498,6 +3576,23 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 		);
 
 		imgIndexCamera = imageList->Add(bmp);
+	}
+
+	{
+		auto bitmap = wxART_CROP_SQUARE;
+		auto client = wxART_CLIENT_MATERIAL_ROUND;
+		auto color = wxColour(255, 0, 128);
+		auto size = wxSize(16, 16);
+
+		auto bmp = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			size,
+			color
+		);
+
+		imgIndexCameraROI = imageList->Add(bmp);
 	}
 
 	{
@@ -3543,11 +3638,23 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 		CreateCameraPage(m_CameraControlNotebook), 
 		"Camera",
 #ifdef _DEBUG
-		true,
+		false,
 #else
 		true,
 #endif // _DEBUG
 		imgIndexCamera
+	);
+
+	m_CameraControlNotebook->AddPage
+	(
+		CreateCameraROIPage(m_CameraControlNotebook), 
+		"ROI",
+#ifdef _DEBUG
+		true,
+#else
+		false,
+#endif // _DEBUG
+		imgIndexCameraROI
 	);
 
 	m_CameraControlNotebook->AddPage
