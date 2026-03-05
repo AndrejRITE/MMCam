@@ -138,6 +138,7 @@ public:
 	(
 		std::unique_ptr<CameraPreviewVariables::InputPreviewPanelArgs> previewPanelArgs
 	);
+
 	auto SetValueDisplayingActive(bool activate = false) -> void { m_DisplayPixelValues = activate; };
 
 	auto SetImageStatisticsDisplayingActive(bool activate = false) -> void { m_ShowImageStats = activate; };
@@ -165,7 +166,8 @@ public:
 		}
 	};
 
-	auto SetOriginalImageSize(const wxSize imageSizeWithoutBinning) -> void { m_OriginalImageSize = imageSizeWithoutBinning; }
+	auto SetCameraSensorSize(const wxSize size) -> void { m_SensorSize = size; }
+	auto SetROI(const wxRect roi) -> void { m_ROIRect = roi; Refresh(); }
 	
 	auto IsImageSet() const -> bool { return m_ImageData != nullptr; }
 
@@ -334,6 +336,8 @@ private:
 	auto DrawActualImageSize(wxGraphicsContext* gc_) -> void;
 	auto DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> void;
 
+	auto DrawROI(wxGraphicsContext* gc_) -> void;
+
 	void OnSize(wxSizeEvent& evt);
 	void ChangeSizeOfImageInDependenceOnCanvasSize();
 	auto UpdateCrossHairOnSize() -> void;
@@ -398,7 +402,9 @@ private:
 	
 	wxImage m_LastBufferImage{};
 
-	wxSize m_OriginalImageSize{};
+	wxSize m_SensorSize{};
+
+	wxRect m_ROIRect{};
 
 	wxSize m_ImageSize{}, m_ImageOnCanvasSize{}, m_CanvasSize{};
 	wxRealPoint m_NotCheckedCursorPosOnImage{}, m_CheckedCursorPosOnImage{}, m_CursorPosOnCanvas{};

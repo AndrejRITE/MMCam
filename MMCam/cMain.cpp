@@ -5037,7 +5037,7 @@ auto cMain::InitializeSelectedCamera() -> void
 	m_ActiveCameraIdentifier = selectedCamera;
 	
 	m_OutputImageSize = wxSize(m_CameraControl->GetWidth(), m_CameraControl->GetHeight());
-	m_CamPreview->SetOriginalImageSize(m_OutputImageSize);
+	m_CamPreview->SetCameraSensorSize(m_OutputImageSize);
 
 	// Successful initialization of the camera
 	// Enabling controls
@@ -7813,11 +7813,9 @@ auto cMain::OnBinningChoice(wxCommandEvent& evt) -> void
 
 	m_Config->default_binning = binning;
 	RewriteInitializationFile();
-	//m_Settings->SetBinning(binning);
 
 	if (m_CameraControl)
 		m_OutputImageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
-	//m_CamPreview->SetImageSize(imageSize);
 }
 
 auto cMain::OnColormapComboBox(wxCommandEvent& evt) -> void
@@ -7855,38 +7853,85 @@ auto cMain::OnCentricalModeROICheckBox(wxCommandEvent& evt) -> void
 
 auto cMain::OnROITxtCtrls(wxCommandEvent& evt) -> void
 {
-	LOG(__FUNCSIG__)
-
 	if (!m_CameraROIToolsControls) return;
+	if (!m_CameraControl || !m_CameraControl->IsConnected()) return;
+
+	const auto sensorWidth = static_cast<int>(m_CameraControl->GetWidth());
+	const auto sensorHeight = static_cast<int>(m_CameraControl->GetHeight());
 
 	auto width = 0;
-	m_CameraROIToolsControls->width_px->GetValue().ToInt(&width);
-	if (!width) m_CameraROIToolsControls->width_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(1.0, 0));
+	{
+		m_CameraROIToolsControls->width_px->GetValue().ToInt(&width);
+
+		width = !width ? 1 : width;
+
+		width = width > sensorWidth ? sensorWidth : width;
+	}
 
 	auto height = 0;
-	m_CameraROIToolsControls->height_px->GetValue().ToInt(&height);
-	if (!height) m_CameraROIToolsControls->height_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(1.0, 0));
+	{
+		m_CameraROIToolsControls->height_px->GetValue().ToInt(&height);
+
+		height = !height ? 1 : height;
+
+		height = height > sensorHeight ? sensorHeight : height;
+	}
 
 	auto isCentricalModeOn = m_CameraROIToolsControls->centricalMode->GetValue();
 
-	if (!m_CameraControl || !m_CameraControl->IsConnected()) return;
+	auto centricalStartX = 0, centricalStartY = 0;
 
 	if (isCentricalModeOn)
 	{
 		/* Width */
-		const auto sensorWidth = static_cast<int>(m_CameraControl->GetWidth());
-		auto centricalStartX = (sensorWidth - width) / 2;
+		centricalStartX = (sensorWidth - width) / 2;
 		centricalStartX += 1; // Because humans count starting from 1
 
-		m_CameraROIToolsControls->startX_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(centricalStartX, 0));
-
 		/* Height */
-		const auto sensorHeight = static_cast<int>(m_CameraControl->GetHeight());
-		auto centricalStartY = (sensorHeight - height) / 2;
+		centricalStartY = (sensorHeight - height) / 2;
 		centricalStartY += 1; // Because humans count starting from 1
 
-		m_CameraROIToolsControls->startY_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(centricalStartY, 0));
 	}
+	else
+	{
+		m_CameraROIToolsControls->startX_px->GetValue().ToInt(&centricalStartX);
+		centricalStartX = !centricalStartX ? 1 : centricalStartX;
+		centricalStartX = centricalStartX > sensorWidth - 1 ? sensorWidth : centricalStartX;
+
+		m_CameraROIToolsControls->startY_px->GetValue().ToInt(&centricalStartY);
+		centricalStartY = !centricalStartY ? 1 : centricalStartY;
+		centricalStartY = centricalStartY > sensorHeight - 1 ? sensorHeight : centricalStartY;
+
+		width = centricalStartX - 1 + width > sensorWidth ? sensorWidth - centricalStartX + 1 : width;
+		height = centricalStartY - 1 + height > sensorHeight ? sensorHeight - centricalStartY + 1 : height;
+	}
+
+	/* Updating the UI */
+	{
+		m_CameraROIToolsControls->startX_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(centricalStartX, 0));
+		m_CameraROIToolsControls->startY_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(centricalStartY, 0));
+		m_CameraROIToolsControls->width_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(width, 0));
+		m_CameraROIToolsControls->height_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(height, 0));
+	}
+
+	// Normalizing the start
+	{
+		--centricalStartX;
+		--centricalStartY;
+	}
+
+	LOG2I("X: ", centricalStartX, " Y: ", centricalStartY);
+
+	// Updating the ROI inside the Preview Panel
+	const auto roi = wxRect
+	(
+		centricalStartX, 
+		centricalStartY, 
+		width, 
+		height
+	);
+
+	if (m_CamPreview) m_CamPreview->SetROI(roi);
 }
 
 auto cMain::OnRefreshROISettingsBtn(wxCommandEvent& evt) -> void

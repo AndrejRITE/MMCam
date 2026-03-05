@@ -1483,6 +1483,7 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 		}
 
 		DrawActualZoomedPositionOverImage(gc);
+		DrawROI(gc);
 		DrawScaleBar(gc);
 
 		DrawCrossHair(gc);
@@ -1970,7 +1971,7 @@ auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 
 	// image bin factor (how many sensor pixels per displayed image pixel)
 	const double binFactor =
-		static_cast<double>(m_OriginalImageSize.GetWidth()) /
+		static_cast<double>(m_SensorSize.GetWidth()) /
 		std::max(1, m_ImageSize.GetWidth()); // NOTE: double division
 
 	// canvas scale: how many canvas pixels per image pixel
@@ -2264,10 +2265,10 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 			curr_value = wxString::Format(wxT("%i"), m_ImageSize.GetWidth());
 			curr_value += " [px]";
 
-			if (m_OriginalImageSize.GetWidth())
+			if (m_SensorSize.GetWidth())
 			{
 				curr_value += "; ";
-				curr_value += wxString::Format(wxT("%.1f"), m_PixelSizeUM * m_OriginalImageSize.GetWidth());
+				curr_value += wxString::Format(wxT("%.1f"), m_PixelSizeUM * m_SensorSize.GetWidth());
 				curr_value += " [um]";
 			}
 
@@ -2309,10 +2310,10 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 			curr_value = wxString::Format(wxT("%i"), m_ImageSize.GetHeight());
 			curr_value += " [px]";
 
-			if (m_OriginalImageSize.GetHeight())
+			if (m_SensorSize.GetHeight())
 			{
 				curr_value += "; ";
-				curr_value += wxString::Format(wxT("%.1f"), m_PixelSizeUM * m_OriginalImageSize.GetHeight());
+				curr_value += wxString::Format(wxT("%.1f"), m_PixelSizeUM * m_SensorSize.GetHeight());
 				curr_value += " [um]";
 			}
 
@@ -2433,6 +2434,112 @@ auto cCamPreview::DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> v
 			actual_view.m_y,
 			actual_view.m_width,
 			actual_view.m_height
+		);
+	}
+}
+
+auto cCamPreview::DrawROI(wxGraphicsContext* gc_) -> void
+{
+	if (m_SensorSize.GetWidth() <= 1 || m_SensorSize.GetHeight() <= 1) return;
+
+	if (m_SensorSize == wxSize(m_ROIRect.GetWidth(), m_ROIRect.GetHeight())) return;
+
+	wxDouble max_width{ 100.0 }, max_height{ 100.0 };
+	wxDouble 
+		offset_x{ GetSize().GetWidth() - max_width - 50.0 },
+		offset_y{ GetSize().GetHeight() / 2 - max_height / 2};
+
+	auto camera_chip_miniature = wxRect2DDouble
+	(
+		offset_x,
+		offset_y,
+		m_SensorSize.GetWidth() >= m_SensorSize.GetHeight() ? max_width : max_height * m_SensorSize.GetWidth() / (wxDouble)m_SensorSize.GetHeight(),
+		m_SensorSize.GetHeight() >= m_SensorSize.GetWidth() ? max_height : max_width * m_SensorSize.GetHeight() / (wxDouble)m_SensorSize.GetWidth()
+	);
+
+	gc_->SetPen(wxPen(wxColour(255, 174, 201), 1, wxPENSTYLE_LONG_DASH));
+
+	gc_->DrawRectangle
+	(
+		camera_chip_miniature.m_x,
+		camera_chip_miniature.m_y,
+		camera_chip_miniature.m_width,
+		camera_chip_miniature.m_height
+	);
+
+	gc_->SetPen(wxPen(wxColour("red"), 1, wxPENSTYLE_DOT_DASH));
+
+	// Stroke Axis Lines
+	{
+		// Stroke horizontal Axis
+		gc_->StrokeLine
+		(
+			-camera_chip_miniature.m_width / 10 + camera_chip_miniature.m_x,
+			camera_chip_miniature.m_y + camera_chip_miniature.m_height / 2,
+			camera_chip_miniature.m_x + camera_chip_miniature.m_width + camera_chip_miniature.m_width / 10,
+			camera_chip_miniature.m_y + camera_chip_miniature.m_height / 2
+		);
+
+		// Stroke vertical Axis
+		gc_->StrokeLine
+		(
+			camera_chip_miniature.m_x + camera_chip_miniature.m_width / 2,
+			-camera_chip_miniature.m_height / 10 + camera_chip_miniature.m_y,
+			camera_chip_miniature.m_x + camera_chip_miniature.m_width / 2,
+			camera_chip_miniature.m_y + camera_chip_miniature.m_height + camera_chip_miniature.m_height / 10
+		);
+	}
+
+	/* ROI */
+	auto roi = wxRect2DDouble
+	(
+		camera_chip_miniature.m_x + camera_chip_miniature.m_width * m_ROIRect.x / m_SensorSize.GetWidth(),
+		camera_chip_miniature.m_y + camera_chip_miniature.m_height * m_ROIRect.y / m_SensorSize.GetHeight(),
+		camera_chip_miniature.m_width * m_ROIRect.width / m_SensorSize.GetWidth(),
+		camera_chip_miniature.m_height * m_ROIRect.height / m_SensorSize.GetHeight()
+	);
+
+	gc_->SetPen(wxPen(wxColour("green"), 2, wxPENSTYLE_SOLID));
+
+	if (roi.m_width < 7.0 && roi.m_height < 7.0)
+	{
+		wxPoint2DDouble start_draw_cross =
+		{
+			roi.m_x + roi.m_width / 2.0,
+			roi.m_y + roi.m_height / 2.0
+		};
+
+		// Length of the line
+		wxDouble leg_length{ 10.0 };
+		auto rotate_angle = M_PI / 4.0; // Rotation in [rad]
+		// Draw the cross
+
+		// Horizontal line
+		gc_->StrokeLine
+		(
+			start_draw_cross.m_x - leg_length / 2.0 * cos(rotate_angle),
+			start_draw_cross.m_y - leg_length / 2.0 * sin(rotate_angle),
+			start_draw_cross.m_x + leg_length / 2.0 * cos(rotate_angle),
+			start_draw_cross.m_y + leg_length / 2.0 * sin(rotate_angle)
+		);
+
+		// Vertical line
+		gc_->StrokeLine
+		(
+			start_draw_cross.m_x - leg_length / 2.0 * cos(rotate_angle),
+			start_draw_cross.m_y + leg_length / 2.0 * sin(rotate_angle),
+			start_draw_cross.m_x + leg_length / 2.0 * cos(rotate_angle),
+			start_draw_cross.m_y - leg_length / 2.0 * sin(rotate_angle)
+		);
+	}
+	else
+	{
+		gc_->DrawRectangle
+		(
+			roi.m_x,
+			roi.m_y,
+			roi.m_width,
+			roi.m_height
 		);
 	}
 }
