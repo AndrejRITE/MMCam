@@ -196,6 +196,7 @@ namespace MainFrameVariables
 		RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN,
 
 		// ROI
+		RIGHT_CAM_ROI_CENTRICAL_MODE_CHECK_BOX,
 		RIGHT_CAM_ROI_START_X_TXT_CTRL,
 		RIGHT_CAM_ROI_START_Y_TXT_CTRL,
 		RIGHT_CAM_ROI_WIDTH_TXT_CTRL,
@@ -444,6 +445,8 @@ namespace MainFrameVariables
 
 	struct CameraROITabControls
 	{
+		std::unique_ptr<wxCheckBox> centricalMode{};
+
 		std::unique_ptr<wxTextCtrl> startX_px{}, startY_px{};
 		std::unique_ptr<wxTextCtrl> width_px{}, height_px{};
 	};

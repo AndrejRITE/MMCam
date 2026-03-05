@@ -2215,6 +2215,23 @@ auto cMain::CreateCameraROIPage(wxWindow* parent) -> wxWindow*
 	{
 		sizerPage->AddStretchSpacer();
 
+		/* Centrical Mode */
+		{
+			m_CameraROIToolsControls->centricalMode = std::make_unique<wxCheckBox>
+				(
+					page, 
+					MainFrameVariables::ID::RIGHT_CAM_ROI_CENTRICAL_MODE_CHECK_BOX, 
+					wxT("Centrical")
+				);
+
+			m_CameraROIToolsControls->centricalMode->SetValue(true);
+
+			sizerPage->Add(m_CameraROIToolsControls->centricalMode.get(), 0, wxCENTER);
+		}
+
+		sizerPage->AddSpacer(5);
+
+		/* Start Position */
 		{
 			auto horSizer = new wxBoxSizer(wxHORIZONTAL);
 			sizerPage->Add(horSizer, 0, wxCENTER);
@@ -2267,6 +2284,64 @@ auto cMain::CreateCameraROIPage(wxWindow* parent) -> wxWindow*
 				m_CameraROIToolsControls->startY_px->Disable();
 
 				sizer->Add(m_CameraROIToolsControls->startY_px.get(), 0, wxEXPAND);
+			}
+		}
+
+		sizerPage->AddSpacer(5);
+
+		/* Dimensions */
+		{
+			auto horSizer = new wxBoxSizer(wxHORIZONTAL);
+			sizerPage->Add(horSizer, 0, wxCENTER);
+
+			/* Width */
+			{
+				auto sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Width");
+				horSizer->Add(sizer, 0, wxEXPAND);
+
+				wxIntegerValidator<int>	val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
+				val.SetMin(1);
+				val.SetMax(100'000);
+
+				m_CameraROIToolsControls->width_px = std::make_unique<wxTextCtrl>
+					(
+						page,
+						MainFrameVariables::ID::RIGHT_CAM_ROI_WIDTH_TXT_CTRL,
+						wxT("1"),
+						wxDefaultPosition,
+						txtCtrlSize,
+						wxTE_CENTRE
+					);
+
+				m_CameraROIToolsControls->width_px->Disable();
+
+				sizer->Add(m_CameraROIToolsControls->width_px.get(), 0, wxEXPAND);
+			}
+
+			horSizer->AddSpacer(5);
+
+			/* Height */
+			{
+				auto sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Height");
+				horSizer->Add(sizer, 0, wxEXPAND);
+
+				wxIntegerValidator<int>	val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
+				val.SetMin(1);
+				val.SetMax(100'000);
+
+				m_CameraROIToolsControls->height_px = std::make_unique<wxTextCtrl>
+					(
+						page,
+						MainFrameVariables::ID::RIGHT_CAM_ROI_HEIGHT_TXT_CTRL,
+						wxT("1"),
+						wxDefaultPosition,
+						txtCtrlSize,
+						wxTE_CENTRE
+					);
+
+				m_CameraROIToolsControls->height_px->Disable();
+
+				sizer->Add(m_CameraROIToolsControls->height_px.get(), 0, wxEXPAND);
 			}
 		}
 
