@@ -884,6 +884,57 @@ namespace MainFrameVariables
 		cv::Scalar meanV = cv::mean(m);
 		return meanV[0];
 	}
+
+	static wxRect GetRequestedRoi0Based
+	(
+		const CameraROITabControls* roiUi,
+		int sensorW, int sensorH
+	)
+	{
+		// Defaults
+		int sx1 = 1, sy1 = 1, w = sensorW, h = sensorH;
+
+		if (roiUi && roiUi->startX_px) roiUi->startX_px->GetValue().ToInt(&sx1);
+		if (roiUi && roiUi->startY_px) roiUi->startY_px->GetValue().ToInt(&sy1);
+		if (roiUi && roiUi->width_px)  roiUi->width_px->GetValue().ToInt(&w);
+		if (roiUi && roiUi->height_px) roiUi->height_px->GetValue().ToInt(&h);
+
+		// Guard / clamp 1-based inputs
+		sx1 = std::max(1, std::min(sx1, sensorW));
+		sy1 = std::max(1, std::min(sy1, sensorH));
+		w = std::max(1, std::min(w, sensorW));
+		h = std::max(1, std::min(h, sensorH));
+
+		// Clamp size so end stays inside sensor (note sx1/sy1 are 1-based here)
+		if (sx1 - 1 + w > sensorW) w = sensorW - (sx1 - 1);
+		if (sy1 - 1 + h > sensorH) h = sensorH - (sy1 - 1);
+
+		// Convert to 0-based
+		const int sx0 = sx1 - 1;
+		const int sy0 = sy1 - 1;
+
+		return wxRect(sx0, sy0, w, h);
+	}
+
+	static void CropU16Rect
+	(
+		const unsigned short* src,
+		int srcW, int srcH,
+		const wxRect& roi,
+		unsigned short* dst // roi.w * roi.h
+	) 
+	{
+		if (!src || !dst) return;
+		if (roi.x < 0 || roi.y < 0) return;
+		if (roi.x + roi.width > srcW) return;
+		if (roi.y + roi.height > srcH) return;
+
+		for (int y = 0; y < roi.height; ++y)
+		{
+			const unsigned short* row = src + (roi.y + y) * srcW + roi.x;
+			std::memcpy(dst + y * roi.width, row, sizeof(unsigned short) * roi.width);
+		}
+	}
 }
 
 class ProgressBar;

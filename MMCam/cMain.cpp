@@ -4292,6 +4292,22 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 
 			m_ResumeLiveAfterSingleShot = start_live_capturing_after_ss;
 
+			const int sensorW = (int)m_CameraControl->GetWidth();
+			const int sensorH = (int)m_CameraControl->GetHeight();
+			const wxRect roi = GetRequestedRoi0Based(m_CameraROIToolsControls.get(), sensorW, sensorH);
+			const bool roiActive = (roi.width != sensorW) || (roi.height != sensorH) || (roi.x != 0) || (roi.y != 0);
+
+			// Try camera's hardware ROI
+			bool usedHardwareROI = false;
+			if (roiActive)
+			{
+				m_CameraControl->SetHardwareROI(roi.x, roi.y, roi.width, roi.height);
+				auto actualROI = m_CameraControl->GetHardwareROI();
+				auto actualROIRect = wxRect(actualROI.startX, actualROI.startY, actualROI.width, actualROI.height);
+
+				usedHardwareROI = roi == actualROIRect ? true : false;
+			}
+
 			// duration in ms for UI timer
 			const int exposureMs = std::max(1, exposure_time / 1000);
 
@@ -4302,7 +4318,7 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 			wxBusyCursor busy_cursor{};
 
 			// Start the blocking call in background
-			std::thread([this, exposure_time, binning, cameraDataType, file_name]()
+			std::thread([this, exposure_time, binning, cameraDataType, file_name, sensorW, sensorH, roiActive, usedHardwareROI, roi]()
 				{
 					MainFrameVariables::SingleShotPayload payload;
 					payload.binning = binning;
@@ -4328,11 +4344,36 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 							}
 							else
 							{
-								payload.w = m_CameraControl->GetWidth();
-								payload.h = m_CameraControl->GetHeight();
+								// Decide what we *actually* got back
+								int gotW = sensorW;
+								int gotH = sensorH;
 
-								const size_t count = (size_t)payload.w * (size_t)payload.h;
-								payload.img.assign(imgPtr, imgPtr + count);
+								if (roiActive && usedHardwareROI)
+								{
+									gotW = roi.width;
+									gotH = roi.height;
+								}
+
+								// Fill payload
+								payload.w = roiActive ? roi.width : gotW;
+								payload.h = roiActive ? roi.height : gotH;
+
+								payload.img.resize((size_t)payload.w * (size_t)payload.h);
+
+								if (!roiActive)
+								{
+									std::memcpy(payload.img.data(), imgPtr, sizeof(unsigned short) * payload.img.size());
+								}
+								else if (usedHardwareROI)
+								{
+									// Moravian returned ROI-sized buffer already
+									std::memcpy(payload.img.data(), imgPtr, sizeof(unsigned short) * payload.img.size());
+								}
+								else
+								{
+									// Fallback: crop from full sensor frame
+									MainFrameVariables::CropU16Rect(imgPtr, gotW, gotH, roi, payload.img.data());
+								}
 
 								payload.ok = true;
 							}

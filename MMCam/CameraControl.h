@@ -12,6 +12,14 @@ namespace CameraControlVariables
         RAW_12BIT,
         RAW_16BIT,
     };
+
+    struct ROI
+    {
+        size_t startX{};
+        size_t startY{};
+        size_t width{};
+        size_t height{};
+	};
 }
 
 class CameraControl
@@ -50,6 +58,11 @@ public:
     // Defaults are safe no-ops so other cameras don’t break.
     virtual auto BeginContinuousAcquisition() -> bool { return true; }
     virtual auto EndContinuousAcquisition() -> void {}
+
+    virtual auto SetHardwareROI(const int startX, const int startY, const int width, const int height) -> void { return; };
+    virtual auto ResetHardwareROIToFullFrame() -> void { return; }
+
+    virtual auto GetHardwareROI() -> CameraControlVariables::ROI = 0;
 
 protected:
     std::string m_CameraSerialNumber{};

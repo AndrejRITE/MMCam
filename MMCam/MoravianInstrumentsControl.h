@@ -3,6 +3,7 @@
 #define MORAVIANINSTRUMENTS_CONTROL_H
 
 #define WIN32
+#define NOMINMAX
 
 #include "CameraControl.h"
 
@@ -10,6 +11,7 @@
 #include <vector>
 #include <chrono>
 #include <thread>
+#include <algorithm>
 
 #include <gxeth.h>
 
@@ -105,6 +107,12 @@ public:
 
 	auto GetFirmwareVersion() -> std::string override;
 
+	// ROI is 0-based, in sensor pixels.
+	auto SetHardwareROI(int startX, int startY, int width, int height) -> void;
+	auto ResetHardwareROIToFullFrame() -> void;
+
+    auto GetHardwareROI() -> CameraControlVariables::ROI override;
+
 private:
 	auto GetCameraParameters(MoravianInstrumentsVariables::ActualCameraParameters* cameraParameters) -> void;
 
@@ -126,6 +134,8 @@ protected:
 	std::unique_ptr<gxetha::INT16[]> m_ImageData{};
 	unsigned int m_Exposure{};
 	bool m_WasAcquisitionStopped{};
+
+	size_t m_ImageElemCount{ 0 }; // number of INT16 elements allocated
 };
 
 #endif // !MORAVIANINSTRUMENTS_CONTROL_H

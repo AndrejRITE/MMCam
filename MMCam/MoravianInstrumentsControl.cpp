@@ -67,14 +67,17 @@ auto MoravianInstrumentsControl::GetImage() -> unsigned short*
 	if (!m_CameraHandler) return nullptr;
 	if (!m_ActualCameraParameters || !m_CapturingParameters) return nullptr;
 
-	m_CapturingParameters->cameraImgWidth = m_ActualCameraParameters->sensor_width;
-	m_CapturingParameters->cameraImgHeight = m_ActualCameraParameters->sensor_height;
+	// If nobody set ROI yet, default to full-frame once
+	if (m_CapturingParameters->cameraImgWidth <= 0 || m_CapturingParameters->cameraImgHeight <= 0)
+		ResetHardwareROIToFullFrame();
 
-	if (!m_ImageData)
-		m_ImageData = std::make_unique<gxetha::INT16[]>
-			(
-				m_ActualCameraParameters->sensor_width * m_ActualCameraParameters->sensor_height
-			);
+	const size_t need = (size_t)m_CapturingParameters->cameraImgWidth * (size_t)m_CapturingParameters->cameraImgHeight;
+
+	if (!m_ImageData || m_ImageElemCount != need)
+	{
+		m_ImageData = std::make_unique<gxetha::INT16[]>(need);
+		m_ImageElemCount = need;
+	}
 
 	auto result = gxetha::StartExposure
 	(
@@ -170,6 +173,48 @@ auto MoravianInstrumentsControl::GetFirmwareVersion() -> std::string
 	gxetha::GetIntegerParameter(m_CameraHandler, gipFirmwareBuild, &build);
 
 	return std::to_string(build) + "." + std::to_string(minor) + "." + std::to_string(major);
+}
+
+auto MoravianInstrumentsControl::SetHardwareROI(int startX, int startY, int width, int height) -> void
+{
+	if (!m_ActualCameraParameters || !m_CapturingParameters) return;
+
+	const int sensorW = (int)m_ActualCameraParameters->sensor_width;
+	const int sensorH = (int)m_ActualCameraParameters->sensor_height;
+
+	startX = std::max(0, std::min(startX, sensorW - 1));
+	startY = std::max(0, std::min(startY, sensorH - 1));
+	width = std::max(1, std::min(width, sensorW));
+	height = std::max(1, std::min(height, sensorH));
+
+	if (startX + width > sensorW) width = sensorW - startX;
+	if (startY + height > sensorH) height = sensorH - startY;
+
+	m_CapturingParameters->start_x = (gxetha::INTEGER)startX;
+	m_CapturingParameters->start_y = (gxetha::INTEGER)startY;
+	m_CapturingParameters->cameraImgWidth = (gxetha::INTEGER)width;
+	m_CapturingParameters->cameraImgHeight = (gxetha::INTEGER)height;
+}
+
+auto MoravianInstrumentsControl::ResetHardwareROIToFullFrame() -> void
+{
+	if (!m_ActualCameraParameters || !m_CapturingParameters) return;
+
+	m_CapturingParameters->start_x = 0;
+	m_CapturingParameters->start_y = 0;
+	m_CapturingParameters->cameraImgWidth = (gxetha::INTEGER)m_ActualCameraParameters->sensor_width;
+	m_CapturingParameters->cameraImgHeight = (gxetha::INTEGER)m_ActualCameraParameters->sensor_height;
+}
+
+auto MoravianInstrumentsControl::GetHardwareROI() -> CameraControlVariables::ROI
+{
+	return CameraControlVariables::ROI
+	(
+		m_CapturingParameters->start_x, 
+		m_CapturingParameters->start_y,
+		m_CapturingParameters->cameraImgWidth,
+		m_CapturingParameters->cameraImgHeight
+	);
 }
 
 auto MoravianInstrumentsControl::GetCameraParameters
