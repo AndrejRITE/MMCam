@@ -399,7 +399,7 @@ namespace MainFrameVariables
 	{
 		std::unique_ptr<wxTextCtrl> camSensorTemperature{}, camExposure{};
 		std::unique_ptr<wxChoice> camBinning{};
-		std::unique_ptr<wxButton> singleShotBtn{};
+		std::unique_ptr<wxBitmapButton> singleShotBtn{};
 		std::unique_ptr<wxToggleButton> startStopLiveCapturingTglBtn{};
 		std::unique_ptr<wxTextCtrl> crossHairPosXTxtCtrl{}, crossHairPosYTxtCtrl{};
 

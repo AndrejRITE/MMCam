@@ -2130,14 +2130,32 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 	{
 		auto hor_sizer = new wxBoxSizer(wxHORIZONTAL);
 		
-		m_CameraTabControls->singleShotBtn = std::make_unique<wxButton>(
+		auto size = wxSize(32, 32);
+
+		wxBitmap bmp{};
+		{
+			auto bitmap = wxART_PLUS_ONE;
+			auto client = wxART_CLIENT_MATERIAL_ROUND;
+			auto color = m_DefaultWidgetsColor;
+
+			bmp = wxMaterialDesignArtProvider::GetBitmap
+			(
+				bitmap,
+				client,
+				size,
+				color
+			);
+		}
+
+		m_CameraTabControls->singleShotBtn = std::make_unique<wxBitmapButton>
+			(
 			page,
 			MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN,
-			wxT("Single Shot (S)"), 
-			wxDefaultPosition, 
-			wxDefaultSize);
+			bmp
+			);
+
 		m_CameraTabControls->singleShotBtn->Disable();
-		m_CameraTabControls->singleShotBtn->SetToolTip("Capture one image and save it on disk");
+		m_CameraTabControls->singleShotBtn->SetToolTip("Single Shot (S)\nCapture single image and save it on disk");
 
 		hor_sizer->Add(m_CameraTabControls->singleShotBtn.get(), 0, wxEXPAND);
 		hor_sizer->AddStretchSpacer();
