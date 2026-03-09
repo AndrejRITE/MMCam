@@ -6520,7 +6520,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 
 	auto binningMode = m_Config->binning_sum_mode ? MainFrameVariables::BinningModes::BINNING_SUM : MainFrameVariables::BinningModes::BINNING_AVERAGE;
 
-	m_OutputImageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
+	m_OutputImageSize = wxSize(m_RequestedRoi0.GetWidth() / binning, m_RequestedRoi0.GetHeight() / binning);
 
 	/* Worker and Progress Threads */
 	{
@@ -6546,6 +6546,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			this,
 			m_CameraControl.get(),
 			m_BackgroundSubtractionCheckBox->GetValue() ? m_BackgroundSubtractionData.get() : nullptr,
+			m_RequestedRoi0,
 			exposure_time,
 			binning,
 			binningMode,
@@ -6611,7 +6612,20 @@ void cMain::StartLiveCapturing()
 	int binning{ 1 };
 	m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 	
-	m_OutputImageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
+	const int sensorW = (int)m_CameraControl->GetWidth();
+	const int sensorH = (int)m_CameraControl->GetHeight();
+
+	// Decide what we *actually* got back
+	int expectedW = sensorW;
+	int expectedH = sensorH;
+
+	if (m_RoiActive && m_UseHardwareRoi)
+	{
+		expectedW = m_RequestedRoi0.width;
+		expectedH = m_RequestedRoi0.height;
+	}
+
+	m_OutputImageSize = wxSize(expectedW / binning, expectedH / binning);
 
 	auto binningMode = m_Config->binning_sum_mode ? MainFrameVariables::BinningModes::BINNING_SUM : MainFrameVariables::BinningModes::BINNING_AVERAGE;
 
@@ -6620,6 +6634,7 @@ void cMain::StartLiveCapturing()
 		this, 
 		m_CameraControl.get(),
 		m_BackgroundSubtractionCheckBox->GetValue() ? m_BackgroundSubtractionData.get() : nullptr,
+		m_RequestedRoi0,
 		exposure_time,
 		binning,
 		binningMode,
@@ -7874,7 +7889,7 @@ auto cMain::OnBinningChoice(wxCommandEvent& evt) -> void
 	RewriteInitializationFile();
 
 	if (m_CameraControl)
-		m_OutputImageSize = wxSize(m_CameraControl->GetWidth() / binning, m_CameraControl->GetHeight() / binning);
+		m_OutputImageSize = wxSize(m_RequestedRoi0.GetWidth() / binning, m_RequestedRoi0.GetHeight() / binning);
 }
 
 auto cMain::OnColormapComboBox(wxCommandEvent& evt) -> void
@@ -7982,7 +7997,7 @@ auto cMain::OnROITxtCtrls(wxCommandEvent& evt) -> void
 	LOG2I("X: ", centricalStartX, " Y: ", centricalStartY);
 
 	// Updating the ROI inside the Preview Panel
-	const auto roi = wxRect
+	m_RequestedRoi0 = wxRect
 	(
 		centricalStartX, 
 		centricalStartY, 
@@ -7990,7 +8005,22 @@ auto cMain::OnROITxtCtrls(wxCommandEvent& evt) -> void
 		height
 	);
 
-	if (m_CamPreview) m_CamPreview->SetROI(roi);
+	m_RoiActive = (m_RequestedRoi0.GetWidth() < sensorWidth) || (m_RequestedRoi0.GetHeight() < sensorHeight);
+
+	if (m_CameraControl) m_CameraControl->SetHardwareROI
+	(
+		m_RequestedRoi0.GetLeft(), 
+		m_RequestedRoi0.GetTop(), 
+		m_RequestedRoi0.GetWidth(), 
+		m_RequestedRoi0.GetHeight()
+	);
+
+	if (m_CamPreview) m_CamPreview->SetROI(m_RequestedRoi0);
+
+	const auto actualROI = m_CameraControl->GetHardwareROI();
+	const auto actualROIRect = wxRect(actualROI.startX, actualROI.startY, actualROI.width, actualROI.height);
+
+	m_UseHardwareRoi = m_RoiActive && (actualROIRect == m_RequestedRoi0);
 }
 
 auto cMain::OnRefreshROISettingsBtn(wxCommandEvent& evt) -> void
@@ -9223,6 +9253,7 @@ LiveCapturing::LiveCapturing
 	cMain* main_frame,
 	CameraControl* cameraControl,
 	unsigned short* backgroundSubtractionDataPtr,
+	const wxRect& requestedRoi0,
 	const int& exposure_us,
 	const unsigned short& binning,
 	const MainFrameVariables::BinningModes& binningMode,
@@ -9234,6 +9265,7 @@ LiveCapturing::LiveCapturing
 	: m_MainFrame(main_frame), 
 	m_CameraControl(cameraControl),
 	m_BackgroundSubtractionDataPtr(backgroundSubtractionDataPtr),
+	m_RequestedRoi0(requestedRoi0),
 	m_ExposureUS(exposure_us),
 	m_Binning(binning),
 	m_BinningMode(binningMode),
@@ -9282,7 +9314,7 @@ wxThread::ExitCode LiveCapturing::Entry()
 	}
 
 	m_CameraControl->SetExposureTime(m_ExposureUS);
-	m_ImageSize.Set(m_CameraControl->GetWidth() / m_Binning, m_CameraControl->GetHeight() / m_Binning);
+	m_ImageSize.Set(m_CameraControl->GetHardwareROI().width / m_Binning, m_CameraControl->GetHardwareROI().height / m_Binning);
 
 	const bool began = m_CameraControl->BeginContinuousAcquisition();
 	if (!began) 
@@ -9358,8 +9390,8 @@ auto LiveCapturing::CaptureImage
 	auto* imgPtr = m_CameraControl->GetImage();
 	if (!imgPtr || !m_CameraControl->IsConnected()) return false;
 
-	const auto imgWidth = m_CameraControl->GetWidth();
-	const auto imgHeight = m_CameraControl->GetHeight();
+	const auto imgWidth = m_ImageSize.GetWidth();
+	const auto imgHeight = m_ImageSize.GetHeight();
 	const auto imgDataType = m_CameraControl->GetCameraDataType();
 	const auto outSize = wxSize( imgWidth / m_Binning, imgHeight / m_Binning );
 
@@ -9447,6 +9479,7 @@ WorkerThread::WorkerThread
 	cMain* main_frame,
 	CameraControl* cameraControl,
 	unsigned short* backgroundSubtractionDataPtr,
+	const wxRect& requestedRoi0,
 	const int& exposure_us,
 	const unsigned short& binning,
 	const MainFrameVariables::BinningModes& binningMode,
@@ -9465,6 +9498,7 @@ WorkerThread::WorkerThread
 		main_frame, 
 		cameraControl, 
 		backgroundSubtractionDataPtr,
+		requestedRoi0,
 		exposure_us,
 		binning,
 		binningMode,
@@ -9535,7 +9569,7 @@ wxThread::ExitCode WorkerThread::Entry()
 	auto measurementGraphFilePath = graphFileName + wxString(".bmp");
 	wxFileName measurementFileName(measurementGraphFilePath);
 
-	m_ImageSize.Set(m_CameraControl->GetWidth() / m_Binning, m_CameraControl->GetHeight() / m_Binning);
+	m_ImageSize.Set(m_RequestedRoi0.GetWidth() / m_Binning, m_RequestedRoi0.GetHeight() / m_Binning);
 
 	auto dataSize = m_ImageSize.GetWidth() * m_ImageSize.GetHeight();
 
@@ -9553,8 +9587,8 @@ wxThread::ExitCode WorkerThread::Entry()
 	const auto checkingInterval = m_ExposureUS / 3;
 	const auto interval = std::chrono::microseconds(checkingInterval);  
 
-	auto w = m_CameraControl->GetWidth();
-	auto h = m_CameraControl->GetHeight();
+	auto w = m_ImageSize.GetWidth();
+	auto h = m_ImageSize.GetHeight();
 
 	float first_axis_rounded_go_to{};
 	float first_axis_position{}, second_axis_position{};
@@ -9602,15 +9636,15 @@ wxThread::ExitCode WorkerThread::Entry()
 			!SaveImage
 			(
 				payload->img.get(), 
-				m_CameraControl->GetWidth() / m_Binning, 
-				m_CameraControl->GetHeight() / m_Binning, 
+				w / m_Binning, 
+				h / m_Binning, 
 				fileName
 			) ||
 			!CalculateFWHM
 			(
 				payload->img.get(), 
-				m_CameraControl->GetWidth() / m_Binning, 
-				m_CameraControl->GetHeight() / m_Binning,
+				w / m_Binning, 
+				h / m_Binning,
 				i
 			)
 			)

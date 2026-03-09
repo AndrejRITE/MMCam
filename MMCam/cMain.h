@@ -2185,6 +2185,10 @@ private:
 	int m_ContinuousDurationMs{ 0 };
 	bool m_ContinuousExposureEnabled{ false };
 
+	wxRect m_RequestedRoi0{};
+	bool m_RoiActive{ false };
+	bool m_UseHardwareRoi{ false };
+
 	wxDECLARE_EVENT_TABLE();
 };
 /* ___ End cMain ___ */
@@ -2198,6 +2202,7 @@ public:
 		cMain* main_frame,
 		CameraControl* cameraControl,
 		unsigned short* backgroundSubtractionDataPtr,
+		const wxRect& requestedRoi0,
 		const int& exposure_us,
 		const unsigned short& binning,
 		const MainFrameVariables::BinningModes& binningMode,
@@ -2241,6 +2246,14 @@ protected:
 	wxSize m_BgSize{};
 	unsigned short m_BgBinning{};
 	MainFrameVariables::BinningModes m_BgMode{};
+
+	// ROI (0-based, sensor coordinates)
+	wxRect m_RequestedRoi0{};
+	bool m_RoiActive{ false };
+	bool m_UseHardwareRoi{ false };
+	int m_SensorW{ 0 };
+	int m_SensorH{ 0 };
+	std::unique_ptr<unsigned short[]> m_RoiTmp; // used when cropping from full frame
 };
 /* ___ End Worker Thread ___ */
 
@@ -2253,6 +2266,7 @@ public:
 		cMain* main_frame,
 		CameraControl* cameraControl,
 		unsigned short* backgroundSubtractionDataPtr,
+		const wxRect& requestedRoi0,
 		const int& exposure_us,
 		const unsigned short& binning,
 		const MainFrameVariables::BinningModes& binningMode,

@@ -206,15 +206,21 @@ auto MoravianInstrumentsControl::ResetHardwareROIToFullFrame() -> void
 	m_CapturingParameters->cameraImgHeight = (gxetha::INTEGER)m_ActualCameraParameters->sensor_height;
 }
 
-auto MoravianInstrumentsControl::GetHardwareROI() -> CameraControlVariables::ROI
+auto MoravianInstrumentsControl::GetHardwareROI() -> CameraControlVariables::HardwareROI
 {
-	return CameraControlVariables::ROI
-	(
-		m_CapturingParameters->start_x, 
-		m_CapturingParameters->start_y,
-		m_CapturingParameters->cameraImgWidth,
-		m_CapturingParameters->cameraImgHeight
-	);
+	CameraControlVariables::HardwareROI r;
+	if (!m_ActualCameraParameters || !m_CapturingParameters)
+	{
+		r.width = 0; r.height = 0;
+		return r;
+	}
+
+	r.startX = static_cast<int>(m_CapturingParameters->start_x);
+	r.startY = static_cast<int>(m_CapturingParameters->start_y);
+	r.width = static_cast<int>(m_CapturingParameters->cameraImgWidth > 0 ? m_CapturingParameters->cameraImgWidth : m_ActualCameraParameters->sensor_width);
+	r.height = static_cast<int>(m_CapturingParameters->cameraImgHeight > 0 ? m_CapturingParameters->cameraImgHeight : m_ActualCameraParameters->sensor_height);
+	return r;
+
 }
 
 auto MoravianInstrumentsControl::GetCameraParameters

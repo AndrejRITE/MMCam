@@ -46,7 +46,8 @@ public:
 
 	auto GetFirmwareVersion() -> std::string override;
 
-	auto GetHardwareROI() -> CameraControlVariables::ROI override { return CameraControlVariables::ROI(0, 0, GetWidth(), GetHeight()); };
+	auto GetHardwareROI() -> CameraControlVariables::HardwareROI override 
+    { return CameraControlVariables::HardwareROI(0, 0, static_cast<int>(GetWidth()), static_cast<int>(GetHeight())); };
 
 private:
     // Helpers

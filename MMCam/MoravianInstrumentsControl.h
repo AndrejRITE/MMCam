@@ -111,7 +111,7 @@ public:
 	auto SetHardwareROI(int startX, int startY, int width, int height) -> void;
 	auto ResetHardwareROIToFullFrame() -> void;
 
-    auto GetHardwareROI() -> CameraControlVariables::ROI override;
+    auto GetHardwareROI() -> CameraControlVariables::HardwareROI override;
 
 private:
 	auto GetCameraParameters(MoravianInstrumentsVariables::ActualCameraParameters* cameraParameters) -> void;

@@ -13,11 +13,11 @@ namespace CameraControlVariables
         RAW_16BIT,
     };
 
-    struct ROI
+    struct HardwareROI
     {
         size_t startX{};
         size_t startY{};
-        size_t width{};
+        size_t width{}; // 0 means "unknown"; callers typically treat it as full frame.
         size_t height{};
 	};
 }
@@ -62,7 +62,7 @@ public:
     virtual auto SetHardwareROI(const int startX, const int startY, const int width, const int height) -> void { return; };
     virtual auto ResetHardwareROIToFullFrame() -> void { return; }
 
-    virtual auto GetHardwareROI() -> CameraControlVariables::ROI = 0;
+    virtual auto GetHardwareROI() -> CameraControlVariables::HardwareROI = 0;
 
 protected:
     std::string m_CameraSerialNumber{};
