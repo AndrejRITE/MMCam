@@ -2066,7 +2066,7 @@ private:
 	std::unique_ptr<wxToggleButton> m_StartStopMeasurementTglBtn{};
 
 	/* Report Generation */
-	std::unique_ptr<wxButton> m_GenerateReportBtn{};
+	std::unique_ptr<wxBitmapButton> m_GenerateReportBtn{};
 
 	/* Progress */
 	bool m_Cancelled{}, m_DataCalculatedInThisApp{};
@@ -2143,11 +2143,11 @@ private:
 	/* Postprocessing */
 	std::unique_ptr<wxCheckBox> m_BackgroundSubtractionCheckBox{};
 	std::unique_ptr<wxTextCtrl> m_BackgroundSubtractionFileNameTxtCtrl{};
-	std::unique_ptr<wxButton> m_BackgroundSubtractionLoadFileBtn{};
+	std::unique_ptr<wxBitmapButton> m_BackgroundSubtractionLoadFileBtn{};
 
 	std::unique_ptr<wxCheckBox> m_FlatFieldCorrectionCheckBox{};
 	std::unique_ptr<wxTextCtrl> m_HiGainFlatFieldFileNameTxtCtrl{}, m_LoGainFlatFieldFileNameTxtCtrl{};
-	std::unique_ptr<wxButton> m_HiGainFlatFieldLoadFileBtn{}, m_LoGainFlatFieldLoadFileBtn{};
+	std::unique_ptr<wxBitmapButton> m_HiGainFlatFieldLoadFileBtn{}, m_LoGainFlatFieldLoadFileBtn{};
 
 	std::unique_ptr<wxCheckBox> m_MedianBlurCheckBox{};
 

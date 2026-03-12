@@ -248,7 +248,13 @@ cMain::cMain(const wxString& title_)
 #ifdef ROI_CHECK
 	// Set desired ROI
 	{
-		m_CameraROIToolsControls->centricalMode->SetValue(false);
+		{
+			m_CameraROIToolsControls->centricalMode->SetValue(false);
+
+			wxCommandEvent artEvt(wxEVT_CHECKBOX, MainFrameVariables::ID::RIGHT_CAM_ROI_CENTRICAL_MODE_CHECK_BOX);
+			ProcessEvent(artEvt);
+		}
+
 		m_CameraROIToolsControls->startX_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_OutputImageSize.GetWidth() / 5, 0));
 		m_CameraROIToolsControls->startY_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_OutputImageSize.GetHeight() / 5, 0));
 
@@ -2682,16 +2688,33 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 
 			horSizer->Add(m_BackgroundSubtractionFileNameTxtCtrl.get(), 1, wxALIGN_CENTER);
 
-			m_BackgroundSubtractionLoadFileBtn = std::make_unique<wxButton>
-				(
-					page,
-					MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_LOAD_FILE_BTN,
-					wxT("Open"),
-					wxDefaultPosition,
-					wxDefaultSize
-				);
+			{
+				auto size = wxSize(16, 16);
 
-			m_BackgroundSubtractionLoadFileBtn->Disable();
+				wxBitmap bmp{};
+				{
+					auto bitmap = wxART_FILE_OPEN;
+					auto client = wxART_CLIENT_MATERIAL_ROUND;
+					auto color = m_DefaultWidgetsColor;
+
+					bmp = wxMaterialDesignArtProvider::GetBitmap
+					(
+						bitmap,
+						client,
+						size,
+						color
+					);
+				}
+
+				m_BackgroundSubtractionLoadFileBtn = std::make_unique<wxBitmapButton>
+					(
+						page,
+						MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_LOAD_FILE_BTN,
+						bmp
+					);
+
+				m_BackgroundSubtractionLoadFileBtn->Disable();
+			}
 
 			horSizer->Add(m_BackgroundSubtractionLoadFileBtn.get(), 0, wxALIGN_CENTER | wxALL, 5);
 		}
@@ -2745,20 +2768,37 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 
 				m_HiGainFlatFieldFileNameTxtCtrl->SetForegroundColour(m_IncorrectFilePathColor);
 
-				gridSizer->Add(m_HiGainFlatFieldFileNameTxtCtrl.get(), 1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
+				gridSizer->Add(m_HiGainFlatFieldFileNameTxtCtrl.get(), 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
 
-				m_HiGainFlatFieldLoadFileBtn = std::make_unique<wxButton>
-					(
-						page,
-						MainFrameVariables::ID::RIGHT_TOOLS_HI_GAIN_FLAT_FIELD_LOAD_FILE_BTN,
-						wxT("Open"),
-						wxDefaultPosition,
-						wxDefaultSize
-					);
+				{
+					auto size = wxSize(16, 16);
 
-				m_HiGainFlatFieldLoadFileBtn->Disable();
+					wxBitmap bmp{};
+					{
+						auto bitmap = wxART_FILE_OPEN;
+						auto client = wxART_CLIENT_MATERIAL_ROUND;
+						auto color = m_DefaultWidgetsColor;
 
-				gridSizer->Add(m_HiGainFlatFieldLoadFileBtn.get(), 0, wxALIGN_CENTER_VERTICAL);
+						bmp = wxMaterialDesignArtProvider::GetBitmap
+						(
+							bitmap,
+							client,
+							size,
+							color
+						);
+					}
+
+					m_HiGainFlatFieldLoadFileBtn = std::make_unique<wxBitmapButton>
+						(
+							page,
+							MainFrameVariables::ID::RIGHT_TOOLS_HI_GAIN_FLAT_FIELD_LOAD_FILE_BTN,
+							bmp
+						);
+
+					m_HiGainFlatFieldLoadFileBtn->Disable();
+				}
+
+				gridSizer->Add(m_HiGainFlatFieldLoadFileBtn.get(), 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 			}
 
 			// Lo-Gain Flat Field
@@ -2788,20 +2828,37 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 
 				m_LoGainFlatFieldFileNameTxtCtrl->SetForegroundColour(m_IncorrectFilePathColor);
 
-				gridSizer->Add(m_LoGainFlatFieldFileNameTxtCtrl.get(), 1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
+				gridSizer->Add(m_LoGainFlatFieldFileNameTxtCtrl.get(), 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
 
-				m_LoGainFlatFieldLoadFileBtn = std::make_unique<wxButton>
-					(
-						page,
-						MainFrameVariables::ID::RIGHT_TOOLS_LO_GAIN_FLAT_FIELD_LOAD_FILE_BTN,
-						wxT("Open"),
-						wxDefaultPosition,
-						wxDefaultSize
-					);
+				{
+					auto size = wxSize(16, 16);
 
-				m_LoGainFlatFieldLoadFileBtn->Disable();
+					wxBitmap bmp{};
+					{
+						auto bitmap = wxART_FILE_OPEN;
+						auto client = wxART_CLIENT_MATERIAL_ROUND;
+						auto color = m_DefaultWidgetsColor;
 
-				gridSizer->Add(m_LoGainFlatFieldLoadFileBtn.get(), 0, wxALIGN_CENTER_VERTICAL);
+						bmp = wxMaterialDesignArtProvider::GetBitmap
+						(
+							bitmap,
+							client,
+							size,
+							color
+						);
+					}
+
+					m_LoGainFlatFieldLoadFileBtn = std::make_unique<wxBitmapButton>
+						(
+							page,
+							MainFrameVariables::ID::RIGHT_TOOLS_LO_GAIN_FLAT_FIELD_LOAD_FILE_BTN,
+							bmp
+						);
+
+					m_LoGainFlatFieldLoadFileBtn->Disable();
+				}
+
+				gridSizer->Add(m_LoGainFlatFieldLoadFileBtn.get(), 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 			}
 			verSizer->Add(gridSizer, 0, wxEXPAND);
 		}
@@ -3371,7 +3428,7 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 			);
 
 		{
-			auto size = wxSize(32, 32);
+			auto size = wxSize(24, 24);
 
 			wxBitmap bmp{};
 			{
@@ -3539,13 +3596,32 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 		/* Report Generation */
 		auto report_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Report");
 
-		m_GenerateReportBtn = std::make_unique<wxButton>
-			(
-				page,
-				MainFrameVariables::ID::RIGHT_MY_GENERATE_REPORT_BTN,
-				wxT("Generate")					
-			);
-		m_GenerateReportBtn->SetToolTip("Generate a verbose report");
+		{
+			auto size = wxSize(32, 32);
+
+			wxBitmap bmp{};
+			{
+				auto bitmap = wxART_SETTINGS_OVERSCAN;
+				auto client = wxART_CLIENT_MATERIAL_ROUND;
+				auto color = m_DefaultWidgetsColor;
+
+				bmp = wxMaterialDesignArtProvider::GetBitmap
+				(
+					bitmap,
+					client,
+					size,
+					color
+				);
+			}
+
+			m_GenerateReportBtn = std::make_unique<wxBitmapButton>
+				(
+					page,
+					MainFrameVariables::ID::RIGHT_MY_GENERATE_REPORT_BTN,
+					bmp
+				);
+			m_GenerateReportBtn->SetToolTip("Generate a verbose report");
+		}
 		
 		report_sizer->Add(m_GenerateReportBtn.get());
 
