@@ -2192,21 +2192,64 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			);
 
 		m_CameraTabControls->singleShotBtn->Disable();
+
+		m_CameraTabControls->singleShotBtn->SetMinSize(size);
+
 		m_CameraTabControls->singleShotBtn->SetToolTip("Single Shot (S)\nCapture single image and save it on disk");
 
-		hor_sizer->Add(m_CameraTabControls->singleShotBtn.get(), 0, wxEXPAND);
-		hor_sizer->AddStretchSpacer();
+		auto vert_sizer = new wxBoxSizer(wxVERTICAL);
 
-		m_CameraTabControls->startStopLiveCapturingTglBtn = std::make_unique<wxToggleButton>
-			(
-				page,
-				MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, 
-				wxT("Start Live (L)")
-			);
-		m_CameraTabControls->startStopLiveCapturingTglBtn->Disable();
-		m_CameraTabControls->startStopLiveCapturingTglBtn->SetToolTip("Start/Stop live sequence of capturing images");
+		vert_sizer->AddStretchSpacer();
+		vert_sizer->Add(m_CameraTabControls->singleShotBtn.get());
+		vert_sizer->AddStretchSpacer();
 
-		hor_sizer->Add(m_CameraTabControls->startStopLiveCapturingTglBtn.get(), 0, wxEXPAND | wxTOP, 5);
+		hor_sizer->Add(vert_sizer, 0, wxEXPAND | wxTOP, 10);
+
+		hor_sizer->AddStretchSpacer(1);
+
+		{
+			auto hor_stat_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, wxT("Live Capturing"));
+
+			hor_stat_sizer->AddSpacer(5);
+
+			{
+				m_CameraTabControls->saveCapturedImagesCheckBox = std::make_unique<wxCheckBox>
+					(
+						page,
+						MainFrameVariables::ID::RIGHT_CAM_SAVE_LIVE_IMAGES_CHECKBOX,
+						wxT("Save Captured Images")
+					);
+				m_CameraTabControls->saveCapturedImagesCheckBox->Disable();
+				m_CameraTabControls->saveCapturedImagesCheckBox->SetToolTip("When checked, the captured images during live capturing are saved on disk");
+
+				hor_stat_sizer->Add(m_CameraTabControls->saveCapturedImagesCheckBox.get(), 0, wxALIGN_CENTER_VERTICAL);
+			}
+
+			hor_stat_sizer->AddSpacer(5);
+
+			{
+				auto bmp = m_CameraTabControls->GetLiveCapturingBitmap(false);
+
+				m_CameraTabControls->startStopLiveCapturingTglBtn = std::make_unique<wxBitmapToggleButton>
+					(
+						page,
+						MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN,
+						bmp
+					);
+				m_CameraTabControls->startStopLiveCapturingTglBtn->Disable();
+
+				// Force a tighter size (still may have minimum imposed by OS)
+				const auto bsz = bmp.GetSize();
+				m_CameraTabControls->startStopLiveCapturingTglBtn->SetMinSize(wxSize(bsz.x + 6, bsz.y + 6));
+
+				m_CameraTabControls->startStopLiveCapturingTglBtn->SetToolTip("Start/Stop live sequence of capturing images (L)");
+
+				hor_stat_sizer->Add(m_CameraTabControls->startStopLiveCapturingTglBtn.get());
+			}
+
+			hor_sizer->Add(hor_stat_sizer, 0, wxALIGN_CENTER_VERTICAL);
+		}
+
 
 		sizerPage->Add(hor_sizer, 0, wxEXPAND | wxALL, 5);
 	}
@@ -2659,6 +2702,8 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 	wxPanel* page = new wxPanel(parent);
 	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
 
+	auto bmpSize = wxSize(20, 20);
+
 	// Background Subtraction
 	{
 		auto horSizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Background Subtraction");
@@ -2689,8 +2734,6 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 			horSizer->Add(m_BackgroundSubtractionFileNameTxtCtrl.get(), 1, wxALIGN_CENTER);
 
 			{
-				auto size = wxSize(16, 16);
-
 				wxBitmap bmp{};
 				{
 					auto bitmap = wxART_FILE_OPEN;
@@ -2701,7 +2744,7 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 					(
 						bitmap,
 						client,
-						size,
+						bmpSize,
 						color
 					);
 				}
@@ -2771,7 +2814,6 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 				gridSizer->Add(m_HiGainFlatFieldFileNameTxtCtrl.get(), 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
 
 				{
-					auto size = wxSize(16, 16);
 
 					wxBitmap bmp{};
 					{
@@ -2783,7 +2825,7 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 						(
 							bitmap,
 							client,
-							size,
+							bmpSize,
 							color
 						);
 					}
@@ -2831,8 +2873,6 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 				gridSizer->Add(m_LoGainFlatFieldFileNameTxtCtrl.get(), 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
 
 				{
-					auto size = wxSize(16, 16);
-
 					wxBitmap bmp{};
 					{
 						auto bitmap = wxART_FILE_OPEN;
@@ -2843,7 +2883,7 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 						(
 							bitmap,
 							client,
-							size,
+							bmpSize,
 							color
 						);
 					}
@@ -3910,7 +3950,7 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 		CreateCameraPage(m_CameraControlNotebook), 
 		"Camera",
 #ifdef _DEBUG
-		false,
+		true,
 #else
 		true,
 #endif // _DEBUG
@@ -3922,7 +3962,7 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 		CreateCameraROIPage(m_CameraControlNotebook), 
 		"ROI",
 #ifdef _DEBUG
-		true,
+		false,
 #else
 		false,
 #endif // _DEBUG
@@ -6577,7 +6617,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, false);
 				m_StartStopMeasurementTglBtn->Disable();
 
-				m_CameraTabControls->DisableAllControls();
+				m_CameraTabControls->EnableAllControls(false);
 			}
 
 			while (!m_StartedThreads.back().first.empty())
@@ -8039,7 +8079,7 @@ auto cMain::OnSensorTemperatureChanged(wxCommandEvent& evt) -> void
 	// 3) UI feedback but NON-BLOCKING
 	wxBeginBusyCursor();                  // stays until wxEndBusyCursor() is called later
 	wxWindowDisabler disabler(this);      // optional: temporarily disable clicks
-	m_CameraTabControls->DisableAllControls(true); // keep Live toggle if you want
+	m_CameraTabControls->EnableAllControls(); // keep Live toggle if you want
 
 	// If you have a status bar/progress text:
 	SetStatusText(wxString::Format("Cooling to %.1f °C…", desiredDegC));
@@ -9161,7 +9201,7 @@ auto cMain::EnableControlsAfterSuccessfulCameraInitialization() -> void
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, enableWidget);
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN, enableWidget);
 
-	m_CameraTabControls->EnableAllControls();
+	m_CameraTabControls->EnableAllControls(enableWidget);
 
 	m_ImageColormapComboBox->stylish_combo_box->Enable(enableWidget);
 
@@ -9229,7 +9269,7 @@ auto cMain::DisableControlsBeforeCapturing() -> void
 
 	m_ImageColormapComboBox->stylish_combo_box->Disable();
 
-	m_CameraTabControls->DisableAllControls();
+	m_CameraTabControls->EnableAllControls(false);
 
 	m_CameraROIToolsControls->EnableAllControls(false);
 
@@ -9284,7 +9324,8 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 	// Sync button label and corresponding menu item
 	auto setLiveLabelAndMenu = [&](bool live)
 		{
-			btn->SetLabel(live ? wxT("Stop Live (L)") : wxT("Start Live (L)"));
+			m_CameraTabControls->SetLiveCapturingBitmapColor(live);
+			//btn->SetLabel(live ? wxT("Stop Live (L)") : wxT("Start Live (L)"));
 
 			const auto id = MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN;
 			if (m_MenuBar && m_MenuBar->menu_edit)
@@ -11140,7 +11181,7 @@ auto cMain::HandleCameraDisconnected() -> void
 	{
 		//m_CameraTabControls->camSensorTemperature->ChangeValue("");
 		//m_CameraTabControls->camExposure->ChangeValue("");
-		m_CameraTabControls->DisableAllControls();
+		m_CameraTabControls->EnableAllControls(false);
 	}
 
 	if (m_CurrentCameraSettingsPropertyGrid)

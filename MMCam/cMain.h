@@ -195,6 +195,7 @@ namespace MainFrameVariables
 		RIGHT_CAM_COLORMAP_COMBOBOX,
 		RIGHT_CAM_MANUFACTURER_CHOICE,
 		RIGHT_CAM_SINGLE_SHOT_BTN,
+		RIGHT_CAM_SAVE_LIVE_IMAGES_CHECKBOX,
 		RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN,
 
 		// ROI
@@ -410,47 +411,49 @@ namespace MainFrameVariables
 		std::unique_ptr<wxTextCtrl> camSensorTemperature{}, camExposure{};
 		std::unique_ptr<wxChoice> camBinning{};
 		std::unique_ptr<wxBitmapButton> singleShotBtn{};
-		std::unique_ptr<wxToggleButton> startStopLiveCapturingTglBtn{};
+		std::unique_ptr<wxCheckBox> saveCapturedImagesCheckBox{};
+		std::unique_ptr<wxBitmapToggleButton> startStopLiveCapturingTglBtn{};
 		std::unique_ptr<wxTextCtrl> crossHairPosXTxtCtrl{}, crossHairPosYTxtCtrl{};
 
-		auto Enable(const bool state) -> void
+		auto SetLiveCapturingBitmapColor(const bool isCapturing) -> void
 		{
-			if (state)
-				EnableAllControls();
-			else
-				DisableAllControls();
-		};
+			if (!startStopLiveCapturingTglBtn) return;
 
-		auto EnableAllControls() -> void
-		{
-			camSensorTemperature->Enable();
-			camExposure->Enable();
-
-			camBinning->Enable();
-
-			singleShotBtn->Enable();
-
-			startStopLiveCapturingTglBtn->Enable();
-
-			crossHairPosXTxtCtrl->Enable();
-			crossHairPosYTxtCtrl->Enable();
-		};
-
-		auto DisableAllControls(const bool liveCapturing = false) -> void
-		{
-			camSensorTemperature->Disable();
-			camExposure->Disable();
-
-			camBinning->Disable();
-
-			singleShotBtn->Disable();
-			
-			if (!liveCapturing)
-				startStopLiveCapturingTglBtn->Disable();
-			
-			crossHairPosXTxtCtrl->Disable();
-			crossHairPosYTxtCtrl->Disable();
+			startStopLiveCapturingTglBtn->SetBitmap(GetLiveCapturingBitmap(isCapturing));
 		}
+
+		auto GetLiveCapturingBitmap(const bool isCapturing) -> wxBitmap
+		{
+			const wxSize bitmapSize = wxSize(32, 32);
+			const char* liveCapturingBitmap = wxART_VIDEOCAM;
+			const char* liveCapturingClient = wxART_CLIENT_MATERIAL_ROUND;
+			const wxColour liveCapturingStartBitmapColor = wxColour(34, 177, 76);
+			const wxColour liveCapturingStopBitmapColor = wxColour(237, 28, 36);
+
+			return wxMaterialDesignArtProvider::GetBitmap
+			(
+				liveCapturingBitmap,
+				liveCapturingClient,
+				bitmapSize,
+				isCapturing ? liveCapturingStopBitmapColor : liveCapturingStartBitmapColor
+			);
+		}
+
+		auto EnableAllControls(const bool enable = true) -> void
+		{
+			camSensorTemperature->Enable(enable);
+			camExposure->Enable(enable);
+
+			camBinning->Enable(enable);
+
+			singleShotBtn->Enable(enable);
+
+			saveCapturedImagesCheckBox->Enable(enable);
+			startStopLiveCapturingTglBtn->Enable(enable);
+
+			crossHairPosXTxtCtrl->Enable(enable);
+			crossHairPosYTxtCtrl->Enable(enable);
+		};
 
 	};
 
