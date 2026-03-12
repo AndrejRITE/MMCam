@@ -3398,8 +3398,8 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 			m_OutDirBtn->SetToolTip(wxT("Set the output directory"));
 		}
 
-		out_dir_static_box_sizer->Add(m_OutDirTextCtrl.get(), 1, wxEXPAND | wxRIGHT, 4);
-		//out_dir_static_box_sizer->AddStretchSpacer();
+		out_dir_static_box_sizer->Add(m_OutDirTextCtrl.get(), 1, wxCENTER);
+		out_dir_static_box_sizer->AddSpacer(5);
 		out_dir_static_box_sizer->Add(m_OutDirBtn.get(), 0, wxALIGN_CENTER);
 	}
 	sizerPage->Add(out_dir_static_box_sizer, 0, wxEXPAND);

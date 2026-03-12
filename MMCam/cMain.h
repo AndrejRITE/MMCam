@@ -50,7 +50,7 @@
 	//#define OPEN
 	//#define ANNULUS
 	#define ROI_CHECK
-	#define BACKGROUND_SUBTRACTION
+	//#define BACKGROUND_SUBTRACTION
 #endif // _DEBUG
 
 
