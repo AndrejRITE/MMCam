@@ -245,6 +245,37 @@ cMain::cMain(const wxString& title_)
 	}
 #endif // DEBUG_ANNULUS
 
+#ifdef ROI_CHECK
+	// Set desired ROI
+	{
+		m_CameraROIToolsControls->centricalMode->SetValue(false);
+		m_CameraROIToolsControls->startX_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_OutputImageSize.GetWidth() / 5, 0));
+		m_CameraROIToolsControls->startY_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_OutputImageSize.GetHeight() / 5, 0));
+
+		m_CameraROIToolsControls->width_px->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(m_OutputImageSize.GetWidth() / 2, 0));
+		m_CameraROIToolsControls->height_px->SetValue(CameraPreviewVariables::CreateStringWithPrecision(m_OutputImageSize.GetHeight() / 2, 0));
+	}
+
+#endif // ROI_CHECK
+
+#ifdef BACKGROUND_SUBTRACTION
+	{
+		m_CameraControlNotebook->SetSelection(MainFrameVariables::CameraControlNotebookPage::POSTPROCESSING);
+		m_BackgroundSubtractionCheckBox->SetValue(true);
+
+		wxCommandEvent artEvt(wxEVT_CHECKBOX, MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_CHECKBOX);
+		ProcessEvent(artEvt);
+	}
+
+	// Capture Single Shot Image
+	{
+		wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN);
+		ProcessEvent(artEvt);
+	}
+
+#endif // BACKGROUND_SUBTRACTION
+
+
 	// Press Generate Button
 	{
 		//wxCommandEvent artEvt(wxEVT_BUTTON, MainFrameVariables::ID_RIGHT_MY_GENERATE_REPORT_BTN);
@@ -2647,7 +2678,7 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 					wxTE_READONLY
 				);
 
-			m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(wxColour(237, 28, 36));
+			m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(m_IncorrectFilePathColor);
 
 			horSizer->Add(m_BackgroundSubtractionFileNameTxtCtrl.get(), 1, wxALIGN_CENTER);
 
@@ -2712,7 +2743,7 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 						wxTE_READONLY
 					);
 
-				m_HiGainFlatFieldFileNameTxtCtrl->SetForegroundColour(wxColour(237, 28, 36));
+				m_HiGainFlatFieldFileNameTxtCtrl->SetForegroundColour(m_IncorrectFilePathColor);
 
 				gridSizer->Add(m_HiGainFlatFieldFileNameTxtCtrl.get(), 1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
 
@@ -2755,7 +2786,7 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 						wxTE_READONLY
 					);
 
-				m_LoGainFlatFieldFileNameTxtCtrl->SetForegroundColour(wxColour(237, 28, 36));
+				m_LoGainFlatFieldFileNameTxtCtrl->SetForegroundColour(m_IncorrectFilePathColor);
 
 				gridSizer->Add(m_LoGainFlatFieldFileNameTxtCtrl.get(), 1, wxEXPAND | wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
 
@@ -3339,11 +3370,33 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 			wxTE_LEFT | wxTE_READONLY
 			);
 
-		m_OutDirBtn = std::make_unique<wxButton>(
-			page, 
-			MainFrameVariables::ID::RIGHT_MT_OUT_FLD_BTN, 
-			wxT("Select folder"));
-		m_OutDirBtn->SetToolTip(wxT("Set the output directory"));
+		{
+			auto size = wxSize(32, 32);
+
+			wxBitmap bmp{};
+			{
+				auto bitmap = wxART_FOLDER_OPEN;
+				auto client = wxART_CLIENT_MATERIAL_ROUND;
+				auto color = m_DefaultWidgetsColor;
+
+				bmp = wxMaterialDesignArtProvider::GetBitmap
+				(
+					bitmap,
+					client,
+					size,
+					color
+				);
+			}
+
+			m_OutDirBtn = std::make_unique<wxBitmapButton>
+				(
+					page,
+					MainFrameVariables::ID::RIGHT_MT_OUT_FLD_BTN,
+					bmp
+				);
+
+			m_OutDirBtn->SetToolTip(wxT("Set the output directory"));
+		}
 
 		out_dir_static_box_sizer->Add(m_OutDirTextCtrl.get(), 1, wxEXPAND | wxRIGHT, 4);
 		//out_dir_static_box_sizer->AddStretchSpacer();
@@ -4406,6 +4459,7 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 			(
 				imgPtr, 
 				wxSize(m_CameraControl->GetWidth(), m_CameraControl->GetHeight()),
+				m_RequestedRoi0,
 				binning,
 				cameraDataType,
 				file_name
@@ -4504,6 +4558,7 @@ void cMain::OnSingleShotCaptureFinished(wxThreadEvent& evt)
 	DisplayAndSaveImageFromTheCamera(
 		payload.img.data(),
 		wxSize(payload.w, payload.h),
+		m_RequestedRoi0,
 		payload.binning,
 		payload.dataType,
 		payload.outFilePath
@@ -4650,12 +4705,30 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 (
 	unsigned short* const imgPtr, 
 	const wxSize& originalImgSize, 
+	const wxRect& roi0Based,
 	const int& binning,
 	const CameraControlVariables::ImageDataTypes dataType,
 	const std::string outFilePath
 ) -> void
 {
 	SCOPE_TIMER("DisplayAndSaveImageFromTheCamera");
+
+	auto extractSensorROI = 
+		[](const cv::Mat& fullFrame, const int targetW, const int targetH, const int start_X, const int start_Y) -> cv::Mat
+		{
+			if (fullFrame.empty() || targetW <= 0 || targetH <= 0) return cv::Mat();
+
+			if (fullFrame.cols == targetW && fullFrame.rows == targetH)
+				return fullFrame;
+
+			const int roiW = std::min(targetW, fullFrame.cols);
+			const int roiH = std::min(targetH, fullFrame.rows);
+
+			const int startX = std::max(1, start_X);
+			const int startY = std::max(1, start_Y);
+
+			return fullFrame(cv::Rect(startX, startY, roiW, roiH));
+		};
 
 	// raw view of camera buffer
 	m_rawMat = cv::Mat(originalImgSize.GetHeight(), originalImgSize.GetWidth(), CV_16UC1, imgPtr);
@@ -4682,13 +4755,29 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 	if (m_BackgroundSubtractionCheckBox->IsChecked()
 		&& (m_bgBinnedMat.empty() || m_bgBinnedMat.size() != m_binnedMat.size()))
 	{
-		ensureMat(m_bgBinnedMat, outH, outW);
-		cv::resize(m_bgMat, m_bgBinnedMat, m_bgBinnedMat.size(), 0, 0, cv::INTER_AREA);
-		if (sum) {
-			m_bgBinnedMat.convertTo(m_bgBinnedMat, CV_32F);
-			m_bgBinnedMat *= static_cast<float>(bin * bin);
-			cv::min(m_bgBinnedMat, 65535.0f, m_bgBinnedMat);
-			m_bgBinnedMat.convertTo(m_bgBinnedMat, CV_16U);
+		const cv::Mat bgAtCaptureROI = extractSensorROI
+		(
+			m_bgMat, 
+			m_rawMat.cols, 
+			m_rawMat.rows, 
+			roi0Based.GetLeft(), 
+			roi0Based.GetTop()
+		);
+
+		if (bgAtCaptureROI.empty())
+		{
+			m_bgBinnedMat.release();
+		}
+		else
+		{
+			ensureMat(m_bgBinnedMat, outH, outW);
+			cv::resize(bgAtCaptureROI, m_bgBinnedMat, m_bgBinnedMat.size(), 0, 0, cv::INTER_AREA);
+			if (sum) {
+				m_bgBinnedMat.convertTo(m_bgBinnedMat, CV_32F);
+				m_bgBinnedMat *= static_cast<float>(bin * bin);
+				cv::min(m_bgBinnedMat, 65535.0f, m_bgBinnedMat);
+				m_bgBinnedMat.convertTo(m_bgBinnedMat, CV_16U);
+			}
 		}
 	}
 
@@ -4716,64 +4805,82 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 			m_ffLoBinned.create(outH, outW, CV_16UC1);
 			m_ffHiBinned.create(outH, outW, CV_16UC1);
 
-			cv::resize(m_ffLoFull, m_ffLoBinned, m_ffLoBinned.size(), 0, 0, cv::INTER_AREA);
-			cv::resize(m_ffHiFull, m_ffHiBinned, m_ffHiBinned.size(), 0, 0, cv::INTER_AREA);
+			const cv::Mat ffLoAtCaptureROI = extractSensorROI(m_ffLoFull, m_rawMat.cols, m_rawMat.rows, roi0Based.GetLeft(), roi0Based.GetTop());
+			const cv::Mat ffHiAtCaptureROI = extractSensorROI(m_ffHiFull, m_rawMat.cols, m_rawMat.rows, roi0Based.GetLeft(), roi0Based.GetTop());
 
-			if (sum) {
-				// keep parity with foreground
-				m_ffLoBinned.convertTo(m_ffLoBinned, CV_32F);
-				m_ffHiBinned.convertTo(m_ffHiBinned, CV_32F);
-				const float s = static_cast<float>(bin * bin);
-				m_ffLoBinned *= s;
-				m_ffHiBinned *= s;
-				cv::min(m_ffLoBinned, 65535.0f, m_ffLoBinned);
-				cv::min(m_ffHiBinned, 65535.0f, m_ffHiBinned);
-				m_ffLoBinned.convertTo(m_ffLoBinned, CV_16U);
-				m_ffHiBinned.convertTo(m_ffHiBinned, CV_16U);
+			if (ffLoAtCaptureROI.empty() || ffHiAtCaptureROI.empty())
+			{
+				m_ffLoBinned.release();
+				m_ffHiBinned.release();
+			}
+			else
+			{
+				cv::resize(ffLoAtCaptureROI, m_ffLoBinned, m_ffLoBinned.size(), 0, 0, cv::INTER_AREA);
+				cv::resize(ffHiAtCaptureROI, m_ffHiBinned, m_ffHiBinned.size(), 0, 0, cv::INTER_AREA);
+
+				if (sum) {
+					// keep parity with foreground
+					m_ffLoBinned.convertTo(m_ffLoBinned, CV_32F);
+					m_ffHiBinned.convertTo(m_ffHiBinned, CV_32F);
+					const float s = static_cast<float>(bin * bin);
+					m_ffLoBinned *= s;
+					m_ffHiBinned *= s;
+					cv::min(m_ffLoBinned, 65535.0f, m_ffLoBinned);
+					cv::min(m_ffHiBinned, 65535.0f, m_ffHiBinned);
+					m_ffLoBinned.convertTo(m_ffLoBinned, CV_16U);
+					m_ffHiBinned.convertTo(m_ffHiBinned, CV_16U);
+				}
 			}
 
 			m_ffBinningSS = static_cast<unsigned short>(binning);
 			m_ffModeSS = binningMode;
 		}
 
-		// src to correct
-		cv::Mat src16 = m_work1.empty() ? m_binnedMat : m_work1;
-
-		// Convert to float
-		cv::Mat src32, blk32, wht32;
-		src16.convertTo(src32, CV_32F);
-		m_ffLoBinned.convertTo(blk32, CV_32F);
-		m_ffHiBinned.convertTo(wht32, CV_32F);
-
-		// num = max(src - black, 0)
-		cv::Mat num32;
-		cv::subtract(src32, blk32, num32);
-		cv::max(num32, 0.0f, num32);
-
-		// denom = max(white - black, 1)
-		cv::Mat denom32;
-		cv::subtract(wht32, blk32, denom32);
-		cv::max(denom32, 1.0f, denom32);
-
-		// normalization: scale so "white" maps to mean(denom)
-		double meanDen = m_ffMeanDenom;
-		if (meanDen <= 0.0) {
-			meanDen = cv::mean(denom32)[0];
-			if (meanDen <= 0.0) meanDen = 1.0;
+		if (m_ffLoBinned.empty() || m_ffHiBinned.empty())
+		{
+			// Keep previous stage output (background-subtracted/binned) if ref mats are unavailable.
 		}
+		else
+		{
+			// src to correct
+			cv::Mat src16 = m_work1.empty() ? m_binnedMat : m_work1;
 
-		// gain = meanDen / denom
-		cv::Mat gain32;
-		denom32.convertTo(gain32, CV_32F, 0.0); // just allocate same size/type
-		cv::divide(static_cast<float>(meanDen), denom32, gain32);
+			// Convert to float
+			cv::Mat src32, blk32, wht32;
+			src16.convertTo(src32, CV_32F);
+			m_ffLoBinned.convertTo(blk32, CV_32F);
+			m_ffHiBinned.convertTo(wht32, CV_32F);
 
-		// corrected = num * gain, clamp to 16U
-		cv::Mat corr32;
-		cv::multiply(num32, gain32, corr32);
-		cv::min(corr32, 65535.0f, corr32);
+			// num = max(src - black, 0)
+			cv::Mat num32;
+			cv::subtract(src32, blk32, num32);
+			cv::max(num32, 0.0f, num32);
 
-		ensureMat(m_work1, outH, outW);
-		corr32.convertTo(m_work1, CV_16U);
+			// denom = max(white - black, 1)
+			cv::Mat denom32;
+			cv::subtract(wht32, blk32, denom32);
+			cv::max(denom32, 1.0f, denom32);
+
+			// normalization: scale so "white" maps to mean(denom)
+			double meanDen = m_ffMeanDenom;
+			if (meanDen <= 0.0) {
+				meanDen = cv::mean(denom32)[0];
+				if (meanDen <= 0.0) meanDen = 1.0;
+			}
+
+			// gain = meanDen / denom
+			cv::Mat gain32;
+			denom32.convertTo(gain32, CV_32F, 0.0); // just allocate same size/type
+			cv::divide(static_cast<float>(meanDen), denom32, gain32);
+
+			// corrected = num * gain, clamp to 16U
+			cv::Mat corr32;
+			cv::multiply(num32, gain32, corr32);
+			cv::min(corr32, 65535.0f, corr32);
+
+			ensureMat(m_work1, outH, outW);
+			corr32.convertTo(m_work1, CV_16U);
+		}
 	}
 
 	// Median blur
@@ -6799,6 +6906,7 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 			(
 				payload->img.get(),
 				m_OutputImageSize,
+				m_RequestedRoi0,
 				1,
 				m_LiveDataType
 			);
@@ -8064,7 +8172,7 @@ auto cMain::OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void
 
 	// Reset UI + old buffers
 	m_BackgroundSubtractionFileNameTxtCtrl->SetValue("No file selected");
-	m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(wxColour(237, 28, 36));
+	m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(m_IncorrectFilePathColor);
 
 	m_BackgroundSubtractionData.reset();   // legacy buffer, no longer used
 	m_BinnedBgSS.reset();                  // legacy single-shot cache
@@ -8079,7 +8187,7 @@ auto cMain::OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void
 	std::string filePath;
 
 #ifdef _DEBUG
-	filePath = ".\\src\\dbg_fld\\black_9576x6388.tif";
+	filePath = std::format(".\\src\\dbg_fld\\black_{}x{}.tif", m_OutputImageSize.GetWidth(), m_OutputImageSize.GetHeight());
 #else
 	wxFileDialog dlg
 	(
@@ -8137,7 +8245,7 @@ auto cMain::OnBackgroundSubtractionLoadFileBtn(wxCommandEvent& evt) -> void
 
 	// Update UI
 	m_BackgroundSubtractionFileNameTxtCtrl->SetValue(fn.GetFullName());
-	m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(wxColour(34, 177, 76));
+	m_BackgroundSubtractionFileNameTxtCtrl->SetForegroundColour(m_CorrectFilePathColor);
 }
 
 auto cMain::OnMedianBlueCheckBox(wxCommandEvent& evt) -> void
@@ -10853,6 +10961,13 @@ auto cMain::OnFlatFieldCorrectionCheckBox(wxCommandEvent& evt) -> void
 	{
 		m_ffHiFull.release();   m_ffLoFull.release();
 		m_ffHiBinned.release(); m_ffLoBinned.release();
+
+		m_HiGainFlatFieldFileNameTxtCtrl->SetValue("No file selected");
+		m_HiGainFlatFieldFileNameTxtCtrl->SetForegroundColour(m_IncorrectFilePathColor);
+
+		m_LoGainFlatFieldFileNameTxtCtrl->SetValue("No file selected");
+		m_LoGainFlatFieldFileNameTxtCtrl->SetForegroundColour(m_IncorrectFilePathColor);
+
 		return;
 	}
 
@@ -10907,7 +11022,7 @@ auto cMain::LoadSingleFlat(const wxString& title, wxTextCtrl* targetTxtCtrl, cv:
 	if (targetTxtCtrl)
 	{
 		targetTxtCtrl->ChangeValue(fn.GetFullName());
-		targetTxtCtrl->SetForegroundColour(wxColour(34, 177, 76));
+		targetTxtCtrl->SetForegroundColour(m_CorrectFilePathColor);
 	}
 
 	// Invalidate cached binned copy

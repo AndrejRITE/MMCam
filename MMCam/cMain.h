@@ -49,6 +49,8 @@
 #ifdef _DEBUG
 	//#define OPEN
 	//#define ANNULUS
+	#define ROI_CHECK
+	#define BACKGROUND_SUBTRACTION
 #endif // _DEBUG
 
 
@@ -239,6 +241,14 @@ namespace MainFrameVariables
 		SINGLE_SHOT_EXPOSURE_TIMER,
 
 		CONTINUOUS_EXPOSURE_TIMER,
+	};
+
+	enum CameraControlNotebookPage
+	{
+		CAMERA,
+		ROI,
+		CAMERA_PARAMETERS,
+		POSTPROCESSING
 	};
 
 	enum BinningModes
@@ -1110,6 +1120,7 @@ private:
 	(
 		unsigned short* const imgPtr, 
 		const wxSize& originalImgSize, 
+		const wxRect& roi,
 		const int& binning,
 		const CameraControlVariables::ImageDataTypes dataType,
 		const std::string outFilePath = ""
@@ -2050,7 +2061,7 @@ private:
 	/* Measurement */
 
 	std::unique_ptr<wxTextCtrl> m_OutDirTextCtrl{};
-	std::unique_ptr<wxButton> m_OutDirBtn{};
+	std::unique_ptr<wxBitmapButton> m_OutDirBtn{};
 	std::unique_ptr<MainFrameVariables::MeasurementStage> m_FirstStage{};
 	std::unique_ptr<wxToggleButton> m_StartStopMeasurementTglBtn{};
 
@@ -2088,6 +2099,9 @@ private:
 	const wxColour m_BlackAppearanceColor = wxColour(75, 75, 75);
 
 	const wxColour m_DefaultWidgetsColor = wxColour(255, 128, 64);
+
+	const wxColour m_CorrectFilePathColor = wxColour(34, 177, 76);
+	const wxColour m_IncorrectFilePathColor = wxColour(237, 28, 36);
 
 	std::unique_ptr<wxStatusBar> m_StatusBar{};
 	std::unique_ptr<wxGauge> m_ProgressBar{}, m_ExposureGauge{};
