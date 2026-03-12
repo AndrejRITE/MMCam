@@ -169,6 +169,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_TOGGLEBUTTON(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, cMain::OnStartStopCapturingTglButton)
 	/* Start\Stop Live Capturing */
 	EVT_TOGGLEBUTTON(MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN, cMain::OnStartStopLiveCapturingTglBtn)
+	EVT_CHECKBOX(MainFrameVariables::ID::RIGHT_CAM_SAVE_LIVE_IMAGES_CHECKBOX, cMain::OnSaveCapturedImagesCheckBox)
 
 	/* Live Capturing */
 	EVT_THREAD(MainFrameVariables::ID::THREAD_LIVE_CAPTURING, cMain::LiveCapturingThread)
@@ -6879,6 +6880,10 @@ void cMain::StartLiveCapturing()
 		live_capturing = nullptr;
 		return;
 	}
+}
+
+auto cMain::OnSaveCapturedImagesCheckBox(wxCommandEvent& evt) -> void
+{
 }
 
 void cMain::StopAllCameraThreads()

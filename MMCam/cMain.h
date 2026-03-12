@@ -1103,6 +1103,7 @@ private:
 
 	/* Live Capturing */
 	void StartLiveCapturing();
+	auto OnSaveCapturedImagesCheckBox(wxCommandEvent& evt) -> void;
 
 	void StopAllCameraThreads();
 
