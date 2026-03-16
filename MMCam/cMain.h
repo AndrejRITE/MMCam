@@ -2434,7 +2434,12 @@ public:
 
 	bool Start()
 	{
-		if (IsPaused()) { Resume(); return true; }
+		if (IsRunning())
+		{
+			if (IsPaused())
+				Resume();
+			return true;
+		}
 
 		if (Create() != wxTHREAD_NO_ERROR) return false;
 		SetPriority(WXTHREAD_MIN_PRIORITY);

@@ -6861,6 +6861,10 @@ void cMain::StartLiveCapturing()
 
 	auto binningMode = m_Config->binning_sum_mode ? MainFrameVariables::BinningModes::BINNING_SUM : MainFrameVariables::BinningModes::BINNING_AVERAGE;
 
+	// Save captured images if the checkbox is checked
+	auto isSaveChecked = m_CameraTabControls->saveCapturedImagesCheckBox->GetValue();
+	
+
 	LiveCapturing* live_capturing = new LiveCapturing
 	(
 		this, 
