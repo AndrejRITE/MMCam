@@ -3671,18 +3671,24 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 		/* Start/Stop Capturing */
 		wxSizer* const capturing_sizer = new wxStaticBoxSizer(wxVERTICAL, page, "&Measurement");
 
-		m_StartStopMeasurementTglBtn = std::make_unique<wxToggleButton>
-			(
-				page,
-				MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT,
-				wxT("Start Measurement (M)")					
-			);
-		m_StartStopMeasurementTglBtn->SetToolTip("Repeatedly move the stage, capture, and save images to disk.");
+		{
+			wxBitmap bmp { GetMeasurementBitmap() };
+
+			m_StartStopMeasurementTglBtn = std::make_unique<wxBitmapToggleButton>
+				(
+					page,
+					MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT,
+					bmp
+				);
+			m_StartStopMeasurementTglBtn->SetMinSize(wxSize(bmp.GetSize().x + 6, bmp.GetSize().y + 6));
+		}
+
+		m_StartStopMeasurementTglBtn->SetToolTip("Start/Stop Measurement (M)\nRepeatedly move the stage, capture, and save images to disk.");
 
 		horizontal_sizer->AddStretchSpacer();
 		horizontal_sizer->Add(capturing_sizer);
 
-		capturing_sizer->Add(m_StartStopMeasurementTglBtn.get());
+		capturing_sizer->Add(m_StartStopMeasurementTglBtn.get(), 0, wxCENTER);
 	}
 	sizerPage->Add(horizontal_sizer, 0, wxEXPAND);
 
@@ -6647,12 +6653,13 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 
 		if (m_TemperatureThread)
 		{
-			m_TemperatureThread->Start();
-			//m_TemperatureThread->Resume();
+			//m_TemperatureThread->Start();
+			m_TemperatureThread->Resume();
 		}
 		
 		EnableControlsAfterCapturing();
-		m_StartStopMeasurementTglBtn->SetLabel("Start Measurement (M)");
+		//m_StartStopMeasurementTglBtn->SetLabel("Start Measurement (M)");
+		m_StartStopMeasurementTglBtn->SetBitmap(GetMeasurementBitmap());
 
 		StopContinuousExposureUI();
 		ReLayoutRightPanel();
@@ -6671,7 +6678,8 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		m_TemperatureThread->Pause();
 
 	DisableControlsBeforeCapturing();
-	m_StartStopMeasurementTglBtn->SetLabel("Stop Measurement (M)");
+	//m_StartStopMeasurementTglBtn->SetLabel("Stop Measurement (M)");
+	m_StartStopMeasurementTglBtn->SetBitmap(GetMeasurementBitmap(true));
 
 	auto first_axis = std::make_unique<MainFrameVariables::AxisMeasurement>();
 	auto second_axis = std::make_unique<MainFrameVariables::AxisMeasurement>();
@@ -9421,7 +9429,7 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 			m_CamPreview->ResetFPS();
 
 		if (m_TemperatureThread)
-			m_TemperatureThread->Start();
+			m_TemperatureThread->Resume();
 
 		StopContinuousExposureUI();
 
@@ -11201,4 +11209,21 @@ auto cMain::HandleCameraDisconnected() -> void
 
 	// Status bar info
 	SetStatusText("Camera disconnected. Reconnect and reinitialize the camera.");
+}
+
+auto cMain::GetMeasurementBitmap(const bool isCapturing) -> wxBitmap
+{
+	const wxSize bitmapSize = wxSize(32, 32);
+	const char* bitmap = wxART_MOVE_UP;
+	const char* client = wxART_CLIENT_MATERIAL_ROUND;
+	const wxColour startBitmapColor = wxColour(34, 177, 76);
+	const wxColour stopBitmapColor = wxColour(237, 28, 36);
+
+	return wxMaterialDesignArtProvider::GetBitmap
+	(
+		bitmap,
+		client,
+		bitmapSize,
+		isCapturing ? stopBitmapColor : startBitmapColor
+	);
 }

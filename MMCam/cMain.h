@@ -2029,6 +2029,8 @@ private:
 
 	auto HandleCameraDisconnected() -> void;
 
+	auto GetMeasurementBitmap(const bool isCapturing = false) -> wxBitmap;
+
 private:
 	CameraControlVariables::ImageDataTypes m_LiveDataType{ CameraControlVariables::RAW_12BIT };
 
@@ -2067,7 +2069,7 @@ private:
 	std::unique_ptr<wxTextCtrl> m_OutDirTextCtrl{};
 	std::unique_ptr<wxBitmapButton> m_OutDirBtn{};
 	std::unique_ptr<MainFrameVariables::MeasurementStage> m_FirstStage{};
-	std::unique_ptr<wxToggleButton> m_StartStopMeasurementTglBtn{};
+	std::unique_ptr<wxBitmapToggleButton> m_StartStopMeasurementTglBtn{};
 
 	/* Report Generation */
 	std::unique_ptr<wxBitmapButton> m_GenerateReportBtn{};
