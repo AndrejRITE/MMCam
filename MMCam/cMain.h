@@ -613,6 +613,7 @@ namespace MainFrameVariables
 		std::unique_ptr<unsigned short[]> img; // owns image buffer
 		int width = 0;
 		int height = 0;
+		int exposure_us = 0;
 
 		TelemetryData telemetry{};
 	};
@@ -947,6 +948,34 @@ namespace MainFrameVariables
 			const unsigned short* row = src + (roi.y + y) * srcW + roi.x;
 			std::memcpy(dst + y * roi.width, row, sizeof(unsigned short) * roi.width);
 		}
+	}
+
+	static auto GenerateTimeStamp() -> std::string
+	{
+		auto now = std::chrono::system_clock::now();
+		auto cur_time = std::chrono::system_clock::to_time_t(now);
+		auto str_time = std::string(std::ctime(&cur_time)).substr(11, 8);
+		auto cur_hours = str_time.substr(0, 2);
+		auto cur_mins = str_time.substr(3, 2);
+		auto cur_secs = str_time.substr(6, 2);
+		return std::format("{}H_{}M_{}S", cur_hours, cur_mins, cur_secs);
+	}
+
+	static auto GenerateFilenameWithTimestamp(const size_t& exposure_time_us, const std::string& filenamePrefix = "", const std::string& filenameSuffix = "") -> std::string
+	{
+		auto filename = filenamePrefix.empty() ? "" : filenamePrefix + "_";
+		filename += GenerateTimeStamp();
+
+		filename += std::format
+		(
+			"_{}us",
+			exposure_time_us
+		);
+
+		filename += filenameSuffix.empty() ? "" : "_" + filenameSuffix;
+		filename += ".tif";
+
+		return filename;
 	}
 }
 
@@ -2208,6 +2237,9 @@ private:
 	wxRect m_RequestedRoi0{};
 	bool m_RoiActive{ false };
 	bool m_UseHardwareRoi{ false };
+
+	unsigned long long m_LiveViewFrameCount{ 0 };
+	std::string m_LiveViewStartTimeStamp{};
 
 	wxDECLARE_EVENT_TABLE();
 };

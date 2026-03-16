@@ -4441,21 +4441,10 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 	InitLogging();
 
 	{
-		auto now = std::chrono::system_clock::now();
-		auto cur_time = std::chrono::system_clock::to_time_t(now);
-		auto str_time = std::string(std::ctime(&cur_time)).substr(11, 8);
-		auto cur_hours = str_time.substr(0, 2);
-		auto cur_mins = str_time.substr(3, 2);
-		auto cur_secs = str_time.substr(6, 2);
-
-		auto out_dir = m_OutDirTextCtrl->GetValue();
-		const std::string file_name = std::string(out_dir.mb_str()) + std::string("\\") +
-			std::string("ss_") + 
-			cur_hours + std::string("H_") + 
-			cur_mins + std::string("M_") + 
-			cur_secs + std::string("S_") + 
-			std::to_string(exposure_time) + std::string("us") 
-			+ std::string(".tif");
+		const auto file_name = 
+			std::string(out_dir.mb_str()) + 
+			std::string("\\") + 
+			MainFrameVariables::GenerateFilenameWithTimestamp(exposure_time, "ss");
 
 		/* Camera */
 		{
@@ -6861,9 +6850,8 @@ void cMain::StartLiveCapturing()
 
 	auto binningMode = m_Config->binning_sum_mode ? MainFrameVariables::BinningModes::BINNING_SUM : MainFrameVariables::BinningModes::BINNING_AVERAGE;
 
-	// Save captured images if the checkbox is checked
-	auto isSaveChecked = m_CameraTabControls->saveCapturedImagesCheckBox->GetValue();
-	
+	m_LiveViewStartTimeStamp = MainFrameVariables::GenerateTimeStamp();
+	m_LiveViewFrameCount = 0;
 
 	LiveCapturing* live_capturing = new LiveCapturing
 	(
@@ -7034,6 +7022,21 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 		int binning{ 1 };
 		m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
 
+		auto isSaveChecked = m_CameraTabControls->saveCapturedImagesCheckBox->GetValue();
+		auto savePath = wxString();
+
+		if (isSaveChecked)
+		{
+			savePath += m_OutDirTextCtrl->GetValue();
+			savePath += wxFileName::GetPathSeparator() + wxString::Format("lv_%s", m_LiveViewStartTimeStamp.c_str());
+			savePath += wxString::Format("_%dus", payload->exposure_us);
+			savePath += wxString::Format("_%04llu", m_LiveViewFrameCount + 1);
+			savePath += wxString::Format("_%dx%d", m_OutputImageSize.GetWidth(), m_OutputImageSize.GetHeight());
+			savePath += wxString(".tif");
+
+			++m_LiveViewFrameCount;
+		}
+
 		if (*m_CamPreview->GetExecutionFinishedPtr())
 			DisplayAndSaveImageFromTheCamera
 			(
@@ -7041,7 +7044,8 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 				m_OutputImageSize,
 				m_RequestedRoi0,
 				1,
-				m_LiveDataType
+				m_LiveDataType,
+				savePath.ToStdString()
 			);
 
 		if (m_StartStopMeasurementTglBtn->GetValue())
@@ -9577,6 +9581,7 @@ wxThread::ExitCode LiveCapturing::Entry()
 	while (m_MainFrame && *m_AliveOrDeadThread)
 	{
 		auto payload = std::make_shared<MainFrameVariables::LiveFramePayload>();
+		payload->exposure_us = m_ExposureUS;
 		payload->width = w;
 		payload->height = h;
 		payload->img = std::make_unique<unsigned short[]>(static_cast<size_t>(w) * h);
@@ -9861,6 +9866,7 @@ wxThread::ExitCode WorkerThread::Entry()
 		);
 
 		auto payload = std::make_shared<MainFrameVariables::LiveFramePayload>();
+		payload->exposure_us = m_ExposureUS;
 		payload->width = w;
 		payload->height = h;
 		payload->img = std::make_unique<unsigned short[]>(static_cast<size_t>(w) * h);
