@@ -81,7 +81,7 @@ the current acquisition and image properties.
        alt="MMCam initialized state with Camera tab active and live preview" />
 </div>
 
-
+<a name="automatic_live_capture"></a>
 <h2>Automatic live capture</h2>
 
 <p>
@@ -170,7 +170,68 @@ preview rendering:
        alt="MMCam initialized state with Camera tab active and live preview" />
 </div>
 
+<a name="roi"></a>
+<h2>ROI tab — Region Of Interest</h2>
 
+<div class="img-wrap">
+  <img src="img/initialized_app_roi_tab.png"
+       alt="Initialized state with ROI tab showing Region Of Interest controls" />
+</div>
+
+<p>
+The <strong>ROI</strong> tab is used to define the <em>Region Of Interest</em>
+of the camera sensor. Restricting acquisition to a smaller sensor area can
+reduce the amount of transferred image data and increase frame rate on cameras
+that support hardware ROI.
+</p>
+
+<p>
+If the selected camera does not support ROI on the hardware level, MMCam
+still uses the full acquired frame and crops the requested region in software.
+In that case, ROI affects the displayed and processed image region, but does
+not reduce sensor readout time.
+</p>
+
+<dl>
+  <dt>Centrical</dt>
+  <dd>
+    When checked, the ROI is adjusted symmetrically around the center of the
+    camera sensor. In this mode, changing the ROI width or height keeps the
+    selected region centered automatically.
+  </dd>
+
+  <dt>X</dt>
+  <dd>
+    Horizontal start position of the ROI on the sensor, expressed in pixels.
+    This value defines the left boundary of the selected region.
+  </dd>
+
+  <dt>Y</dt>
+  <dd>
+    Vertical start position of the ROI on the sensor, expressed in pixels.
+    This value defines the top boundary of the selected region.
+  </dd>
+
+  <dt>Width</dt>
+  <dd>
+    Width of the selected ROI in pixels.
+  </dd>
+
+  <dt>Height</dt>
+  <dd>
+    Height of the selected ROI in pixels.
+  </dd>
+
+  <dt>Reset button</dt>
+  <dd>
+    Restores the ROI to the full sensor area.
+  </dd>
+</dl>
+
+<p>
+The ROI overlay is shown in the preview panel so that the selected region can
+be verified visually against the live image.
+</p>
 
 <h2>Parameters tab — camera state and telemetry</h2>
 
