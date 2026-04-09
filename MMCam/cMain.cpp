@@ -5598,7 +5598,7 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 
 #ifdef _DEBUG
 	//filePath = ".\\src\\dbg_fld\\goodSmooth.tif";
-	filePath = ".\\src\\dbg_fld\\ss_14H_38M_40S_100000us.tif";
+	filePath = ".\\src\\dbg_fld\\black_6252x4176.tif";
 	//filePath = ".\\src\\dbg_fld\\badSmooth.tif";
 	//filePath = ".\\src\\dbg_fld\\ss_14H_01M_23S_1500000us.tif";
 #else

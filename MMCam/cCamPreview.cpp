@@ -2033,27 +2033,16 @@ auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 	// --- Label: use K/M/G for microns (as requested)
 	auto format_um_KMG = [](double um) -> wxString {
 		const double a = std::fabs(um);
-		wxString suff = " [microns]";
+		wxString suff = " [micron";
+		suff += a == 1.0 ? "" : "s";
+		suff += "]";
+
 		if (a >= 1e9)  return wxString::Format(wxT("%.0fG"), um / 1e9) + suff;
 		if (a >= 1e6)  return wxString::Format(wxT("%.0fM"), um / 1e6) + suff;
 		if (a >= 1e3)  return wxString::Format(wxT("%.0fk"), um / 1e3) + suff;
 		// fall back to integer µm for small values
 		return wxString::Format(wxT("%.0f"), um) + suff;
 		};
-
-	// Alternative unit auto-switch (optional). If you prefer always µm with K/M/G,
-	// keep the line above and remove this block.
-	// Uncomment to switch units:
-	/*
-	auto format_with_units = [](double um) -> wxString {
-		const double a = std::fabs(um);
-		if (a >= 1e6)  return wxString::Format(wxT("%.2f m"),    um / 1e6);
-		if (a >= 1e3)  return wxString::Format(wxT("%.2f mm"),   um / 1e3);
-		if (a >= 100)  return wxString::Format(wxT("%.0f µm"),   um);
-		if (a >= 1)    return wxString::Format(wxT("%.1f µm"),   um);
-		return wxString::Format(wxT("%.2f µm"), um);
-	};
-	*/
 
 	// --- Draw the text centered above the bar
 	wxFont font(16, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
