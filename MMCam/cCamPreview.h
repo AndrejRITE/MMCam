@@ -129,6 +129,18 @@ namespace CameraPreviewVariables
 		stream << std::scientific << std::uppercase << doubleValue;
 		return wxString::FromUTF8(stream.str());
 	};
+
+	static auto FormatWithApostropheDelimiter = [](unsigned long long value) -> wxString
+	{
+		wxString formatted = wxString::Format("%llu", value);
+
+		for (int insertPos = static_cast<int>(formatted.Length()) - 3; insertPos > 0; insertPos -= 3)
+		{
+			formatted.insert(static_cast<size_t>(insertPos), "'");
+		}
+
+		return formatted;
+	};
 }
 
 class cCamPreview final : public wxPanel

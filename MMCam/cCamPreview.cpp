@@ -1299,9 +1299,13 @@ void cCamPreview::DrawFPS(wxGraphicsContext* gc)
 	wxString txt = wxString::Format("FPS: %.1f", m_FPSInstant);
 	txt += m_FPSInstant > 0.0 ? wxString::Format(" (avg %.1f)", m_FPSEMA) : wxString("");
 
-	if (m_FPSInstant == 0.0) m_FrameCount = 0;
+	m_FrameCount = m_FPSInstant == 0.0 ? 0 : m_FrameCount;
 
-	txt += m_FPSInstant > 0.0 ? wxString::Format(" | Frames: %llu", m_FrameCount + 1) : wxString("");
+	if (m_FPSInstant > 0.0)
+	{
+		txt += " | Frames: ";
+		txt += CameraPreviewVariables::FormatWithApostropheDelimiter(m_FrameCount + 1);
+	}
 
 	// Font & metrics
 	wxFont font(11, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
