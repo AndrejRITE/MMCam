@@ -28,11 +28,15 @@
 #include <chrono>
 #include <regex>
 #include <algorithm>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
 #include "cStylishComboBox.h"
 #include "cHistogramPanel.h"
+#include "cSpectroscopyHistogramPanel.h"
 #include "cCamPreview.h"
 #include "cSettings.h"
 #include "cGenerateReportDialog.h"
@@ -44,7 +48,7 @@
 #include "src/img/logo.xpm"
 
 #define MAJOR_VERSION 2
-#define MINOR_VERSION 1
+#define MINOR_VERSION 2
 
 #ifdef _DEBUG
 	//#define OPEN
@@ -211,6 +215,14 @@ namespace MainFrameVariables
 		RIGHT_CAM_CROSS_HAIR_SET_POS_TGL_BTN,
 		RIGHT_CAM_ACTUAL_PARAMETERS_PROPERTY_GRID,
 
+		/* Spectroscopy */
+		RIGHT_CAM_SPECTROSCOPY_ENABLE_CHECKBOX,
+		RIGHT_CAM_SPECTROSCOPY_SMALL_EXPOSURE_MS_TXT_CTRL,
+		RIGHT_CAM_SPECTROSCOPY_BATCH_EXPOSURE_SEC_TXT_CTRL,
+		RIGHT_CAM_SPECTROSCOPY_THRESHOLD_TXT_CTRL,
+		RIGHT_CAM_SPECTROSCOPY_NEIGHBOR_RADIUS_TXT_CTRL,
+		RIGHT_CAM_SPECTROSCOPY_RESET_BTN,
+
 		/* Histogram */
 		HISTOGRAM_LEFT_BORDER_TXT_CTRL,
 		HISTOGRAM_RIGHT_BORDER_TXT_CTRL,
@@ -293,6 +305,12 @@ namespace MainFrameVariables
 		int default_binning = 1;
 		int default_exposure_ms = 100;
 
+		bool spectroscopy_enabled{ false };
+		double spectroscopy_small_exposure_ms{ 300.0 };
+		double spectroscopy_batch_exposure_sec{ 60.0 };
+		int spectroscopy_threshold{ 1000 };
+		int spectroscopy_neighbor_radius_px{ 1 };
+
 		int median_blur_ksize = 3;
 		
 		std::string default_motors_name_first_tab{ "Detector" };
@@ -338,6 +356,12 @@ namespace MainFrameVariables
 			default_colormap,
 			default_binning,
 			default_exposure_ms,
+
+			spectroscopy_enabled,
+			spectroscopy_small_exposure_ms,
+			spectroscopy_batch_exposure_sec,
+			spectroscopy_threshold,
+			spectroscopy_neighbor_radius_px,
 
 			median_blur_ksize,
 
@@ -455,6 +479,27 @@ namespace MainFrameVariables
 			crossHairPosYTxtCtrl->Enable(enable);
 		};
 
+	};
+
+	struct SpectroscopyTabControls
+	{
+		std::unique_ptr<wxCheckBox> enableCheckBox{};
+		std::unique_ptr<wxTextCtrl> smallExposureMsTxtCtrl{};
+		std::unique_ptr<wxTextCtrl> batchExposureSecTxtCtrl{};
+		std::unique_ptr<wxTextCtrl> thresholdTxtCtrl{};
+		std::unique_ptr<wxTextCtrl> neighborRadiusTxtCtrl{};
+		std::unique_ptr<wxButton> resetBtn{};
+		std::unique_ptr<wxStaticText> statusText{};
+
+		auto EnableAllControls(const bool enable = true) -> void
+		{
+			if (enableCheckBox) enableCheckBox->Enable(enable);
+			if (smallExposureMsTxtCtrl) smallExposureMsTxtCtrl->Enable(enable);
+			if (batchExposureSecTxtCtrl) batchExposureSecTxtCtrl->Enable(enable);
+			if (thresholdTxtCtrl) thresholdTxtCtrl->Enable(enable);
+			if (neighborRadiusTxtCtrl) neighborRadiusTxtCtrl->Enable(enable);
+			if (resetBtn) resetBtn->Enable(enable);
+		}
 	};
 
 	struct CameraROITabControls
@@ -1067,6 +1112,11 @@ private:
 		wxWindow* parent
 	) -> wxWindow*;
 
+	auto CreateSpectroscopyPage
+	(
+		wxWindow* parent
+	) -> wxWindow*;
+
 	auto CreateGridMeshPage
 	(
 		wxWindow* parent
@@ -1186,6 +1236,15 @@ private:
 
 	void OnExit(wxCloseEvent& evt);
 	void OnExit(wxCommandEvent& evt);
+
+	auto OnSpectroscopyEnableCheckBox(wxCommandEvent& evt) -> void;
+	auto OnSpectroscopyTextCtrl(wxCommandEvent& evt) -> void;
+	auto OnSpectroscopyResetButton(wxCommandEvent& evt) -> void;
+	auto UpdateSpectroscopySettingsFromControls() -> void;
+	auto ResetSpectroscopyHistogram() -> void;
+	auto ApplySpectroscopyProcessing(cv::Mat& frame, const CameraControlVariables::ImageDataTypes dataType) -> void;
+	auto FilterSpectroscopyEvents(const cv::Mat& src, cv::Mat& dst) -> void;
+	auto UpdateSpectroscopyStatus() -> void;
 
 	/* Stepper Control Functions */
 	void OnEnterTextCtrlAbsPos(wxCommandEvent& evt, int index, int buttonID)
@@ -2078,6 +2137,8 @@ private:
 	std::unique_ptr<MainFrameVariables::ToolBar> m_VerticalToolBar{}, m_HorizontalToolBar{};
 	/* Preview Panel */
 	std::unique_ptr<cCamPreview> m_CamPreview{};
+	std::unique_ptr<cSpectroscopyHistogramPanel> m_SpectroscopyHistogramPanel{};
+
 	/* Steppers Control */
 	std::unique_ptr<MainFrameVariables::StepperControl[]> m_Detector = std::make_unique<MainFrameVariables::StepperControl[]>(3);
 	std::unique_ptr<MainFrameVariables::StepperControl[]> m_Optics = std::make_unique<MainFrameVariables::StepperControl[]>(3);
@@ -2090,6 +2151,9 @@ private:
 	wxString m_ActiveCameraIdentifier{};
 	std::shared_ptr<CameraControl> m_CameraControl{};
 	std::unique_ptr<MainFrameVariables::CameraTabControls> m_CameraTabControls{};
+	std::unique_ptr<MainFrameVariables::CameraROITabControls> m_CameraROIToolsControls{};
+	std::unique_ptr<MainFrameVariables::ToolsTabControls> m_ToolsControls{};
+	std::unique_ptr<MainFrameVariables::SpectroscopyTabControls> m_SpectroscopyTabControls{};
 
 	wxSize m_OutputImageSize{};
 
@@ -2159,9 +2223,6 @@ private:
 	wxNotebook* m_CameraControlNotebook{};
 	
 	wxNotebook* m_ToolsControlsNotebook{};
-
-	std::unique_ptr<MainFrameVariables::CameraROITabControls> m_CameraROIToolsControls{};
-	std::unique_ptr<MainFrameVariables::ToolsTabControls> m_ToolsControls{};
 
 	wxNotebook* m_MeasurementNotebook{};
 
@@ -2240,6 +2301,19 @@ private:
 
 	unsigned long long m_LiveViewFrameCount{ 0 };
 	std::string m_LiveViewStartTimeStamp{};
+
+	// Spectroscopy mode keeps only the current filtered frame plus the accumulated histogram.
+	bool m_SpectroscopyEnabled{ false };
+	double m_SpectroscopySmallExposureMs{ 300.0 };
+	double m_SpectroscopyBatchExposureSec{ 60.0 };
+	unsigned short m_SpectroscopyThreshold{ 1000 };
+	int m_SpectroscopyNeighborRadiusPx{ 1 };
+	unsigned long long m_SpectroscopyFrameCount{ 0 };
+	unsigned long long m_SpectroscopyTotalEvents{ 0 };
+	std::chrono::steady_clock::time_point m_SpectroscopyBatchStart{};
+	std::vector<unsigned long long> m_SpectroscopyAccumulatedHistogram{};
+	cv::Mat m_SpectroscopyFilteredFrame;
+	std::mutex m_SpectroscopyMutex;
 
 	wxDECLARE_EVENT_TABLE();
 };

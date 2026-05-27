@@ -122,6 +122,14 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_TEXT(MainFrameVariables::ID::RIGHT_CAM_ROI_HEIGHT_TXT_CTRL, cMain::OnROITxtCtrls)
 	EVT_BUTTON(MainFrameVariables::ID::RIGHT_CAM_ROI_REFRESH_BTN, cMain::OnRefreshROISettingsBtn)
 
+	/* Spectroscopy */
+	EVT_CHECKBOX(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_ENABLE_CHECKBOX, cMain::OnSpectroscopyEnableCheckBox)
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_SMALL_EXPOSURE_MS_TXT_CTRL, cMain::OnSpectroscopyTextCtrl)
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_BATCH_EXPOSURE_SEC_TXT_CTRL, cMain::OnSpectroscopyTextCtrl)
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_THRESHOLD_TXT_CTRL, cMain::OnSpectroscopyTextCtrl)
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_NEIGHBOR_RADIUS_TXT_CTRL, cMain::OnSpectroscopyTextCtrl)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_RESET_BTN, cMain::OnSpectroscopyResetButton)
+
 	/* Postprocessing */
 	// Background Subtraction
 	EVT_CHECKBOX(MainFrameVariables::ID::RIGHT_TOOLS_BACKGROUND_SUBTRACTION_CHECKBOX, cMain::OnBackgroundSubtractionCheckBox)
@@ -988,6 +996,9 @@ void cMain::CreateLeftSide(wxWindow* parent, wxSizer* left_side_sizer)
 		);
 
 	m_CamPreview = std::make_unique<cCamPreview>(std::move(input_args));
+
+	m_SpectroscopyHistogramPanel = std::make_unique<cSpectroscopyHistogramPanel>(parent, left_side_sizer, 1);
+	m_SpectroscopyHistogramPanel->Hide();
 }
 
 void cMain::CreateRightSide(wxWindow* parent, wxSizer* right_side_sizer)
@@ -1979,6 +1990,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 
 	//wxSizer* const cam_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, right_side_panel, "&Camera");
 	m_CameraTabControls = std::make_unique<MainFrameVariables::CameraTabControls>();
+	m_SpectroscopyTabControls = std::make_unique<MainFrameVariables::SpectroscopyTabControls>();
 
 	//wxSizer* const first_row_sizer = new wxBoxSizer(wxHORIZONTAL);
 	auto gridSizer = new wxGridSizer(2); 
@@ -2925,6 +2937,142 @@ auto cMain::CreatePostprocessingPage(wxWindow* parent) -> wxWindow*
 
 		sizerPage->Add(horSizer, 0, wxEXPAND);
 	}
+
+	page->SetSizer(sizerPage);
+	return page;
+}
+
+auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
+{
+	if (!m_SpectroscopyTabControls)
+		m_SpectroscopyTabControls = std::make_unique<MainFrameVariables::SpectroscopyTabControls>();
+
+	wxPanel* page = new wxPanel(parent);
+	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
+
+	wxSize txtCtrlSize = { 90, 22 };
+
+	m_SpectroscopyTabControls->enableCheckBox = std::make_unique<wxCheckBox>
+		(
+			page,
+			MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_ENABLE_CHECKBOX,
+			wxT("Enable spectroscopy mode")
+		);
+
+	m_SpectroscopyTabControls->enableCheckBox->SetValue(m_Config ? m_Config->spectroscopy_enabled : false);
+	sizerPage->Add(m_SpectroscopyTabControls->enableCheckBox.get(), 0, wxEXPAND | wxALL, 5);
+
+	auto gridSizer = new wxFlexGridSizer(2, 5, 5);
+	gridSizer->AddGrowableCol(1, 1);
+
+	auto addDoubleText = [&](const wxString& label, std::unique_ptr<wxTextCtrl>& ctrl, int id, double value, const wxString& tooltip)
+		{
+			wxFloatingPointValidator<double> val(3, nullptr, wxNUM_VAL_ZERO_AS_BLANK);
+			val.SetMin(0.001);
+			val.SetMax(1'000'000.0);
+
+			gridSizer->Add(new wxStaticText(page, wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL);
+
+			ctrl = std::make_unique<wxTextCtrl>
+				(
+					page,
+					id,
+					wxString::Format(wxT("%.3f"), value),
+					wxDefaultPosition,
+					txtCtrlSize,
+					wxTE_CENTRE | wxTE_PROCESS_ENTER,
+					val
+				);
+
+			ctrl->SetToolTip(tooltip);
+			gridSizer->Add(ctrl.get(), 0, wxALIGN_CENTER_VERTICAL);
+		};
+
+	auto addIntText = [&](const wxString& label, std::unique_ptr<wxTextCtrl>& ctrl, int id, int value, int minValue, int maxValue, const wxString& tooltip)
+		{
+			wxIntegerValidator<int> val(nullptr, wxNUM_VAL_ZERO_AS_BLANK);
+			val.SetMin(minValue);
+			val.SetMax(maxValue);
+
+			gridSizer->Add(new wxStaticText(page, wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL);
+
+			ctrl = std::make_unique<wxTextCtrl>
+				(
+					page,
+					id,
+					wxString::Format(wxT("%i"), value),
+					wxDefaultPosition,
+					txtCtrlSize,
+					wxTE_CENTRE | wxTE_PROCESS_ENTER,
+					val
+				);
+
+			ctrl->SetToolTip(tooltip);
+			gridSizer->Add(ctrl.get(), 0, wxALIGN_CENTER_VERTICAL);
+		};
+
+	addDoubleText
+	(
+		wxT("Small exposure [ms]:"),
+		m_SpectroscopyTabControls->smallExposureMsTxtCtrl,
+		MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_SMALL_EXPOSURE_MS_TXT_CTRL,
+		m_Config ? m_Config->spectroscopy_small_exposure_ms : 300.0,
+		wxT("Camera exposure for one short frame. Press Enter to apply.")
+	);
+
+	addDoubleText
+	(
+		wxT("Batch exposure [s]:"),
+		m_SpectroscopyTabControls->batchExposureSecTxtCtrl,
+		MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_BATCH_EXPOSURE_SEC_TXT_CTRL,
+		m_Config ? m_Config->spectroscopy_batch_exposure_sec : 60.0,
+		wxT("Total acquisition time for accumulated spectroscopy histogram. Press Enter to apply.")
+	);
+
+	addIntText
+	(
+		wxT("Event threshold [ADU]:"),
+		m_SpectroscopyTabControls->thresholdTxtCtrl,
+		MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_THRESHOLD_TXT_CTRL,
+		m_Config ? m_Config->spectroscopy_threshold : 1000,
+		0,
+		65535,
+		wxT("Pixels at or below this value are rejected. Press Enter to apply.")
+	);
+
+	addIntText
+	(
+		wxT("Merge radius [px]:"),
+		m_SpectroscopyTabControls->neighborRadiusTxtCtrl,
+		MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_NEIGHBOR_RADIUS_TXT_CTRL,
+		m_Config ? m_Config->spectroscopy_neighbor_radius_px : 1,
+		0,
+		8,
+		wxT("Neighbourhood radius used to suppress split/double events. Press Enter to apply.")
+	);
+
+	sizerPage->Add(gridSizer, 0, wxEXPAND | wxALL, 5);
+
+	m_SpectroscopyTabControls->resetBtn = std::make_unique<wxButton>
+		(
+			page,
+			MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_RESET_BTN,
+			wxT("Reset accumulated histogram")
+		);
+
+	sizerPage->Add(m_SpectroscopyTabControls->resetBtn.get(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+
+	m_SpectroscopyTabControls->statusText = std::make_unique<wxStaticText>
+		(
+			page,
+			wxID_ANY,
+			wxT("Frames: 0, events: 0")
+		);
+
+	sizerPage->Add(m_SpectroscopyTabControls->statusText.get(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+
+	UpdateSpectroscopySettingsFromControls();
+	UpdateSpectroscopyStatus();
 
 	page->SetSizer(sizerPage);
 	return page;
@@ -3878,7 +4026,7 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 	auto size = wxSize(16, 16);
 	wxImageList* imageList = new wxImageList(size.GetWidth(), size.GetHeight(), true);
 
-	int imgIndexCamera{}, imgIndexCameraROI{}, imgIndexCameraParameters{}, imgIndexPostprocessing{};
+	int imgIndexCamera{}, imgIndexCameraROI{}, imgIndexCameraParameters{}, imgIndexPostprocessing{}, imgIndexSpectroscopy{};
 
 	{
 		auto bitmap = wxART_CAMERA;
@@ -3948,6 +4096,23 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 		imgIndexPostprocessing = imageList->Add(bmp);
 	}
 
+	{
+		auto bitmap = wxART_ATTRACTIONS;
+		auto client = wxART_CLIENT_MATERIAL_ROUND;
+		auto color = wxColour(112, 146, 190);
+		auto size = wxSize(16, 16);
+
+		auto bmp = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			size,
+			color
+		);
+
+		imgIndexSpectroscopy = imageList->Add(bmp);
+	}
+
 	m_CameraControlNotebook = new wxNotebook(right_side_panel, MainFrameVariables::ID::RIGHT_CAM_NOTEBOOK);
 
 	m_CameraControlNotebook->AssignImageList(imageList);
@@ -3957,7 +4122,7 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 		CreateCameraPage(m_CameraControlNotebook), 
 		"Camera",
 #ifdef _DEBUG
-		true,
+		false,
 #else
 		true,
 #endif // _DEBUG
@@ -3987,6 +4152,19 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 #endif // _DEBUG
 
 		imgIndexCameraParameters
+	);
+
+	m_CameraControlNotebook->AddPage
+	(
+		CreateSpectroscopyPage(m_CameraControlNotebook), 
+		"Spectroscopy",
+#ifdef _DEBUG
+		true,
+#else
+		false,
+#endif // _DEBUG
+
+		imgIndexSpectroscopy
 	);
 
 	m_CameraControlNotebook->AddPage
@@ -4793,6 +4971,19 @@ auto cMain::OnContinuousExposureTimer(wxTimerEvent& evt) -> void
 			);
 
 		m_ExposureProgressStaticText->SetLabel(progressText);
+
+		if (m_SpectroscopyEnabled && m_CameraTabControls && m_CameraTabControls->startStopLiveCapturingTglBtn)
+		{
+			m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
+
+			wxCommandEvent stopEvt
+			(
+				wxEVT_TOGGLEBUTTON,
+				MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN
+			);
+
+			ProcessEvent(stopEvt);
+		}
 	}
 }
 
@@ -5021,15 +5212,24 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 		cv::min(m_final, 4095, m_final); // saturate to 12-bit max
 	}
 
+	if (m_SpectroscopyEnabled)
+	{
+		ApplySpectroscopyProcessing(m_final, dataType);
+	}
+
 	// histogram
 	const size_t totalPx =
 		static_cast<size_t>(m_final.rows) *
 		static_cast<size_t>(m_final.cols);
 
+	// For normal preview, keep the existing robust min/max suppression.
 	// ~0.002% of pixels, but never below 5.
 	// Example: 1 MP -> 20 counts; 16 MP -> 320 counts.
+	// For spectroscopy, the displayed image is already filtered; use the exact displayed-image range.
 	const double frac = 2e-5;
-	const unsigned int minimumCount = std::max(5u, static_cast<unsigned int>(totalPx * frac));
+	const unsigned int minimumCount = m_SpectroscopyEnabled
+		? 1u
+		: std::max(5u, static_cast<unsigned int>(totalPx * frac));
 
 	unsigned short minValue{}, maxValue{};
 	const size_t histSize = (dataType == CameraControlVariables::ImageDataTypes::RAW_12BIT) ? 4096 : 65536;
@@ -5851,6 +6051,281 @@ void cMain::OnExit(wxCommandEvent& evt)
 {
 	wxCloseEvent artificialExit(wxEVT_CLOSE_WINDOW);
 	ProcessEvent(artificialExit);
+}
+
+auto cMain::OnSpectroscopyEnableCheckBox(wxCommandEvent& evt) -> void
+{
+	UpdateSpectroscopySettingsFromControls();
+	ResetSpectroscopyHistogram();
+
+	if (m_SpectroscopyHistogramPanel)
+	{
+		m_SpectroscopyEnabled
+			? m_SpectroscopyHistogramPanel->Show()
+			: m_SpectroscopyHistogramPanel->Hide();
+
+		if (m_LeftPanel)
+			m_LeftPanel->Layout();
+	}
+
+	if (m_Config)
+	{
+		m_Config->spectroscopy_enabled = m_SpectroscopyEnabled;
+		RewriteInitializationFile();
+	}
+}
+
+auto cMain::OnSpectroscopyTextCtrl(wxCommandEvent& evt) -> void
+{
+	UpdateSpectroscopySettingsFromControls();
+	ResetSpectroscopyHistogram();
+
+	if (m_Config)
+	{
+		m_Config->spectroscopy_enabled = m_SpectroscopyEnabled;
+		m_Config->spectroscopy_small_exposure_ms = m_SpectroscopySmallExposureMs;
+		m_Config->spectroscopy_batch_exposure_sec = m_SpectroscopyBatchExposureSec;
+		m_Config->spectroscopy_threshold = static_cast<int>(m_SpectroscopyThreshold);
+		m_Config->spectroscopy_neighbor_radius_px = m_SpectroscopyNeighborRadiusPx;
+
+		RewriteInitializationFile();
+	}
+}
+
+auto cMain::OnSpectroscopyResetButton(wxCommandEvent& evt) -> void
+{
+	ResetSpectroscopyHistogram();
+}
+
+auto cMain::UpdateSpectroscopySettingsFromControls() -> void
+{
+	if (!m_SpectroscopyTabControls)
+		return;
+
+	m_SpectroscopyEnabled = m_SpectroscopyTabControls->enableCheckBox
+		? m_SpectroscopyTabControls->enableCheckBox->GetValue()
+		: false;
+
+	double smallExposureMs = m_SpectroscopySmallExposureMs;
+
+	if (m_SpectroscopyTabControls->smallExposureMsTxtCtrl)
+		m_SpectroscopyTabControls->smallExposureMsTxtCtrl->GetValue().ToDouble(&smallExposureMs);
+
+	m_SpectroscopySmallExposureMs = std::clamp(smallExposureMs, 0.001, 1'000'000.0);
+
+	double batchExposureSec = m_SpectroscopyBatchExposureSec;
+
+	if (m_SpectroscopyTabControls->batchExposureSecTxtCtrl)
+		m_SpectroscopyTabControls->batchExposureSecTxtCtrl->GetValue().ToDouble(&batchExposureSec);
+
+	m_SpectroscopyBatchExposureSec = std::clamp(batchExposureSec, 0.001, 1'000'000.0);
+
+	int threshold = static_cast<int>(m_SpectroscopyThreshold);
+
+	if (m_SpectroscopyTabControls->thresholdTxtCtrl)
+		m_SpectroscopyTabControls->thresholdTxtCtrl->GetValue().ToInt(&threshold);
+
+	m_SpectroscopyThreshold = static_cast<unsigned short>(std::clamp(threshold, 0, 65535));
+
+	int radius = m_SpectroscopyNeighborRadiusPx;
+
+	if (m_SpectroscopyTabControls->neighborRadiusTxtCtrl)
+		m_SpectroscopyTabControls->neighborRadiusTxtCtrl->GetValue().ToInt(&radius);
+
+	m_SpectroscopyNeighborRadiusPx = std::clamp(radius, 0, 8);
+}
+
+auto cMain::ResetSpectroscopyHistogram() -> void
+{
+	std::lock_guard<std::mutex> lock(m_SpectroscopyMutex);
+
+	m_SpectroscopyAccumulatedHistogram.clear();
+	m_SpectroscopyFilteredFrame.release();
+
+	m_SpectroscopyFrameCount = 0;
+	m_SpectroscopyTotalEvents = 0;
+	m_SpectroscopyBatchStart = std::chrono::steady_clock::now();
+
+	if (m_SpectroscopyHistogramPanel)
+		m_SpectroscopyHistogramPanel->ResetHistogram();
+
+	UpdateSpectroscopyStatus();
+}
+
+auto cMain::ApplySpectroscopyProcessing(cv::Mat& frame, const CameraControlVariables::ImageDataTypes dataType) -> void
+{
+	if (frame.empty() || frame.type() != CV_16UC1)
+		return;
+
+	std::lock_guard<std::mutex> lock(m_SpectroscopyMutex);
+
+	FilterSpectroscopyEvents(frame, m_SpectroscopyFilteredFrame);
+
+	if (m_SpectroscopyFilteredFrame.empty())
+		return;
+
+	const size_t histSize = (dataType == CameraControlVariables::ImageDataTypes::RAW_12BIT) ? 4096 : 65536;
+
+	if (m_SpectroscopyAccumulatedHistogram.size() != histSize)
+		m_SpectroscopyAccumulatedHistogram.assign(histSize, 0ull);
+
+	auto currentHistogram = std::make_unique<unsigned long long[]>(histSize);
+
+	unsigned short minValue{}, maxValue{};
+
+	if (!CalculateHistogram
+	(
+		reinterpret_cast<unsigned short*>(m_SpectroscopyFilteredFrame.data),
+		m_SpectroscopyFilteredFrame.cols,
+		m_SpectroscopyFilteredFrame.rows,
+		1,
+		currentHistogram.get(),
+		&minValue,
+		&maxValue,
+		dataType
+	))
+	{
+		return;
+	}
+
+	unsigned long long frameEvents = 0;
+
+	// Bin 0 is the background after filtering. Do not accumulate it as an event.
+	for (size_t i = 1; i < histSize; ++i)
+	{
+		m_SpectroscopyAccumulatedHistogram[i] += currentHistogram[i];
+		frameEvents += currentHistogram[i];
+	}
+
+	++m_SpectroscopyFrameCount;
+	m_SpectroscopyTotalEvents += frameEvents;
+
+	if (m_SpectroscopyHistogramPanel)
+	{
+		m_SpectroscopyHistogramPanel->SetHistogram
+		(
+			m_SpectroscopyAccumulatedHistogram.data(),
+			m_SpectroscopyAccumulatedHistogram.size(),
+			m_SpectroscopyTotalEvents
+		);
+	}
+
+	// Display only the current filtered image.
+	// Previous images are not kept.
+	frame = m_SpectroscopyFilteredFrame;
+
+	UpdateSpectroscopyStatus();
+}
+
+auto cMain::FilterSpectroscopyEvents(const cv::Mat& src, cv::Mat& dst) -> void
+{
+	if (src.empty() || src.type() != CV_16UC1)
+		return;
+
+	dst = cv::Mat::zeros(src.rows, src.cols, CV_16UC1);
+
+	const int rows = src.rows;
+	const int cols = src.cols;
+	const int radius = m_SpectroscopyNeighborRadiusPx;
+	const unsigned short threshold = m_SpectroscopyThreshold;
+
+	const unsigned threadCount = std::max(1u, std::thread::hardware_concurrency());
+	const int chunk = (rows + static_cast<int>(threadCount) - 1) / static_cast<int>(threadCount);
+
+	auto worker = [&](const int yBegin, const int yEnd)
+		{
+			for (int y = yBegin; y < yEnd; ++y)
+			{
+				const auto* srcRow = src.ptr<unsigned short>(y);
+				auto* dstRow = dst.ptr<unsigned short>(y);
+
+				for (int x = 0; x < cols; ++x)
+				{
+					const unsigned short v = srcRow[x];
+
+					if (v <= threshold)
+						continue;
+
+					bool isLocalMaximum = true;
+
+					if (radius > 0)
+					{
+						const int y0 = std::max(0, y - radius);
+						const int y1 = std::min(rows - 1, y + radius);
+						const int x0 = std::max(0, x - radius);
+						const int x1 = std::min(cols - 1, x + radius);
+
+						for (int yy = y0; yy <= y1 && isLocalMaximum; ++yy)
+						{
+							const auto* nRow = src.ptr<unsigned short>(yy);
+
+							for (int xx = x0; xx <= x1; ++xx)
+							{
+								if (yy == y && xx == x)
+									continue;
+
+								// Keep only local maxima.
+								// Tie-breaker keeps one deterministic pixel from a flat split event.
+								if (nRow[xx] > v || (nRow[xx] == v && (yy < y || (yy == y && xx < x))))
+								{
+									isLocalMaximum = false;
+									break;
+								}
+							}
+						}
+					}
+
+					if (isLocalMaximum)
+						dstRow[x] = v;
+				}
+			}
+		};
+
+	std::vector<std::thread> threads;
+	threads.reserve(threadCount);
+
+	for (unsigned t = 0; t < threadCount; ++t)
+	{
+		const int yBegin = static_cast<int>(t) * chunk;
+
+		if (yBegin >= rows)
+			break;
+
+		const int yEnd = std::min(rows, yBegin + chunk);
+
+		threads.emplace_back(worker, yBegin, yEnd);
+	}
+
+	for (auto& thread : threads)
+		thread.join();
+}
+
+auto cMain::UpdateSpectroscopyStatus() -> void
+{
+	if (!m_SpectroscopyTabControls || !m_SpectroscopyTabControls->statusText)
+		return;
+
+	double elapsedSec = 0.0;
+
+	if (m_SpectroscopyFrameCount > 0)
+	{
+		elapsedSec = std::chrono::duration<double>
+			(
+				std::chrono::steady_clock::now() - m_SpectroscopyBatchStart
+			).count();
+	}
+
+	m_SpectroscopyTabControls->statusText->SetLabel
+	(
+		wxString::Format
+		(
+			wxT("Frames: %llu, events: %llu, elapsed: %.1f / %.1f s"),
+			m_SpectroscopyFrameCount,
+			m_SpectroscopyTotalEvents,
+			elapsedSec,
+			m_SpectroscopyBatchExposureSec
+		)
+	);
 }
 
 void cMain::EnableUsedAndDisableNonUsedMotors()
@@ -6818,12 +7293,26 @@ void cMain::StartLiveCapturing()
 	m_LiveDataType = m_CameraControl ? m_CameraControl->GetCameraDataType()
 		: CameraControlVariables::RAW_12BIT;
 
-	wxString exposure_time_str = m_CameraTabControls->camExposure->GetValue().IsEmpty() 
-		? wxString("0") 
+	UpdateSpectroscopySettingsFromControls();
+
+	wxString exposure_time_str = m_CameraTabControls->camExposure->GetValue().IsEmpty()
+		? wxString("0")
 		: m_CameraTabControls->camExposure->GetValue();
+
 	unsigned long exposure_time = abs(wxAtoi(exposure_time_str)) * 1000; // Because user input is in [ms], we need to recalculate the value to [us]
 
-	StartContinuousExposureUI(exposure_time / 1000);
+	if (m_SpectroscopyEnabled)
+	{
+		exposure_time = static_cast<unsigned long>(std::max(1.0, m_SpectroscopySmallExposureMs * 1000.0));
+		ResetSpectroscopyHistogram();
+	}
+
+	StartContinuousExposureUI
+	(
+		m_SpectroscopyEnabled
+		? static_cast<int>(std::max(1.0, m_SpectroscopyBatchExposureSec * 1000.0))
+		: static_cast<int>(exposure_time / 1000)
+	);
 
 	auto currThreadTimeStamp = timePointToWxString();
 	m_StartedThreads.push_back(std::make_pair(currThreadTimeStamp, true));
@@ -7001,7 +7490,10 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 
 	if (curr_code == 2)
 	{
-		RestartContinuousExposureUI();
+		// In spectroscopy mode the progress UI represents the whole batch, not one short frame.
+		if (!m_SpectroscopyEnabled)
+			RestartContinuousExposureUI();
+
 		return;
 	}
 

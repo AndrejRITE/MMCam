@@ -171,6 +171,7 @@
     <ClInclude Include="cMain.h" />
     <ClInclude Include="cPreviewTools.h" />
     <ClInclude Include="cSettings.h" />
+    <ClInclude Include="cSpectroscopyHistogramPanel.h" />
     <ClInclude Include="cStylishComboBox.h" />
     <ClInclude Include="Logging.h" />
     <ClInclude Include="MoravianInstrumentsControl.h" />
@@ -207,6 +208,7 @@
     <ClCompile Include="cMain.cpp" />
     <ClCompile Include="cPreviewTools.cpp" />
     <ClCompile Include="cSettings.cpp" />
+    <ClCompile Include="cSpectroscopyHistogramPanel.cpp" />
     <ClCompile Include="cStylishComboBox.cpp" />
     <ClCompile Include="MoravianInstrumentsControl.cpp" />
     <ClCompile Include="StandaMotor.cpp" />
