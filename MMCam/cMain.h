@@ -53,7 +53,7 @@
 #ifdef _DEBUG
 	//#define OPEN
 	//#define ANNULUS
-	#define ROI_CHECK
+	//#define ROI_CHECK
 	//#define BACKGROUND_SUBTRACTION
 #endif // _DEBUG
 

@@ -982,10 +982,13 @@ void cMain::CreateLeftAndRightSide()
 
 void cMain::CreateLeftSide(wxWindow* parent, wxSizer* left_side_sizer)
 {
+	auto* vertSizer = new wxBoxSizer(wxVERTICAL);
+	left_side_sizer->Add(vertSizer, 1, wxEXPAND);
+
 	auto input_args = std::make_unique<CameraPreviewVariables::InputPreviewPanelArgs>
 		(
 			parent,
-			left_side_sizer,
+			vertSizer,
 			m_CameraTabControls->crossHairPosXTxtCtrl.get(),
 			m_CameraTabControls->crossHairPosYTxtCtrl.get(),
 			m_ToolsControls->annulusCenterXTxtCtrl.get(),
@@ -997,7 +1000,7 @@ void cMain::CreateLeftSide(wxWindow* parent, wxSizer* left_side_sizer)
 
 	m_CamPreview = std::make_unique<cCamPreview>(std::move(input_args));
 
-	m_SpectroscopyHistogramPanel = std::make_unique<cSpectroscopyHistogramPanel>(parent, left_side_sizer, 1);
+	m_SpectroscopyHistogramPanel = std::make_unique<cSpectroscopyHistogramPanel>(parent, vertSizer, 1);
 	m_SpectroscopyHistogramPanel->Hide();
 }
 
@@ -2960,7 +2963,7 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 		);
 
 	m_SpectroscopyTabControls->enableCheckBox->SetValue(m_Config ? m_Config->spectroscopy_enabled : false);
-	sizerPage->Add(m_SpectroscopyTabControls->enableCheckBox.get(), 0, wxEXPAND | wxALL, 5);
+	sizerPage->Add(m_SpectroscopyTabControls->enableCheckBox.get(), 0, wxCENTER | wxALL, 5);
 
 	auto gridSizer = new wxFlexGridSizer(2, 5, 5);
 	gridSizer->AddGrowableCol(1, 1);
@@ -3051,7 +3054,7 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 		wxT("Neighbourhood radius used to suppress split/double events. Press Enter to apply.")
 	);
 
-	sizerPage->Add(gridSizer, 0, wxEXPAND | wxALL, 5);
+	sizerPage->Add(gridSizer, 0, wxCENTER | wxALL, 5);
 
 	m_SpectroscopyTabControls->resetBtn = std::make_unique<wxButton>
 		(
@@ -3060,7 +3063,7 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 			wxT("Reset accumulated histogram")
 		);
 
-	sizerPage->Add(m_SpectroscopyTabControls->resetBtn.get(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+	sizerPage->Add(m_SpectroscopyTabControls->resetBtn.get(), 0, wxCENTER | wxLEFT | wxRIGHT | wxBOTTOM, 5);
 
 	m_SpectroscopyTabControls->statusText = std::make_unique<wxStaticText>
 		(
