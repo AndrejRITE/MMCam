@@ -1240,6 +1240,10 @@ private:
 	auto OnSpectroscopyEnableCheckBox(wxCommandEvent& evt) -> void;
 	auto OnSpectroscopyTextCtrl(wxCommandEvent& evt) -> void;
 	auto OnSpectroscopyResetButton(wxCommandEvent& evt) -> void;
+
+	auto SyncCameraExposureToSpectroscopyBatchExposure() -> void;
+	auto SyncSpectroscopyBatchExposureToCameraExposure() -> void;
+
 	auto UpdateSpectroscopySettingsFromControls() -> void;
 	auto ResetSpectroscopyHistogram() -> void;
 	auto ApplySpectroscopyProcessing(cv::Mat& frame, const CameraControlVariables::ImageDataTypes dataType) -> void;
@@ -2306,6 +2310,7 @@ private:
 
 	// Spectroscopy mode keeps only the current filtered frame plus the accumulated histogram.
 	bool m_SpectroscopyEnabled{ false };
+	bool m_IsSynchronizingExposureControls{ false };
 	double m_SpectroscopySmallExposureMs{ 300.0 };
 	double m_SpectroscopyBatchExposureSec{ 60.0 };
 	unsigned short m_SpectroscopyThreshold{ 1000 };

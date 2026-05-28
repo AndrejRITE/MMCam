@@ -3072,7 +3072,7 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 		MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_BATCH_EXPOSURE_SEC_TXT_CTRL,
 		m_Config ? m_Config->spectroscopy_batch_exposure_sec : 60.0,
 		wxT("Total acquisition time for accumulated spectroscopy histogram. Press Enter to apply."),
-		1
+		3
 	);
 
 	addIntText
@@ -6112,6 +6112,8 @@ void cMain::OnExit(wxCommandEvent& evt)
 
 auto cMain::OnSpectroscopyEnableCheckBox(wxCommandEvent& evt) -> void
 {
+	SyncCameraExposureToSpectroscopyBatchExposure();
+
 	UpdateSpectroscopySettingsFromControls();
 	ResetSpectroscopyHistogram();
 
@@ -6158,6 +6160,9 @@ auto cMain::OnSpectroscopyEnableCheckBox(wxCommandEvent& evt) -> void
 
 auto cMain::OnSpectroscopyTextCtrl(wxCommandEvent& evt) -> void
 {
+	if (evt.GetId() == MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_BATCH_EXPOSURE_SEC_TXT_CTRL)
+		SyncSpectroscopyBatchExposureToCameraExposure();
+
 	UpdateSpectroscopySettingsFromControls();
 	ResetSpectroscopyHistogram();
 
@@ -6169,6 +6174,13 @@ auto cMain::OnSpectroscopyTextCtrl(wxCommandEvent& evt) -> void
 		m_Config->spectroscopy_threshold = static_cast<int>(m_SpectroscopyThreshold);
 		m_Config->spectroscopy_neighbor_radius_px = m_SpectroscopyNeighborRadiusPx;
 
+		int exposureMs{ 1 };
+
+		if (m_CameraTabControls && m_CameraTabControls->camExposure)
+			m_CameraTabControls->camExposure->GetValue().ToInt(&exposureMs);
+
+		m_Config->default_exposure_ms = std::clamp(exposureMs, 1, 1'000'000);
+
 		RewriteInitializationFile();
 	}
 }
@@ -6176,6 +6188,78 @@ auto cMain::OnSpectroscopyTextCtrl(wxCommandEvent& evt) -> void
 auto cMain::OnSpectroscopyResetButton(wxCommandEvent& evt) -> void
 {
 	ResetSpectroscopyHistogram();
+}
+
+auto cMain::SyncCameraExposureToSpectroscopyBatchExposure() -> void
+{
+	if (m_IsSynchronizingExposureControls)
+		return;
+
+	if (!m_CameraTabControls ||
+		!m_CameraTabControls->camExposure ||
+		!m_SpectroscopyTabControls ||
+		!m_SpectroscopyTabControls->batchExposureSecTxtCtrl)
+	{
+		return;
+	}
+
+	long exposureMs{ 1 };
+
+	if (!m_CameraTabControls->camExposure->GetValue().ToLong(&exposureMs))
+		return;
+
+	exposureMs = std::clamp<long>(std::abs(exposureMs), 1, 1'000'000);
+
+	const double batchExposureSec = static_cast<double>(exposureMs) / 1000.0;
+	const wxString batchExposureStr = wxString::Format(wxT("%.3f"), batchExposureSec);
+
+	m_IsSynchronizingExposureControls = true;
+
+	if (m_SpectroscopyTabControls->batchExposureSecTxtCtrl->GetValue() != batchExposureStr)
+		m_SpectroscopyTabControls->batchExposureSecTxtCtrl->ChangeValue(batchExposureStr);
+
+	m_IsSynchronizingExposureControls = false;
+
+	m_SpectroscopyBatchExposureSec = std::clamp(batchExposureSec, 0.001, 1'000'000.0);
+}
+
+auto cMain::SyncSpectroscopyBatchExposureToCameraExposure() -> void
+{
+	if (m_IsSynchronizingExposureControls)
+		return;
+
+	if (!m_CameraTabControls ||
+		!m_CameraTabControls->camExposure ||
+		!m_SpectroscopyTabControls ||
+		!m_SpectroscopyTabControls->batchExposureSecTxtCtrl)
+	{
+		return;
+	}
+
+	double batchExposureSec{ 0.001 };
+
+	if (!m_SpectroscopyTabControls->batchExposureSecTxtCtrl->GetValue().ToDouble(&batchExposureSec))
+		return;
+
+	batchExposureSec = std::clamp(batchExposureSec, 0.001, 1'000'000.0);
+
+	const long exposureMs = std::clamp<long>
+		(
+			static_cast<long>(std::llround(batchExposureSec * 1000.0)),
+			1,
+			1'000'000
+		);
+
+	const wxString exposureMsStr = wxString::Format(wxT("%ld"), exposureMs);
+
+	m_IsSynchronizingExposureControls = true;
+
+	if (m_CameraTabControls->camExposure->GetValue() != exposureMsStr)
+		m_CameraTabControls->camExposure->ChangeValue(exposureMsStr);
+
+	m_IsSynchronizingExposureControls = false;
+
+	m_SpectroscopyBatchExposureSec = batchExposureSec;
 }
 
 auto cMain::UpdateSpectroscopySettingsFromControls() -> void
@@ -8636,22 +8720,48 @@ void cMain::UpdateAllAxisGlobalPositions()
 
 void cMain::ExposureValueChanged(wxCommandEvent& evt)
 {
-	int exposure_ms{ 1 };
-	m_CameraTabControls->camExposure->GetValue().ToInt(&exposure_ms);
+	{
+		if (m_IsSynchronizingExposureControls)
+			return;
 
-	m_Config->default_exposure_ms = exposure_ms;
-	RewriteInitializationFile();
+		SyncCameraExposureToSpectroscopyBatchExposure();
 
-	if (!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue()) return;
+		int exposure_ms{ 1 };
 
-	// Stop acquisition
-	m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
-	wxCommandEvent artStartStopLiveCapturingPressed(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
-	ProcessEvent(artStartStopLiveCapturingPressed);
+		if (m_CameraTabControls && m_CameraTabControls->camExposure)
+			m_CameraTabControls->camExposure->GetValue().ToInt(&exposure_ms);
 
-	// Start acquisition
-	m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
-	ProcessEvent(artStartStopLiveCapturingPressed);
+		exposure_ms = std::clamp(exposure_ms, 1, 1'000'000);
+
+		if (m_Config)
+		{
+			m_Config->default_exposure_ms = exposure_ms;
+			m_Config->spectroscopy_batch_exposure_sec = static_cast<double>(exposure_ms) / 1000.0;
+			RewriteInitializationFile();
+		}
+
+		if (!m_CameraTabControls ||
+			!m_CameraTabControls->startStopLiveCapturingTglBtn ||
+			!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
+		{
+			return;
+		}
+
+		// Stop acquisition
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
+
+		wxCommandEvent artStartStopLiveCapturingPressed
+		(
+			wxEVT_TOGGLEBUTTON,
+			MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN
+		);
+
+		ProcessEvent(artStartStopLiveCapturingPressed);
+
+		// Start acquisition
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(true);
+		ProcessEvent(artStartStopLiveCapturingPressed);
+	}
 }
 
 auto cMain::OnSensorTemperatureChanged(wxCommandEvent& evt) -> void
