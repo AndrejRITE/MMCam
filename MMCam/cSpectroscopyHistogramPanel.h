@@ -36,8 +36,12 @@ private:
     void Render(wxBufferedPaintDC& dc);
     void DrawHistogram(wxGraphicsContext* gc);
     void DrawAxes(wxGraphicsContext* gc);
+    void DrawHorizontalScale(wxGraphicsContext* gc);
     void DrawCursorOverlay(wxGraphicsContext* gc);
     void ResetViewToFull();
+    void UpdateViewPeak();
+
+    wxRect GetPlotRect() const;
 
     unsigned int CanvasXToBin(int x) const;
     int BinToCanvasX(unsigned int bin) const;
