@@ -14,8 +14,10 @@ cSpectroscopyHistogramPanel::cSpectroscopyHistogramPanel(wxWindow* parent, wxSiz
     : wxPanel(parent)
 {
     SetDoubleBuffered(true);
-    SetMinSize(wxSize(200, 140));
-    parentSizer->Add(this, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, borderSize);
+    SetMinSize(wxSize(200, 200));
+
+    if (parentSizer)
+        parentSizer->Add(this, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, borderSize);
 }
 
 void cSpectroscopyHistogramPanel::SetHistogram(const unsigned long long* histogram, size_t histogramSize, unsigned long long totalEvents)
@@ -221,7 +223,7 @@ void cSpectroscopyHistogramPanel::DrawAxes(wxGraphicsContext* gc)
 
     const wxString title = wxString::Format
     (
-        wxT("Accumulated spectroscopy histogram  |  Events: %s  |  Peak: %s%s"),
+        wxT("Accumulated spectroscopy histogram\nEvents: %s  |  Peak: %s%s"),
         FormatCount(m_TotalEvents),
         FormatCount(m_ViewPeak),
         m_LogScale ? wxT("  |  log") : wxT("")
@@ -232,7 +234,10 @@ void cSpectroscopyHistogramPanel::DrawAxes(wxGraphicsContext* gc)
 
     gc->DrawText(left, 4, H - 16);
     gc->DrawText(right, W - tw - 4, H - 16);
-    gc->DrawText(title, 6, 4);
+
+    gc->GetTextExtent(title, &tw, &th);
+
+    gc->DrawText(title, W - tw - 6, 4);
 }
 
 void cSpectroscopyHistogramPanel::DrawCursorOverlay(wxGraphicsContext* gc)

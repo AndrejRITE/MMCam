@@ -2213,8 +2213,10 @@ private:
 	/* wxPanels */
 	wxSplitterWindow* m_MainSplitter{};   // outer: top (Left+Right) vs bottom
 	wxSplitterWindow* m_TopSplitter{};    // inner: Left vs Right
+	wxSplitterWindow* m_LeftPreviewSplitter{};   // camera preview vs spectroscopy histogram
 
 	wxPanel* m_LeftPanel{};      // container for left side
+	wxPanel* m_CamPreviewPane{};         // top pane inside m_LeftPreviewSplitter
 	wxScrolledWindow* m_RightSidePanel{}; // you already have this member - keep it
 	wxPanel* m_BottomPanel{};    // container for bottom side
 

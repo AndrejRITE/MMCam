@@ -985,10 +985,28 @@ void cMain::CreateLeftSide(wxWindow* parent, wxSizer* left_side_sizer)
 	auto* vertSizer = new wxBoxSizer(wxVERTICAL);
 	left_side_sizer->Add(vertSizer, 1, wxEXPAND);
 
+	m_LeftPreviewSplitter = new wxSplitterWindow
+	(
+		parent,
+		wxID_ANY,
+		wxDefaultPosition,
+		wxDefaultSize,
+		wxSP_LIVE_UPDATE | wxSP_3D | wxSP_BORDER
+	);
+
+	m_LeftPreviewSplitter->SetMinimumPaneSize(FromDIP(120));
+	m_LeftPreviewSplitter->SetSashGravity(1.0);
+
+	vertSizer->Add(m_LeftPreviewSplitter, 1, wxEXPAND);
+
+	m_CamPreviewPane = new wxPanel(m_LeftPreviewSplitter);
+	auto* camPreviewSizer = new wxBoxSizer(wxVERTICAL);
+	m_CamPreviewPane->SetSizer(camPreviewSizer);
+
 	auto input_args = std::make_unique<CameraPreviewVariables::InputPreviewPanelArgs>
 		(
-			parent,
-			vertSizer,
+			m_CamPreviewPane,
+			camPreviewSizer,
 			m_CameraTabControls->crossHairPosXTxtCtrl.get(),
 			m_CameraTabControls->crossHairPosYTxtCtrl.get(),
 			m_ToolsControls->annulusCenterXTxtCtrl.get(),
@@ -1000,8 +1018,30 @@ void cMain::CreateLeftSide(wxWindow* parent, wxSizer* left_side_sizer)
 
 	m_CamPreview = std::make_unique<cCamPreview>(std::move(input_args));
 
-	m_SpectroscopyHistogramPanel = std::make_unique<cSpectroscopyHistogramPanel>(parent, vertSizer, 1);
+	m_SpectroscopyHistogramPanel = std::make_unique<cSpectroscopyHistogramPanel>
+		(
+			m_LeftPreviewSplitter,
+			nullptr,
+			1
+		);
+
 	m_SpectroscopyHistogramPanel->Hide();
+
+	if (m_SpectroscopyEnabled)
+	{
+		m_SpectroscopyHistogramPanel->Show();
+
+		m_LeftPreviewSplitter->SplitHorizontally
+		(
+			m_CamPreviewPane,
+			m_SpectroscopyHistogramPanel.get(),
+			FromDIP(650)
+		);
+	}
+	else
+	{
+		m_LeftPreviewSplitter->Initialize(m_CamPreviewPane);
+	}
 }
 
 void cMain::CreateRightSide(wxWindow* parent, wxSizer* right_side_sizer)
@@ -2968,19 +3008,20 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 	auto gridSizer = new wxFlexGridSizer(2, 5, 5);
 	gridSizer->AddGrowableCol(1, 1);
 
-	auto addDoubleText = [&](const wxString& label, std::unique_ptr<wxTextCtrl>& ctrl, int id, double value, const wxString& tooltip)
+	auto addDoubleText = [&](const wxString& label, std::unique_ptr<wxTextCtrl>& ctrl, int id, double value, const wxString& tooltip, const int precision)
 		{
-			wxFloatingPointValidator<double> val(3, nullptr, wxNUM_VAL_ZERO_AS_BLANK);
-			val.SetMin(0.001);
+			wxFloatingPointValidator<double> val(precision, nullptr, wxNUM_VAL_ZERO_AS_BLANK);
+			val.SetMin(1.0 / std::pow(10, precision));
 			val.SetMax(1'000'000.0);
 
 			gridSizer->Add(new wxStaticText(page, wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL);
 
+			auto strFormat = wxString::Format(wxT("%.*f"), precision, value);
 			ctrl = std::make_unique<wxTextCtrl>
 				(
 					page,
 					id,
-					wxString::Format(wxT("%.3f"), value),
+					strFormat,
 					wxDefaultPosition,
 					txtCtrlSize,
 					wxTE_CENTRE | wxTE_PROCESS_ENTER,
@@ -3020,7 +3061,8 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 		m_SpectroscopyTabControls->smallExposureMsTxtCtrl,
 		MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_SMALL_EXPOSURE_MS_TXT_CTRL,
 		m_Config ? m_Config->spectroscopy_small_exposure_ms : 300.0,
-		wxT("Camera exposure for one short frame. Press Enter to apply.")
+		wxT("Camera exposure for one short frame. Press Enter to apply."),
+		1
 	);
 
 	addDoubleText
@@ -3029,7 +3071,8 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 		m_SpectroscopyTabControls->batchExposureSecTxtCtrl,
 		MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_BATCH_EXPOSURE_SEC_TXT_CTRL,
 		m_Config ? m_Config->spectroscopy_batch_exposure_sec : 60.0,
-		wxT("Total acquisition time for accumulated spectroscopy histogram. Press Enter to apply.")
+		wxT("Total acquisition time for accumulated spectroscopy histogram. Press Enter to apply."),
+		1
 	);
 
 	addIntText
@@ -4393,6 +4436,8 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 	m_MeasurementNotebook->SetBackgroundColour(bckgColour);
 
 	m_HistogramPanel->SetBackgroundColor(bckgColour);
+
+	m_SpectroscopyHistogramPanel->SetBackgroundColor(bckgColour);
 	
 	Refresh();
 }
@@ -5675,6 +5720,15 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 		auto step_str = CameraPreviewVariables::CreateStringWithPrecision(m_Config->circle_mesh_step_px, 0);
 		m_ToolsControls->circleMeshStepTxtCtrl->SetValue(step_str);
 	}
+
+	// Spectroscopy Histogram
+	{
+		auto checked = m_Config->spectroscopy_enabled;
+		m_SpectroscopyTabControls->enableCheckBox->SetValue(checked);
+
+		wxCommandEvent evt(wxEVT_CHECKBOX, MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_ENABLE_CHECKBOX);
+		ProcessEvent(evt);
+	}
 }
 
 auto cMain::UpdateCameraROIParameters() -> void
@@ -6061,11 +6115,35 @@ auto cMain::OnSpectroscopyEnableCheckBox(wxCommandEvent& evt) -> void
 	UpdateSpectroscopySettingsFromControls();
 	ResetSpectroscopyHistogram();
 
-	if (m_SpectroscopyHistogramPanel)
+	if (m_LeftPreviewSplitter && m_CamPreviewPane && m_SpectroscopyHistogramPanel)
 	{
-		m_SpectroscopyEnabled
-			? m_SpectroscopyHistogramPanel->Show()
-			: m_SpectroscopyHistogramPanel->Hide();
+		if (m_SpectroscopyEnabled)
+		{
+			m_SpectroscopyHistogramPanel->Show();
+
+			if (!m_LeftPreviewSplitter->IsSplit())
+			{
+				const int splitterHeight = m_LeftPreviewSplitter->GetClientSize().GetHeight();
+				const int histogramHeight = FromDIP(220);
+				const int sashPosition = std::max(FromDIP(120), splitterHeight - histogramHeight);
+
+				m_LeftPreviewSplitter->SplitHorizontally
+				(
+					m_CamPreviewPane,
+					m_SpectroscopyHistogramPanel.get(),
+					sashPosition
+				);
+			}
+		}
+		else
+		{
+			if (m_LeftPreviewSplitter->IsSplit())
+				m_LeftPreviewSplitter->Unsplit(m_SpectroscopyHistogramPanel.get());
+
+			m_SpectroscopyHistogramPanel->Hide();
+		}
+
+		m_LeftPreviewSplitter->Layout();
 
 		if (m_LeftPanel)
 			m_LeftPanel->Layout();
