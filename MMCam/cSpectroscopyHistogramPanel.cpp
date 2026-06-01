@@ -1,4 +1,6 @@
 #include "cSpectroscopyHistogramPanel.h"
+#include <limits>
+#include <utility>
 
 namespace
 {
@@ -31,12 +33,104 @@ namespace
 
         return niceNormalized * magnitude;
     }
+
+    unsigned int CalculateNiceBinStep(unsigned int span, unsigned int targetStepCount)
+    {
+        if (span <= 1 || targetStepCount <= 1)
+            return 1;
+
+        const double rawStep = static_cast<double>(span) / static_cast<double>(targetStepCount);
+        const double magnitude = std::pow(10.0, std::floor(std::log10(rawStep)));
+        const double normalized = rawStep / magnitude;
+
+        double niceNormalized = 1.0;
+
+        if (normalized <= 1.0)
+            niceNormalized = 1.0;
+        else if (normalized <= 2.0)
+            niceNormalized = 2.0;
+        else if (normalized <= 5.0)
+            niceNormalized = 5.0;
+        else
+            niceNormalized = 10.0;
+
+        return std::max(1u, static_cast<unsigned int>(std::llround(niceNormalized * magnitude)));
+    }
+
+    long double CalculateHistogramTotal(const std::vector<unsigned long long>& histogram)
+    {
+        long double total = 0.0L;
+
+        for (const auto value : histogram)
+            total += static_cast<long double>(value);
+
+        return total;
+    }
+
+    unsigned int CalculateWeightedQuantileBin
+    (
+        const std::vector<unsigned long long>& histogram,
+        const long double quantile
+    )
+    {
+        if (histogram.empty())
+            return 0;
+
+        const long double total = CalculateHistogramTotal(histogram);
+
+        if (total <= 0.0L)
+            return 0;
+
+        const long double clampedQuantile = std::clamp<long double>(quantile, 0.0L, 1.0L);
+        const long double target = total * clampedQuantile;
+
+        long double accumulated = 0.0L;
+
+        for (size_t i = 0; i < histogram.size(); ++i)
+        {
+            accumulated += static_cast<long double>(histogram[i]);
+
+            if (accumulated >= target)
+                return static_cast<unsigned int>(i);
+        }
+
+        return static_cast<unsigned int>(histogram.size() - 1);
+    }
+
+    long long FloorToMultiple(long long value, unsigned int step)
+    {
+        if (step == 0)
+            return value;
+
+        const long long s = static_cast<long long>(step);
+
+        if (value >= 0)
+            return (value / s) * s;
+
+        return -(((-value + s - 1) / s) * s);
+    }
+
+    long long CeilToMultiple(long long value, unsigned int step)
+    {
+        if (step == 0)
+            return value;
+
+        const long long s = static_cast<long long>(step);
+
+        if (value >= 0)
+            return ((value + s - 1) / s) * s;
+
+        return -((-value / s) * s);
+    }
 }
 
 BEGIN_EVENT_TABLE(cSpectroscopyHistogramPanel, wxPanel)
 	EVT_PAINT(cSpectroscopyHistogramPanel::PaintEvent)
 	EVT_SIZE(cSpectroscopyHistogramPanel::OnSize)
 	EVT_MOTION(cSpectroscopyHistogramPanel::OnMouseMove)
+	EVT_LEFT_DOWN(cSpectroscopyHistogramPanel::OnLeftDown)
+	EVT_LEFT_UP(cSpectroscopyHistogramPanel::OnLeftUp)
+	EVT_MOUSE_CAPTURE_LOST(cSpectroscopyHistogramPanel::OnCaptureLost)
 	EVT_LEAVE_WINDOW(cSpectroscopyHistogramPanel::OnMouseLeave)
 	EVT_MOUSEWHEEL(cSpectroscopyHistogramPanel::OnMouseWheel)
 	EVT_RIGHT_UP(cSpectroscopyHistogramPanel::OnRightUp)
@@ -61,15 +155,13 @@ void cSpectroscopyHistogramPanel::SetHistogram(const unsigned long long* histogr
     m_Histogram.assign(histogram, histogram + histogramSize);
     m_TotalEvents = totalEvents;
 
-    if (!m_ViewInitialized || m_ViewMax >= histogramSize)
+    if (!m_ViewInitialized || !m_UserAdjustedView)
     {
-        ResetViewToFull();
+        ResetViewToAutomaticRange();
     }
     else
     {
-        m_ViewMax = std::min<unsigned int>(m_ViewMax, static_cast<unsigned int>(histogramSize - 1));
-        if (m_ViewMin > m_ViewMax)
-            ResetViewToFull();
+        ClampViewToHistogram();
     }
 
     Refresh(false);
@@ -78,9 +170,20 @@ void cSpectroscopyHistogramPanel::SetHistogram(const unsigned long long* histogr
 void cSpectroscopyHistogramPanel::ResetHistogram()
 {
     m_Histogram.clear();
+
     m_TotalEvents = 0;
     m_ViewPeak = 0;
+
+    m_ViewMin = 0;
+    m_ViewMax = 0;
     m_ViewInitialized = false;
+    m_UserAdjustedView = false;
+
+    m_IsPanning = false;
+
+    if (HasCapture())
+        ReleaseMouse();
+
     Refresh(false);
 }
 
@@ -112,12 +215,60 @@ void cSpectroscopyHistogramPanel::OnMouseMove(wxMouseEvent& evt)
 {
     m_CursorPos = evt.GetPosition();
     m_MouseInside = true;
+
+    if (m_IsPanning && evt.LeftIsDown() && !m_Histogram.empty())
+    {
+        const wxRect plotRect = GetPlotRect();
+
+        if (plotRect.GetWidth() > 1)
+        {
+            const unsigned int fullMax = static_cast<unsigned int>(m_Histogram.size() - 1);
+            const unsigned int currentSpan = std::max(1u, m_PanStartViewMax - m_PanStartViewMin);
+
+            const int deltaX = evt.GetX() - m_PanStartX;
+
+            const long long deltaBins = std::llround
+            (
+                static_cast<double>(deltaX) *
+                static_cast<double>(currentSpan) /
+                static_cast<double>(std::max(1, plotRect.GetWidth() - 1))
+            );
+
+            long long newMin = static_cast<long long>(m_PanStartViewMin) - deltaBins;
+            long long newMax = static_cast<long long>(m_PanStartViewMax) - deltaBins;
+
+            if (newMin < 0)
+            {
+                newMin = 0;
+                newMax = static_cast<long long>(currentSpan);
+            }
+
+            if (newMax > static_cast<long long>(fullMax))
+            {
+                newMax = static_cast<long long>(fullMax);
+                newMin = newMax - static_cast<long long>(currentSpan);
+            }
+
+            if (newMin < 0)
+                newMin = 0;
+
+            m_ViewMin = static_cast<unsigned int>(newMin);
+            m_ViewMax = static_cast<unsigned int>(newMax);
+
+            MarkViewUserAdjusted();
+        }
+    }
+
     Refresh(false);
 }
 
 void cSpectroscopyHistogramPanel::OnMouseLeave(wxMouseEvent& evt)
 {
     m_MouseInside = false;
+
+    if (!m_IsPanning)
+        SetCursor(wxCursor(wxCURSOR_ARROW));
+
     Refresh(false);
 }
 
@@ -170,6 +321,8 @@ void cSpectroscopyHistogramPanel::OnMouseWheel(wxMouseEvent& evt)
     m_ViewMin = static_cast<unsigned int>(newMin);
     m_ViewMax = static_cast<unsigned int>(newMax);
 
+    MarkViewUserAdjusted();
+
     Refresh(false);
 }
 
@@ -181,7 +334,52 @@ void cSpectroscopyHistogramPanel::OnRightUp(wxMouseEvent& evt)
 
 void cSpectroscopyHistogramPanel::OnLeftDClick(wxMouseEvent& evt)
 {
-    ResetViewToFull();
+    m_UserAdjustedView = false;
+    ResetViewToAutomaticRange();
+    Refresh(false);
+}
+
+void cSpectroscopyHistogramPanel::OnLeftDown(wxMouseEvent& evt)
+{
+    m_CursorPos = evt.GetPosition();
+    m_MouseInside = true;
+
+    if (!m_Histogram.empty() && GetPlotRect().Contains(m_CursorPos))
+    {
+        m_IsPanning = true;
+        m_PanStartX = evt.GetX();
+        m_PanStartViewMin = m_ViewMin;
+        m_PanStartViewMax = m_ViewMax;
+
+        if (!HasCapture())
+            CaptureMouse();
+
+        SetCursor(wxCursor(wxCURSOR_SIZEWE));
+    }
+
+    Refresh(false);
+}
+
+void cSpectroscopyHistogramPanel::OnLeftUp(wxMouseEvent& evt)
+{
+    m_CursorPos = evt.GetPosition();
+
+    if (m_IsPanning)
+    {
+        m_IsPanning = false;
+
+        if (HasCapture())
+            ReleaseMouse();
+
+        SetCursor(wxCursor(wxCURSOR_ARROW));
+        Refresh(false);
+    }
+}
+
+void cSpectroscopyHistogramPanel::OnCaptureLost(wxMouseCaptureLostEvent& evt)
+{
+    m_IsPanning = false;
+    SetCursor(wxCursor(wxCURSOR_ARROW));
     Refresh(false);
 }
 
@@ -213,46 +411,75 @@ void cSpectroscopyHistogramPanel::DrawHistogram(wxGraphicsContext* gc)
     if (plotRect.GetWidth() <= 2 || plotRect.GetHeight() <= 2)
         return;
 
-    const unsigned int viewMin = std::min<unsigned int>(m_ViewMin, static_cast<unsigned int>(m_Histogram.size() - 1));
-    const unsigned int viewMax = std::min<unsigned int>(m_ViewMax, static_cast<unsigned int>(m_Histogram.size() - 1));
+    const unsigned int histogramMax = static_cast<unsigned int>(m_Histogram.size() - 1);
 
-    if (viewMax <= viewMin || m_ViewPeak == 0)
+    const unsigned int viewMin = std::min<unsigned int>(m_ViewMin, histogramMax);
+    const unsigned int viewMax = std::min<unsigned int>(m_ViewMax, histogramMax);
+
+    if (viewMax < viewMin || m_ViewPeak == 0)
         return;
 
-    gc->SetPen(wxPen(m_HistogramColour, 1));
-    gc->SetBrush(wxBrush(m_HistogramColour));
+    const wxColour histogramColour
+    (
+        m_HistogramColour.Red(),
+        m_HistogramColour.Green(),
+        m_HistogramColour.Blue(),
+        m_MouseInside ? 120 : 255
+    );
+
+    gc->SetPen(wxPen(histogramColour, 1));
+    gc->SetBrush(wxBrush(histogramColour));
 
     const int plotLeft = plotRect.GetLeft();
-    const int plotRight = plotRect.GetRight();
     const int plotBottom = plotRect.GetBottom();
-
     const int plotWidth = std::max(1, plotRect.GetWidth());
-    const unsigned int span = std::max(1u, viewMax - viewMin);
 
-    for (int px = 0; px < plotWidth; ++px)
+    const unsigned int visibleBinCount = viewMax - viewMin + 1u;
+
+    for (unsigned int bin = viewMin; bin <= viewMax; ++bin)
     {
-        const unsigned int bin0 = viewMin + static_cast<unsigned int>
-            (
-                (static_cast<unsigned long long>(px) * span) / std::max(1, plotWidth - 1)
-                );
-
-        const unsigned int bin1 = viewMin + static_cast<unsigned int>
-            (
-                (static_cast<unsigned long long>(px + 1) * span) / std::max(1, plotWidth - 1)
-                );
-
-        unsigned long long count = 0;
-
-        for (unsigned int b = bin0; b <= std::min(bin1, viewMax); ++b)
-            count = std::max(count, m_Histogram[b]);
+        const unsigned long long count = m_Histogram[bin];
 
         if (count == 0)
             continue;
 
-        const int x = std::min(plotLeft + px, plotRight);
-        const int y = CountToCanvasY(count);
+        const unsigned int localBin = bin - viewMin;
 
-        gc->StrokeLine(x, plotBottom, x, y);
+        const double x0 =
+            static_cast<double>(plotLeft) +
+            (
+                static_cast<double>(localBin) *
+                static_cast<double>(plotWidth) /
+                static_cast<double>(visibleBinCount)
+                );
+
+        const double x1 =
+            static_cast<double>(plotLeft) +
+            (
+                static_cast<double>(localBin + 1u) *
+                static_cast<double>(plotWidth) /
+                static_cast<double>(visibleBinCount)
+                );
+
+        const double rectX = std::floor(x0);
+        const double rectW = std::max(1.0, std::ceil(x1) - std::floor(x0));
+
+        const int y = CountToCanvasY(count);
+        const double rectH = static_cast<double>(plotBottom - y);
+
+        if (rectH <= 0.0)
+            continue;
+
+        gc->DrawRectangle
+        (
+            rectX,
+            static_cast<double>(y),
+            rectW,
+            rectH
+        );
+
+        if (bin == viewMax)
+            break;
     }
 }
 
@@ -406,7 +633,7 @@ void cSpectroscopyHistogramPanel::DrawCursorOverlay(wxGraphicsContext* gc)
         return;
 
     const unsigned long long count = m_Histogram[bin];
-    const int x = BinToCanvasX(bin);
+    const int x = BinToCanvasXCenter(bin);
     const int y = CountToCanvasY(count);
 
     gc->SetPen(wxPen(wxColour(255, 255, 255, 90), 1, wxPENSTYLE_DOT));
@@ -444,8 +671,16 @@ void cSpectroscopyHistogramPanel::DrawCursorOverlay(wxGraphicsContext* gc)
 
     if (count > 0)
     {
-        gc->SetPen(wxPen(m_HistogramColour, 2));
-        gc->SetBrush(wxBrush(m_HistogramColour));
+        const wxColour markerColour
+        (
+            m_HistogramColour.Red(),
+            m_HistogramColour.Green(),
+            m_HistogramColour.Blue(),
+            255
+        );
+
+        gc->SetPen(wxPen(markerColour, 2));
+        gc->SetBrush(wxBrush(markerColour));
         gc->DrawEllipse(x - 3.0, y - 3.0, 6.0, 6.0);
     }
 }
@@ -472,6 +707,182 @@ void cSpectroscopyHistogramPanel::UpdateViewPeak()
 
     for (unsigned int i = viewMin; i <= viewMax; ++i)
         m_ViewPeak = std::max(m_ViewPeak, m_Histogram[i]);
+}
+
+void cSpectroscopyHistogramPanel::ResetViewToAutomaticRange()
+{
+    if (m_Histogram.empty())
+    {
+        ResetViewToFull();
+        return;
+    }
+
+    auto firstIt = std::find_if
+    (
+        m_Histogram.begin(),
+        m_Histogram.end(),
+        [](const unsigned long long value)
+        {
+            return value != 0;
+        }
+    );
+
+    if (firstIt == m_Histogram.end())
+    {
+        ResetViewToFull();
+        return;
+    }
+
+    auto lastIt = std::find_if
+    (
+        m_Histogram.rbegin(),
+        m_Histogram.rend(),
+        [](const unsigned long long value)
+        {
+            return value != 0;
+        }
+    );
+
+    const unsigned int histogramMax = static_cast<unsigned int>(m_Histogram.size() - 1);
+
+    const unsigned int firstNonZero = static_cast<unsigned int>
+        (
+            std::distance(m_Histogram.begin(), firstIt)
+            );
+
+    const unsigned int lastNonZero = static_cast<unsigned int>
+        (
+            m_Histogram.size() - 1ULL - static_cast<size_t>(std::distance(m_Histogram.rbegin(), lastIt))
+            );
+
+    unsigned int interestingMin = firstNonZero;
+    unsigned int interestingMax = lastNonZero;
+
+    const long double totalEvents = CalculateHistogramTotal(m_Histogram);
+
+    /*
+        For sufficiently populated histograms, use a robust central range.
+        This prevents one or two accidental non-zero outlier bins from forcing
+        the automatic viewport to become unnecessarily wide.
+
+        The exact first/last non-zero range is still used for small histograms,
+        where quantile trimming would be unstable and visually misleading.
+    */
+    if (totalEvents >= 1000.0L && lastNonZero > firstNonZero)
+    {
+        const unsigned int qLow = CalculateWeightedQuantileBin(m_Histogram, 0.0025L);
+        const unsigned int qHigh = CalculateWeightedQuantileBin(m_Histogram, 0.9975L);
+
+        if (qHigh > qLow)
+        {
+            interestingMin = std::clamp(qLow, firstNonZero, lastNonZero);
+            interestingMax = std::clamp(qHigh, firstNonZero, lastNonZero);
+        }
+    }
+
+    if (interestingMax < interestingMin)
+        std::swap(interestingMin, interestingMax);
+
+    const unsigned int interestingSpan = std::max(1u, interestingMax - interestingMin + 1u);
+
+    /*
+        Minimum visible range prevents the automatic viewport from looking
+        over-zoomed when only a few adjacent bins are currently non-zero.
+    */
+    const unsigned int minVisibleSpan = std::min<unsigned int>
+        (
+            static_cast<unsigned int>(m_Histogram.size()),
+            128u
+        );
+
+    /*
+        Padding gives the user visual context around the populated region.
+        It scales with the signal width but never drops below a few bins.
+    */
+    const unsigned int padding = std::max
+    (
+        8u,
+        static_cast<unsigned int>(std::llround(static_cast<double>(interestingSpan) * 0.12))
+    );
+
+    long long viewMin = static_cast<long long>(interestingMin) - static_cast<long long>(padding);
+    long long viewMax = static_cast<long long>(interestingMax) + static_cast<long long>(padding);
+
+    unsigned int currentSpan = static_cast<unsigned int>
+        (
+            std::max<long long>(1, viewMax - viewMin + 1)
+            );
+
+    if (currentSpan < minVisibleSpan)
+    {
+        const unsigned int missing = minVisibleSpan - currentSpan;
+
+        viewMin -= static_cast<long long>(missing / 2);
+        viewMax += static_cast<long long>(missing - missing / 2);
+
+        currentSpan = minVisibleSpan;
+    }
+
+    /*
+        Snap the range to readable horizontal boundaries. This is what makes
+        the automatic range look intentional instead of mechanically cropped.
+    */
+    const unsigned int niceStep = CalculateNiceBinStep(currentSpan, 10u);
+
+    viewMin = FloorToMultiple(viewMin, niceStep);
+    viewMax = CeilToMultiple(viewMax, niceStep);
+
+    if (viewMin < 0)
+    {
+        const long long shift = -viewMin;
+        viewMin += shift;
+        viewMax += shift;
+    }
+
+    if (viewMax > static_cast<long long>(histogramMax))
+    {
+        const long long shift = viewMax - static_cast<long long>(histogramMax);
+        viewMin -= shift;
+        viewMax -= shift;
+    }
+
+    viewMin = std::clamp<long long>(viewMin, 0, static_cast<long long>(histogramMax));
+    viewMax = std::clamp<long long>(viewMax, 0, static_cast<long long>(histogramMax));
+
+    if (viewMax <= viewMin)
+    {
+        viewMin = std::max<long long>(0, static_cast<long long>(interestingMin) - 1);
+        viewMax = std::min<long long>(static_cast<long long>(histogramMax), static_cast<long long>(interestingMax) + 1);
+    }
+
+    m_ViewMin = static_cast<unsigned int>(viewMin);
+    m_ViewMax = static_cast<unsigned int>(viewMax);
+    m_ViewInitialized = true;
+}
+
+void cSpectroscopyHistogramPanel::ClampViewToHistogram()
+{
+    if (m_Histogram.empty())
+    {
+        ResetViewToFull();
+        return;
+    }
+
+    const unsigned int fullMax = static_cast<unsigned int>(m_Histogram.size() - 1);
+
+    m_ViewMin = std::min(m_ViewMin, fullMax);
+    m_ViewMax = std::min(m_ViewMax, fullMax);
+
+    if (m_ViewMax < m_ViewMin)
+        m_ViewMax = m_ViewMin;
+
+    m_ViewInitialized = true;
+}
+
+void cSpectroscopyHistogramPanel::MarkViewUserAdjusted()
+{
+    if (m_ViewInitialized)
+        m_UserAdjustedView = true;
 }
 
 wxRect cSpectroscopyHistogramPanel::GetPlotRect() const
@@ -502,25 +913,36 @@ unsigned int cSpectroscopyHistogramPanel::CanvasXToBin(int x) const
     const wxRect plotRect = GetPlotRect();
 
     if (plotRect.GetWidth() <= 1)
-        return 0;
+        return std::min<unsigned int>(m_ViewMin, static_cast<unsigned int>(m_Histogram.size() - 1));
+
+    if (m_ViewMax < m_ViewMin)
+        return std::min<unsigned int>(m_ViewMin, static_cast<unsigned int>(m_Histogram.size() - 1));
+
+    const unsigned int histogramMax = static_cast<unsigned int>(m_Histogram.size() - 1);
+
+    const unsigned int viewMin = std::min<unsigned int>(m_ViewMin, histogramMax);
+    const unsigned int viewMax = std::min<unsigned int>(m_ViewMax, histogramMax);
+
+    if (viewMax < viewMin)
+        return viewMin;
 
     x = std::clamp(x, plotRect.GetLeft(), plotRect.GetRight());
 
-    const unsigned int span = std::max(1u, m_ViewMax - m_ViewMin);
+    const unsigned int visibleBinCount = viewMax - viewMin + 1u;
 
-    return std::min<unsigned int>
+    const double t = std::clamp
+    (
+        static_cast<double>(x - plotRect.GetLeft()) / static_cast<double>(std::max(1, plotRect.GetWidth())),
+        0.0,
+        std::nextafter(1.0, 0.0)
+    );
+
+    const unsigned int localBin = static_cast<unsigned int>
         (
-            static_cast<unsigned int>(m_Histogram.size() - 1),
-            m_ViewMin + static_cast<unsigned int>
-            (
-                std::llround
-                (
-                    static_cast<double>(x - plotRect.GetLeft()) *
-                    static_cast<double>(span) /
-                    static_cast<double>(std::max(1, plotRect.GetWidth() - 1))
-                )
-                )
-        );
+            std::floor(t * static_cast<double>(visibleBinCount))
+            );
+
+    return std::min<unsigned int>(viewMin + localBin, viewMax);
 }
 
 int cSpectroscopyHistogramPanel::BinToCanvasX(unsigned int bin) const
@@ -530,16 +952,45 @@ int cSpectroscopyHistogramPanel::BinToCanvasX(unsigned int bin) const
     if (plotRect.GetWidth() <= 1)
         return plotRect.GetLeft();
 
-    const unsigned int span = std::max(1u, m_ViewMax - m_ViewMin);
+    if (m_ViewMax < m_ViewMin)
+        return plotRect.GetLeft();
 
-    const double t =
-        static_cast<double>(std::clamp(bin, m_ViewMin, m_ViewMax) - m_ViewMin) /
-        static_cast<double>(span);
+    const unsigned int clampedBin = std::clamp(bin, m_ViewMin, m_ViewMax);
+    const unsigned int visibleBinCount = std::max(1u, m_ViewMax - m_ViewMin + 1u);
 
-    return plotRect.GetLeft() + static_cast<int>
+    const double slotLeft =
+        static_cast<double>(plotRect.GetLeft()) +
         (
-            std::round(t * static_cast<double>(plotRect.GetWidth() - 1))
+            static_cast<double>(clampedBin - m_ViewMin) *
+            static_cast<double>(plotRect.GetWidth()) /
+            static_cast<double>(visibleBinCount)
             );
+
+    return static_cast<int>(std::floor(slotLeft));
+}
+
+int cSpectroscopyHistogramPanel::BinToCanvasXCenter(unsigned int bin) const
+{
+    const wxRect plotRect = GetPlotRect();
+
+    if (plotRect.GetWidth() <= 1)
+        return plotRect.GetLeft();
+
+    if (m_ViewMax < m_ViewMin)
+        return plotRect.GetLeft();
+
+    const unsigned int clampedBin = std::clamp(bin, m_ViewMin, m_ViewMax);
+    const unsigned int visibleBinCount = std::max(1u, m_ViewMax - m_ViewMin + 1u);
+
+    const double slotCenter =
+        static_cast<double>(plotRect.GetLeft()) +
+        (
+            (static_cast<double>(clampedBin - m_ViewMin) + 0.5) *
+            static_cast<double>(plotRect.GetWidth()) /
+            static_cast<double>(visibleBinCount)
+            );
+
+    return static_cast<int>(std::round(slotCenter));
 }
 
 int cSpectroscopyHistogramPanel::CountToCanvasY(unsigned long long count) const

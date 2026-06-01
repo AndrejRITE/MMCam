@@ -33,6 +33,10 @@ private:
     void OnRightUp(wxMouseEvent& evt);
     void OnLeftDClick(wxMouseEvent& evt);
 
+    void OnLeftDown(wxMouseEvent& evt);
+    void OnLeftUp(wxMouseEvent& evt);
+    void OnCaptureLost(wxMouseCaptureLostEvent& evt);
+
     void Render(wxBufferedPaintDC& dc);
     void DrawHistogram(wxGraphicsContext* gc);
     void DrawAxes(wxGraphicsContext* gc);
@@ -41,10 +45,15 @@ private:
     void ResetViewToFull();
     void UpdateViewPeak();
 
+    void ResetViewToAutomaticRange();
+    void ClampViewToHistogram();
+    void MarkViewUserAdjusted();
+
     wxRect GetPlotRect() const;
 
     unsigned int CanvasXToBin(int x) const;
     int BinToCanvasX(unsigned int bin) const;
+    int BinToCanvasXCenter(unsigned int bin) const;
     int CountToCanvasY(unsigned long long count) const;
     wxString FormatCount(unsigned long long value) const;
 
@@ -56,11 +65,17 @@ private:
     unsigned int m_ViewMin{};
     unsigned int m_ViewMax{};
     bool m_ViewInitialized{};
+    bool m_UserAdjustedView{};
     bool m_LogScale{};
 
     wxSize m_CanvasSize{};
     wxPoint m_CursorPos{};
     bool m_MouseInside{};
+
+    bool m_IsPanning{};
+    int m_PanStartX{};
+    unsigned int m_PanStartViewMin{};
+    unsigned int m_PanStartViewMax{};
 
     wxColour m_BackgroundColour{ 30, 30, 30 };
     wxColour m_HistogramColour{ 60, 220, 110 };
