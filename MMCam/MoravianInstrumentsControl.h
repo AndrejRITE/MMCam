@@ -12,6 +12,8 @@
 #include <chrono>
 #include <thread>
 #include <algorithm>
+#include <mutex>
+#include <atomic>
 
 #include <gxeth.h>
 
@@ -124,7 +126,11 @@ private:
 		const unsigned long waitingTime,
 		bool* const continueWaiting = nullptr,
 		const bool continuousReading = false
-	) -> void;
+	) -> bool;
+
+private:
+	mutable std::recursive_mutex m_ApiMutex{};
+	std::atomic_bool m_ExposureInProgress{ false };
 
 protected:
 	bool m_IsCameraOpen{ false };

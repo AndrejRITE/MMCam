@@ -54,24 +54,42 @@ auto MoravianInstrumentsControl::StartAcquisition() -> bool
 
 auto MoravianInstrumentsControl::StopAcquisition() -> bool
 {
-	if (!m_CameraHandler) return false;
+	std::lock_guard<std::recursive_mutex> lock(m_ApiMutex);
+
+	if (!m_CameraHandler || !m_IsCameraOpen)
+		return false;
+
+	if (!m_ExposureInProgress.load(std::memory_order_acquire))
+		return true;
 
 	gxetha::BOOLEAN rescue_image{};
-	gxetha::AbortExposure(m_CameraHandler, rescue_image);
 
-	return true;
+	const auto result = gxetha::AbortExposure(m_CameraHandler, rescue_image);
+
+	m_ExposureInProgress.store(false, std::memory_order_release);
+
+	return static_cast<bool>(result);
 }
 
 auto MoravianInstrumentsControl::GetImage() -> unsigned short* 
 {
-	if (!m_CameraHandler) return nullptr;
-	if (!m_ActualCameraParameters || !m_CapturingParameters) return nullptr;
+	std::lock_guard<std::recursive_mutex> lock(m_ApiMutex);
 
-	// If nobody set ROI yet, default to full-frame once
+	if (!m_CameraHandler || !m_IsCameraOpen)
+		return nullptr;
+
+	if (!m_ActualCameraParameters || !m_CapturingParameters)
+		return nullptr;
+
 	if (m_CapturingParameters->cameraImgWidth <= 0 || m_CapturingParameters->cameraImgHeight <= 0)
 		ResetHardwareROIToFullFrame();
 
-	const size_t need = (size_t)m_CapturingParameters->cameraImgWidth * (size_t)m_CapturingParameters->cameraImgHeight;
+	const size_t need =
+		static_cast<size_t>(m_CapturingParameters->cameraImgWidth) *
+		static_cast<size_t>(m_CapturingParameters->cameraImgHeight);
+
+	if (need == 0)
+		return nullptr;
 
 	if (!m_ImageData || m_ImageElemCount != need)
 	{
@@ -79,7 +97,9 @@ auto MoravianInstrumentsControl::GetImage() -> unsigned short*
 		m_ImageElemCount = need;
 	}
 
-	auto result = gxetha::StartExposure
+	m_ExposureInProgress.store(true, std::memory_order_release);
+
+	const auto startResult = gxetha::StartExposure
 	(
 		m_CameraHandler,
 		m_CapturingParameters->exposure_sec,
@@ -90,27 +110,40 @@ auto MoravianInstrumentsControl::GetImage() -> unsigned short*
 		m_CapturingParameters->cameraImgHeight
 	);
 
-	auto continueWaiting = true;
-
-	try 
+	if (!static_cast<bool>(startResult))
 	{
-		WaitAndCallReadImage
-		(
-			m_CameraHandler,
-			m_CapturingParameters.get(),
-			m_ImageData.get(),
-			5,
-			&continueWaiting,
-			false
-		);
+		m_ExposureInProgress.store(false, std::memory_order_release);
+
+		gxetha::CHAR err_string[100]{};
+		gxetha::GetLastErrorString(m_CameraHandler, 100, err_string);
+
+		return nullptr;
 	}
-	catch (...) { }
+
+	bool continueWaiting = true;
+
+	const bool readOk = WaitAndCallReadImage
+	(
+		m_CameraHandler,
+		m_CapturingParameters.get(),
+		m_ImageData.get(),
+		5,
+		&continueWaiting,
+		false
+	);
+
+	m_ExposureInProgress.store(false, std::memory_order_release);
+
+	if (!readOk)
+		return nullptr;
 
 	return reinterpret_cast<unsigned short*>(m_ImageData.get());
 }
 
 auto MoravianInstrumentsControl::SetExposureTime(int exposure_us) -> void 
 {
+	std::lock_guard<std::recursive_mutex> lock(m_ApiMutex);
+
 	if (!m_CapturingParameters) return;
 
 	m_CapturingParameters->exposure_sec = exposure_us / 1'000'000.0 ;
@@ -124,48 +157,77 @@ auto MoravianInstrumentsControl::SetSensorTemperature(const double requiredTempe
 
 auto MoravianInstrumentsControl::GetSensorTemperature() -> double 
 {
+	std::lock_guard<std::recursive_mutex> lock(m_ApiMutex);
+
 	if (!m_CameraHandler || !IsConnected()) return 0.0;
+
 	gxetha::REAL value{};
-	gxetha::GetValue(m_CameraHandler, gvChipTemperature, &value);
+
+	if (!gxetha::GetValue(m_CameraHandler, gvChipTemperature, &value))
+		return m_SensorTemperature;
+
 	m_SensorTemperature = static_cast<double>(value);
+
 	return m_SensorTemperature;
 }
 
 auto MoravianInstrumentsControl::GetSupplyVoltage() -> double
 {
+	std::lock_guard<std::recursive_mutex> lock(m_ApiMutex);
+
 	if (!m_CameraHandler || !IsConnected()) return 0.0;
+
 	gxetha::REAL value{};
-	gxetha::GetValue(m_CameraHandler, gvSupplyVoltage, &value);
+
+	if (!gxetha::GetValue(m_CameraHandler, gvSupplyVoltage, &value))
+		return m_SupplyVoltage;
+
 	m_SupplyVoltage = static_cast<double>(value);
 	return m_SupplyVoltage;
 }
 
 auto MoravianInstrumentsControl::GetPowerUtilization() -> int
 {
-	if (!m_CameraHandler || !IsConnected()) return 0;
+	std::lock_guard<std::recursive_mutex> lock(m_ApiMutex);
+
+	if (!m_CameraHandler || !m_IsCameraOpen)
+		return 0;
 
 	gxetha::BOOLEAN state{};
-	gxetha::GetBooleanParameter(m_CameraHandler, gbpPowerUtilization, &state);
 
-	if (!state) return -1;
+	if (!gxetha::GetBooleanParameter(m_CameraHandler, gbpPowerUtilization, &state))
+		return -1;
+
+	if (!state)
+		return -1;
 
 	gxetha::REAL value{};
-	gxetha::GetValue(m_CameraHandler, gvPowerUtilization, &value);
+
+	if (!gxetha::GetValue(m_CameraHandler, gvPowerUtilization, &value))
+		return -1;
+
 	return static_cast<int>(value * 100.0);
 }
 
 auto MoravianInstrumentsControl::IsConnected() const -> bool 
 {
+	std::lock_guard<std::recursive_mutex> lock(m_ApiMutex);
+
 	if (!m_CameraHandler) return false;
 
 	gxetha::BOOLEAN cam_connected{};
-	gxetha::GetBooleanParameter(m_CameraHandler, gbpConnected, &cam_connected);
+
+	if (!gxetha::GetBooleanParameter(m_CameraHandler, gbpConnected, &cam_connected))
+		return false;
+
 	return (bool)cam_connected;
 }
 
 auto MoravianInstrumentsControl::GetFirmwareVersion() -> std::string
 {
-	if (!m_CameraHandler) return std::string();
+	std::lock_guard<std::recursive_mutex> lock(m_ApiMutex);
+
+	if (!m_CameraHandler || !m_IsCameraOpen) return std::string();
 
 	gxetha::CARDINAL major{}, minor{}, build{};
 	gxetha::GetIntegerParameter(m_CameraHandler, gipFirmwareMajor, &major);
@@ -270,55 +332,71 @@ auto MoravianInstrumentsControl::WaitAndCallReadImage
 	const unsigned long waitingTime, 
 	bool* const continueWaiting, 
 	const bool continuousReading
-) -> void
+) -> bool
 {
-	if (!m_IsCameraOpen) return;
+	if (!m_IsCameraOpen || !camPtr || !captParam || !dataPtr || !continueWaiting)
+		return false;
 
 	gxetha::BOOLEAN image_ready{};
 
 	auto startCheckingTime = std::chrono::high_resolution_clock::now();
-	auto currentTime = std::chrono::high_resolution_clock::now();
 
-	auto waitingTimePlusExposureTime = (waitingTime + captParam->exposure_sec) * 1000.0; // Milliseconds
-	double deltaTime{};
-	/* 1. Wait till the Hardware Trigger signal or till the end of Waiting Time */
-	do
+	const double waitingTimePlusExposureTime =
+		(static_cast<double>(waitingTime) + captParam->exposure_sec) * 1000.0;
+
+	while (!static_cast<bool>(image_ready))
 	{
-		gxetha::ImageReady(camPtr, &image_ready);
-		currentTime = std::chrono::high_resolution_clock::now();
-		deltaTime = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>
-			(currentTime - startCheckingTime).count());
+		const auto readyResult = gxetha::ImageReady(camPtr, &image_ready);
+
+		if (!static_cast<bool>(readyResult))
+			return false;
+
+		const auto currentTime = std::chrono::high_resolution_clock::now();
+
+		const double deltaTime = static_cast<double>
+			(
+				std::chrono::duration_cast<std::chrono::milliseconds>
+				(
+					currentTime - startCheckingTime
+				).count()
+				);
+
 		if (!*continueWaiting || deltaTime > waitingTimePlusExposureTime)
 		{
 			StopAcquisition();
-			return;
+			return false;
 		}
+
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-	} while (!(bool)image_ready);
+	}
 
 	gxetha::BOOLEAN result{};
-	/* 2. Reading Captured Image */
+
 	if (continuousReading)
+	{
 		result = gxetha::ReadImageExposure
 		(
 			camPtr,
 			captParam->cameraImgWidth * captParam->cameraImgHeight * sizeof(gxetha::INT16),
 			dataPtr
 		);
+	}
 	else
+	{
 		result = gxetha::ReadImage
 		(
 			camPtr,
 			captParam->cameraImgWidth * captParam->cameraImgHeight * sizeof(gxetha::INT16),
 			dataPtr
 		);
-
-
-	/* 3. Reading Error message if it exists */
-	gxetha::CHAR err_string[100];
-	if (!(bool)result)
-	{
-		gxetha::GetLastErrorString(camPtr, 100, err_string);
-		return;
 	}
+
+	if (!static_cast<bool>(result))
+	{
+		gxetha::CHAR err_string[100]{};
+		gxetha::GetLastErrorString(camPtr, 100, err_string);
+		return false;
+	}
+
+	return true;
 }

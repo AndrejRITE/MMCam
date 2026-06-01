@@ -4722,6 +4722,9 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 		usedHardwareROI = roi == actualROIRect;
 	}
 
+	if (m_TemperatureThread)
+		m_TemperatureThread->Pause();
+
 	const int singleExposureMs = std::max(1, exposure_time / 1000);
 	// The exposure gauge always represents one camera exposure, not the whole spectroscopy cycle.
 	StartSingleShotExposureUI(singleExposureMs);
@@ -5021,6 +5024,9 @@ void cMain::OnSingleShotCaptureFinished(wxThreadEvent& evt)
 
 	if (payload.spectroscopyBatch && !payload.spectroscopyBatchFinished)
 		return;
+
+	if (m_TemperatureThread)
+		m_TemperatureThread->Resume();
 
 	StopSingleShotExposureUI();
 
