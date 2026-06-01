@@ -13,6 +13,7 @@
 #include <numeric>
 #include <string>
 #include <vector>
+#include <wx/string.h>
 
 class cSpectroscopyHistogramPanel final : public wxPanel
 {
@@ -23,6 +24,10 @@ public:
     void ResetHistogram();
     void SetBackgroundColor(const wxColour& colour);
     void SetLogScale(bool enabled);
+
+    bool HasHistogramData() const;
+    bool ExportVisibleHistogramToCsv(const wxString& filePath, wxString* errorMessage = nullptr) const;
+    bool ExportVisibleHistogramToTxt(const wxString& filePath, wxString* errorMessage = nullptr) const;
 
 private:
     void PaintEvent(wxPaintEvent& evt);

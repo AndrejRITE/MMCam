@@ -2237,13 +2237,44 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 	if (m_Zoom > m_MinZoom) return;
 	if (!m_Image.IsOk()) return;
 	if (m_DisplayFWHM) return;
+	if (!gc_) return;
 
-	wxDouble offset_x{ 10.0 }, offset_y{ 10.0 };
-	// Drawing image size below it's lower and left sides
+	const wxSize panelSize = GetSize();
+
+	if (panelSize.GetWidth() <= 0 || panelSize.GetHeight() <= 0)
+		return;
+
+	const double panelMinSide = static_cast<double>(std::min(panelSize.GetWidth(), panelSize.GetHeight()));
+	const double imageMinSide = static_cast<double>(std::min(m_ImageOnCanvasSize.GetWidth(), m_ImageOnCanvasSize.GetHeight()));
+
+	/*
+		The old values were:
+			font size  = 22
+			icon size  = 24
+
+		Those remain the maximum values. On smaller panels/images, the overlay
+		scales down so it does not dominate the preview.
+	*/
+	const double referenceSide = 650.0;
+
+	const double rawScale = std::min
+	(
+		panelMinSide / referenceSide,
+		imageMinSide / referenceSide
+	);
+
+	const double overlayScale = std::clamp(rawScale, 0.45, 1.0);
+
+	const int fontSize = static_cast<int>(std::round(22.0 * overlayScale));
+	const int bmpWidth = static_cast<int>(std::round(24.0 * overlayScale));
+
+	const wxDouble offset_x = std::round(10.0 * overlayScale);
+	const wxDouble offset_y = std::round(10.0 * overlayScale);
+
+	// Drawing image size below its lower and left sides.
 	{
-		// Setting up the current font
 		wxColour fontColour(255, 87, 51, 100);
-		wxFont font = wxFont(22, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+		wxFont font = wxFont(fontSize, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
 		gc_->SetFont(font, fontColour);
 
 		wxString curr_value{};
@@ -2268,11 +2299,11 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 			}
 
 			gc_->GetTextExtent(curr_value, &widthText, &heightText);
+
 			wxRealPoint draw_point =
 			{
 				image_start_draw.x + m_ImageOnCanvasSize.GetWidth() / 2.0 - widthText / 2.0,
 				image_start_draw.y + m_ImageOnCanvasSize.GetHeight() + offset_y
-				//image_start_draw.y - offset_y - heightText
 			};
 
 			if (GetSize().GetHeight() < m_ImageOnCanvasSize.GetHeight() + 2 * offset_y + 2 * heightText)
@@ -2282,7 +2313,6 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 
 			// Draw the Icon
 			{
-				auto bmpWidth = 24;
 				auto bmp = wxMaterialDesignArtProvider::GetBitmap
 				(
 					wxART_AUTO_FIT_WIDTH,
@@ -2290,13 +2320,15 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 					wxSize(bmpWidth, bmpWidth),
 					fontColour
 				);
-				draw_point =
+
+				const wxRealPoint icon_draw_point =
 				{
 					draw_point.x - bmpWidth - offset_x,
 					draw_point.y + (heightText - bmpWidth) / 2.0
 				};
 
-				gc_->DrawBitmap(bmp, draw_point.x, draw_point.y, bmp.GetWidth(), bmp.GetHeight());
+				if (bmp.IsOk())
+					gc_->DrawBitmap(bmp, icon_draw_point.x, icon_draw_point.y, bmp.GetWidth(), bmp.GetHeight());
 			}
 		}
 
@@ -2313,10 +2345,11 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 			}
 
 			gc_->GetTextExtent(curr_value, &widthText, &heightText);
+
 			wxRealPoint draw_point =
 			{
 				image_start_draw.x - offset_x - heightText,
-				image_start_draw.y + m_ImageOnCanvasSize.GetHeight() / 2 + widthText / 2.0
+				image_start_draw.y + m_ImageOnCanvasSize.GetHeight() / 2.0 + widthText / 2.0
 			};
 
 			if (GetSize().GetWidth() < m_ImageOnCanvasSize.GetWidth() + 2 * offset_x + 2 * heightText)
@@ -2324,8 +2357,7 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 
 			// Draw the Icon
 			{
-				auto bmpWidth = 24;
-				wxRealPoint icon_draw_point =
+				const wxRealPoint icon_draw_point =
 				{
 					draw_point.x + (heightText - bmpWidth) / 2.0,
 					draw_point.y + offset_y
@@ -2339,15 +2371,19 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 					fontColour
 				);
 
-				gc_->DrawBitmap(bmp, icon_draw_point.x, icon_draw_point.y, bmp.GetWidth(), bmp.GetHeight());
+				if (bmp.IsOk())
+					gc_->DrawBitmap(bmp, icon_draw_point.x, icon_draw_point.y, bmp.GetWidth(), bmp.GetHeight());
 			}
 
+			gc_->PushState();
 
-			// Set up the transformation matrix for a 90-degree counterclockwise rotation
 			gc_->Translate(draw_point.x, draw_point.y);
-			gc_->Rotate(-M_PI / 2.0); // Rotate 90 degrees counterclockwise (pi/2 radians)
+			gc_->Rotate(-M_PI / 2.0);
 			gc_->Translate(-draw_point.x, -draw_point.y);
+
 			gc_->DrawText(curr_value, draw_point.x, draw_point.y);
+
+			gc_->PopState();
 		}
 	}
 }

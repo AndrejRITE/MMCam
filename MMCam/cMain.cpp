@@ -129,6 +129,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_THRESHOLD_TXT_CTRL, cMain::OnSpectroscopyTextCtrl)
 	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_NEIGHBOR_RADIUS_TXT_CTRL, cMain::OnSpectroscopyTextCtrl)
 	EVT_BUTTON(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_RESET_BTN, cMain::OnSpectroscopyResetButton)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_EXPORT_BTN, cMain::OnSpectroscopyExportButton)
 
 	/* Postprocessing */
 	// Background Subtraction
@@ -3156,6 +3157,8 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 		}
 	}
 
+	auto buttonSizer = new wxBoxSizer(wxHORIZONTAL);
+
 	m_SpectroscopyTabControls->resetBtn = std::make_unique<wxBitmapButton>
 		(
 			page,
@@ -3165,9 +3168,40 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 
 	m_SpectroscopyTabControls->resetBtn->SetToolTip("Reset accumulated histogram and event count to zero");
 
+	buttonSizer->Add(m_SpectroscopyTabControls->resetBtn.get(), 0, wxRIGHT, 5);
+
+	buttonSizer->AddStretchSpacer();
+
+	{
+		const wxSize iconSize{ 20, 20 };
+
+		const auto bitmap = wxART_DOWNLOAD_FOR_OFFLINE;
+		const auto client = wxART_CLIENT_MATERIAL_ROUND;
+		const auto color = m_DefaultWidgetsColor;
+
+		bmp = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			iconSize,
+			color
+		);
+	}
+
+	m_SpectroscopyTabControls->exportBtn = std::make_unique<wxBitmapButton>
+		(
+			page,
+			MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_EXPORT_BTN,
+			bmp
+		);
+
+	m_SpectroscopyTabControls->exportBtn->SetToolTip(wxT("Export the currently displayed spectroscopy histogram range as CSV or TXT."));
+
+	buttonSizer->Add(m_SpectroscopyTabControls->exportBtn.get(), 0, wxLEFT, 5);
+
 	sizerPage->AddStretchSpacer();
 
-	sizerPage->Add(m_SpectroscopyTabControls->resetBtn.get(), 0, wxALIGN_RIGHT | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+	sizerPage->Add(buttonSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
 
 	m_SpectroscopyTabControls->statusText = std::make_unique<wxStaticText>
 		(
@@ -6376,6 +6410,64 @@ auto cMain::OnSpectroscopyTextCtrl(wxCommandEvent& evt) -> void
 auto cMain::OnSpectroscopyResetButton(wxCommandEvent& evt) -> void
 {
 	ResetSpectroscopyHistogram();
+}
+
+auto cMain::OnSpectroscopyExportButton(wxCommandEvent& evt) -> void
+{
+	if (!m_SpectroscopyHistogramPanel || !m_SpectroscopyHistogramPanel->HasHistogramData())
+	{
+		wxMessageBox
+		(
+			wxT("There is no spectroscopy histogram data to export."),
+			wxT("Export spectroscopy histogram"),
+			wxOK | wxICON_INFORMATION,
+			this
+		);
+
+		return;
+	}
+
+	wxString timestamp = wxDateTime::Now().Format(wxT("%Y_%m_%d_%H_%M_%S"));
+
+	wxFileDialog saveDialog
+	(
+		this,
+		wxT("Export spectroscopy histogram"),
+		wxEmptyString,
+		wxString::Format(wxT("spectroscopy_histogram_%s.csv"), timestamp),
+		wxT("CSV files (*.csv)|*.csv|Text files (*.txt)|*.txt"),
+		wxFD_SAVE | wxFD_OVERWRITE_PROMPT
+	);
+
+	if (saveDialog.ShowModal() != wxID_OK)
+		return;
+
+	wxFileName fileName(saveDialog.GetPath());
+
+	const int filterIndex = saveDialog.GetFilterIndex();
+	const bool exportCsv = filterIndex == 0;
+
+	if (fileName.GetExt().IsEmpty())
+		fileName.SetExt(exportCsv ? wxT("csv") : wxT("txt"));
+
+	wxString errorMessage;
+
+	const bool ok = exportCsv
+		? m_SpectroscopyHistogramPanel->ExportVisibleHistogramToCsv(fileName.GetFullPath(), &errorMessage)
+		: m_SpectroscopyHistogramPanel->ExportVisibleHistogramToTxt(fileName.GetFullPath(), &errorMessage);
+
+	if (!ok)
+	{
+		wxMessageBox
+		(
+			errorMessage.IsEmpty() ? wxString("Failed to export spectroscopy histogram.") : errorMessage,
+			wxT("Export spectroscopy histogram"),
+			wxOK | wxICON_ERROR,
+			this
+		);
+
+		return;
+	}
 }
 
 auto cMain::UpdateSpectroscopySettingsFromControls() -> void

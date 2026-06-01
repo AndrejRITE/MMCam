@@ -1,4 +1,7 @@
 #include "cSpectroscopyHistogramPanel.h"
+
+#include "wx/file.h"
+
 #include <limits>
 #include <utility>
 
@@ -9,7 +12,11 @@ namespace
     constexpr int HISTOGRAM_TOP_MARGIN = 30;
     constexpr int HISTOGRAM_BOTTOM_MARGIN = 24;
 
-    constexpr int HISTOGRAM_TARGET_Y_TICKS = 5;
+    constexpr int HISTOGRAM_MIN_MAJOR_Y_GRID_SPACING_PX = 34;
+    constexpr int HISTOGRAM_MIN_MINOR_Y_GRID_SPACING_PX = 22;
+    constexpr int HISTOGRAM_MIN_LABEL_SPACING_PX = 26;
+    constexpr int HISTOGRAM_MIN_MAJOR_Y_TICKS = 4;
+    constexpr int HISTOGRAM_MAX_MAJOR_Y_TICKS = 11;
 
     double CalculateNiceTickStep(double maxValue, int targetTickCount)
     {
@@ -32,6 +39,39 @@ namespace
             niceNormalized = 10.0;
 
         return niceNormalized * magnitude;
+    }
+
+    int CalculateSmartMajorTickTarget(const int plotHeight, const unsigned long long peak)
+    {
+        if (plotHeight <= 0 || peak == 0)
+            return HISTOGRAM_MIN_MAJOR_Y_TICKS;
+
+        int target = std::clamp
+        (
+            plotHeight / HISTOGRAM_MIN_MAJOR_Y_GRID_SPACING_PX + 1,
+            HISTOGRAM_MIN_MAJOR_Y_TICKS,
+            HISTOGRAM_MAX_MAJOR_Y_TICKS
+        );
+
+        /*
+            If the visible peak is very small, do not create fractional-looking
+            over-dense scales. Integer count values are more readable here.
+        */
+        if (peak <= 10)
+            target = std::min<int>(target, static_cast<int>(peak) + 1);
+
+        return std::max(HISTOGRAM_MIN_MAJOR_Y_TICKS, target);
+    }
+
+    bool IsFarEnoughFromExistingLabels(const std::vector<int>& usedY, const int y)
+    {
+        for (const int existingY : usedY)
+        {
+            if (std::abs(existingY - y) < HISTOGRAM_MIN_LABEL_SPACING_PX)
+                return false;
+        }
+
+        return true;
     }
 
     unsigned int CalculateNiceBinStep(unsigned int span, unsigned int targetStepCount)
@@ -197,6 +237,127 @@ void cSpectroscopyHistogramPanel::SetLogScale(bool enabled)
 {
     m_LogScale = enabled;
     Refresh(false);
+}
+
+bool cSpectroscopyHistogramPanel::HasHistogramData() const
+{
+    return !m_Histogram.empty() && m_ViewInitialized && m_ViewMax >= m_ViewMin;
+}
+
+bool cSpectroscopyHistogramPanel::ExportVisibleHistogramToCsv(const wxString& filePath, wxString* errorMessage) const
+{
+    if (!HasHistogramData())
+    {
+        if (errorMessage)
+            *errorMessage = wxT("There is no histogram data to export.");
+
+        return false;
+    }
+
+    const unsigned int histogramMax = static_cast<unsigned int>(m_Histogram.size() - 1);
+    const unsigned int viewMin = std::min<unsigned int>(m_ViewMin, histogramMax);
+    const unsigned int viewMax = std::min<unsigned int>(m_ViewMax, histogramMax);
+
+    if (viewMax < viewMin)
+    {
+        if (errorMessage)
+            *errorMessage = wxT("The displayed histogram range is invalid.");
+
+        return false;
+    }
+
+    wxString content;
+    content.reserve(static_cast<size_t>(viewMax - viewMin + 1u) * 24u);
+
+    content += wxT("Position,Value\n");
+
+    for (unsigned int bin = viewMin; bin <= viewMax; ++bin)
+    {
+        content += wxString::Format(wxT("%u,%llu\n"), bin, m_Histogram[bin]);
+
+        if (bin == viewMax)
+            break;
+    }
+
+    wxFile file(filePath, wxFile::write);
+
+    if (!file.IsOpened())
+    {
+        if (errorMessage)
+            *errorMessage = wxString::Format(wxT("Cannot open file for writing:\n%s"), filePath);
+
+        return false;
+    }
+
+    if (!file.Write(content, wxConvUTF8))
+    {
+        if (errorMessage)
+            *errorMessage = wxString::Format(wxT("Cannot write histogram data to file:\n%s"), filePath);
+
+        return false;
+    }
+
+    return true;
+}
+
+bool cSpectroscopyHistogramPanel::ExportVisibleHistogramToTxt(const wxString& filePath, wxString* errorMessage) const
+{
+    if (!HasHistogramData())
+    {
+        if (errorMessage)
+            *errorMessage = wxT("There is no histogram data to export.");
+
+        return false;
+    }
+
+    const unsigned int histogramMax = static_cast<unsigned int>(m_Histogram.size() - 1);
+    const unsigned int viewMin = std::min<unsigned int>(m_ViewMin, histogramMax);
+    const unsigned int viewMax = std::min<unsigned int>(m_ViewMax, histogramMax);
+
+    if (viewMax < viewMin)
+    {
+        if (errorMessage)
+            *errorMessage = wxT("The displayed histogram range is invalid.");
+
+        return false;
+    }
+
+    wxString content;
+    content.reserve(static_cast<size_t>(viewMax - viewMin + 1u) * 28u);
+
+    content += wxT("# MMCam spectroscopy histogram export\n");
+    content += wxString::Format(wxT("# Displayed range: %u - %u\n"), viewMin, viewMax);
+    content += wxString::Format(wxT("# Total events: %llu\n"), m_TotalEvents);
+    content += wxT("# Columns: Position\tValue\n");
+    content += wxT("Position\tValue\n");
+
+    for (unsigned int bin = viewMin; bin <= viewMax; ++bin)
+    {
+        content += wxString::Format(wxT("%u\t%llu\n"), bin, m_Histogram[bin]);
+
+        if (bin == viewMax)
+            break;
+    }
+
+    wxFile file(filePath, wxFile::write);
+
+    if (!file.IsOpened())
+    {
+        if (errorMessage)
+            *errorMessage = wxString::Format(wxT("Cannot open file for writing:\n%s"), filePath);
+
+        return false;
+    }
+
+    if (!file.Write(content, wxConvUTF8))
+    {
+        if (errorMessage)
+            *errorMessage = wxString::Format(wxT("Cannot write histogram data to file:\n%s"), filePath);
+
+        return false;
+    }
+
+    return true;
 }
 
 void cSpectroscopyHistogramPanel::PaintEvent(wxPaintEvent& evt)
@@ -550,52 +711,68 @@ void cSpectroscopyHistogramPanel::DrawHorizontalScale(wxGraphicsContext* gc)
         return;
 
     wxFont font(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
-    gc->SetFont(font, wxColour(170, 170, 170));
 
-    const wxColour gridColour(255, 255, 255, 36);
+    const wxColour majorGridColour(255, 255, 255, 42);
+    const wxColour minorGridColour(255, 255, 255, 18);
     const wxColour textColour(185, 185, 185);
 
-    gc->SetPen(wxPen(gridColour, 1));
+    std::vector<int> labelledY{};
 
-    auto drawScaleLine = [&](unsigned long long value)
+    auto drawScaleLine =
+        [&]
+        (
+            const unsigned long long value,
+            const bool drawLabel,
+            const bool majorLine
+            )
         {
             if (value > m_ViewPeak)
-                return;
+                return false;
 
             const int y = CountToCanvasY(value);
 
             if (y < plotRect.GetTop() || y > plotRect.GetBottom())
-                return;
+                return false;
 
-            gc->SetPen(wxPen(gridColour, 1));
+            gc->SetPen(wxPen(majorLine ? majorGridColour : minorGridColour, 1));
             gc->StrokeLine(plotRect.GetLeft(), y, plotRect.GetRight(), y);
+
+            if (!drawLabel)
+                return true;
+
+            if (!IsFarEnoughFromExistingLabels(labelledY, y))
+                return true;
 
             const wxString label = FormatCount(value);
 
             wxDouble tw{}, th{};
+            gc->SetFont(font, textColour);
             gc->GetTextExtent(label, &tw, &th);
 
-            gc->SetFont(font, textColour);
             gc->DrawText
             (
                 label,
                 std::max(2.0, static_cast<double>(plotRect.GetLeft()) - tw - 8.0),
                 static_cast<double>(y) - th / 2.0
             );
+
+            labelledY.push_back(y);
+
+            return true;
         };
 
-    drawScaleLine(0);
+    drawScaleLine(0, true, true);
 
     if (m_ViewPeak == 0)
         return;
 
     if (m_LogScale)
     {
-        unsigned long long value = 1;
+        std::vector<unsigned long long> majorValues{};
 
-        while (value <= m_ViewPeak)
+        for (unsigned long long value = 1; value <= m_ViewPeak;)
         {
-            drawScaleLine(value);
+            majorValues.push_back(value);
 
             if (value > std::numeric_limits<unsigned long long>::max() / 10ULL)
                 break;
@@ -603,18 +780,112 @@ void cSpectroscopyHistogramPanel::DrawHorizontalScale(wxGraphicsContext* gc)
             value *= 10ULL;
         }
 
-        drawScaleLine(m_ViewPeak);
+        if (majorValues.empty() || majorValues.back() != m_ViewPeak)
+            majorValues.push_back(m_ViewPeak);
+
+        for (const auto value : majorValues)
+            drawScaleLine(value, true, true);
+
+        /*
+            Minor log grid lines are useful only when there is enough vertical room.
+            Otherwise they become visual noise.
+        */
+        if (plotRect.GetHeight() >= 260)
+        {
+            for (unsigned long long decade = 1; decade <= m_ViewPeak;)
+            {
+                for (unsigned int multiplier = 2; multiplier <= 9; ++multiplier)
+                {
+                    if (decade > std::numeric_limits<unsigned long long>::max() / multiplier)
+                        continue;
+
+                    const unsigned long long value = decade * multiplier;
+
+                    if (value > m_ViewPeak)
+                        break;
+
+                    const int y = CountToCanvasY(value);
+
+                    bool farEnough = true;
+
+                    for (const int existingY : labelledY)
+                    {
+                        if (std::abs(existingY - y) < HISTOGRAM_MIN_MINOR_Y_GRID_SPACING_PX)
+                        {
+                            farEnough = false;
+                            break;
+                        }
+                    }
+
+                    if (farEnough)
+                        drawScaleLine(value, false, false);
+                }
+
+                if (decade > std::numeric_limits<unsigned long long>::max() / 10ULL)
+                    break;
+
+                decade *= 10ULL;
+            }
+        }
+
         return;
     }
 
-    const double step = CalculateNiceTickStep(static_cast<double>(m_ViewPeak), HISTOGRAM_TARGET_Y_TICKS);
+    const int targetMajorTicks = CalculateSmartMajorTickTarget(plotRect.GetHeight(), m_ViewPeak);
+    const double majorStep = CalculateNiceTickStep(static_cast<double>(m_ViewPeak), targetMajorTicks);
 
-    for (double value = step; value < static_cast<double>(m_ViewPeak); value += step)
+    if (majorStep <= 0.0)
     {
-        drawScaleLine(static_cast<unsigned long long>(std::llround(value)));
+        drawScaleLine(m_ViewPeak, true, true);
+        return;
     }
 
-    drawScaleLine(m_ViewPeak);
+    std::vector<unsigned long long> majorValues{};
+
+    majorValues.push_back(0);
+
+    for (double value = majorStep; value < static_cast<double>(m_ViewPeak); value += majorStep)
+    {
+        const unsigned long long roundedValue = static_cast<unsigned long long>(std::llround(value));
+
+        if (roundedValue > 0 && roundedValue < m_ViewPeak)
+            majorValues.push_back(roundedValue);
+    }
+
+    majorValues.push_back(m_ViewPeak);
+
+    std::sort(majorValues.begin(), majorValues.end());
+    majorValues.erase(std::unique(majorValues.begin(), majorValues.end()), majorValues.end());
+
+    for (const auto value : majorValues)
+        drawScaleLine(value, true, true);
+
+    /*
+        Add minor horizontal grid lines only when major lines are far apart.
+        They are intentionally unlabeled to avoid cluttering the Y axis.
+    */
+    if (majorValues.size() >= 2)
+    {
+        for (size_t i = 1; i < majorValues.size(); ++i)
+        {
+            const unsigned long long a = majorValues[i - 1];
+            const unsigned long long b = majorValues[i];
+
+            if (b <= a)
+                continue;
+
+            const int yA = CountToCanvasY(a);
+            const int yB = CountToCanvasY(b);
+
+            if (std::abs(yA - yB) < HISTOGRAM_MIN_MAJOR_Y_GRID_SPACING_PX * 2)
+                continue;
+
+            const unsigned long long mid = a + (b - a) / 2ULL;
+
+            if (mid > a && mid < b)
+                drawScaleLine(mid, false, false);
+        }
+    }
 }
 
 void cSpectroscopyHistogramPanel::DrawCursorOverlay(wxGraphicsContext* gc)

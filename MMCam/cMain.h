@@ -222,6 +222,7 @@ namespace MainFrameVariables
 		RIGHT_CAM_SPECTROSCOPY_THRESHOLD_TXT_CTRL,
 		RIGHT_CAM_SPECTROSCOPY_NEIGHBOR_RADIUS_TXT_CTRL,
 		RIGHT_CAM_SPECTROSCOPY_RESET_BTN,
+		RIGHT_CAM_SPECTROSCOPY_EXPORT_BTN,
 
 		/* Histogram */
 		HISTOGRAM_LEFT_BORDER_TXT_CTRL,
@@ -489,6 +490,7 @@ namespace MainFrameVariables
 		std::unique_ptr<wxTextCtrl> thresholdTxtCtrl{};
 		std::unique_ptr<wxTextCtrl> neighborRadiusTxtCtrl{};
 		std::unique_ptr<wxBitmapButton> resetBtn{};
+		std::unique_ptr<wxBitmapButton> exportBtn{};
 		std::unique_ptr<wxStaticText> statusText{};
 
 		auto EnableAllControls(const bool enable = true) -> void
@@ -498,6 +500,7 @@ namespace MainFrameVariables
 			if (thresholdTxtCtrl) thresholdTxtCtrl->Enable(enable);
 			if (neighborRadiusTxtCtrl) neighborRadiusTxtCtrl->Enable(enable);
 			if (resetBtn) resetBtn->Enable(enable);
+			if (exportBtn) exportBtn->Enable(enable);
 		}
 	};
 
@@ -1246,6 +1249,7 @@ private:
 	auto OnSpectroscopyEnableCheckBox(wxCommandEvent& evt) -> void;
 	auto OnSpectroscopyTextCtrl(wxCommandEvent& evt) -> void;
 	auto OnSpectroscopyResetButton(wxCommandEvent& evt) -> void;
+	auto OnSpectroscopyExportButton(wxCommandEvent& evt) -> void;
 
 	auto UpdateSpectroscopySettingsFromControls() -> void;
 	auto ResetSpectroscopyHistogram() -> void;
