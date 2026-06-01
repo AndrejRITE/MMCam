@@ -125,7 +125,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	/* Spectroscopy */
 	EVT_CHECKBOX(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_ENABLE_CHECKBOX, cMain::OnSpectroscopyEnableCheckBox)
 	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_SMALL_EXPOSURE_MS_TXT_CTRL, cMain::OnSpectroscopyTextCtrl)
-	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_BATCH_EXPOSURE_SEC_TXT_CTRL, cMain::OnSpectroscopyTextCtrl)
+	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_CYCLE_COUNT_TXT_CTRL, cMain::OnSpectroscopyTextCtrl)
 	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_THRESHOLD_TXT_CTRL, cMain::OnSpectroscopyTextCtrl)
 	EVT_TEXT_ENTER(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_NEIGHBOR_RADIUS_TXT_CTRL, cMain::OnSpectroscopyTextCtrl)
 	EVT_BUTTON(MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_RESET_BTN, cMain::OnSpectroscopyResetButton)
@@ -3065,14 +3065,15 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 		1
 	);
 
-	addDoubleText
+	addIntText
 	(
-		wxT("Batch exposure [s]:"),
-		m_SpectroscopyTabControls->batchExposureSecTxtCtrl,
-		MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_BATCH_EXPOSURE_SEC_TXT_CTRL,
-		m_Config ? m_Config->spectroscopy_batch_exposure_sec : 60.0,
-		wxT("Total acquisition time for accumulated spectroscopy histogram. Press Enter to apply."),
-		3
+		wxT("Cycle count:"),
+		m_SpectroscopyTabControls->cycleCountTxtCtrl,
+		MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_CYCLE_COUNT_TXT_CTRL,
+		m_Config ? m_Config->spectroscopy_cycle_count : 200,
+		1,
+		1'000'000,
+		wxT("Number of short exposures to capture and accumulate. Press Enter to apply.")
 	);
 
 	addIntText
@@ -3080,7 +3081,7 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 		wxT("Event threshold [ADU]:"),
 		m_SpectroscopyTabControls->thresholdTxtCtrl,
 		MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_THRESHOLD_TXT_CTRL,
-		m_Config ? m_Config->spectroscopy_threshold : 1000,
+		m_Config ? m_Config->spectroscopy_threshold : 500,
 		0,
 		65535,
 		wxT("Pixels at or below this value are rejected. Press Enter to apply.")
@@ -4617,18 +4618,18 @@ void cMain::CreateProgressBar()
 
 void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 {
-	constexpr auto raise_exception_msg = []() 
-	{
-		wxString title = "Connection error";
-		wxMessageBox(
-			wxT
-			(
-				"Current camera can't provide a single shot."
-				"\nPlease, check if the camera is connected properly and restart the program."
-			),
-			title,
-			wxICON_ERROR);
-	};
+	constexpr auto raise_exception_msg = []()
+		{
+			wxString title = "Connection error";
+			wxMessageBox(
+				wxT
+				(
+					"Current camera can't provide a single shot."
+					"\nPlease, check if the camera is connected properly and restart the program."
+				),
+				title,
+				wxICON_ERROR);
+		};
 
 	LOG("Started: " + wxString(__FUNCSIG__));
 
@@ -4642,6 +4643,7 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 	wxBusyCursor busy_cursor{};
 
 	auto out_dir = m_OutDirTextCtrl->GetValue();
+
 	while (!wxDir::Exists(out_dir))
 	{
 		wxCommandEvent artSetOutDir(wxEVT_BUTTON, MainFrameVariables::ID::RIGHT_MT_OUT_FLD_BTN);
@@ -4649,175 +4651,227 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 		out_dir = m_OutDirTextCtrl->GetValue();
 	}
 
-	wxString exposure_time_str = m_CameraTabControls->camExposure->GetValue().IsEmpty() 
-		? wxString("1") 
+	UpdateSpectroscopySettingsFromControls();
+
+	wxString exposure_time_str = m_CameraTabControls->camExposure->GetValue().IsEmpty()
+		? wxString("1")
 		: m_CameraTabControls->camExposure->GetValue();
-	int exposure_time = abs(wxAtoi(exposure_time_str)) * 1000; // Because user input is in [ms], we need to recalculate exposure time to [us]
+
+	int exposure_time = std::max(1, std::abs(wxAtoi(exposure_time_str))) * 1000; // [us]
+
+	int spectroscopyFrameCount = 1;
+
+	if (m_SpectroscopyEnabled)
+	{
+		const double smallExposureMs = std::clamp(m_SpectroscopySmallExposureMs, 0.001, 1'000'000.0);
+
+		spectroscopyFrameCount = static_cast<int>(
+			std::clamp<unsigned long long>(m_SpectroscopyCycleCount, 1ull, 1000000ull)
+			);
+
+		exposure_time = static_cast<int>(std::max(1.0, std::round(smallExposureMs * 1000.0))); // [us]
+
+		ResetSpectroscopyHistogram();
+	}
 
 	auto start_live_capturing_after_ss = m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue();
 
-	wxCommandEvent artStartStopLiveCapturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
+	wxCommandEvent artStartStopLiveCapturing
+	(
+		wxEVT_TOGGLEBUTTON,
+		MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN
+	);
+
 	if (start_live_capturing_after_ss)
 	{
-		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
-		// Start/Stop the acquisition
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
 		ProcessEvent(artStartStopLiveCapturing);
 	}
 
 	InitLogging();
 
+	const auto file_name =
+		std::string(out_dir.mb_str()) +
+		std::string("\\") +
+		MainFrameVariables::GenerateFilenameWithTimestamp(exposure_time, m_SpectroscopyEnabled ? "spectroscopy_ss" : "ss");
+
+	m_CameraControl->SetExposureTime(exposure_time);
+
+	auto cameraDataType = m_CameraControl->GetCameraDataType();
+
+	int binning{ 1 };
+	m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
+
+	m_ResumeLiveAfterSingleShot = start_live_capturing_after_ss;
+
+	const int sensorW = static_cast<int>(m_CameraControl->GetWidth());
+	const int sensorH = static_cast<int>(m_CameraControl->GetHeight());
+
+	const wxRect roi = GetRequestedRoi0Based(m_CameraROIToolsControls.get(), sensorW, sensorH);
+	const bool roiActive = (roi.width != sensorW) || (roi.height != sensorH) || (roi.x != 0) || (roi.y != 0);
+
+	bool usedHardwareROI = false;
+
+	if (roiActive)
 	{
-		const auto file_name = 
-			std::string(out_dir.mb_str()) + 
-			std::string("\\") + 
-			MainFrameVariables::GenerateFilenameWithTimestamp(exposure_time, "ss");
+		m_CameraControl->SetHardwareROI(roi.x, roi.y, roi.width, roi.height);
 
-		/* Camera */
+		auto actualROI = m_CameraControl->GetHardwareROI();
+		auto actualROIRect = wxRect(actualROI.startX, actualROI.startY, actualROI.width, actualROI.height);
+
+		usedHardwareROI = roi == actualROIRect;
+	}
+
+	const int singleExposureMs = std::max(1, exposure_time / 1000);
+	// The exposure gauge always represents one camera exposure, not the whole spectroscopy cycle.
+	StartSingleShotExposureUI(singleExposureMs);
+
+	std::thread
+	(
+		[
+			this,
+			exposure_time,
+			binning,
+			cameraDataType,
+			file_name,
+			sensorW,
+			sensorH,
+			roiActive,
+			usedHardwareROI,
+			roi,
+			spectroscopyFrameCount,
+			spectroscopyEnabled = m_SpectroscopyEnabled
+		]()
+	{
+		try
 		{
-			m_CameraControl->SetExposureTime(exposure_time);
-			
-			auto cameraDataType = m_CameraControl->GetCameraDataType();
-
-			int binning{ 1 };
-			m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
-
-			m_ResumeLiveAfterSingleShot = start_live_capturing_after_ss;
-
-			const int sensorW = (int)m_CameraControl->GetWidth();
-			const int sensorH = (int)m_CameraControl->GetHeight();
-			const wxRect roi = GetRequestedRoi0Based(m_CameraROIToolsControls.get(), sensorW, sensorH);
-			const bool roiActive = (roi.width != sensorW) || (roi.height != sensorH) || (roi.x != 0) || (roi.y != 0);
-
-			// Try camera's hardware ROI
-			bool usedHardwareROI = false;
-			if (roiActive)
+			if (!m_CameraControl || !m_CameraControl->IsConnected())
 			{
-				m_CameraControl->SetHardwareROI(roi.x, roi.y, roi.width, roi.height);
-				auto actualROI = m_CameraControl->GetHardwareROI();
-				auto actualROIRect = wxRect(actualROI.startX, actualROI.startY, actualROI.width, actualROI.height);
+				MainFrameVariables::SingleShotPayload payload;
+				payload.ok = false;
+				payload.err = "Camera disconnected.";
+				payload.spectroscopyBatch = spectroscopyEnabled;
+				payload.spectroscopyBatchFinished = true;
 
-				usedHardwareROI = roi == actualROIRect ? true : false;
+				auto* evt = new wxThreadEvent(wxEVT_THREAD, MainFrameVariables::ID::THREAD_SINGLE_SHOT_CAPTURE);
+				evt->SetPayload(payload);
+				wxQueueEvent(this, evt);
+				return;
 			}
 
-			// duration in ms for UI timer
-			const int exposureMs = std::max(1, exposure_time / 1000);
+			m_CameraControl->SetExposureTime(exposure_time);
 
-			// Show countdown/progress UI BEFORE starting blocking acquisition (in worker thread)
-			StartSingleShotExposureUI(exposureMs);
-
-			// Keep wait cursor if you want
-			wxBusyCursor busy_cursor{};
-
-			// Start the blocking call in background
-			std::thread([this, exposure_time, binning, cameraDataType, file_name, sensorW, sensorH, roiActive, usedHardwareROI, roi]()
+			for (int frameIndex = 0; frameIndex < spectroscopyFrameCount; ++frameIndex)
+			{
+				if (spectroscopyEnabled)
 				{
-					MainFrameVariables::SingleShotPayload payload;
-					payload.binning = binning;
-					payload.dataType = cameraDataType;
-					payload.outFilePath = file_name;
+					MainFrameVariables::SingleShotPayload exposureStartedPayload;
+					
+					exposureStartedPayload.exposureStarted = true;
+					exposureStartedPayload.spectroscopyBatch = true;
+					exposureStartedPayload.spectroscopyFrameIndex = frameIndex + 1;
+					exposureStartedPayload.spectroscopyFrameCount = spectroscopyFrameCount;
+					exposureStartedPayload.spectroscopyBatchFinished = false;
+					
+					auto* exposureStartedEvt = new wxThreadEvent
+					 (
+						wxEVT_THREAD,
+						MainFrameVariables::ID::THREAD_SINGLE_SHOT_CAPTURE
+						 );
+				
+					exposureStartedEvt->SetPayload(exposureStartedPayload);
+					wxQueueEvent(this, exposureStartedEvt);
+				}
 
-					try
-					{
-						if (!m_CameraControl || !m_CameraControl->IsConnected())
-						{
-							payload.ok = false;
-							payload.err = "Camera disconnected.";
-						}
-						else
-						{
-							m_CameraControl->SetExposureTime(exposure_time);
+				MainFrameVariables::SingleShotPayload payload;
 
-							auto imgPtr = m_CameraControl->GetImage(); // BLOCKS here
-							if (!imgPtr)
-							{
-								payload.ok = false;
-								payload.err = "GetImage() returned null.";
-							}
-							else
-							{
-								// Decide what we *actually* got back
-								int gotW = sensorW;
-								int gotH = sensorH;
+				payload.binning = binning;
+				payload.dataType = cameraDataType;
 
-								if (roiActive && usedHardwareROI)
-								{
-									gotW = roi.width;
-									gotH = roi.height;
-								}
+				payload.spectroscopyBatch = spectroscopyEnabled;
+				payload.spectroscopyFrameIndex = frameIndex + 1;
+				payload.spectroscopyFrameCount = spectroscopyFrameCount;
+				payload.spectroscopyBatchFinished = (frameIndex + 1) >= spectroscopyFrameCount;
 
-								// Fill payload
-								payload.w = roiActive ? roi.width : gotW;
-								payload.h = roiActive ? roi.height : gotH;
+				// Save only the final frame in spectroscopy mode.
+				// Intermediate frames are used only for accumulation and display.
+				payload.outFilePath = (!spectroscopyEnabled || payload.spectroscopyBatchFinished)
+					? file_name
+					: std::string();
 
-								payload.img.resize((size_t)payload.w * (size_t)payload.h);
+				auto imgPtr = m_CameraControl->GetImage(); // BLOCKS here
 
-								if (!roiActive)
-								{
-									std::memcpy(payload.img.data(), imgPtr, sizeof(unsigned short) * payload.img.size());
-								}
-								else if (usedHardwareROI)
-								{
-									// Moravian returned ROI-sized buffer already
-									std::memcpy(payload.img.data(), imgPtr, sizeof(unsigned short) * payload.img.size());
-								}
-								else
-								{
-									// Fallback: crop from full sensor frame
-									MainFrameVariables::CropU16Rect(imgPtr, gotW, gotH, roi, payload.img.data());
-								}
-
-								payload.ok = true;
-							}
-						}
-					}
-					catch (...)
-					{
-						payload.ok = false;
-						payload.err = "Exception during single shot acquisition.";
-					}
+				if (!imgPtr)
+				{
+					payload.ok = false;
+					payload.err = "GetImage() returned null.";
+					payload.spectroscopyBatchFinished = true;
 
 					auto* evt = new wxThreadEvent(wxEVT_THREAD, MainFrameVariables::ID::THREAD_SINGLE_SHOT_CAPTURE);
 					evt->SetPayload(payload);
 					wxQueueEvent(this, evt);
+					return;
+				}
 
-				}).detach();
+				int gotW = sensorW;
+				int gotH = sensorH;
 
-			// IMPORTANT: return immediately, do not continue with saving/displaying here
-			return;
+				if (roiActive && usedHardwareROI)
+				{
+					gotW = roi.width;
+					gotH = roi.height;
+				}
 
-			SCOPE_TIMER("CaptureAndDisplayAndSaveImageFromTheCamera");
-			auto imgPtr = m_CameraControl->GetImage();
-			if (!imgPtr)
-			{
-				raise_exception_msg();
-				return;
+				payload.w = roiActive ? roi.width : gotW;
+				payload.h = roiActive ? roi.height : gotH;
+
+				payload.img.resize(static_cast<size_t>(payload.w) * static_cast<size_t>(payload.h));
+
+				if (!roiActive)
+				{
+					std::memcpy
+					(
+						payload.img.data(),
+						imgPtr,
+						sizeof(unsigned short) * payload.img.size()
+					);
+				}
+				else if (usedHardwareROI)
+				{
+					std::memcpy
+					(
+						payload.img.data(),
+						imgPtr,
+						sizeof(unsigned short) * payload.img.size()
+					);
+				}
+				else
+				{
+					MainFrameVariables::CropU16Rect(imgPtr, gotW, gotH, roi, payload.img.data());
+				}
+
+				payload.ok = true;
+
+				auto* evt = new wxThreadEvent(wxEVT_THREAD, MainFrameVariables::ID::THREAD_SINGLE_SHOT_CAPTURE);
+				evt->SetPayload(payload);
+				wxQueueEvent(this, evt);
 			}
-
-			DisplayAndSaveImageFromTheCamera
-			(
-				imgPtr, 
-				wxSize(m_CameraControl->GetWidth(), m_CameraControl->GetHeight()),
-				m_RequestedRoi0,
-				binning,
-				cameraDataType,
-				file_name
-			);
 		}
+		catch (...)
+		{
+			MainFrameVariables::SingleShotPayload payload;
+			payload.ok = false;
+			payload.err = "Exception during single shot acquisition.";
+			payload.spectroscopyBatch = spectroscopyEnabled;
+			payload.spectroscopyBatchFinished = true;
+
+			auto* evt = new wxThreadEvent(wxEVT_THREAD, MainFrameVariables::ID::THREAD_SINGLE_SHOT_CAPTURE);
+			evt->SetPayload(payload);
+			wxQueueEvent(this, evt);
+		}
+
 	}
-
-	EnableControlsAfterCapturing();
-
-	if (m_CamPreview)
-		m_CamPreview->ResetFPS();
-
-	/* Only if user has already started Live Capturing, continue Live Capturing */
-	if (start_live_capturing_after_ss)
-	{
-		LOG("Start Live Capturing");
-		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
-		// Start/Stop the acquisition
-		ProcessEvent(artStartStopLiveCapturing);
-	}
+	).detach();
 
 	LOG("Finished: " + wxString(__FUNCSIG__));
 }
@@ -4855,6 +4909,25 @@ void cMain::StopSingleShotExposureUI()
 	// SetStatusText("", 0);
 }
 
+void cMain::RestartSingleShotExposureUI(int durationMs)
+{
+	m_SingleShotDurationMs = std::max(1, durationMs);
+	m_SingleShotStartMs = wxGetUTCTimeMillis();
+	
+	if (m_ExposureGauge)
+	{
+		m_ExposureGauge->SetRange(100);
+		m_ExposureGauge->SetValue(0);
+		m_ExposureGauge->Show();
+	}
+
+	if (m_ExposureProgressStaticText)
+	{
+		m_ExposureProgressStaticText->SetLabel(wxString::Format("Exposing... 0.0s / %.1fs", m_SingleShotDurationMs / 1000.0));
+		m_ExposureProgressStaticText->Show();
+	}
+}
+
 void cMain::OnSingleShotExposureTimer(wxTimerEvent& evt)
 {
 	const wxLongLong now = wxGetUTCTimeMillis();
@@ -4871,7 +4944,16 @@ void cMain::OnSingleShotExposureTimer(wxTimerEvent& evt)
 	pct = std::clamp(pct, 0, 100);
 
 	m_ExposureGauge->SetValue(pct);
-	m_ExposureProgressStaticText->SetLabel(wxString::Format("Exposing... %.1fs / %.1fs (%.1fs left)", elapsedS, totalS, remS));
+	m_ExposureProgressStaticText->SetLabel
+	(
+		wxString::Format
+		(
+			wxT("Exposing... %.1fs / %.1fs (%.1fs left)"),
+			elapsedS,
+			totalS,
+			remS
+		)
+	);
 
 	// optional: also show in status bar
 	// SetStatusText(wxString::Format("Exposure: %.1fs left", remS), 0);
@@ -4879,21 +4961,43 @@ void cMain::OnSingleShotExposureTimer(wxTimerEvent& evt)
 
 void cMain::OnSingleShotCaptureFinished(wxThreadEvent& evt)
 {
-	// stop timer/dialog first
-	StopSingleShotExposureUI();
-
 	MainFrameVariables::SingleShotPayload payload = evt.GetPayload<MainFrameVariables::SingleShotPayload>();
+
+	if (payload.exposureStarted)
+	 {
+		RestartSingleShotExposureUI
+		(
+			static_cast<int>
+			(
+				std::max
+				 (
+					1.0,
+					std::round(m_SpectroscopySmallExposureMs)
+				 )
+			)
+		 );
+	
+		return;
+	}
 
 	if (!payload.ok)
 	{
-		wxMessageBox(payload.err.IsEmpty() ? wxString("Single shot failed.") : payload.err,
-			wxString("Connection error"), wxICON_ERROR);
-		HandleCameraDisconnected(); // if you want; or be more selective
+		StopSingleShotExposureUI();
+
+		wxMessageBox
+		(
+			payload.err.IsEmpty() ? wxString("Single shot failed.") : payload.err,
+			wxString("Connection error"),
+			wxICON_ERROR
+		);
+
+		HandleCameraDisconnected();
 		EnableControlsAfterCapturing();
 		return;
 	}
 
-	DisplayAndSaveImageFromTheCamera(
+	DisplayAndSaveImageFromTheCamera
+	(
 		payload.img.data(),
 		wxSize(payload.w, payload.h),
 		m_RequestedRoi0,
@@ -4902,16 +5006,38 @@ void cMain::OnSingleShotCaptureFinished(wxThreadEvent& evt)
 		payload.outFilePath
 	);
 
+	if (payload.spectroscopyBatch && m_ExposureProgressStaticText)
+	{
+		m_ExposureProgressStaticText->SetLabel
+		(
+			wxString::Format
+			(
+				wxT("Spectroscopy single shot... frame %i / %i"),
+				payload.spectroscopyFrameIndex,
+				payload.spectroscopyFrameCount
+			)
+		);
+	}
+
+	if (payload.spectroscopyBatch && !payload.spectroscopyBatchFinished)
+		return;
+
+	StopSingleShotExposureUI();
+
 	EnableControlsAfterCapturing();
 
 	if (m_CamPreview)
 		m_CamPreview->ResetFPS();
 
-	// Resume live capturing if it was running before single-shot
 	if (m_ResumeLiveAfterSingleShot)
 	{
-		wxCommandEvent artStartStopLiveCapturing(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
-		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue());
+		wxCommandEvent artStartStopLiveCapturing
+		(
+			wxEVT_TOGGLEBUTTON,
+			MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN
+		);
+
+		m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(true);
 		ProcessEvent(artStartStopLiveCapturing);
 	}
 }
@@ -5019,19 +5145,6 @@ auto cMain::OnContinuousExposureTimer(wxTimerEvent& evt) -> void
 			);
 
 		m_ExposureProgressStaticText->SetLabel(progressText);
-
-		if (m_SpectroscopyEnabled && m_CameraTabControls && m_CameraTabControls->startStopLiveCapturingTglBtn)
-		{
-			m_CameraTabControls->startStopLiveCapturingTglBtn->SetValue(false);
-
-			wxCommandEvent stopEvt
-			(
-				wxEVT_TOGGLEBUTTON,
-				MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN
-			);
-
-			ProcessEvent(stopEvt);
-		}
 	}
 }
 
@@ -5044,12 +5157,24 @@ auto cMain::RestartContinuousExposureUI() -> void
 	m_ContinuousStartMs = wxGetUTCTimeMillis();
 
 	if (m_ExposureGauge)
+	{
+		m_ExposureGauge->SetRange(100);
 		m_ExposureGauge->SetValue(0);
+		m_ExposureGauge->Show();
+	}
+
+	if (m_AppProgressIndicator)
+		m_AppProgressIndicator->SetValue(0);
 
 	if (m_ExposureProgressStaticText)
+	{
 		m_ExposureProgressStaticText->SetLabel(
 			wxString::Format("Exposing... 0.0s / %.1fs", m_ContinuousDurationMs / 1000.0));
+		m_ExposureProgressStaticText->Show();
+	}
 
+	if (!m_ContinuousExposureTimer.IsRunning())
+		m_ContinuousExposureTimer.Start(100);
 }
 
 auto cMain::DisplayAndSaveImageFromTheCamera
@@ -6112,8 +6237,6 @@ void cMain::OnExit(wxCommandEvent& evt)
 
 auto cMain::OnSpectroscopyEnableCheckBox(wxCommandEvent& evt) -> void
 {
-	SyncCameraExposureToSpectroscopyBatchExposure();
-
 	UpdateSpectroscopySettingsFromControls();
 	ResetSpectroscopyHistogram();
 
@@ -6156,13 +6279,12 @@ auto cMain::OnSpectroscopyEnableCheckBox(wxCommandEvent& evt) -> void
 		m_Config->spectroscopy_enabled = m_SpectroscopyEnabled;
 		RewriteInitializationFile();
 	}
+
+	m_SpectroscopyTabControls->EnableAllControls(m_SpectroscopyEnabled);
 }
 
 auto cMain::OnSpectroscopyTextCtrl(wxCommandEvent& evt) -> void
 {
-	if (evt.GetId() == MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_BATCH_EXPOSURE_SEC_TXT_CTRL)
-		SyncSpectroscopyBatchExposureToCameraExposure();
-
 	UpdateSpectroscopySettingsFromControls();
 	ResetSpectroscopyHistogram();
 
@@ -6170,7 +6292,7 @@ auto cMain::OnSpectroscopyTextCtrl(wxCommandEvent& evt) -> void
 	{
 		m_Config->spectroscopy_enabled = m_SpectroscopyEnabled;
 		m_Config->spectroscopy_small_exposure_ms = m_SpectroscopySmallExposureMs;
-		m_Config->spectroscopy_batch_exposure_sec = m_SpectroscopyBatchExposureSec;
+		m_Config->spectroscopy_cycle_count = static_cast<int>(std::clamp<unsigned long long>(m_SpectroscopyCycleCount, 1ull, 1000000ull));
 		m_Config->spectroscopy_threshold = static_cast<int>(m_SpectroscopyThreshold);
 		m_Config->spectroscopy_neighbor_radius_px = m_SpectroscopyNeighborRadiusPx;
 
@@ -6190,78 +6312,6 @@ auto cMain::OnSpectroscopyResetButton(wxCommandEvent& evt) -> void
 	ResetSpectroscopyHistogram();
 }
 
-auto cMain::SyncCameraExposureToSpectroscopyBatchExposure() -> void
-{
-	if (m_IsSynchronizingExposureControls)
-		return;
-
-	if (!m_CameraTabControls ||
-		!m_CameraTabControls->camExposure ||
-		!m_SpectroscopyTabControls ||
-		!m_SpectroscopyTabControls->batchExposureSecTxtCtrl)
-	{
-		return;
-	}
-
-	long exposureMs{ 1 };
-
-	if (!m_CameraTabControls->camExposure->GetValue().ToLong(&exposureMs))
-		return;
-
-	exposureMs = std::clamp<long>(std::abs(exposureMs), 1, 1'000'000);
-
-	const double batchExposureSec = static_cast<double>(exposureMs) / 1000.0;
-	const wxString batchExposureStr = wxString::Format(wxT("%.3f"), batchExposureSec);
-
-	m_IsSynchronizingExposureControls = true;
-
-	if (m_SpectroscopyTabControls->batchExposureSecTxtCtrl->GetValue() != batchExposureStr)
-		m_SpectroscopyTabControls->batchExposureSecTxtCtrl->ChangeValue(batchExposureStr);
-
-	m_IsSynchronizingExposureControls = false;
-
-	m_SpectroscopyBatchExposureSec = std::clamp(batchExposureSec, 0.001, 1'000'000.0);
-}
-
-auto cMain::SyncSpectroscopyBatchExposureToCameraExposure() -> void
-{
-	if (m_IsSynchronizingExposureControls)
-		return;
-
-	if (!m_CameraTabControls ||
-		!m_CameraTabControls->camExposure ||
-		!m_SpectroscopyTabControls ||
-		!m_SpectroscopyTabControls->batchExposureSecTxtCtrl)
-	{
-		return;
-	}
-
-	double batchExposureSec{ 0.001 };
-
-	if (!m_SpectroscopyTabControls->batchExposureSecTxtCtrl->GetValue().ToDouble(&batchExposureSec))
-		return;
-
-	batchExposureSec = std::clamp(batchExposureSec, 0.001, 1'000'000.0);
-
-	const long exposureMs = std::clamp<long>
-		(
-			static_cast<long>(std::llround(batchExposureSec * 1000.0)),
-			1,
-			1'000'000
-		);
-
-	const wxString exposureMsStr = wxString::Format(wxT("%ld"), exposureMs);
-
-	m_IsSynchronizingExposureControls = true;
-
-	if (m_CameraTabControls->camExposure->GetValue() != exposureMsStr)
-		m_CameraTabControls->camExposure->ChangeValue(exposureMsStr);
-
-	m_IsSynchronizingExposureControls = false;
-
-	m_SpectroscopyBatchExposureSec = batchExposureSec;
-}
-
 auto cMain::UpdateSpectroscopySettingsFromControls() -> void
 {
 	if (!m_SpectroscopyTabControls)
@@ -6278,12 +6328,12 @@ auto cMain::UpdateSpectroscopySettingsFromControls() -> void
 
 	m_SpectroscopySmallExposureMs = std::clamp(smallExposureMs, 0.001, 1'000'000.0);
 
-	double batchExposureSec = m_SpectroscopyBatchExposureSec;
+	int cycleCount = static_cast<int>(std::clamp<unsigned long long>(m_SpectroscopyCycleCount, 1ull, 1000000ull));
 
-	if (m_SpectroscopyTabControls->batchExposureSecTxtCtrl)
-		m_SpectroscopyTabControls->batchExposureSecTxtCtrl->GetValue().ToDouble(&batchExposureSec);
+	if (m_SpectroscopyTabControls->cycleCountTxtCtrl)
+		m_SpectroscopyTabControls->cycleCountTxtCtrl->GetValue().ToInt(&cycleCount);
 
-	m_SpectroscopyBatchExposureSec = std::clamp(batchExposureSec, 0.001, 1'000'000.0);
+	m_SpectroscopyCycleCount = static_cast<unsigned long long>(std::clamp(cycleCount, 1, 1000000));
 
 	int threshold = static_cast<int>(m_SpectroscopyThreshold);
 
@@ -6484,11 +6534,11 @@ auto cMain::UpdateSpectroscopyStatus() -> void
 	(
 		wxString::Format
 		(
-			wxT("Frames: %llu, events: %llu, elapsed: %.1f / %.1f s"),
+			wxT("Frames: %llu / %llu, events: %llu, elapsed: %.1f s"),
 			m_SpectroscopyFrameCount,
+			m_SpectroscopyCycleCount,
 			m_SpectroscopyTotalEvents,
-			elapsedSec,
-			m_SpectroscopyBatchExposureSec
+			elapsedSec
 		)
 	);
 }
@@ -7472,12 +7522,8 @@ void cMain::StartLiveCapturing()
 		ResetSpectroscopyHistogram();
 	}
 
-	StartContinuousExposureUI
-	(
-		m_SpectroscopyEnabled
-		? static_cast<int>(std::max(1.0, m_SpectroscopyBatchExposureSec * 1000.0))
-		: static_cast<int>(exposure_time / 1000)
-	);
+	// The exposure gauge always represents one camera exposure.
+	StartContinuousExposureUI(static_cast<int>(std::max(1, (int)(exposure_time / 1000))));
 
 	auto currThreadTimeStamp = timePointToWxString();
 	m_StartedThreads.push_back(std::make_pair(currThreadTimeStamp, true));
@@ -7655,9 +7701,7 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 
 	if (curr_code == 2)
 	{
-		// In spectroscopy mode the progress UI represents the whole batch, not one short frame.
-		if (!m_SpectroscopyEnabled)
-			RestartContinuousExposureUI();
+		RestartContinuousExposureUI();
 
 		return;
 	}
@@ -7695,6 +7739,7 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 		}
 
 		if (*m_CamPreview->GetExecutionFinishedPtr())
+		{
 			DisplayAndSaveImageFromTheCamera
 			(
 				payload->img.get(),
@@ -7705,6 +7750,14 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 				savePath.ToStdString()
 			);
 
+			if (m_SpectroscopyEnabled && m_SpectroscopyFrameCount >= m_SpectroscopyCycleCount)
+			{
+				stopCapturing();
+				StopContinuousExposureUI();
+				return;
+			}
+
+		}
 		if (m_StartStopMeasurementTglBtn->GetValue())
 		{
 			m_ProgressBar->SetValue(progress);
@@ -8721,11 +8774,6 @@ void cMain::UpdateAllAxisGlobalPositions()
 void cMain::ExposureValueChanged(wxCommandEvent& evt)
 {
 	{
-		if (m_IsSynchronizingExposureControls)
-			return;
-
-		SyncCameraExposureToSpectroscopyBatchExposure();
-
 		int exposure_ms{ 1 };
 
 		if (m_CameraTabControls && m_CameraTabControls->camExposure)
@@ -8736,7 +8784,6 @@ void cMain::ExposureValueChanged(wxCommandEvent& evt)
 		if (m_Config)
 		{
 			m_Config->default_exposure_ms = exposure_ms;
-			m_Config->spectroscopy_batch_exposure_sec = static_cast<double>(exposure_ms) / 1000.0;
 			RewriteInitializationFile();
 		}
 

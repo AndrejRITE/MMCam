@@ -1295,6 +1295,8 @@ void cCamPreview::DrawFPS(wxGraphicsContext* gc)
 {
 	if (!m_ShowFPS) return;
 
+	if (m_FPSInstant <= 0.0) return;
+
 	// Text
 	wxString txt = wxString::Format("FPS: %.1f", m_FPSInstant);
 	txt += m_FPSInstant > 0.0 ? wxString::Format(" (avg %.1f)", m_FPSEMA) : wxString("");

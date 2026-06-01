@@ -218,7 +218,7 @@ namespace MainFrameVariables
 		/* Spectroscopy */
 		RIGHT_CAM_SPECTROSCOPY_ENABLE_CHECKBOX,
 		RIGHT_CAM_SPECTROSCOPY_SMALL_EXPOSURE_MS_TXT_CTRL,
-		RIGHT_CAM_SPECTROSCOPY_BATCH_EXPOSURE_SEC_TXT_CTRL,
+		RIGHT_CAM_SPECTROSCOPY_CYCLE_COUNT_TXT_CTRL,
 		RIGHT_CAM_SPECTROSCOPY_THRESHOLD_TXT_CTRL,
 		RIGHT_CAM_SPECTROSCOPY_NEIGHBOR_RADIUS_TXT_CTRL,
 		RIGHT_CAM_SPECTROSCOPY_RESET_BTN,
@@ -307,8 +307,8 @@ namespace MainFrameVariables
 
 		bool spectroscopy_enabled{ false };
 		double spectroscopy_small_exposure_ms{ 300.0 };
-		double spectroscopy_batch_exposure_sec{ 60.0 };
-		int spectroscopy_threshold{ 1000 };
+		int spectroscopy_cycle_count{ 10 };
+		int spectroscopy_threshold{ 500 };
 		int spectroscopy_neighbor_radius_px{ 1 };
 
 		int median_blur_ksize = 3;
@@ -359,7 +359,7 @@ namespace MainFrameVariables
 
 			spectroscopy_enabled,
 			spectroscopy_small_exposure_ms,
-			spectroscopy_batch_exposure_sec,
+			spectroscopy_cycle_count,
 			spectroscopy_threshold,
 			spectroscopy_neighbor_radius_px,
 
@@ -485,7 +485,7 @@ namespace MainFrameVariables
 	{
 		std::unique_ptr<wxCheckBox> enableCheckBox{};
 		std::unique_ptr<wxTextCtrl> smallExposureMsTxtCtrl{};
-		std::unique_ptr<wxTextCtrl> batchExposureSecTxtCtrl{};
+		std::unique_ptr<wxTextCtrl> cycleCountTxtCtrl{};
 		std::unique_ptr<wxTextCtrl> thresholdTxtCtrl{};
 		std::unique_ptr<wxTextCtrl> neighborRadiusTxtCtrl{};
 		std::unique_ptr<wxButton> resetBtn{};
@@ -493,9 +493,8 @@ namespace MainFrameVariables
 
 		auto EnableAllControls(const bool enable = true) -> void
 		{
-			if (enableCheckBox) enableCheckBox->Enable(enable);
 			if (smallExposureMsTxtCtrl) smallExposureMsTxtCtrl->Enable(enable);
-			if (batchExposureSecTxtCtrl) batchExposureSecTxtCtrl->Enable(enable);
+			if (cycleCountTxtCtrl) cycleCountTxtCtrl->Enable(enable);
 			if (thresholdTxtCtrl) thresholdTxtCtrl->Enable(enable);
 			if (neighborRadiusTxtCtrl) neighborRadiusTxtCtrl->Enable(enable);
 			if (resetBtn) resetBtn->Enable(enable);
@@ -666,6 +665,7 @@ namespace MainFrameVariables
 	struct SingleShotPayload
 	{
 		bool ok{ false };
+		bool exposureStarted{ false };
 		wxString err;
 
 		std::vector<unsigned short> img; // copied buffer
@@ -674,6 +674,11 @@ namespace MainFrameVariables
 		int binning{ 1 };
 		CameraControlVariables::ImageDataTypes dataType{};
 		std::string outFilePath;
+
+		bool spectroscopyBatch{ false };
+		bool spectroscopyBatchFinished{ true };
+		int spectroscopyFrameIndex{ 0 };
+		int spectroscopyFrameCount{ 1 };
 	};
 
 	static auto BinImageData
@@ -1191,6 +1196,7 @@ private:
 
 	void StartSingleShotExposureUI(int durationMs);
 	void StopSingleShotExposureUI();
+	void RestartSingleShotExposureUI(int durationMs);
 	void OnSingleShotExposureTimer(wxTimerEvent& evt);
 	void OnSingleShotCaptureFinished(wxThreadEvent& evt);
 
@@ -1240,9 +1246,6 @@ private:
 	auto OnSpectroscopyEnableCheckBox(wxCommandEvent& evt) -> void;
 	auto OnSpectroscopyTextCtrl(wxCommandEvent& evt) -> void;
 	auto OnSpectroscopyResetButton(wxCommandEvent& evt) -> void;
-
-	auto SyncCameraExposureToSpectroscopyBatchExposure() -> void;
-	auto SyncSpectroscopyBatchExposureToCameraExposure() -> void;
 
 	auto UpdateSpectroscopySettingsFromControls() -> void;
 	auto ResetSpectroscopyHistogram() -> void;
@@ -2310,9 +2313,8 @@ private:
 
 	// Spectroscopy mode keeps only the current filtered frame plus the accumulated histogram.
 	bool m_SpectroscopyEnabled{ false };
-	bool m_IsSynchronizingExposureControls{ false };
 	double m_SpectroscopySmallExposureMs{ 300.0 };
-	double m_SpectroscopyBatchExposureSec{ 60.0 };
+	unsigned long long m_SpectroscopyCycleCount{ 200 };
 	unsigned short m_SpectroscopyThreshold{ 1000 };
 	int m_SpectroscopyNeighborRadiusPx{ 1 };
 	unsigned long long m_SpectroscopyFrameCount{ 0 };
