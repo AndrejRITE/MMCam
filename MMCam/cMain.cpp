@@ -3100,14 +3100,74 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 
 	sizerPage->Add(gridSizer, 0, wxCENTER | wxALL, 5);
 
-	m_SpectroscopyTabControls->resetBtn = std::make_unique<wxButton>
+	wxBitmap bmp{};
+	{
+		const wxSize iconSize{ 20, 20 };
+		const int gapPx = 4;
+
+		const auto client = wxART_CLIENT_MATERIAL_ROUND;
+		const auto refreshColor = m_DefaultWidgetsColor;
+		const auto histogramColor = wxColour(60, 220, 110);
+
+		const wxBitmap refreshBmp = wxMaterialDesignArtProvider::GetBitmap
+		(
+			wxART_REFRESH,
+			client,
+			iconSize,
+			refreshColor
+		);
+
+		const wxBitmap histogramBmp = wxMaterialDesignArtProvider::GetBitmap
+		(
+			wxART_BAR_CHART,
+			client,
+			iconSize,
+			histogramColor
+		);
+
+		if (refreshBmp.IsOk() && histogramBmp.IsOk())
+		{
+			const int bmpWidth = refreshBmp.GetWidth() + gapPx + histogramBmp.GetWidth();
+			const int bmpHeight = std::max(refreshBmp.GetHeight(), histogramBmp.GetHeight());
+
+			wxImage image(bmpWidth, bmpHeight, true);
+			image.InitAlpha();
+
+			unsigned char* alpha = image.GetAlpha();
+
+			if (alpha)
+				std::fill(alpha, alpha + static_cast<size_t>(bmpWidth * bmpHeight), 0);
+
+			bmp = wxBitmap(image);
+
+			wxMemoryDC dc;
+			dc.SelectObject(bmp);
+
+			const int refreshX = 0;
+			const int refreshY = (bmpHeight - refreshBmp.GetHeight()) / 2;
+
+			const int histogramX = refreshBmp.GetWidth() + gapPx;
+			const int histogramY = (bmpHeight - histogramBmp.GetHeight()) / 2;
+
+			dc.DrawBitmap(refreshBmp, refreshX, refreshY, true);
+			dc.DrawBitmap(histogramBmp, histogramX, histogramY, true);
+
+			dc.SelectObject(wxNullBitmap);
+		}
+	}
+
+	m_SpectroscopyTabControls->resetBtn = std::make_unique<wxBitmapButton>
 		(
 			page,
 			MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_RESET_BTN,
-			wxT("Reset accumulated histogram")
+			bmp
 		);
 
-	sizerPage->Add(m_SpectroscopyTabControls->resetBtn.get(), 0, wxCENTER | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+	m_SpectroscopyTabControls->resetBtn->SetToolTip("Reset accumulated histogram and event count to zero");
+
+	sizerPage->AddStretchSpacer();
+
+	sizerPage->Add(m_SpectroscopyTabControls->resetBtn.get(), 0, wxALIGN_RIGHT | wxLEFT | wxRIGHT | wxBOTTOM, 5);
 
 	m_SpectroscopyTabControls->statusText = std::make_unique<wxStaticText>
 		(

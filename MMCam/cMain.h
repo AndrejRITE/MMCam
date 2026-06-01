@@ -488,7 +488,7 @@ namespace MainFrameVariables
 		std::unique_ptr<wxTextCtrl> cycleCountTxtCtrl{};
 		std::unique_ptr<wxTextCtrl> thresholdTxtCtrl{};
 		std::unique_ptr<wxTextCtrl> neighborRadiusTxtCtrl{};
-		std::unique_ptr<wxButton> resetBtn{};
+		std::unique_ptr<wxBitmapButton> resetBtn{};
 		std::unique_ptr<wxStaticText> statusText{};
 
 		auto EnableAllControls(const bool enable = true) -> void
