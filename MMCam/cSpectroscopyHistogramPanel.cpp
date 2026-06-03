@@ -7,14 +7,21 @@
 
 namespace
 {
-    constexpr int HISTOGRAM_LEFT_MARGIN = 64;
-    constexpr int HISTOGRAM_RIGHT_MARGIN = 8;
-    constexpr int HISTOGRAM_TOP_MARGIN = 30;
-    constexpr int HISTOGRAM_BOTTOM_MARGIN = 24;
+    constexpr int HISTOGRAM_LEFT_MARGIN = 92;
+    constexpr int HISTOGRAM_RIGHT_MARGIN = 18;
+    constexpr int HISTOGRAM_TOP_MARGIN = 34;
+    constexpr int HISTOGRAM_BOTTOM_MARGIN = 56;
 
-    constexpr int HISTOGRAM_MIN_MAJOR_Y_GRID_SPACING_PX = 34;
-    constexpr int HISTOGRAM_MIN_MINOR_Y_GRID_SPACING_PX = 22;
-    constexpr int HISTOGRAM_MIN_LABEL_SPACING_PX = 26;
+    constexpr int HISTOGRAM_AXIS_LABEL_FONT_SIZE = 15;
+    constexpr int HISTOGRAM_TITLE_FONT_SIZE = 9;
+
+    constexpr int HISTOGRAM_MIN_MAJOR_Y_GRID_SPACING_PX = 48;
+    constexpr int HISTOGRAM_MIN_MINOR_Y_GRID_SPACING_PX = 24;
+    constexpr int HISTOGRAM_MIN_LABEL_SPACING_PX = 42;
+
+    constexpr int HISTOGRAM_MIN_X_LABEL_SPACING_PX = 92;
+    constexpr int HISTOGRAM_X_TICK_HEIGHT = 6;
+
     constexpr int HISTOGRAM_MIN_MAJOR_Y_TICKS = 4;
     constexpr int HISTOGRAM_MAX_MAJOR_Y_TICKS = 11;
 
@@ -162,6 +169,79 @@ namespace
 
         return -((-value / s) * s);
     }
+
+    double CalculateColourLuminance(const wxColour& colour)
+    {
+        /*
+            Perceptual luminance approximation.
+            Good enough for UI contrast decisions.
+        */
+        return
+            0.2126 * static_cast<double>(colour.Red()) +
+            0.7152 * static_cast<double>(colour.Green()) +
+            0.0722 * static_cast<double>(colour.Blue());
+    }
+
+    bool IsDarkColour(const wxColour& colour)
+    {
+        return CalculateColourLuminance(colour) < 128.0;
+    }
+
+    wxColour MakeColourWithAlpha(const wxColour& colour, const unsigned char alpha)
+    {
+        return wxColour
+        (
+            colour.Red(),
+            colour.Green(),
+            colour.Blue(),
+            alpha
+        );
+    }
+
+    wxColour GetReadableAxisColour(const wxColour& backgroundColour)
+    {
+        return IsDarkColour(backgroundColour)
+            ? wxColour(230, 230, 230)
+            : wxColour(35, 35, 35);
+    }
+
+    wxColour GetReadableTickColour(const wxColour& backgroundColour)
+    {
+        return IsDarkColour(backgroundColour)
+            ? wxColour(245, 245, 245)
+            : wxColour(25, 25, 25);
+    }
+
+    wxColour GetReadableMajorGridColour(const wxColour& backgroundColour)
+    {
+        return IsDarkColour(backgroundColour)
+            ? wxColour(255, 255, 255, 48)
+            : wxColour(0, 0, 0, 62);
+    }
+
+    wxColour GetReadableMinorGridColour(const wxColour& backgroundColour)
+    {
+        return IsDarkColour(backgroundColour)
+            ? wxColour(255, 255, 255, 22)
+            : wxColour(0, 0, 0, 28);
+    }
+
+    wxColour GetReadableLabelColour(const wxColour& backgroundColour, const wxColour& preferredColour)
+    {
+        /*
+            If the user-provided label colour already contrasts with the background,
+            keep it. Otherwise fall back to black/white depending on the background.
+        */
+        const double backgroundLuminance = CalculateColourLuminance(backgroundColour);
+        const double preferredLuminance = CalculateColourLuminance(preferredColour);
+
+        if (std::abs(backgroundLuminance - preferredLuminance) >= 85.0)
+            return preferredColour;
+
+        return IsDarkColour(backgroundColour)
+            ? wxColour(245, 245, 245)
+            : wxColour(25, 25, 25);
+    }
 }
 
 BEGIN_EVENT_TABLE(cSpectroscopyHistogramPanel, wxPanel)
@@ -177,8 +257,14 @@ BEGIN_EVENT_TABLE(cSpectroscopyHistogramPanel, wxPanel)
 	EVT_LEFT_DCLICK(cSpectroscopyHistogramPanel::OnLeftDClick)
 END_EVENT_TABLE()
 
-cSpectroscopyHistogramPanel::cSpectroscopyHistogramPanel(wxWindow* parent, wxSizer* parentSizer, const int borderSize)
-    : wxPanel(parent)
+cSpectroscopyHistogramPanel::cSpectroscopyHistogramPanel
+(
+    wxWindow* parent, 
+    wxSizer* parentSizer, 
+	wxColour labelsColor,
+    const int borderSize
+)
+	: wxPanel(parent), m_LabelsColour(std::move(labelsColor))
 {
     SetDoubleBuffered(true);
     SetMinSize(wxSize(200, 200));
@@ -650,12 +736,21 @@ void cSpectroscopyHistogramPanel::DrawAxes(wxGraphicsContext* gc)
         return;
 
     const int W = m_CanvasSize.GetWidth();
-
     const wxRect plotRect = GetPlotRect();
 
-    DrawHorizontalScale(gc);
+    if (plotRect.GetWidth() <= 2 || plotRect.GetHeight() <= 2)
+        return;
 
-    gc->SetPen(wxPen(m_AxisColour, 1));
+    /*
+        Draw grid/scales first, then draw the main axes on top.
+    */
+    DrawHorizontalScale(gc);
+    DrawXAxisScale(gc);
+
+    const wxColour axisColour = GetReadableAxisColour(m_BackgroundColour);
+    const wxColour labelColour = GetReadableLabelColour(m_BackgroundColour, m_LabelsColour);
+
+    gc->SetPen(wxPen(axisColour, 1));
 
     // Left vertical axis.
     gc->StrokeLine
@@ -675,29 +770,33 @@ void cSpectroscopyHistogramPanel::DrawAxes(wxGraphicsContext* gc)
         plotRect.GetBottom()
     );
 
-    wxFont font(9, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
-    gc->SetFont(font, m_AxisColour);
-
-    const wxString left = wxString::Format(wxT("%u"), m_ViewMin);
-    const wxString right = wxString::Format(wxT("%u"), m_ViewMax);
-
-    wxDouble tw{}, th{};
-
-    gc->DrawText(left, plotRect.GetLeft(), plotRect.GetBottom() + 4);
-
-    gc->GetTextExtent(right, &tw, &th);
-    gc->DrawText(right, plotRect.GetRight() - tw, plotRect.GetBottom() + 4);
-
     const wxString title = wxString::Format
     (
         wxT("Accumulated spectroscopy histogram  |  Events: %s  |  Peak: %s%s"),
-        FormatCount(m_TotalEvents),
-        FormatCount(m_ViewPeak),
+        FormatCompactCount(m_TotalEvents),
+        FormatCompactCount(m_ViewPeak),
         m_LogScale ? wxT("  |  log") : wxT("")
     );
 
+    wxFont titleFont
+    (
+        HISTOGRAM_TITLE_FONT_SIZE,
+        wxFONTFAMILY_SWISS,
+        wxFONTSTYLE_NORMAL,
+        wxFONTWEIGHT_NORMAL
+    );
+
+    gc->SetFont(titleFont, labelColour);
+
+    wxDouble tw{}, th{};
     gc->GetTextExtent(title, &tw, &th);
-    gc->DrawText(title, std::max(4.0, static_cast<double>(W) - tw - 6.0), 4);
+
+    gc->DrawText
+    (
+        title,
+        std::max(4.0, static_cast<double>(W) - tw - 8.0),
+        4.0
+    );
 }
 
 void cSpectroscopyHistogramPanel::DrawHorizontalScale(wxGraphicsContext* gc)
@@ -710,11 +809,17 @@ void cSpectroscopyHistogramPanel::DrawHorizontalScale(wxGraphicsContext* gc)
     if (plotRect.GetWidth() <= 2 || plotRect.GetHeight() <= 2)
         return;
 
-    wxFont font(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+    wxFont font
+    (
+        HISTOGRAM_AXIS_LABEL_FONT_SIZE,
+        wxFONTFAMILY_SWISS,
+        wxFONTSTYLE_NORMAL,
+        wxFONTWEIGHT_NORMAL
+    );
 
-    const wxColour majorGridColour(255, 255, 255, 42);
-    const wxColour minorGridColour(255, 255, 255, 18);
-    const wxColour textColour(185, 185, 185);
+    const wxColour majorGridColour = GetReadableMajorGridColour(m_BackgroundColour);
+    const wxColour minorGridColour = GetReadableMinorGridColour(m_BackgroundColour);
+    const wxColour textColour = GetReadableLabelColour(m_BackgroundColour, m_LabelsColour);
 
     std::vector<int> labelledY{};
 
@@ -743,18 +848,28 @@ void cSpectroscopyHistogramPanel::DrawHorizontalScale(wxGraphicsContext* gc)
             if (!IsFarEnoughFromExistingLabels(labelledY, y))
                 return true;
 
-            const wxString label = FormatCount(value);
+            const wxString label = FormatCompactCount(value);
 
             wxDouble tw{}, th{};
             gc->SetFont(font, textColour);
             gc->GetTextExtent(label, &tw, &th);
 
-            gc->DrawText
-            (
-                label,
-                std::max(2.0, static_cast<double>(plotRect.GetLeft()) - tw - 8.0),
-                static_cast<double>(y) - th / 2.0
-            );
+            const double labelX =
+                std::max
+                (
+                    4.0,
+                    static_cast<double>(plotRect.GetLeft()) - tw - 12.0
+                );
+
+            const double labelY =
+                std::clamp
+                (
+                    static_cast<double>(y) - th / 2.0,
+                    2.0,
+                    static_cast<double>(plotRect.GetBottom()) - th - 2.0
+                );
+
+            gc->DrawText(label, labelX, labelY);
 
             labelledY.push_back(y);
 
@@ -888,6 +1003,215 @@ void cSpectroscopyHistogramPanel::DrawHorizontalScale(wxGraphicsContext* gc)
     }
 }
 
+void cSpectroscopyHistogramPanel::DrawXAxisScale(wxGraphicsContext* gc)
+{
+    if (!gc)
+        return;
+
+    const wxRect plotRect = GetPlotRect();
+
+    if (plotRect.GetWidth() <= 2 || plotRect.GetHeight() <= 2)
+        return;
+
+    if (m_ViewMax < m_ViewMin)
+        return;
+
+    wxFont labelFont
+    (
+        HISTOGRAM_AXIS_LABEL_FONT_SIZE,
+        wxFONTFAMILY_SWISS,
+        wxFONTSTYLE_NORMAL,
+        wxFONTWEIGHT_NORMAL
+    );
+
+    const wxColour majorGridColour = GetReadableMajorGridColour(m_BackgroundColour);
+    const wxColour tickColour = GetReadableTickColour(m_BackgroundColour);
+    const wxColour textColour = GetReadableLabelColour(m_BackgroundColour, m_LabelsColour);
+
+    const unsigned int visibleSpan = std::max(1u, m_ViewMax - m_ViewMin);
+    const int targetIntervalCount = std::clamp
+    (
+        plotRect.GetWidth() / HISTOGRAM_MIN_X_LABEL_SPACING_PX,
+        2,
+        10
+    );
+
+    const unsigned int step = CalculateNiceBinStep
+    (
+        visibleSpan,
+        static_cast<unsigned int>(targetIntervalCount)
+    );
+
+    std::vector<unsigned int> tickValues{};
+    tickValues.reserve(16);
+
+    tickValues.push_back(m_ViewMin);
+
+    if (step > 0)
+    {
+        unsigned int firstTick = 0;
+
+        if (m_ViewMin % step == 0)
+        {
+            firstTick = m_ViewMin;
+        }
+        else
+        {
+            const unsigned int remainder = m_ViewMin % step;
+            firstTick = m_ViewMin + (step - remainder);
+        }
+
+        for (unsigned int value = firstTick; value < m_ViewMax;)
+        {
+            if (value > m_ViewMin)
+                tickValues.push_back(value);
+
+            if (value > std::numeric_limits<unsigned int>::max() - step)
+                break;
+
+            value += step;
+        }
+    }
+
+    tickValues.push_back(m_ViewMax);
+
+    std::sort(tickValues.begin(), tickValues.end());
+    tickValues.erase(std::unique(tickValues.begin(), tickValues.end()), tickValues.end());
+
+    gc->SetFont(labelFont, textColour);
+
+    struct UsedLabelRange
+    {
+        double left{};
+        double right{};
+    };
+
+    std::vector<UsedLabelRange> usedLabelRanges{};
+
+    auto canDrawLabel =
+        [&usedLabelRanges](const double left, const double right) -> bool
+        {
+            for (const auto& used : usedLabelRanges)
+            {
+                if (right >= used.left && left <= used.right)
+                    return false;
+            }
+
+            return true;
+        };
+
+    auto drawTick =
+        [&]
+        (
+            const unsigned int value,
+            const bool forceLabel
+            )
+        {
+            const int x = BinToCanvasXCenter(value);
+
+            if (x < plotRect.GetLeft() || x > plotRect.GetRight())
+                return;
+
+            gc->SetPen(wxPen(majorGridColour, 1));
+            gc->StrokeLine
+            (
+                x,
+                plotRect.GetTop(),
+                x,
+                plotRect.GetBottom()
+            );
+
+            gc->SetPen(wxPen(tickColour, 2));
+            gc->StrokeLine
+            (
+                x,
+                plotRect.GetBottom(),
+                x,
+                plotRect.GetBottom() + HISTOGRAM_X_TICK_HEIGHT
+            );
+
+            const wxString label = wxString::Format(wxT("%u"), value);
+
+            wxDouble tw{}, th{};
+            gc->GetTextExtent(label, &tw, &th);
+
+            double textX = static_cast<double>(x) - tw / 2.0;
+
+            textX = std::clamp
+            (
+                textX,
+                static_cast<double>(plotRect.GetLeft()),
+                std::max
+                (
+                    static_cast<double>(plotRect.GetLeft()),
+                    static_cast<double>(plotRect.GetRight()) - tw
+                )
+            );
+
+            const double textY =
+                static_cast<double>(plotRect.GetBottom()) +
+                static_cast<double>(HISTOGRAM_X_TICK_HEIGHT) +
+                5.0;
+
+            const double paddedLeft = textX - 8.0;
+            const double paddedRight = textX + tw + 8.0;
+
+            if (!forceLabel && !canDrawLabel(paddedLeft, paddedRight))
+                return;
+
+            gc->DrawText(label, textX, textY);
+
+            usedLabelRanges.push_back
+            (
+                UsedLabelRange
+                {
+                    paddedLeft,
+                    paddedRight
+                }
+            );
+        };
+
+    /*
+        Draw edge labels first so that the visible range is always explicit.
+        Then draw intermediate labels only if they have enough room.
+    */
+    drawTick(m_ViewMin, true);
+    drawTick(m_ViewMax, true);
+
+    for (const auto value : tickValues)
+    {
+        if (value == m_ViewMin || value == m_ViewMax)
+            continue;
+
+        drawTick(value, false);
+    }
+
+    const wxString axisTitle = wxT("ADU");
+
+    wxDouble titleW{}, titleH{};
+    gc->GetTextExtent(axisTitle, &titleW, &titleH);
+
+    const double titleX =
+        static_cast<double>(plotRect.GetLeft()) +
+        (static_cast<double>(plotRect.GetWidth()) - titleW) / 2.0;
+
+    const double titleY =
+        static_cast<double>(plotRect.GetBottom()) +
+        static_cast<double>(HISTOGRAM_X_TICK_HEIGHT) +
+        static_cast<double>(HISTOGRAM_AXIS_LABEL_FONT_SIZE) +
+        10.0;
+
+    if (titleY + titleH < static_cast<double>(m_CanvasSize.GetHeight()) - 2.0)
+    {
+        gc->DrawText
+        (
+            axisTitle,
+            std::max(2.0, titleX),
+            titleY
+        );
+    }
+}
+
 void cSpectroscopyHistogramPanel::DrawCursorOverlay(wxGraphicsContext* gc)
 {
     if (!gc || !m_MouseInside || m_Histogram.empty() || m_CanvasSize.GetWidth() <= 0)
@@ -910,7 +1234,7 @@ void cSpectroscopyHistogramPanel::DrawCursorOverlay(wxGraphicsContext* gc)
     gc->SetPen(wxPen(wxColour(255, 255, 255, 90), 1, wxPENSTYLE_DOT));
     gc->StrokeLine(x, plotRect.GetTop(), x, plotRect.GetBottom());
 
-    const wxString text = wxString::Format(wxT("ADU %u  |  %s"), bin, FormatCount(count));
+    const wxString text = wxString::Format(wxT("ADU %u  |  %s"), bin, FormatCompactCount(count));
 
     wxFont font(10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
     gc->SetFont(font, m_OverlayColour);
@@ -1171,8 +1495,8 @@ wxRect cSpectroscopyHistogramPanel::GetPlotRect() const
     (
         HISTOGRAM_LEFT_MARGIN,
         HISTOGRAM_TOP_MARGIN,
-        W - HISTOGRAM_LEFT_MARGIN - HISTOGRAM_RIGHT_MARGIN,
-        H - HISTOGRAM_TOP_MARGIN - HISTOGRAM_BOTTOM_MARGIN
+        std::max(1, W - HISTOGRAM_LEFT_MARGIN - HISTOGRAM_RIGHT_MARGIN),
+        std::max(1, H - HISTOGRAM_TOP_MARGIN - HISTOGRAM_BOTTOM_MARGIN)
     );
 }
 
@@ -1286,12 +1610,60 @@ int cSpectroscopyHistogramPanel::CountToCanvasY(unsigned long long count) const
             );
 }
 
-wxString cSpectroscopyHistogramPanel::FormatCount(unsigned long long value) const
+wxString cSpectroscopyHistogramPanel::FormatCompactCount(unsigned long long value) const
 {
-    wxString s = wxString::Format(wxT("%llu"), value);
+    struct Unit
+    {
+        unsigned long long factor;
+        const wxChar* suffix;
+    };
 
-    for (int i = static_cast<int>(s.length()) - 3; i > 0; i -= 3)
-        s.insert(i, wxT("'"));
+    static constexpr Unit units[]
+    {
+        { 1'000'000'000'000'000'000ull, wxT("Qi") }, // quintillion
+        { 1'000'000'000'000'000ull,     wxT("Qa") }, // quadrillion
+        { 1'000'000'000'000ull,         wxT("T")  }, // trillion
+        { 1'000'000'000ull,             wxT("B")  }, // billion
+        { 1'000'000ull,                 wxT("M")  }, // million
+        { 1'000ull,                     wxT("K")  }  // thousand
+    };
 
-    return s;
+    for (std::size_t i = 0; i < std::size(units); ++i)
+    {
+        if (value < units[i].factor)
+            continue;
+
+        double scaled =
+            static_cast<double>(value) /
+            static_cast<double>(units[i].factor);
+
+        /*
+            Avoid labels such as 1000K or 1000M after rounding.
+            Promote them to the next larger suffix when possible.
+        */
+        if (scaled >= 999.5 && i > 0)
+        {
+            scaled =
+                static_cast<double>(value) /
+                static_cast<double>(units[i - 1].factor);
+
+            if (scaled >= 100.0)
+                return wxString::Format(wxT("%.0f%s"), scaled, units[i - 1].suffix);
+
+            if (scaled >= 10.0)
+                return wxString::Format(wxT("%.1f%s"), scaled, units[i - 1].suffix);
+
+            return wxString::Format(wxT("%.2f%s"), scaled, units[i - 1].suffix);
+        }
+
+        if (scaled >= 100.0)
+            return wxString::Format(wxT("%.0f%s"), scaled, units[i].suffix);
+
+        if (scaled >= 10.0)
+            return wxString::Format(wxT("%.1f%s"), scaled, units[i].suffix);
+
+        return wxString::Format(wxT("%.2f%s"), scaled, units[i].suffix);
+    }
+
+    return wxString::Format(wxT("%llu"), value);
 }

@@ -3,6 +3,63 @@
 #include "Logging.h"
 #include "Profiler.h"
 
+namespace
+{
+	auto FormatCompactEventCount(unsigned long long value) -> wxString
+	{
+		struct Unit
+		{
+			unsigned long long factor;
+			const wxChar* suffix;
+		};
+
+		static constexpr Unit units[]
+		{
+			{ 1'000'000'000'000'000'000ull, wxT("Qi") }, // quintillion
+			{ 1'000'000'000'000'000ull,     wxT("Qa") }, // quadrillion
+			{ 1'000'000'000'000ull,         wxT("T")  }, // trillion
+			{ 1'000'000'000ull,             wxT("B")  }, // billion
+			{ 1'000'000ull,                 wxT("M")  }, // million
+			{ 1'000ull,                     wxT("K")  }  // thousand
+		};
+
+		for (std::size_t i = 0; i < sizeof(units) / sizeof(units[0]); ++i)
+		{
+			if (value < units[i].factor)
+				continue;
+
+			double scaled =
+				static_cast<double>(value) /
+				static_cast<double>(units[i].factor);
+
+			if (scaled >= 999.5 && i > 0)
+			{
+				scaled =
+					static_cast<double>(value) /
+					static_cast<double>(units[i - 1].factor);
+
+				if (scaled >= 100.0)
+					return wxString::Format(wxT("%.0f%s"), scaled, units[i - 1].suffix);
+
+				if (scaled >= 10.0)
+					return wxString::Format(wxT("%.1f%s"), scaled, units[i - 1].suffix);
+
+				return wxString::Format(wxT("%.2f%s"), scaled, units[i - 1].suffix);
+			}
+
+			if (scaled >= 100.0)
+				return wxString::Format(wxT("%.0f%s"), scaled, units[i].suffix);
+
+			if (scaled >= 10.0)
+				return wxString::Format(wxT("%.1f%s"), scaled, units[i].suffix);
+
+			return wxString::Format(wxT("%.2f%s"), scaled, units[i].suffix);
+		}
+
+		return wxString::Format(wxT("%llu"), value);
+	}
+}
+
 wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_FILE_OPEN, cMain::OnOpen)
 	EVT_MENU(MainFrameVariables::ID::MENUBAR_FILE_SAVE, cMain::OnSave)
@@ -1023,6 +1080,7 @@ void cMain::CreateLeftSide(wxWindow* parent, wxSizer* left_side_sizer)
 		(
 			m_LeftPreviewSplitter,
 			nullptr,
+			m_DefaultWidgetsColor,
 			1
 		);
 
@@ -6618,27 +6676,6 @@ auto cMain::UpdateSpectroscopyPreviewLayout() -> void
 	{
 		m_SpectroscopyHistogramPanel->Show();
 
-#ifdef _DEBUG
-		/*
-			Debug mode: keep the camera preview visible.
-			This is useful when checking filtering and acquisition behavior.
-		*/
-		m_CamPreviewPane->Show();
-
-		if (!m_LeftPreviewSplitter->IsSplit())
-		{
-			const int splitterHeight = m_LeftPreviewSplitter->GetClientSize().GetHeight();
-			const int histogramHeight = FromDIP(220);
-			const int sashPosition = std::max(FromDIP(120), splitterHeight - histogramHeight);
-
-			m_LeftPreviewSplitter->SplitHorizontally
-			(
-				m_CamPreviewPane,
-				m_SpectroscopyHistogramPanel.get(),
-				sashPosition
-			);
-		}
-#else
 		/*
 			Release mode: spectroscopy does not need the camera preview.
 			Show only the accumulated histogram panel.
@@ -6648,7 +6685,6 @@ auto cMain::UpdateSpectroscopyPreviewLayout() -> void
 
 		m_CamPreviewPane->Hide();
 		m_LeftPreviewSplitter->Initialize(m_SpectroscopyHistogramPanel.get());
-#endif
 	}
 	else
 	{
@@ -6892,10 +6928,10 @@ auto cMain::UpdateSpectroscopyStatus() -> void
 	(
 		wxString::Format
 		(
-			wxT("Frames: %llu / %llu, events: %llu, elapsed: %.1f s"),
+			wxT("Frames: %llu / %llu, events: %s, elapsed: %.1f s"),
 			m_SpectroscopyFrameCount,
 			m_SpectroscopyCycleCount,
-			m_SpectroscopyTotalEvents,
+			FormatCompactEventCount(m_SpectroscopyTotalEvents),
 			elapsedSec
 		)
 	);
