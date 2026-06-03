@@ -3,8 +3,6 @@
 wxIMPLEMENT_CLASS(cGenerateReportDialog, wxPropertySheetDialog);
 wxBEGIN_EVENT_TABLE(cGenerateReportDialog, wxPropertySheetDialog)
     EVT_CHOICE(GenerateReportVariables::ID_IMG_DATA_TYPE, cGenerateReportDialog::OnDataTypeChoice)
-    //EVT_BUTTON(SetFFCImgVariables::ID_OPEN_BLACK_BTN, cSetFFCImgDialog::OnOpenBlackImageBtn)
-    //EVT_BUTTON(SetFFCImgVariables::ID_OPEN_WHITE_BTN, cSetFFCImgDialog::OnOpenWhiteImageBtn)
 wxEND_EVENT_TABLE()
 
 cGenerateReportDialog::cGenerateReportDialog
@@ -14,9 +12,7 @@ cGenerateReportDialog::cGenerateReportDialog
 )
 {
     m_InputParameters = std::make_unique<GenerateReportVariables::InputParameters>(inputParameters);
-    //SetExtraStyle(wxDIALOG_EX_CONTEXTHELP);
 
-    //int resizeBorder = wxRESIZE_BORDER;
     int resizeBorder = 0;
 
     Create(parent, wxID_ANY, "Load Data", wxDefaultPosition, wxDefaultSize,
@@ -26,7 +22,60 @@ cGenerateReportDialog::cGenerateReportDialog
     Bind(wxEVT_BUTTON, &cGenerateReportDialog::OnExitButtonClicked, this);
 
     auto notebook = GetBookCtrl();
-    notebook->SetImageList(m_imageList);
+
+	auto size = wxSize(16, 16);
+	auto imageList = new wxImageList(size.GetWidth(), size.GetHeight(), true);
+
+    notebook->SetImageList(imageList);
+    int imgIndexReportVariables{}, imgIndexFFC{}, imgIndexInputImages{};
+
+	{
+		auto bitmap = wxART_FILE_PRESENT;
+		auto client = wxART_CLIENT_MATERIAL_ROUND;
+		auto color = wxColour(0, 162, 232);
+
+		auto bmp = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			size,
+			color
+		);
+
+		imgIndexReportVariables = imageList->Add(bmp);
+	}
+
+	{
+		auto bitmap = wxART_FLIP_TO_BACK;
+		auto client = wxART_CLIENT_MATERIAL_ROUND;
+		auto color = wxColour(238, 138, 248);
+
+		auto bmp = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			size,
+			color
+		);
+
+		imgIndexFFC = imageList->Add(bmp);
+	}
+
+	{
+		auto bitmap = wxART_IMAGE_SEARCH;
+		auto client = wxART_CLIENT_MATERIAL_ROUND;
+		auto color = wxColour(117, 250, 97);
+
+		auto bmp = wxMaterialDesignArtProvider::GetBitmap
+		(
+			bitmap,
+			client,
+			size,
+			color
+		);
+
+		imgIndexInputImages = imageList->Add(bmp);
+	}
 
     auto reportVariables = CreateReportVariablesPage(notebook);
     auto flatFieldPage = CreateFlatFieldPage(notebook);
@@ -41,7 +90,7 @@ cGenerateReportDialog::cGenerateReportDialog
 #else
         true, 
 #endif // _DEBUG
-        0
+        imgIndexReportVariables
     );
     
     notebook->AddPage
@@ -49,7 +98,7 @@ cGenerateReportDialog::cGenerateReportDialog
         flatFieldPage, 
         "Flat Field Correction", 
         false, 
-        0
+        imgIndexFFC
     );
     
     notebook->AddPage
@@ -61,7 +110,7 @@ cGenerateReportDialog::cGenerateReportDialog
 #else
         false, 
 #endif // _DEBUG
-        0
+        imgIndexInputImages
     );
 
     LayoutDialog();
@@ -636,7 +685,7 @@ wxPanel* cGenerateReportDialog::CreateFlatFieldPage(wxWindow* parent)
 	// Original White Image
     wxStaticBox* whiteStaticBox = new wxStaticBox(panel, wxID_ANY, "Original White Image");
     {
-        whiteStaticBox->SetBackgroundColour(wxColor(255, 255, 255));
+        whiteStaticBox->SetBackgroundColour(wxColor(162, 162, 162));
         wxStaticBoxSizer* staticBoxSizer = new wxStaticBoxSizer(whiteStaticBox, wxVERTICAL);
         {
             wxBoxSizer* horizontalSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -820,299 +869,21 @@ wxPanel* cGenerateReportDialog::CreateInputImagesPage(wxWindow* parent)
 
 	topSizer->AddStretchSpacer();
 
-    // X-Ray Test
-    auto xRayTestStaticBox = new wxStaticBoxSizer(wxVERTICAL, panel, "X-Ray Test (Optional)");
+    auto xRayTestStaticBox = new wxStaticBoxSizer
+    (
+        wxVERTICAL,
+        panel,
+        "X-Ray Test (Optional)"
+    );
+
+    for (std::size_t i = 0; i < XRayImageCount; ++i)
     {
-        // Image 1
+        CreateXRayImageControls(panel, xRayTestStaticBox, i);
+
+        if (i + 1 < XRayImageCount)
         {
-			auto staticBox = new wxStaticBox(panel, wxID_ANY, "Image 1");
-            {
-                staticBox->SetBackgroundColour(wxColor(255, 201, 14));
-                wxStaticBoxSizer* staticBoxSizer = new wxStaticBoxSizer(staticBox, wxVERTICAL);
-                {
-                    wxBoxSizer* horizontalSizer = new wxBoxSizer(wxHORIZONTAL);
-
-                    m_XRayImage1Path = std::make_unique<wxTextCtrl>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_XRAY_IMAGE_1_PATH_TXT_CTRL,
-                            wxT("X-Ray 1 Image Path..."),
-                            wxDefaultPosition, wxDefaultSize,
-                            wxTE_LEFT | wxTE_READONLY
-                        );
-
-                    horizontalSizer->Add(m_XRayImage1Path.get(), 1, wxLEFT | wxRIGHT | wxEXPAND, 2);
-
-                    auto bmp = wxMaterialDesignArtProvider::GetBitmap
-                    (
-                        wxART_TOGGLE_OFF,
-                        wxART_CLIENT_AWESOME_SOLID,
-                        wxSize(16, 16),
-                        wxColour(255, 0, 0)
-                    );
-
-                    m_OpenXRayImage1Btn = std::make_unique<wxBitmapButton>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_OPEN_XRAY_IMAGE_1_BTN,
-                            bmp
-                        );
-
-                    m_OpenXRayImage1Btn->Bind(wxEVT_BUTTON, &cGenerateReportDialog::OnOpenXRayImage1Btn, this);
-
-                    horizontalSizer->Add(m_OpenXRayImage1Btn.get(), 0, wxRIGHT, 2);
-
-                    staticBoxSizer->Add(horizontalSizer, 0, wxEXPAND);
-
-                    m_XRayImage1Caption = std::make_unique<wxTextCtrl>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_XRAY_IMAGE_1_CAPTION_TXT_CTRL,
-                            m_InputParameters->xRayImagesDefaultCaption[0],
-                            wxDefaultPosition, wxDefaultSize,
-                            wxTE_LEFT
-                        );
-                    m_XRayImage1Caption->Disable();
-                    staticBoxSizer->AddSpacer(2);
-                    staticBoxSizer->Add(m_XRayImage1Caption.get(), 0, wxEXPAND);
-
-                }
-                xRayTestStaticBox->Add(staticBoxSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
-            }
+            xRayTestStaticBox->AddSpacer(5);
         }
-
-        xRayTestStaticBox->AddSpacer(5);
-
-        // Image 2
-        {
-            auto staticBox = new wxStaticBox(panel, wxID_ANY, "Image 2");
-            {
-                staticBox->SetBackgroundColour(wxColor(255, 201, 14));
-                wxStaticBoxSizer* staticBoxSizer = new wxStaticBoxSizer(staticBox, wxVERTICAL);
-                {
-                    wxBoxSizer* horizontalSizer = new wxBoxSizer(wxHORIZONTAL);
-
-                    m_XRayImage2Path = std::make_unique<wxTextCtrl>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_XRAY_IMAGE_2_PATH_TXT_CTRL,
-                            wxT("X-Ray 2 Image Path..."),
-                            wxDefaultPosition, wxDefaultSize,
-                            wxTE_LEFT | wxTE_READONLY
-                        );
-
-                    horizontalSizer->Add(m_XRayImage2Path.get(), 1, wxLEFT | wxRIGHT | wxEXPAND, 2);
-
-                    auto bmp = wxMaterialDesignArtProvider::GetBitmap
-                    (
-                        wxART_TOGGLE_OFF,
-                        wxART_CLIENT_AWESOME_SOLID,
-                        wxSize(16, 16),
-                        wxColour(255, 0, 0)
-                    );
-
-                    m_OpenXRayImage2Btn = std::make_unique<wxBitmapButton>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_OPEN_XRAY_IMAGE_2_BTN,
-                            bmp
-                        );
-
-                    m_OpenXRayImage2Btn->Bind(wxEVT_BUTTON, &cGenerateReportDialog::OnOpenXRayImage2Btn, this);
-
-                    horizontalSizer->Add(m_OpenXRayImage2Btn.get(), 0, wxRIGHT, 2);
-                    staticBoxSizer->Add(horizontalSizer, 0, wxEXPAND);
-
-                    m_XRayImage2Caption = std::make_unique<wxTextCtrl>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_XRAY_IMAGE_2_CAPTION_TXT_CTRL,
-                            m_InputParameters->xRayImagesDefaultCaption[1],
-                            wxDefaultPosition, wxDefaultSize,
-                            wxTE_LEFT
-                        );
-                    m_XRayImage2Caption->Disable();
-                    staticBoxSizer->AddSpacer(2);
-                    staticBoxSizer->Add(m_XRayImage2Caption.get(), 0, wxEXPAND);
-                }
-                xRayTestStaticBox->Add(staticBoxSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
-            }
-        }
-
-        xRayTestStaticBox->AddSpacer(5);
-
-        // Image 3
-        {
-            auto staticBox = new wxStaticBox(panel, wxID_ANY, "Image 3");
-            {
-                staticBox->SetBackgroundColour(wxColor(255, 201, 14));
-                wxStaticBoxSizer* staticBoxSizer = new wxStaticBoxSizer(staticBox, wxVERTICAL);
-                {
-                    wxBoxSizer* horizontalSizer = new wxBoxSizer(wxHORIZONTAL);
-
-                    m_XRayImage3Path = std::make_unique<wxTextCtrl>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_XRAY_IMAGE_3_PATH_TXT_CTRL,
-                            wxT("X-Ray 3 Image Path..."),
-                            wxDefaultPosition, wxDefaultSize,
-                            wxTE_LEFT | wxTE_READONLY
-                        );
-
-                    horizontalSizer->Add(m_XRayImage3Path.get(), 1, wxLEFT | wxRIGHT | wxEXPAND, 2);
-
-                    auto bmp = wxMaterialDesignArtProvider::GetBitmap
-                    (
-                        wxART_TOGGLE_OFF,
-                        wxART_CLIENT_AWESOME_SOLID,
-                        wxSize(16, 16),
-                        wxColour(255, 0, 0)
-                    );
-
-                    m_OpenXRayImage3Btn = std::make_unique<wxBitmapButton>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_OPEN_XRAY_IMAGE_3_BTN,
-                            bmp
-                        );
-
-                    m_OpenXRayImage3Btn->Bind(wxEVT_BUTTON, &cGenerateReportDialog::OnOpenXRayImage3Btn, this);
-
-                    horizontalSizer->Add(m_OpenXRayImage3Btn.get(), 0, wxRIGHT, 2);
-                    staticBoxSizer->Add(horizontalSizer, 0, wxEXPAND);
-
-                    m_XRayImage3Caption = std::make_unique<wxTextCtrl>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_XRAY_IMAGE_3_CAPTION_TXT_CTRL,
-                            m_InputParameters->xRayImagesDefaultCaption[2],
-                            wxDefaultPosition, wxDefaultSize,
-                            wxTE_LEFT
-                        );
-                    m_XRayImage3Caption->Disable();
-                    staticBoxSizer->AddSpacer(2);
-                    staticBoxSizer->Add(m_XRayImage3Caption.get(), 0, wxEXPAND);
-                }
-                xRayTestStaticBox->Add(staticBoxSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
-            }
-        }
-
-        xRayTestStaticBox->AddSpacer(5);
-
-        // Image 4
-        {
-            auto staticBox = new wxStaticBox(panel, wxID_ANY, "Image 4");
-            {
-                staticBox->SetBackgroundColour(wxColor(255, 201, 14));
-                wxStaticBoxSizer* staticBoxSizer = new wxStaticBoxSizer(staticBox, wxVERTICAL);
-                {
-                    wxBoxSizer* horizontalSizer = new wxBoxSizer(wxHORIZONTAL);
-
-                    m_XRayImage4Path = std::make_unique<wxTextCtrl>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_XRAY_IMAGE_4_PATH_TXT_CTRL,
-                            wxT("X-Ray 4 Image Path..."),
-                            wxDefaultPosition, wxDefaultSize,
-                            wxTE_LEFT | wxTE_READONLY
-                        );
-
-                    horizontalSizer->Add(m_XRayImage4Path.get(), 1, wxLEFT | wxRIGHT | wxEXPAND, 2);
-
-                    auto bmp = wxMaterialDesignArtProvider::GetBitmap
-                    (
-                        wxART_TOGGLE_OFF,
-                        wxART_CLIENT_AWESOME_SOLID,
-                        wxSize(16, 16),
-                        wxColour(255, 0, 0)
-                    );
-
-                    m_OpenXRayImage4Btn = std::make_unique<wxBitmapButton>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_OPEN_XRAY_IMAGE_4_BTN,
-                            bmp
-                        );
-
-                    m_OpenXRayImage4Btn->Bind(wxEVT_BUTTON, &cGenerateReportDialog::OnOpenXRayImage4Btn, this);
-
-                    horizontalSizer->Add(m_OpenXRayImage4Btn.get(), 0, wxRIGHT, 2);
-                    staticBoxSizer->Add(horizontalSizer, 0, wxEXPAND);
-
-                    m_XRayImage4Caption = std::make_unique<wxTextCtrl>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_XRAY_IMAGE_4_CAPTION_TXT_CTRL,
-                            m_InputParameters->xRayImagesDefaultCaption[3],
-                            wxDefaultPosition, wxDefaultSize,
-                            wxTE_LEFT
-                        );
-                    m_XRayImage4Caption->Disable();
-                    staticBoxSizer->AddSpacer(2);
-                    staticBoxSizer->Add(m_XRayImage4Caption.get(), 0, wxEXPAND);
-                }
-                xRayTestStaticBox->Add(staticBoxSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
-            }
-        }
-
-        xRayTestStaticBox->AddSpacer(5);
-
-        // Image 5
-        {
-            auto staticBox = new wxStaticBox(panel, wxID_ANY, "Image 5");
-            {
-                staticBox->SetBackgroundColour(wxColor(255, 201, 14));
-                wxStaticBoxSizer* staticBoxSizer = new wxStaticBoxSizer(staticBox, wxVERTICAL);
-                {
-                    wxBoxSizer* horizontalSizer = new wxBoxSizer(wxHORIZONTAL);
-
-                    m_XRayImage5Path = std::make_unique<wxTextCtrl>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_XRAY_IMAGE_5_PATH_TXT_CTRL,
-                            wxT("X-Ray 5 Image Path..."),
-                            wxDefaultPosition, wxDefaultSize,
-                            wxTE_LEFT | wxTE_READONLY
-                        );
-
-                    horizontalSizer->Add(m_XRayImage5Path.get(), 1, wxLEFT | wxRIGHT | wxEXPAND, 2);
-
-                    auto bmp = wxMaterialDesignArtProvider::GetBitmap
-                    (
-                        wxART_TOGGLE_OFF,
-                        wxART_CLIENT_AWESOME_SOLID,
-                        wxSize(16, 16),
-                        wxColour(255, 0, 0)
-                    );
-
-                    m_OpenXRayImage5Btn = std::make_unique<wxBitmapButton>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_OPEN_XRAY_IMAGE_5_BTN,
-                            bmp
-                        );
-
-                    m_OpenXRayImage5Btn->Bind(wxEVT_BUTTON, &cGenerateReportDialog::OnOpenXRayImage5Btn, this);
-
-                    horizontalSizer->Add(m_OpenXRayImage5Btn.get(), 0, wxRIGHT, 2);
-                    staticBoxSizer->Add(horizontalSizer, 0, wxEXPAND);
-
-                    m_XRayImage5Caption = std::make_unique<wxTextCtrl>
-                        (
-                            panel,
-                            GenerateReportVariables::ID_XRAY_IMAGE_5_CAPTION_TXT_CTRL,
-                            m_InputParameters->xRayImagesDefaultCaption[4],
-                            wxDefaultPosition, wxDefaultSize,
-                            wxTE_LEFT
-                        );
-                    m_XRayImage5Caption->Disable();
-                    staticBoxSizer->AddSpacer(2);
-                    staticBoxSizer->Add(m_XRayImage5Caption.get(), 0, wxEXPAND);
-                }
-                xRayTestStaticBox->Add(staticBoxSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
-            }
-        }
-
     }
 
 	topSizer->Add(xRayTestStaticBox, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
@@ -1735,85 +1506,78 @@ auto cGenerateReportDialog::OnOpenCircleImagesForCalculationBtn(wxCommandEvent& 
 	m_OpenCircleImagesForCalculationBtn->SetBitmap(bmp);
 }
 
-auto cGenerateReportDialog::OnOpenXRayImage1Btn(wxCommandEvent& evt) -> void
+auto cGenerateReportDialog::OnOpenXRayImageBtn(wxCommandEvent& event_) -> void
 {
-    auto bmp = wxBitmap();
+    const int eventId = event_.GetId();
 
-    if (m_IsOpenXRayImage1Toggled)
+    const auto it = std::find
+    (
+        OpenXRayImageButtonIds.begin(),
+        OpenXRayImageButtonIds.end(),
+        eventId
+    );
+
+    if (it == OpenXRayImageButtonIds.end())
     {
-        m_XRayImage1Path->ChangeValue(wxT("X-Ray 1 Image Path..."));
-        
-        m_IsOpenXRayImage1Toggled = false;
-		bmp = wxMaterialDesignArtProvider::GetBitmap
-		(
-			wxART_TOGGLE_OFF, 
-			wxART_CLIENT_AWESOME_SOLID, 
-			wxSize(16, 16), 
-			wxColour(255, 0, 0)
-		);
-		m_OpenXRayImage1Btn->SetBitmap(bmp);
-		m_XRayImage1Caption->Disable();
+        event_.Skip();
         return;
     }
 
-	std::string file_path{};
-#ifdef _DEBUG
-	file_path = "D:\\Data_RIGAKU\\2025\\VM\\037-066\\mca_graf.png";
-#else
-    wxFileDialog dlg
-    (
-        this,
-        "Open an image",
-        wxEmptyString,
-        wxEmptyString,
-        "PNG Files (*.png)|*.png",
-        wxFD_OPEN | wxFD_FILE_MUST_EXIST
-    );
+    const auto imageIndex = static_cast<std::size_t>
+        (
+            std::distance(OpenXRayImageButtonIds.begin(), it)
+            );
 
-    if (dlg.ShowModal() != wxID_OK) return;
-    file_path = std::string(dlg.GetPath().mbc_str());
-#endif // _DEBUG
-
-    m_XRayImage1Path->ChangeValue(file_path);
-
-    m_IsOpenXRayImage1Toggled = true;
-
-	bmp = wxMaterialDesignArtProvider::GetBitmap
-	(
-		wxART_TOGGLE_ON, 
-		wxART_CLIENT_AWESOME_SOLID, 
-		wxSize(16, 16), 
-		wxColour(0, 255, 0)
-	);
-
-	m_OpenXRayImage1Btn->SetBitmap(bmp);
-	m_XRayImage1Caption->Enable();
+    OpenXRayImage(imageIndex);
 }
 
-auto cGenerateReportDialog::OnOpenXRayImage2Btn(wxCommandEvent& evt) -> void
+auto cGenerateReportDialog::OpenXRayImage(std::size_t imageIndex_) -> void
 {
-    auto bmp = wxBitmap();
-
-    if (m_IsOpenXRayImage2Toggled)
+    if (imageIndex_ >= XRayImageCount)
     {
-        m_XRayImage2Path->ChangeValue(wxT("X-Ray 2 Image Path..."));
-        
-        m_IsOpenXRayImage2Toggled = false;
-		bmp = wxMaterialDesignArtProvider::GetBitmap
-		(
-			wxART_TOGGLE_OFF, 
-			wxART_CLIENT_AWESOME_SOLID, 
-			wxSize(16, 16), 
-			wxColour(255, 0, 0)
-		);
-		m_OpenXRayImage2Btn->SetBitmap(bmp);
-		m_XRayImage2Caption->Disable();
         return;
     }
 
-	std::string file_path{};
+    auto make_toggle_bitmap = [](bool isToggled_) -> wxBitmap
+        {
+            return wxMaterialDesignArtProvider::GetBitmap
+            (
+                isToggled_ ? wxART_TOGGLE_ON : wxART_TOGGLE_OFF,
+                wxART_CLIENT_AWESOME_SOLID,
+                wxSize(16, 16),
+                isToggled_ ? wxColour(0, 255, 0) : wxColour(255, 0, 0)
+            );
+        };
+
+    const auto imageNumber = imageIndex_ + 1;
+
+    if (m_IsOpenXRayImageToggled[imageIndex_])
+    {
+        m_XRayImagePaths[imageIndex_]->ChangeValue
+        (
+            wxString::Format("X-Ray %zu Image Path...", imageNumber)
+        );
+
+        m_XRayImageCaptions[imageIndex_]->Disable();
+        m_OpenXRayImageBtns[imageIndex_]->SetBitmap(make_toggle_bitmap(false));
+
+        m_IsOpenXRayImageToggled[imageIndex_] = false;
+        return;
+    }
+
+    wxString filePath{};
+
 #ifdef _DEBUG
-	file_path = "D:\\Data_RIGAKU\\2025\\VM\\037-066\\Gain.png";
+    static const std::array<wxString, XRayImageCount> DebugXRayImagePaths =
+    {
+        wxString("D:\\Data_RIGAKU\\2025\\VM\\037-066\\mca_graf.png"),
+        wxString("D:\\Data_RIGAKU\\2025\\VM\\037-066\\Gain.png"),
+        wxString("D:\\Data_RIGAKU\\2025\\VM\\037-066\\Gain_compare.png"),
+        wxString("D:\\Data_RIGAKU\\2025\\VM\\037-066\\mca_graf.png"),
+        wxString("D:\\Data_RIGAKU\\2025\\VM\\037-066\\mca_graf.png")
+    };
+
+    filePath = DebugXRayImagePaths[imageIndex_];
 #else
     wxFileDialog dlg
     (
@@ -1821,193 +1585,28 @@ auto cGenerateReportDialog::OnOpenXRayImage2Btn(wxCommandEvent& evt) -> void
         "Open an image",
         wxEmptyString,
         wxEmptyString,
-        "PNG Files (*.png)|*.png",
+        "PNG files (*.png)|*.png",
         wxFD_OPEN | wxFD_FILE_MUST_EXIST
     );
 
-    if (dlg.ShowModal() != wxID_OK) return;
-    file_path = std::string(dlg.GetPath().mbc_str());
-#endif // _DEBUG
-
-    m_XRayImage2Path->ChangeValue(file_path);
-
-    m_IsOpenXRayImage2Toggled = true;
-
-	bmp = wxMaterialDesignArtProvider::GetBitmap
-	(
-		wxART_TOGGLE_ON, 
-		wxART_CLIENT_AWESOME_SOLID, 
-		wxSize(16, 16), 
-		wxColour(0, 255, 0)
-	);
-
-	m_OpenXRayImage2Btn->SetBitmap(bmp);
-	m_XRayImage2Caption->Enable();
-}
-
-auto cGenerateReportDialog::OnOpenXRayImage3Btn(wxCommandEvent& evt) -> void
-{
-    auto bmp = wxBitmap();
-
-    if (m_IsOpenXRayImage3Toggled)
+    if (dlg.ShowModal() != wxID_OK)
     {
-        m_XRayImage3Path->ChangeValue(wxT("X-Ray 3 Image Path..."));
-        
-        m_IsOpenXRayImage3Toggled = false;
-		bmp = wxMaterialDesignArtProvider::GetBitmap
-		(
-			wxART_TOGGLE_OFF, 
-			wxART_CLIENT_AWESOME_SOLID, 
-			wxSize(16, 16), 
-			wxColour(255, 0, 0)
-		);
-		m_OpenXRayImage3Btn->SetBitmap(bmp);
-		m_XRayImage3Caption->Disable();
         return;
     }
 
-	std::string file_path{};
-#ifdef _DEBUG
-	file_path = "D:\\Data_RIGAKU\\2025\\VM\\037-066\\Gain_compare.png";
-#else
-    wxFileDialog dlg
-    (
-        this,
-        "Open an image",
-        wxEmptyString,
-        wxEmptyString,
-        "PNG Files (*.png)|*.png",
-        wxFD_OPEN | wxFD_FILE_MUST_EXIST
-    );
+    filePath = dlg.GetPath();
+#endif
 
-    if (dlg.ShowModal() != wxID_OK) return;
-    file_path = std::string(dlg.GetPath().mbc_str());
-#endif // _DEBUG
-
-    m_XRayImage3Path->ChangeValue(file_path);
-
-    m_IsOpenXRayImage3Toggled = true;
-
-	bmp = wxMaterialDesignArtProvider::GetBitmap
-	(
-		wxART_TOGGLE_ON, 
-		wxART_CLIENT_AWESOME_SOLID, 
-		wxSize(16, 16), 
-		wxColour(0, 255, 0)
-	);
-
-	m_OpenXRayImage3Btn->SetBitmap(bmp);
-	m_XRayImage3Caption->Enable();
-}
-
-auto cGenerateReportDialog::OnOpenXRayImage4Btn(wxCommandEvent& evt) -> void
-{
-    auto bmp = wxBitmap();
-
-    if (m_IsOpenXRayImage4Toggled)
+    if (filePath.IsEmpty())
     {
-        m_XRayImage4Path->ChangeValue(wxT("X-Ray 4 Image Path..."));
-        
-        m_IsOpenXRayImage4Toggled = false;
-		bmp = wxMaterialDesignArtProvider::GetBitmap
-		(
-			wxART_TOGGLE_OFF, 
-			wxART_CLIENT_AWESOME_SOLID, 
-			wxSize(16, 16), 
-			wxColour(255, 0, 0)
-		);
-		m_OpenXRayImage4Btn->SetBitmap(bmp);
-		m_XRayImage4Caption->Disable();
         return;
     }
 
-	std::string file_path{};
-#ifdef _DEBUG
-	file_path = "D:\\Data_RIGAKU\\2025\\VM\\037-066\\mca_graf.png";
-#else
-    wxFileDialog dlg
-    (
-        this,
-        "Open an image",
-        wxEmptyString,
-        wxEmptyString,
-        "PNG Files (*.png)|*.png",
-        wxFD_OPEN | wxFD_FILE_MUST_EXIST
-    );
+    m_XRayImagePaths[imageIndex_]->ChangeValue(filePath);
+    m_XRayImageCaptions[imageIndex_]->Enable();
+    m_OpenXRayImageBtns[imageIndex_]->SetBitmap(make_toggle_bitmap(true));
 
-    if (dlg.ShowModal() != wxID_OK) return;
-    file_path = std::string(dlg.GetPath().mbc_str());
-#endif // _DEBUG
-
-    m_XRayImage4Path->ChangeValue(file_path);
-
-    m_IsOpenXRayImage4Toggled = true;
-
-	bmp = wxMaterialDesignArtProvider::GetBitmap
-	(
-		wxART_TOGGLE_ON, 
-		wxART_CLIENT_AWESOME_SOLID, 
-		wxSize(16, 16), 
-		wxColour(0, 255, 0)
-	);
-
-	m_OpenXRayImage4Btn->SetBitmap(bmp);
-	m_XRayImage4Caption->Enable();
-}
-
-auto cGenerateReportDialog::OnOpenXRayImage5Btn(wxCommandEvent& evt) -> void
-{
-    auto bmp = wxBitmap();
-
-    if (m_IsOpenXRayImage5Toggled)
-    {
-        m_XRayImage5Path->ChangeValue(wxT("X-Ray 5 Image Path..."));
-        
-        m_IsOpenXRayImage5Toggled = false;
-		bmp = wxMaterialDesignArtProvider::GetBitmap
-		(
-			wxART_TOGGLE_OFF, 
-			wxART_CLIENT_AWESOME_SOLID, 
-			wxSize(16, 16), 
-			wxColour(255, 0, 0)
-		);
-		m_OpenXRayImage5Btn->SetBitmap(bmp);
-		m_XRayImage5Caption->Disable();
-        return;
-    }
-
-	std::string file_path{};
-#ifdef _DEBUG
-	file_path = "D:\\Data_RIGAKU\\2025\\VM\\037-066\\mca_graf.png";
-#else
-    wxFileDialog dlg
-    (
-        this,
-        "Open an image",
-        wxEmptyString,
-        wxEmptyString,
-        "PNG Files (*.png)|*.png",
-        wxFD_OPEN | wxFD_FILE_MUST_EXIST
-    );
-
-    if (dlg.ShowModal() != wxID_OK) return;
-    file_path = std::string(dlg.GetPath().mbc_str());
-#endif // _DEBUG
-
-    m_XRayImage5Path->ChangeValue(file_path);
-
-    m_IsOpenXRayImage5Toggled = true;
-
-	bmp = wxMaterialDesignArtProvider::GetBitmap
-	(
-		wxART_TOGGLE_ON, 
-		wxART_CLIENT_AWESOME_SOLID, 
-		wxSize(16, 16), 
-		wxColour(0, 255, 0)
-	);
-
-	m_OpenXRayImage5Btn->SetBitmap(bmp);
-	m_XRayImage5Caption->Enable();
+    m_IsOpenXRayImageToggled[imageIndex_] = true;
 }
 
 auto cGenerateReportDialog::OnDataTypeChoice(wxCommandEvent& evt) -> void
@@ -2151,4 +1750,106 @@ auto cGenerateReportDialog::OnExitButtonClicked(wxCommandEvent& evt) -> void
     }
 
 	EndModal(buttonId);
+}
+
+auto cGenerateReportDialog::CreateXRayImageControls(wxWindow* parent_, wxStaticBoxSizer* parentSizer_, std::size_t imageIndex_) -> void
+{
+    if (imageIndex_ >= XRayImageCount)
+    {
+        return;
+    }
+
+    const auto imageNumber = imageIndex_ + 1;
+
+    auto staticBox = new wxStaticBox
+    (
+        parent_,
+        wxID_ANY,
+        wxString::Format("Image %zu", imageNumber)
+    );
+
+    const wxColour backgroundColour = wxColour(173, 172, 58);
+
+    staticBox->SetBackgroundColour(backgroundColour);
+
+    auto staticBoxSizer = new wxStaticBoxSizer(staticBox, wxVERTICAL);
+    auto horizontalSizer = new wxBoxSizer(wxHORIZONTAL);
+
+    m_XRayImagePaths[imageIndex_] = std::make_unique<wxTextCtrl>
+        (
+            parent_,
+            XRayImagePathTextCtrlIds[imageIndex_],
+            wxString::Format("X-Ray %zu Image Path...", imageNumber),
+            wxDefaultPosition,
+            wxDefaultSize,
+            wxTE_LEFT | wxTE_READONLY
+        );
+
+    horizontalSizer->Add
+    (
+        m_XRayImagePaths[imageIndex_].get(),
+        1,
+        wxLEFT | wxRIGHT | wxEXPAND,
+        2
+    );
+
+    auto bmp = wxMaterialDesignArtProvider::GetBitmap
+    (
+        wxART_TOGGLE_OFF,
+        wxART_CLIENT_AWESOME_SOLID,
+        wxSize(16, 16),
+        wxColour(255, 0, 0)
+    );
+
+    m_OpenXRayImageBtns[imageIndex_] = std::make_unique<wxBitmapButton>
+        (
+            parent_,
+            OpenXRayImageButtonIds[imageIndex_],
+            bmp
+        );
+
+    m_OpenXRayImageBtns[imageIndex_]->Bind
+    (
+        wxEVT_BUTTON,
+        &cGenerateReportDialog::OnOpenXRayImageBtn,
+        this
+    );
+
+    horizontalSizer->Add
+    (
+        m_OpenXRayImageBtns[imageIndex_].get(),
+        0,
+        wxRIGHT,
+        2
+    );
+
+    staticBoxSizer->Add(horizontalSizer, 0, wxEXPAND);
+
+    m_XRayImageCaptions[imageIndex_] = std::make_unique<wxTextCtrl>
+        (
+            parent_,
+            XRayImageCaptionTextCtrlIds[imageIndex_],
+            m_InputParameters->xRayImagesDefaultCaption[imageIndex_],
+            wxDefaultPosition,
+            wxDefaultSize,
+            wxTE_LEFT
+        );
+
+    m_XRayImageCaptions[imageIndex_]->Disable();
+
+    staticBoxSizer->AddSpacer(2);
+    staticBoxSizer->Add
+    (
+        m_XRayImageCaptions[imageIndex_].get(),
+        0,
+        wxEXPAND
+    );
+
+    parentSizer_->Add
+    (
+        staticBoxSizer,
+        0,
+        wxEXPAND | wxLEFT | wxRIGHT,
+        5
+    );
 }

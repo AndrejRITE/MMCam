@@ -18,6 +18,8 @@
 
 #include <memory>
 #include <fstream>
+#include <array>
+#include <algorithm>
 
 namespace GenerateReportVariables {
     enum 
@@ -166,27 +168,31 @@ public:
     {
         wxArrayString returnArray{};
 
-        if (m_IsOpenXRayImage1Toggled) returnArray.Add(m_XRayImage1Path->GetValue());
-        if (m_IsOpenXRayImage2Toggled) returnArray.Add(m_XRayImage2Path->GetValue());
-        if (m_IsOpenXRayImage3Toggled) returnArray.Add(m_XRayImage3Path->GetValue());
-        if (m_IsOpenXRayImage4Toggled) returnArray.Add(m_XRayImage4Path->GetValue());
-        if (m_IsOpenXRayImage5Toggled) returnArray.Add(m_XRayImage5Path->GetValue());
+        for (std::size_t i = 0; i < XRayImageCount; ++i)
+        {
+            if (m_IsOpenXRayImageToggled[i] && m_XRayImagePaths[i])
+            {
+                returnArray.Add(m_XRayImagePaths[i]->GetValue());
+            }
+        }
 
         return returnArray;
-    }
+    };
 
     auto GetXRayImagesCaptions() const -> wxArrayString
     {
         wxArrayString returnArray{};
 
-        if (m_IsOpenXRayImage1Toggled) returnArray.Add(m_XRayImage1Caption->GetValue());
-        if (m_IsOpenXRayImage2Toggled) returnArray.Add(m_XRayImage2Caption->GetValue());
-        if (m_IsOpenXRayImage3Toggled) returnArray.Add(m_XRayImage3Caption->GetValue());
-        if (m_IsOpenXRayImage4Toggled) returnArray.Add(m_XRayImage4Caption->GetValue());
-        if (m_IsOpenXRayImage5Toggled) returnArray.Add(m_XRayImage5Caption->GetValue());
+        for (std::size_t i = 0; i < XRayImageCount; ++i)
+        {
+            if (m_IsOpenXRayImageToggled[i] && m_XRayImageCaptions[i])
+            {
+                returnArray.Add(m_XRayImageCaptions[i]->GetValue());
+            }
+        }
 
         return returnArray;
-    }
+    };
 
 
 private:
@@ -203,11 +209,9 @@ private:
     auto OnOpenImagesForCalculationBtn(wxCommandEvent& evt) -> void;
     auto OnOpenCircleImagesForCalculationBtn(wxCommandEvent& evt) -> void;
 
-    auto OnOpenXRayImage1Btn(wxCommandEvent& evt) -> void;
-    auto OnOpenXRayImage2Btn(wxCommandEvent& evt) -> void;
-    auto OnOpenXRayImage3Btn(wxCommandEvent& evt) -> void;
-    auto OnOpenXRayImage4Btn(wxCommandEvent& evt) -> void;
-    auto OnOpenXRayImage5Btn(wxCommandEvent& evt) -> void;
+    auto OnOpenXRayImageBtn(wxCommandEvent& event_) -> void;
+
+    auto OpenXRayImage(std::size_t imageIndex_) -> void;
 
     auto CheckIfImageIsCorrect
     (
@@ -226,6 +230,13 @@ private:
     ) -> bool;
 
     auto OnExitButtonClicked(wxCommandEvent& evt) -> void;
+
+    auto CreateXRayImageControls
+    (
+        wxWindow* parent_,
+        wxStaticBoxSizer* parentSizer_,
+        std::size_t imageIndex_
+    ) -> void;
 
     auto GetPngFiles(const wxString& directory, wxArrayString& pngFiles) -> void
     {
@@ -274,22 +285,44 @@ protected:
     std::unique_ptr<wxBitmapButton> m_OpenImagesForCalculationBtn{}, m_OpenCircleImagesForCalculationBtn{};
     bool m_IsOpenImagesForCalculationToggled{}, m_IsOpenCircleImagesForCalculationToggled{};
 
-    // X-ray test
-    std::unique_ptr<wxTextCtrl> m_XRayImage1Path{}, m_XRayImage2Path{}, m_XRayImage3Path{}, m_XRayImage4Path{}, m_XRayImage5Path{};
-    std::unique_ptr<wxTextCtrl> m_XRayImage1Caption{}, m_XRayImage2Caption{}, m_XRayImage3Caption{}, m_XRayImage4Caption{}, m_XRayImage5Caption{};
-    std::unique_ptr<wxBitmapButton> m_OpenXRayImage1Btn{}, m_OpenXRayImage2Btn{}, m_OpenXRayImage3Btn{}, m_OpenXRayImage4Btn{}, m_OpenXRayImage5Btn{};
-    bool m_IsOpenXRayImage1Toggled{}, m_IsOpenXRayImage2Toggled{}, m_IsOpenXRayImage3Toggled{}, m_IsOpenXRayImage4Toggled{}, m_IsOpenXRayImage5Toggled{};
-
-    //bool m_IsOriginalBlackImageLoadedSucc{}, m_IsOriginalWhiteImageLoadedSucc{}, m_IsCircleBlackImageLoadedSucc{};
-
-    //cv::Mat m_BlackImageMat{}, m_WhiteImageMat{};
     wxString m_OriginalBlackImagePath{}, m_OriginalWhiteImagePath{}, m_CircleBlackImagePath{};
     wxArrayString m_ImagesForCalculationPathsArray{}, m_CircleImagesForCalculationPathsArray{};
 
-    wxImageList* m_imageList;
-
     std::unique_ptr<GenerateReportVariables::InputParameters> m_InputParameters{};
 
+    static constexpr std::size_t XRayImageCount = 5;
+
+    std::array<std::unique_ptr<wxTextCtrl>, XRayImageCount> m_XRayImagePaths;
+    std::array<std::unique_ptr<wxBitmapButton>, XRayImageCount> m_OpenXRayImageBtns;
+    std::array<std::unique_ptr<wxTextCtrl>, XRayImageCount> m_XRayImageCaptions;
+    std::array<bool, XRayImageCount> m_IsOpenXRayImageToggled{};
+
+    static constexpr std::array<int, XRayImageCount> XRayImagePathTextCtrlIds =
+    {
+        GenerateReportVariables::ID_XRAY_IMAGE_1_PATH_TXT_CTRL,
+        GenerateReportVariables::ID_XRAY_IMAGE_2_PATH_TXT_CTRL,
+        GenerateReportVariables::ID_XRAY_IMAGE_3_PATH_TXT_CTRL,
+        GenerateReportVariables::ID_XRAY_IMAGE_4_PATH_TXT_CTRL,
+        GenerateReportVariables::ID_XRAY_IMAGE_5_PATH_TXT_CTRL
+    };
+
+    static constexpr std::array<int, XRayImageCount> OpenXRayImageButtonIds =
+    {
+        GenerateReportVariables::ID_OPEN_XRAY_IMAGE_1_BTN,
+        GenerateReportVariables::ID_OPEN_XRAY_IMAGE_2_BTN,
+        GenerateReportVariables::ID_OPEN_XRAY_IMAGE_3_BTN,
+        GenerateReportVariables::ID_OPEN_XRAY_IMAGE_4_BTN,
+        GenerateReportVariables::ID_OPEN_XRAY_IMAGE_5_BTN
+    };
+
+    static constexpr std::array<int, XRayImageCount> XRayImageCaptionTextCtrlIds =
+    {
+        GenerateReportVariables::ID_XRAY_IMAGE_1_CAPTION_TXT_CTRL,
+        GenerateReportVariables::ID_XRAY_IMAGE_2_CAPTION_TXT_CTRL,
+        GenerateReportVariables::ID_XRAY_IMAGE_3_CAPTION_TXT_CTRL,
+        GenerateReportVariables::ID_XRAY_IMAGE_4_CAPTION_TXT_CTRL,
+        GenerateReportVariables::ID_XRAY_IMAGE_5_CAPTION_TXT_CTRL
+    };
 
     wxDECLARE_EVENT_TABLE();
 

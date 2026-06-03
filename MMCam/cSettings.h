@@ -350,7 +350,14 @@ public:
 	auto GetPixelSizeUM() const -> double { return m_PixelSizeUM; };
 	auto GetInitializedWorkStation() const -> wxString { return m_WorkStations->initialized_work_station; };
 	auto GetUploadReportFolder() const -> wxString { return m_UploadReportFolder; };
-	auto GetXRayImagesDefaultCaption() const -> wxArrayString { return m_XRayImagesCaptions; };
+	auto GetXRayImagesDefaultCaption() -> wxArrayString 
+	{
+		if (m_XRayImagesCaptions.GetCount() == 0) 
+			for (int i = 1; i <= 5; ++i) 
+				m_XRayImagesCaptions.Add(wxString::Format("X-Ray Image %d", i));
+
+		return m_XRayImagesCaptions; 
+	};
 	
 	auto GetCameraManufacturer() const -> int { return m_CameraManufacturer; }
 
