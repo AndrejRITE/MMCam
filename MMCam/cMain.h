@@ -32,6 +32,8 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <cmath>
+#include <cstring>
 
 #include <nlohmann/json.hpp>
 
@@ -667,6 +669,12 @@ namespace MainFrameVariables
 		int exposure_us = 0;
 
 		TelemetryData telemetry{};
+
+		bool spectroscopyBatch{ false };
+		bool spectroscopyBatchFinished{ true };
+		unsigned long long spectroscopyFrameIndex{ 0 };
+		unsigned long long spectroscopyFrameCount{ 1 };
+		unsigned long long spectroscopyCycleIndex{ 0 };
 	};
 
 	struct SingleShotPayload
@@ -1218,10 +1226,10 @@ private:
 	(
 		unsigned short* const imgPtr,
 		const wxSize& originalImgSize,
-		const wxRect& roi0Based,
+		const wxRect& roi,
 		const int& binning,
 		const CameraControlVariables::ImageDataTypes dataType,
-		const std::string outFilePath,
+		const std::string outFilePath = "",
 		const bool spectroscopyBatchFinished = true
 	) -> void;
 
@@ -2156,6 +2164,9 @@ private:
 
 	auto GetMeasurementBitmap(const bool isCapturing = false) -> wxBitmap;
 
+	auto SynchronizeExposureControlsFromCameraExposure() -> void;
+	auto SynchronizeExposureControlsFromSpectroscopyExposure() -> void;
+
 private:
 	CameraControlVariables::ImageDataTypes m_LiveDataType{ CameraControlVariables::RAW_12BIT };
 
@@ -2225,10 +2236,6 @@ private:
 
 	/* Live View FPS */
 	bool m_IsLiveViewFPSChecked{};
-
-	/* Live Capturing */
-	//bool m_StopLiveCapturing{};
-	//bool m_LiveCapturingEndedDrawingOnCamPreview{ true };
 
 	/* Appearance Colors */
 	const wxColour m_DefaultAppearanceColor = wxColour(230, 230, 230);
@@ -2312,6 +2319,7 @@ private:
 	cv::Mat m_binnedMat;     // software-binned frame
 	cv::Mat m_bgMat;         // full-res loaded background
 	cv::Mat m_bgBinnedMat;   // cached binned background
+	wxPoint m_bgRoiOriginSS{ -1, -1 };
 	cv::Mat m_work1, m_work2; // scratch buffers for ops (median, subtract, rotate)
 
 	// --- Flat Field Correction state ---
@@ -2320,6 +2328,7 @@ private:
 
 	unsigned short m_ffBinningSS{ 0 };
 	MainFrameVariables::BinningModes m_ffModeSS{ MainFrameVariables::BINNING_AVERAGE };
+	wxPoint m_ffRoiOriginSS{ -1, -1 };
 	double m_ffMeanDenom{ 1.0 }; // mean(white-black) at full res for normalization
 
 	// Exposure UI
@@ -2354,6 +2363,8 @@ private:
 	cv::Mat m_SpectroscopyFilteredFrame;
 	std::mutex m_SpectroscopyMutex;
 
+	bool m_IsSynchronizingExposureControls{ false };
+
 	wxDECLARE_EVENT_TABLE();
 };
 /* ___ End cMain ___ */
@@ -2374,7 +2385,9 @@ public:
 		const int& medianBlurRadius,
 		wxString* uniqueThreadKey,
 		bool* aliveOrDeadThread,
-		std::atomic<bool>* isDrawExecutionFinished
+		std::atomic<bool>* isDrawExecutionFinished,
+		const bool spectroscopyMode = false,
+		const unsigned long long spectroscopyFrameCount = 0
 	);
 	~LiveCapturing();
 
@@ -2419,6 +2432,9 @@ protected:
 	int m_SensorW{ 0 };
 	int m_SensorH{ 0 };
 	std::unique_ptr<unsigned short[]> m_RoiTmp; // used when cropping from full frame
+
+	bool m_SpectroscopyMode{ false };
+	unsigned long long m_SpectroscopyFrameCount{ 0 };
 };
 /* ___ End Worker Thread ___ */
 
