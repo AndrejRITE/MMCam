@@ -1030,14 +1030,7 @@ void cMain::CreateLeftSide(wxWindow* parent, wxSizer* left_side_sizer)
 
 	if (m_SpectroscopyEnabled)
 	{
-		m_SpectroscopyHistogramPanel->Show();
-
-		m_LeftPreviewSplitter->SplitHorizontally
-		(
-			m_CamPreviewPane,
-			m_SpectroscopyHistogramPanel.get(),
-			FromDIP(650)
-		);
+		UpdateSpectroscopyPreviewLayout();
 	}
 	else
 	{
@@ -3099,6 +3092,23 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 		wxT("Neighbourhood radius used to suppress split/double events. Press Enter to apply.")
 	);
 
+	gridSizer->Add(new wxStaticText(page, wxID_ANY, wxT("Output format:")), 0, wxALIGN_CENTER_VERTICAL);
+
+	m_SpectroscopyTabControls->outputFormatChoice = std::make_unique<wxChoice>
+		(
+			page,
+			MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_OUTPUT_FORMAT_CHOICE,
+			wxDefaultPosition,
+			txtCtrlSize
+		);
+
+	m_SpectroscopyTabControls->outputFormatChoice->Append(wxT("csv"));
+	m_SpectroscopyTabControls->outputFormatChoice->Append(wxT("txt"));
+	m_SpectroscopyTabControls->outputFormatChoice->SetSelection(0);
+	m_SpectroscopyTabControls->outputFormatChoice->SetToolTip(wxT("Accumulated spectroscopy histogram output format."));
+
+	gridSizer->Add(m_SpectroscopyTabControls->outputFormatChoice.get(), 0, wxALIGN_CENTER_VERTICAL);
+
 	sizerPage->Add(gridSizer, 0, wxCENTER | wxALL, 5);
 
 	wxBitmap bmp{};
@@ -4789,6 +4799,11 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 		std::string("\\") +
 		MainFrameVariables::GenerateFilenameWithTimestamp(exposure_time, m_SpectroscopyEnabled ? "spectroscopy_ss" : "ss");
 
+	const auto spectroscopy_histogram_base_name =
+		std::string(out_dir.mb_str()) +
+		std::string("\\") +
+		MainFrameVariables::GenerateFilenameWithTimestamp(exposure_time, "spectroscopy_histogram");
+
 	m_CameraControl->SetExposureTime(exposure_time);
 
 	auto cameraDataType = m_CameraControl->GetCameraDataType();
@@ -4831,6 +4846,7 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 			binning,
 			cameraDataType,
 			file_name,
+			spectroscopy_histogram_base_name,
 			sensorW,
 			sensorH,
 			roiActive,
@@ -4890,11 +4906,24 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 				payload.spectroscopyFrameCount = spectroscopyFrameCount;
 				payload.spectroscopyBatchFinished = (frameIndex + 1) >= spectroscopyFrameCount;
 
-				// Save only the final frame in spectroscopy mode.
-				// Intermediate frames are used only for accumulation and display.
-				payload.outFilePath = (!spectroscopyEnabled || payload.spectroscopyBatchFinished)
-					? file_name
-					: std::string();
+				payload.spectroscopyHistogramBaseFilePath = spectroscopy_histogram_base_name;
+
+				if (!spectroscopyEnabled)
+				{
+					payload.outFilePath = file_name;
+				}
+				else
+				{
+#ifdef _DEBUG
+					/*
+						Debug mode: keep the final filtered spectroscopy frame for diagnostics.
+						Release mode must not create TIFF images during spectroscopy.
+					*/
+					payload.outFilePath = payload.spectroscopyBatchFinished ? file_name : std::string();
+#else
+					payload.outFilePath.clear();
+#endif
+				}
 
 				auto imgPtr = m_CameraControl->GetImage(); // BLOCKS here
 
@@ -5100,7 +5129,8 @@ void cMain::OnSingleShotCaptureFinished(wxThreadEvent& evt)
 		m_RequestedRoi0,
 		payload.binning,
 		payload.dataType,
-		payload.outFilePath
+		payload.outFilePath,
+		payload.spectroscopyBatchFinished
 	);
 
 	if (payload.spectroscopyBatch && m_ExposureProgressStaticText)
@@ -5118,6 +5148,11 @@ void cMain::OnSingleShotCaptureFinished(wxThreadEvent& evt)
 
 	if (payload.spectroscopyBatch && !payload.spectroscopyBatchFinished)
 		return;
+
+	if (payload.spectroscopyBatch && payload.spectroscopyBatchFinished)
+	{
+		ExportSpectroscopyAccumulatedHistogramAfterBatch(payload.spectroscopyHistogramBaseFilePath);
+	}
 
 	if (m_TemperatureThread)
 		m_TemperatureThread->Resume();
@@ -5279,12 +5314,13 @@ auto cMain::RestartContinuousExposureUI() -> void
 
 auto cMain::DisplayAndSaveImageFromTheCamera
 (
-	unsigned short* const imgPtr, 
-	const wxSize& originalImgSize, 
+	unsigned short* const imgPtr,
+	const wxSize& originalImgSize,
 	const wxRect& roi0Based,
 	const int& binning,
 	const CameraControlVariables::ImageDataTypes dataType,
-	const std::string outFilePath
+	const std::string outFilePath,
+	const bool spectroscopyBatchFinished
 ) -> void
 {
 	SCOPE_TIMER("DisplayAndSaveImageFromTheCamera");
@@ -5487,7 +5523,29 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 
 	if (m_SpectroscopyEnabled)
 	{
-		ApplySpectroscopyProcessing(m_final, dataType);
+		ApplySpectroscopyProcessing
+		(
+			m_final,
+			dataType,
+			true,
+#ifdef _DEBUG
+			spectroscopyBatchFinished
+#else
+			false
+#endif
+		);
+
+#ifdef _DEBUG
+		if (spectroscopyBatchFinished && !outFilePath.empty())
+		{
+			wxFileName file(outFilePath);
+
+			if (wxDir::Exists(file.GetPath()))
+				cv::imwrite(file.GetFullPath().ToStdString(), m_final);
+		}
+#endif
+
+		return;
 	}
 
 	// histogram
@@ -6339,40 +6397,7 @@ auto cMain::OnSpectroscopyEnableCheckBox(wxCommandEvent& evt) -> void
 {
 	UpdateSpectroscopySettingsFromControls();
 	ResetSpectroscopyHistogram();
-
-	if (m_LeftPreviewSplitter && m_CamPreviewPane && m_SpectroscopyHistogramPanel)
-	{
-		if (m_SpectroscopyEnabled)
-		{
-			m_SpectroscopyHistogramPanel->Show();
-
-			if (!m_LeftPreviewSplitter->IsSplit())
-			{
-				const int splitterHeight = m_LeftPreviewSplitter->GetClientSize().GetHeight();
-				const int histogramHeight = FromDIP(220);
-				const int sashPosition = std::max(FromDIP(120), splitterHeight - histogramHeight);
-
-				m_LeftPreviewSplitter->SplitHorizontally
-				(
-					m_CamPreviewPane,
-					m_SpectroscopyHistogramPanel.get(),
-					sashPosition
-				);
-			}
-		}
-		else
-		{
-			if (m_LeftPreviewSplitter->IsSplit())
-				m_LeftPreviewSplitter->Unsplit(m_SpectroscopyHistogramPanel.get());
-
-			m_SpectroscopyHistogramPanel->Hide();
-		}
-
-		m_LeftPreviewSplitter->Layout();
-
-		if (m_LeftPanel)
-			m_LeftPanel->Layout();
-	}
+	UpdateSpectroscopyPreviewLayout();
 
 	if (m_Config)
 	{
@@ -6380,7 +6405,8 @@ auto cMain::OnSpectroscopyEnableCheckBox(wxCommandEvent& evt) -> void
 		RewriteInitializationFile();
 	}
 
-	m_SpectroscopyTabControls->EnableAllControls(m_SpectroscopyEnabled);
+	if (m_SpectroscopyTabControls)
+		m_SpectroscopyTabControls->EnableAllControls(m_SpectroscopyEnabled);
 }
 
 auto cMain::OnSpectroscopyTextCtrl(wxCommandEvent& evt) -> void
@@ -6414,7 +6440,7 @@ auto cMain::OnSpectroscopyResetButton(wxCommandEvent& evt) -> void
 
 auto cMain::OnSpectroscopyExportButton(wxCommandEvent& evt) -> void
 {
-	if (!m_SpectroscopyHistogramPanel || !m_SpectroscopyHistogramPanel->HasHistogramData())
+	if (m_SpectroscopyAccumulatedHistogram.empty() || m_SpectroscopyTotalEvents == 0)
 	{
 		wxMessageBox
 		(
@@ -6427,36 +6453,37 @@ auto cMain::OnSpectroscopyExportButton(wxCommandEvent& evt) -> void
 		return;
 	}
 
-	wxString timestamp = wxDateTime::Now().Format(wxT("%Y_%m_%d_%H_%M_%S"));
+	const wxString timestamp = wxDateTime::Now().Format(wxT("%Y_%m_%d_%H_%M_%S"));
+	const wxString extension = GetSpectroscopyOutputExtension();
 
 	wxFileDialog saveDialog
 	(
 		this,
 		wxT("Export spectroscopy histogram"),
 		wxEmptyString,
-		wxString::Format(wxT("spectroscopy_histogram_%s.csv"), timestamp),
+		wxString::Format(wxT("spectroscopy_histogram_%s.%s"), timestamp, extension),
 		wxT("CSV files (*.csv)|*.csv|Text files (*.txt)|*.txt"),
 		wxFD_SAVE | wxFD_OVERWRITE_PROMPT
 	);
+
+	saveDialog.SetFilterIndex(GetSelectedSpectroscopyOutputFormat() == SpectroscopyOutputFormat::Csv ? 0 : 1);
 
 	if (saveDialog.ShowModal() != wxID_OK)
 		return;
 
 	wxFileName fileName(saveDialog.GetPath());
 
-	const int filterIndex = saveDialog.GetFilterIndex();
-	const bool exportCsv = filterIndex == 0;
+	const bool exportCsv = saveDialog.GetFilterIndex() == 0;
 
 	if (fileName.GetExt().IsEmpty())
 		fileName.SetExt(exportCsv ? wxT("csv") : wxT("txt"));
 
+	if (m_SpectroscopyTabControls && m_SpectroscopyTabControls->outputFormatChoice)
+		m_SpectroscopyTabControls->outputFormatChoice->SetSelection(exportCsv ? 0 : 1);
+
 	wxString errorMessage;
 
-	const bool ok = exportCsv
-		? m_SpectroscopyHistogramPanel->ExportVisibleHistogramToCsv(fileName.GetFullPath(), &errorMessage)
-		: m_SpectroscopyHistogramPanel->ExportVisibleHistogramToTxt(fileName.GetFullPath(), &errorMessage);
-
-	if (!ok)
+	if (!ExportSpectroscopyAccumulatedHistogram(fileName.GetFullPath(), &errorMessage))
 	{
 		wxMessageBox
 		(
@@ -6465,9 +6492,178 @@ auto cMain::OnSpectroscopyExportButton(wxCommandEvent& evt) -> void
 			wxOK | wxICON_ERROR,
 			this
 		);
-
-		return;
 	}
+}
+
+auto cMain::GetSelectedSpectroscopyOutputFormat() const -> SpectroscopyOutputFormat
+{
+	if
+		(
+			m_SpectroscopyTabControls &&
+			m_SpectroscopyTabControls->outputFormatChoice &&
+			m_SpectroscopyTabControls->outputFormatChoice->GetSelection() == 1
+			)
+	{
+		return SpectroscopyOutputFormat::Txt;
+	}
+
+	return SpectroscopyOutputFormat::Csv;
+}
+
+auto cMain::GetSpectroscopyOutputExtension() const -> wxString
+{
+	return GetSelectedSpectroscopyOutputFormat() == SpectroscopyOutputFormat::Csv
+		? wxT("csv")
+		: wxT("txt");
+}
+
+auto cMain::ExportSpectroscopyAccumulatedHistogram(const wxString& filePath, wxString* errorMessage) -> bool
+{
+	std::lock_guard<std::mutex> lock(m_SpectroscopyMutex);
+
+	if (m_SpectroscopyAccumulatedHistogram.empty())
+	{
+		if (errorMessage)
+			*errorMessage = wxT("There is no accumulated spectroscopy histogram to export.");
+
+		return false;
+	}
+
+	wxString content;
+
+	const auto outputFormat = GetSelectedSpectroscopyOutputFormat();
+
+	if (outputFormat == SpectroscopyOutputFormat::Csv)
+	{
+		content += wxT("Position,Value\n");
+
+		for (size_t i = 0; i < m_SpectroscopyAccumulatedHistogram.size(); ++i)
+		{
+			const auto value = m_SpectroscopyAccumulatedHistogram[i];
+
+			if (value == 0)
+				continue;
+
+			content += wxString::Format(wxT("%zu,%llu\n"), i, value);
+		}
+	}
+	else
+	{
+		content += wxT("# MMCam spectroscopy accumulated histogram\n");
+		content += wxString::Format(wxT("# Frames: %llu\n"), m_SpectroscopyFrameCount);
+		content += wxString::Format(wxT("# Total events: %llu\n"), m_SpectroscopyTotalEvents);
+		content += wxT("# Columns: Position\tValue\n");
+		content += wxT("Position\tValue\n");
+
+		for (size_t i = 0; i < m_SpectroscopyAccumulatedHistogram.size(); ++i)
+		{
+			const auto value = m_SpectroscopyAccumulatedHistogram[i];
+
+			if (value == 0)
+				continue;
+
+			content += wxString::Format(wxT("%zu\t%llu\n"), i, value);
+		}
+	}
+
+	wxFile file(filePath, wxFile::write);
+
+	if (!file.IsOpened())
+	{
+		if (errorMessage)
+			*errorMessage = wxString::Format(wxT("Cannot open file for writing:\n%s"), filePath);
+
+		return false;
+	}
+
+	if (!file.Write(content, wxConvUTF8))
+	{
+		if (errorMessage)
+			*errorMessage = wxString::Format(wxT("Cannot write spectroscopy histogram:\n%s"), filePath);
+
+		return false;
+	}
+
+	return true;
+}
+
+auto cMain::ExportSpectroscopyAccumulatedHistogramAfterBatch(const std::string& baseFilePath) -> void
+{
+	if (baseFilePath.empty())
+		return;
+
+	wxFileName fileName(wxString::FromUTF8(baseFilePath));
+	fileName.SetExt(GetSpectroscopyOutputExtension());
+
+	wxString errorMessage;
+
+	if (!ExportSpectroscopyAccumulatedHistogram(fileName.GetFullPath(), &errorMessage))
+	{
+		wxMessageBox
+		(
+			errorMessage.IsEmpty() ? wxString("Failed to export spectroscopy histogram.") : errorMessage,
+			wxT("Spectroscopy export"),
+			wxOK | wxICON_ERROR,
+			this
+		);
+	}
+}
+
+auto cMain::UpdateSpectroscopyPreviewLayout() -> void
+{
+	if (!m_LeftPreviewSplitter || !m_CamPreviewPane || !m_SpectroscopyHistogramPanel)
+		return;
+
+	if (m_SpectroscopyEnabled)
+	{
+		m_SpectroscopyHistogramPanel->Show();
+
+#ifdef _DEBUG
+		/*
+			Debug mode: keep the camera preview visible.
+			This is useful when checking filtering and acquisition behavior.
+		*/
+		m_CamPreviewPane->Show();
+
+		if (!m_LeftPreviewSplitter->IsSplit())
+		{
+			const int splitterHeight = m_LeftPreviewSplitter->GetClientSize().GetHeight();
+			const int histogramHeight = FromDIP(220);
+			const int sashPosition = std::max(FromDIP(120), splitterHeight - histogramHeight);
+
+			m_LeftPreviewSplitter->SplitHorizontally
+			(
+				m_CamPreviewPane,
+				m_SpectroscopyHistogramPanel.get(),
+				sashPosition
+			);
+		}
+#else
+		/*
+			Release mode: spectroscopy does not need the camera preview.
+			Show only the accumulated histogram panel.
+		*/
+		if (m_LeftPreviewSplitter->IsSplit())
+			m_LeftPreviewSplitter->Unsplit(m_SpectroscopyHistogramPanel.get());
+
+		m_CamPreviewPane->Hide();
+		m_LeftPreviewSplitter->Initialize(m_SpectroscopyHistogramPanel.get());
+#endif
+	}
+	else
+	{
+		if (m_LeftPreviewSplitter->IsSplit())
+			m_LeftPreviewSplitter->Unsplit(m_SpectroscopyHistogramPanel.get());
+
+		m_SpectroscopyHistogramPanel->Hide();
+		m_CamPreviewPane->Show();
+		m_LeftPreviewSplitter->Initialize(m_CamPreviewPane);
+	}
+
+	m_LeftPreviewSplitter->Layout();
+
+	if (m_LeftPanel)
+		m_LeftPanel->Layout();
 }
 
 auto cMain::UpdateSpectroscopySettingsFromControls() -> void
@@ -6525,7 +6721,13 @@ auto cMain::ResetSpectroscopyHistogram() -> void
 	UpdateSpectroscopyStatus();
 }
 
-auto cMain::ApplySpectroscopyProcessing(cv::Mat& frame, const CameraControlVariables::ImageDataTypes dataType) -> void
+auto cMain::ApplySpectroscopyProcessing
+(
+	cv::Mat& frame,
+	const CameraControlVariables::ImageDataTypes dataType,
+	const bool updatePanel,
+	const bool copyFilteredFrameBack
+) -> void
 {
 	if (frame.empty() || frame.type() != CV_16UC1)
 		return;
@@ -6563,7 +6765,6 @@ auto cMain::ApplySpectroscopyProcessing(cv::Mat& frame, const CameraControlVaria
 
 	unsigned long long frameEvents = 0;
 
-	// Bin 0 is the background after filtering. Do not accumulate it as an event.
 	for (size_t i = 1; i < histSize; ++i)
 	{
 		m_SpectroscopyAccumulatedHistogram[i] += currentHistogram[i];
@@ -6573,7 +6774,7 @@ auto cMain::ApplySpectroscopyProcessing(cv::Mat& frame, const CameraControlVaria
 	++m_SpectroscopyFrameCount;
 	m_SpectroscopyTotalEvents += frameEvents;
 
-	if (m_SpectroscopyHistogramPanel)
+	if (updatePanel && m_SpectroscopyHistogramPanel)
 	{
 		m_SpectroscopyHistogramPanel->SetHistogram
 		(
@@ -6583,9 +6784,8 @@ auto cMain::ApplySpectroscopyProcessing(cv::Mat& frame, const CameraControlVaria
 		);
 	}
 
-	// Display only the current filtered image.
-	// Previous images are not kept.
-	frame = m_SpectroscopyFilteredFrame;
+	if (copyFilteredFrameBack)
+		frame = m_SpectroscopyFilteredFrame;
 
 	UpdateSpectroscopyStatus();
 }

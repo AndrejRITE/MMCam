@@ -22,6 +22,7 @@
 #include "wx/msw/window.h"
 #include "wx/timer.h"
 #include "wx/aboutdlg.h"
+#include "wx/file.h"
 
 #include <string>
 #include <memory>
@@ -221,6 +222,7 @@ namespace MainFrameVariables
 		RIGHT_CAM_SPECTROSCOPY_CYCLE_COUNT_TXT_CTRL,
 		RIGHT_CAM_SPECTROSCOPY_THRESHOLD_TXT_CTRL,
 		RIGHT_CAM_SPECTROSCOPY_NEIGHBOR_RADIUS_TXT_CTRL,
+		RIGHT_CAM_SPECTROSCOPY_OUTPUT_FORMAT_CHOICE,
 		RIGHT_CAM_SPECTROSCOPY_RESET_BTN,
 		RIGHT_CAM_SPECTROSCOPY_EXPORT_BTN,
 
@@ -489,6 +491,7 @@ namespace MainFrameVariables
 		std::unique_ptr<wxTextCtrl> cycleCountTxtCtrl{};
 		std::unique_ptr<wxTextCtrl> thresholdTxtCtrl{};
 		std::unique_ptr<wxTextCtrl> neighborRadiusTxtCtrl{};
+		std::unique_ptr<wxChoice> outputFormatChoice{};
 		std::unique_ptr<wxBitmapButton> resetBtn{};
 		std::unique_ptr<wxBitmapButton> exportBtn{};
 		std::unique_ptr<wxStaticText> statusText{};
@@ -499,6 +502,7 @@ namespace MainFrameVariables
 			if (cycleCountTxtCtrl) cycleCountTxtCtrl->Enable(enable);
 			if (thresholdTxtCtrl) thresholdTxtCtrl->Enable(enable);
 			if (neighborRadiusTxtCtrl) neighborRadiusTxtCtrl->Enable(enable);
+			if (outputFormatChoice) outputFormatChoice->Enable(enable);
 			if (resetBtn) resetBtn->Enable(enable);
 			if (exportBtn) exportBtn->Enable(enable);
 		}
@@ -682,6 +686,8 @@ namespace MainFrameVariables
 		bool spectroscopyBatchFinished{ true };
 		int spectroscopyFrameIndex{ 0 };
 		int spectroscopyFrameCount{ 1 };
+
+		std::string spectroscopyHistogramBaseFilePath;
 	};
 
 	static auto BinImageData
@@ -1210,12 +1216,13 @@ private:
 
 	auto DisplayAndSaveImageFromTheCamera
 	(
-		unsigned short* const imgPtr, 
-		const wxSize& originalImgSize, 
-		const wxRect& roi,
+		unsigned short* const imgPtr,
+		const wxSize& originalImgSize,
+		const wxRect& roi0Based,
 		const int& binning,
 		const CameraControlVariables::ImageDataTypes dataType,
-		const std::string outFilePath = ""
+		const std::string outFilePath,
+		const bool spectroscopyBatchFinished = true
 	) -> void;
 
 	void OnSetOutDirectoryBtn(wxCommandEvent& evt);
@@ -1246,6 +1253,18 @@ private:
 	void OnExit(wxCloseEvent& evt);
 	void OnExit(wxCommandEvent& evt);
 
+	enum class SpectroscopyOutputFormat
+	{
+		Csv,
+		Txt
+	};
+
+	auto GetSelectedSpectroscopyOutputFormat() const -> SpectroscopyOutputFormat;
+	auto GetSpectroscopyOutputExtension() const -> wxString;
+	auto ExportSpectroscopyAccumulatedHistogram(const wxString& filePath, wxString* errorMessage = nullptr) -> bool;
+	auto ExportSpectroscopyAccumulatedHistogramAfterBatch(const std::string& baseFilePath) -> void;
+	auto UpdateSpectroscopyPreviewLayout() -> void;
+
 	auto OnSpectroscopyEnableCheckBox(wxCommandEvent& evt) -> void;
 	auto OnSpectroscopyTextCtrl(wxCommandEvent& evt) -> void;
 	auto OnSpectroscopyResetButton(wxCommandEvent& evt) -> void;
@@ -1253,7 +1272,14 @@ private:
 
 	auto UpdateSpectroscopySettingsFromControls() -> void;
 	auto ResetSpectroscopyHistogram() -> void;
-	auto ApplySpectroscopyProcessing(cv::Mat& frame, const CameraControlVariables::ImageDataTypes dataType) -> void;
+	auto ApplySpectroscopyProcessing
+	(
+		cv::Mat& frame,
+		const CameraControlVariables::ImageDataTypes dataType,
+		const bool updatePanel,
+		const bool copyFilteredFrameBack
+	) -> void;
+
 	auto FilterSpectroscopyEvents(const cv::Mat& src, cv::Mat& dst) -> void;
 	auto UpdateSpectroscopyStatus() -> void;
 
