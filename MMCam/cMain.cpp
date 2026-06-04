@@ -6068,12 +6068,10 @@ auto cMain::UpdateDefaultWidgetParameters() -> void
 
 	// Display Histogram
 	{
-		auto displayHistogram = m_Config->display_histogram;
+		const bool displayHistogram = m_Config->display_histogram;
 
-		if (displayHistogram)
-			m_HistogramPanel->Show();
-		else
-			m_HistogramPanel->Hide();
+		if (m_HistogramPanel)
+			m_HistogramPanel->Show(displayHistogram);
 
 		Layout();
 	}
@@ -6823,37 +6821,148 @@ auto cMain::ExportSpectroscopyAccumulatedHistogramAfterBatch(const std::string& 
 
 auto cMain::UpdateSpectroscopyPreviewLayout() -> void
 {
-	if (!m_LeftPreviewSplitter || !m_CamPreviewPane || !m_SpectroscopyHistogramPanel)
+	if (!m_MainSplitter ||
+		!m_TopSplitter ||
+		!m_BottomPanel ||
+		!m_LeftPreviewSplitter ||
+		!m_CamPreviewPane ||
+		!m_SpectroscopyHistogramPanel)
+	{
 		return;
+	}
+
+	Freeze();
 
 	if (m_SpectroscopyEnabled)
 	{
-		m_SpectroscopyHistogramPanel->Show();
+		/*
+			Do NOT hide m_HistogramPanel here.
+
+			The normal histogram belongs to m_BottomPanel, and m_BottomPanel
+			is the second pane of m_MainSplitter.
+
+			Instead of hiding/unsplitting the bottom pane, keep the splitter
+			split and move the sash to the bottom. This makes the bottom pane
+			effectively invisible without destroying/restoring its layout.
+		*/
+		if (m_MainSplitter->IsSplit())
+		{
+			const int currentSashPosition = m_MainSplitter->GetSashPosition();
+
+			/*
+				Only remember a meaningful normal position.
+
+				When spectroscopy is enabled, the sash will be moved close to
+				the bottom. We do not want to accidentally store that collapsed
+				position as the "normal" position.
+			*/
+			const int splitterHeight = m_MainSplitter->GetClientSize().GetHeight();
+			const int minUsefulBottomHeight = FromDIP(80);
+
+			if (currentSashPosition > 0 &&
+				currentSashPosition < splitterHeight - minUsefulBottomHeight)
+			{
+				m_MainSplitterNormalSashPosition = currentSashPosition;
+			}
+
+			/*
+				Your splitter was created with SetMinimumPaneSize(100).
+				That prevents the bottom pane from collapsing fully, so reduce
+				the minimum temporarily.
+			*/
+			m_MainSplitter->SetMinimumPaneSize(0);
+
+#if wxCHECK_VERSION(3, 1, 0)
+			m_MainSplitter->SetSashInvisible(true);
+#endif
+
+			m_MainSplitter->SetSashPosition(splitterHeight, true);
+			m_MainSplitter->UpdateSize();
+		}
 
 		/*
-			Release mode: spectroscopy does not need the camera preview.
-			Show only the accumulated histogram panel.
+			Switch the left preview area to the spectroscopy histogram.
+		*/
+		if (m_LeftPreviewSplitter->IsSplit())
+			m_LeftPreviewSplitter->Unsplit(m_CamPreviewPane);
+
+		m_CamPreviewPane->Hide();
+
+		m_SpectroscopyHistogramPanel->Show();
+
+		if (!m_LeftPreviewSplitter->IsSplit())
+			m_LeftPreviewSplitter->Initialize(m_SpectroscopyHistogramPanel.get());
+	}
+	else
+	{
+		/*
+			Restore the bottom histogram pane by moving the sash back.
+			No SplitHorizontally() call is needed because we never unsplit
+			m_MainSplitter.
+		*/
+		if (m_MainSplitter->IsSplit())
+		{
+#if wxCHECK_VERSION(3, 1, 0)
+			m_MainSplitter->SetSashInvisible(false);
+#endif
+
+			m_MainSplitter->SetMinimumPaneSize(FromDIP(100));
+
+			const int sashPosition =
+				m_MainSplitterNormalSashPosition > 0
+				? m_MainSplitterNormalSashPosition
+				: FromDIP(700);
+
+			m_MainSplitter->SetSashPosition(sashPosition, true);
+			m_MainSplitter->UpdateSize();
+		}
+
+		/*
+			Restore normal camera preview.
 		*/
 		if (m_LeftPreviewSplitter->IsSplit())
 			m_LeftPreviewSplitter->Unsplit(m_SpectroscopyHistogramPanel.get());
 
-		m_CamPreviewPane->Hide();
-		m_LeftPreviewSplitter->Initialize(m_SpectroscopyHistogramPanel.get());
-	}
-	else
-	{
-		if (m_LeftPreviewSplitter->IsSplit())
-			m_LeftPreviewSplitter->Unsplit(m_SpectroscopyHistogramPanel.get());
-
 		m_SpectroscopyHistogramPanel->Hide();
+
 		m_CamPreviewPane->Show();
-		m_LeftPreviewSplitter->Initialize(m_CamPreviewPane);
+
+		if (!m_LeftPreviewSplitter->IsSplit())
+			m_LeftPreviewSplitter->Initialize(m_CamPreviewPane);
+
+		/*
+			Do not use !m_SpectroscopyEnabled here anymore.
+
+			The bottom pane is already collapsed in spectroscopy mode. The
+			histogram widget itself should keep its natural visibility state
+			according to the config, so its layout is valid when restored.
+		*/
+		const bool displayHistogram = m_Config && m_Config->display_histogram;
+
+		if (m_HistogramPanel)
+			m_HistogramPanel->Show(displayHistogram);
 	}
 
 	m_LeftPreviewSplitter->Layout();
+	m_TopSplitter->Layout();
+	m_MainSplitter->Layout();
+
+	if (m_BottomPanel)
+		m_BottomPanel->Layout();
 
 	if (m_LeftPanel)
 		m_LeftPanel->Layout();
+
+	if (m_RightSidePanel)
+	{
+		m_RightSidePanel->Layout();
+		m_RightSidePanel->FitInside();
+	}
+
+	Layout();
+	SendSizeEvent();
+
+	Thaw();
 }
 
 auto cMain::UpdateSpectroscopySettingsFromControls() -> void

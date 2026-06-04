@@ -2264,6 +2264,8 @@ private:
 	wxScrolledWindow* m_RightSidePanel{}; // you already have this member - keep it
 	wxPanel* m_BottomPanel{};    // container for bottom side
 
+	int m_MainSplitterNormalSashPosition{ -1 };
+
 	wxNotebook* m_DetectorControlsNotebook{}, * m_OpticsControlsNotebook{}, * m_AuxControlsNotebook{};
 	
 	wxNotebook* m_CameraControlNotebook{};
