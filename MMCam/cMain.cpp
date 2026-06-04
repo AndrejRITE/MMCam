@@ -1082,6 +1082,7 @@ void cMain::CreateLeftSide(wxWindow* parent, wxSizer* left_side_sizer)
 			m_LeftPreviewSplitter,
 			nullptr,
 			m_DefaultWidgetsColor,
+			m_StatusBar.get(),
 			1
 		);
 
@@ -5181,6 +5182,16 @@ void cMain::OnSingleShotCaptureFinished(wxThreadEvent& evt)
 		return;
 	}
 
+	if (payload.spectroscopyBatch && m_SpectroscopyHistogramPanel)
+	{
+		m_SpectroscopyHistogramPanel->SetAcquisitionPosition
+		(
+			static_cast<unsigned long long>(payload.spectroscopyFrameIndex),
+			static_cast<unsigned long long>(payload.spectroscopyFrameCount),
+			1
+		);
+	}
+
 	DisplayAndSaveImageFromTheCamera
 	(
 		payload.img.data(),
@@ -7015,7 +7026,10 @@ auto cMain::ResetSpectroscopyHistogram() -> void
 	m_SpectroscopyBatchStart = std::chrono::steady_clock::now();
 
 	if (m_SpectroscopyHistogramPanel)
+	{
 		m_SpectroscopyHistogramPanel->ResetHistogram();
+		m_SpectroscopyHistogramPanel->SetAcquisitionPosition(0, m_SpectroscopyCycleCount, 0);
+	}
 
 	UpdateSpectroscopyStatus();
 }
@@ -7080,6 +7094,13 @@ auto cMain::ApplySpectroscopyProcessing
 			m_SpectroscopyAccumulatedHistogram.data(),
 			m_SpectroscopyAccumulatedHistogram.size(),
 			m_SpectroscopyTotalEvents
+		);
+
+		m_SpectroscopyHistogramPanel->SetAcquisitionPosition
+		(
+			m_SpectroscopyFrameCount,
+			m_SpectroscopyCycleCount,
+			0
 		);
 	}
 
@@ -8461,6 +8482,16 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 		*/
 		if (m_SpectroscopyEnabled || *m_CamPreview->GetExecutionFinishedPtr())
 		{
+			if (payload->spectroscopyBatch && m_SpectroscopyHistogramPanel)
+			{
+				m_SpectroscopyHistogramPanel->SetAcquisitionPosition
+				(
+					payload->spectroscopyFrameIndex,
+					payload->spectroscopyFrameCount,
+					payload->spectroscopyCycleIndex
+				);
+			}
+
 			DisplayAndSaveImageFromTheCamera
 			(
 				payload->img.get(),

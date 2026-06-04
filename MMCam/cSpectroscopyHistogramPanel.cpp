@@ -25,6 +25,10 @@ namespace
     constexpr int HISTOGRAM_MIN_MAJOR_Y_TICKS = 4;
     constexpr int HISTOGRAM_MAX_MAJOR_Y_TICKS = 11;
 
+    constexpr int HISTOGRAM_OVERVIEW_WIDTH = 170;
+    constexpr int HISTOGRAM_OVERVIEW_HEIGHT = 42;
+    constexpr int HISTOGRAM_OVERLAY_RADIUS = 8;
+
     double CalculateNiceTickStep(double maxValue, int targetTickCount)
     {
         if (maxValue <= 0.0 || targetTickCount <= 1)
@@ -262,9 +266,12 @@ cSpectroscopyHistogramPanel::cSpectroscopyHistogramPanel
     wxWindow* parent, 
     wxSizer* parentSizer, 
 	wxColour labelsColor,
+    wxStatusBar* statusBar,
     const int borderSize
 )
-	: wxPanel(parent), m_LabelsColour(std::move(labelsColor))
+	: wxPanel(parent), 
+    m_StatusBar(statusBar), 
+    m_LabelsColour(std::move(labelsColor))
 {
     SetDoubleBuffered(true);
     SetMinSize(wxSize(200, 200));
@@ -307,6 +314,11 @@ void cSpectroscopyHistogramPanel::ResetHistogram()
 
     m_IsPanning = false;
 
+    m_CurrentFrame = 0;
+    m_FrameCount = 1;
+    m_CurrentCycle = 0;
+    m_StatusBarOwnsCursorText = false;
+
     if (HasCapture())
         ReleaseMouse();
 
@@ -322,6 +334,15 @@ void cSpectroscopyHistogramPanel::SetBackgroundColor(const wxColour& colour)
 void cSpectroscopyHistogramPanel::SetLogScale(bool enabled)
 {
     m_LogScale = enabled;
+    Refresh(false);
+}
+
+void cSpectroscopyHistogramPanel::SetAcquisitionPosition(unsigned long long currentFrame, unsigned long long frameCount, unsigned long long currentCycle)
+{
+    m_CurrentFrame = currentFrame;
+    m_FrameCount = std::max(1ull, frameCount);
+    m_CurrentCycle = currentCycle;
+
     Refresh(false);
 }
 
@@ -506,6 +527,7 @@ void cSpectroscopyHistogramPanel::OnMouseMove(wxMouseEvent& evt)
         }
     }
 
+    UpdateStatusBarFromCursor();
     Refresh(false);
 }
 
@@ -516,6 +538,7 @@ void cSpectroscopyHistogramPanel::OnMouseLeave(wxMouseEvent& evt)
     if (!m_IsPanning)
         SetCursor(wxCursor(wxCURSOR_ARROW));
 
+    ClearCursorStatusBar();
     Refresh(false);
 }
 
@@ -570,6 +593,8 @@ void cSpectroscopyHistogramPanel::OnMouseWheel(wxMouseEvent& evt)
 
     MarkViewUserAdjusted();
 
+    UpdateStatusBarFromCursor();
+
     Refresh(false);
 }
 
@@ -583,6 +608,9 @@ void cSpectroscopyHistogramPanel::OnLeftDClick(wxMouseEvent& evt)
 {
     m_UserAdjustedView = false;
     ResetViewToAutomaticRange();
+
+    UpdateStatusBarFromCursor();
+
     Refresh(false);
 }
 
@@ -643,6 +671,8 @@ void cSpectroscopyHistogramPanel::Render(wxBufferedPaintDC& dc)
 
     DrawAxes(gc);
     DrawHistogram(gc);
+    DrawAcquisitionOverlay(gc);
+    DrawVisibleRangeOverview(gc);
     DrawCursorOverlay(gc);
 
     delete gc;
@@ -666,16 +696,24 @@ void cSpectroscopyHistogramPanel::DrawHistogram(wxGraphicsContext* gc)
     if (viewMax < viewMin || m_ViewPeak == 0)
         return;
 
-    const wxColour histogramColour
+    const wxColour histogramFill
     (
         m_HistogramColour.Red(),
         m_HistogramColour.Green(),
         m_HistogramColour.Blue(),
-        m_MouseInside ? 120 : 255
+        m_MouseInside ? 145 : 210
     );
 
-    gc->SetPen(wxPen(histogramColour, 1));
-    gc->SetBrush(wxBrush(histogramColour));
+    const wxColour histogramStroke
+    (
+        std::min(255, static_cast<int>(m_HistogramColour.Red()) + 24),
+        std::min(255, static_cast<int>(m_HistogramColour.Green()) + 24),
+        std::min(255, static_cast<int>(m_HistogramColour.Blue()) + 24),
+        m_MouseInside ? 210 : 245
+    );
+
+    gc->SetPen(wxPen(histogramStroke, 1));
+    gc->SetBrush(wxBrush(histogramFill));
 
     const int plotLeft = plotRect.GetLeft();
     const int plotBottom = plotRect.GetBottom();
@@ -741,8 +779,29 @@ void cSpectroscopyHistogramPanel::DrawAxes(wxGraphicsContext* gc)
     if (plotRect.GetWidth() <= 2 || plotRect.GetHeight() <= 2)
         return;
 
+    const bool darkBackground = IsDarkColour(m_BackgroundColour);
+
+    const wxColour plotBackground = darkBackground
+        ? wxColour(255, 255, 255, 10)
+        : wxColour(255, 255, 255, 145);
+
+    const wxColour plotBorder = darkBackground
+        ? wxColour(255, 255, 255, 30)
+        : wxColour(0, 0, 0, 35);
+
+    gc->SetPen(wxPen(plotBorder, 1));
+    gc->SetBrush(wxBrush(plotBackground));
+    gc->DrawRoundedRectangle
+    (
+        plotRect.GetLeft(),
+        plotRect.GetTop(),
+        plotRect.GetWidth(),
+        plotRect.GetHeight(),
+        9.0
+    );
+
     /*
-        Draw grid/scales first, then draw the main axes on top.
+        Draw grid/scales after the plot background, then draw the main axes on top.
     */
     DrawHorizontalScale(gc);
     DrawXAxisScale(gc);
@@ -750,7 +809,7 @@ void cSpectroscopyHistogramPanel::DrawAxes(wxGraphicsContext* gc)
     const wxColour axisColour = GetReadableAxisColour(m_BackgroundColour);
     const wxColour labelColour = GetReadableLabelColour(m_BackgroundColour, m_LabelsColour);
 
-    gc->SetPen(wxPen(axisColour, 1));
+    gc->SetPen(wxPen(axisColour, 2));
 
     // Left vertical axis.
     gc->StrokeLine
@@ -783,7 +842,7 @@ void cSpectroscopyHistogramPanel::DrawAxes(wxGraphicsContext* gc)
         HISTOGRAM_TITLE_FONT_SIZE,
         wxFONTFAMILY_SWISS,
         wxFONTSTYLE_NORMAL,
-        wxFONTWEIGHT_NORMAL
+        wxFONTWEIGHT_BOLD
     );
 
     gc->SetFont(titleFont, labelColour);
@@ -791,12 +850,14 @@ void cSpectroscopyHistogramPanel::DrawAxes(wxGraphicsContext* gc)
     wxDouble tw{}, th{};
     gc->GetTextExtent(title, &tw, &th);
 
-    gc->DrawText
-    (
-        title,
-        std::max(4.0, static_cast<double>(W) - tw - 8.0),
-        4.0
-    );
+    const double textX = std::max(4.0, static_cast<double>(W) - tw - 8.0);
+    const double textY = 4.0;
+
+    gc->SetPen(*wxTRANSPARENT_PEN);
+    gc->SetBrush(wxBrush(darkBackground ? wxColour(0, 0, 0, 70) : wxColour(255, 255, 255, 180)));
+    gc->DrawRoundedRectangle(textX - 8.0, textY - 2.0, tw + 16.0, th + 6.0, 6.0);
+
+    gc->DrawText(title, textX, textY);
 }
 
 void cSpectroscopyHistogramPanel::DrawHorizontalScale(wxGraphicsContext* gc)
@@ -839,8 +900,8 @@ void cSpectroscopyHistogramPanel::DrawHorizontalScale(wxGraphicsContext* gc)
             if (y < plotRect.GetTop() || y > plotRect.GetBottom())
                 return false;
 
-            gc->SetPen(wxPen(majorLine ? majorGridColour : minorGridColour, 1));
-            gc->StrokeLine(plotRect.GetLeft(), y, plotRect.GetRight(), y);
+            gc->SetPen(wxPen(majorLine ? majorGridColour : minorGridColour, majorLine ? 1 : 1));
+            gc->StrokeLine(plotRect.GetLeft() + 1, y, plotRect.GetRight() - 1, y);
 
             if (!drawLabel)
                 return true;
@@ -1116,9 +1177,9 @@ void cSpectroscopyHistogramPanel::DrawXAxisScale(wxGraphicsContext* gc)
             gc->StrokeLine
             (
                 x,
-                plotRect.GetTop(),
+                plotRect.GetTop() + 1,
                 x,
-                plotRect.GetBottom()
+                plotRect.GetBottom() - 1
             );
 
             gc->SetPen(wxPen(tickColour, 2));
@@ -1278,6 +1339,253 @@ void cSpectroscopyHistogramPanel::DrawCursorOverlay(wxGraphicsContext* gc)
         gc->SetBrush(wxBrush(markerColour));
         gc->DrawEllipse(x - 3.0, y - 3.0, 6.0, 6.0);
     }
+}
+
+void cSpectroscopyHistogramPanel::DrawAcquisitionOverlay(wxGraphicsContext* gc)
+{
+    if (!gc || m_CanvasSize.GetWidth() <= 0 || m_CanvasSize.GetHeight() <= 0)
+        return;
+
+    const wxRect plotRect = GetPlotRect();
+
+    if (plotRect.GetWidth() <= 2 || plotRect.GetHeight() <= 2)
+        return;
+
+    wxString text;
+
+    if (m_CurrentCycle > 0)
+    {
+        text = wxString::Format
+        (
+            wxT("Cycle %llu  |  Frame %llu / %llu"),
+            m_CurrentCycle,
+            m_CurrentFrame,
+            m_FrameCount
+        );
+    }
+    else
+    {
+        text = wxString::Format
+        (
+            wxT("Frame %llu / %llu"),
+            m_CurrentFrame,
+            m_FrameCount
+        );
+    }
+
+    wxFont font
+    (
+        11,
+        wxFONTFAMILY_SWISS,
+        wxFONTSTYLE_NORMAL,
+        wxFONTWEIGHT_BOLD
+    );
+
+    const wxColour textColour = GetReadableLabelColour(m_BackgroundColour, m_LabelsColour);
+    const bool darkBackground = IsDarkColour(m_BackgroundColour);
+
+    gc->SetFont(font, textColour);
+
+    wxDouble tw{}, th{};
+    gc->GetTextExtent(text, &tw, &th);
+
+    const double boxX = static_cast<double>(plotRect.GetLeft()) + 12.0;
+    const double boxY = static_cast<double>(plotRect.GetTop()) + 10.0;
+    const double boxW = tw + 20.0;
+    const double boxH = th + 10.0;
+
+    gc->SetPen(wxPen(darkBackground ? wxColour(255, 255, 255, 35) : wxColour(0, 0, 0, 35), 1));
+    gc->SetBrush(wxBrush(darkBackground ? wxColour(0, 0, 0, 135) : wxColour(255, 255, 255, 210)));
+
+    gc->DrawRoundedRectangle
+    (
+        boxX,
+        boxY,
+        boxW,
+        boxH,
+        static_cast<double>(HISTOGRAM_OVERLAY_RADIUS)
+    );
+
+    gc->DrawText(text, boxX + 10.0, boxY + 5.0);
+}
+
+void cSpectroscopyHistogramPanel::DrawVisibleRangeOverview(wxGraphicsContext* gc)
+{
+    if (!gc || m_Histogram.empty() || m_CanvasSize.GetWidth() <= 0 || m_CanvasSize.GetHeight() <= 0)
+        return;
+
+    const wxRect plotRect = GetPlotRect();
+
+    if (plotRect.GetWidth() <= 2 || plotRect.GetHeight() <= 2)
+        return;
+
+    const unsigned int histogramMax = static_cast<unsigned int>(m_Histogram.size() - 1);
+
+    if (histogramMax == 0)
+        return;
+
+    const unsigned int viewMin = std::min<unsigned int>(m_ViewMin, histogramMax);
+    const unsigned int viewMax = std::min<unsigned int>(m_ViewMax, histogramMax);
+
+    if (viewMax < viewMin)
+        return;
+
+    const int overviewW = std::min(HISTOGRAM_OVERVIEW_WIDTH, std::max(90, plotRect.GetWidth() / 4));
+    const int overviewH = HISTOGRAM_OVERVIEW_HEIGHT;
+
+    const int overviewX = plotRect.GetRight() - overviewW - 12;
+    const int overviewY = plotRect.GetTop() + 10;
+
+    if (overviewX <= plotRect.GetLeft() + 20)
+        return;
+
+    const bool darkBackground = IsDarkColour(m_BackgroundColour);
+
+    const wxColour panelFill = darkBackground
+        ? wxColour(0, 0, 0, 135)
+        : wxColour(255, 255, 255, 220);
+
+    const wxColour panelBorder = darkBackground
+        ? wxColour(255, 255, 255, 45)
+        : wxColour(0, 0, 0, 45);
+
+    const wxColour rangeFill
+    (
+        m_HistogramColour.Red(),
+        m_HistogramColour.Green(),
+        m_HistogramColour.Blue(),
+        95
+    );
+
+    const wxColour rangeBorder
+    (
+        std::min(255, static_cast<int>(m_HistogramColour.Red()) + 35),
+        std::min(255, static_cast<int>(m_HistogramColour.Green()) + 35),
+        std::min(255, static_cast<int>(m_HistogramColour.Blue()) + 35),
+        230
+    );
+
+    gc->SetPen(wxPen(panelBorder, 1));
+    gc->SetBrush(wxBrush(panelFill));
+    gc->DrawRoundedRectangle
+    (
+        overviewX,
+        overviewY,
+        overviewW,
+        overviewH,
+        static_cast<double>(HISTOGRAM_OVERLAY_RADIUS)
+    );
+
+    const int barX = overviewX + 10;
+    const int barY = overviewY + 16;
+    const int barW = overviewW - 20;
+    const int barH = 8;
+
+    gc->SetPen(wxPen(darkBackground ? wxColour(255, 255, 255, 45) : wxColour(0, 0, 0, 45), 1));
+    gc->SetBrush(wxBrush(darkBackground ? wxColour(255, 255, 255, 24) : wxColour(0, 0, 0, 18)));
+    gc->DrawRoundedRectangle(barX, barY, barW, barH, 4.0);
+
+    const double leftT = static_cast<double>(viewMin) / static_cast<double>(histogramMax);
+    const double rightT = static_cast<double>(viewMax) / static_cast<double>(histogramMax);
+
+    const int rangeX = barX + static_cast<int>(std::round(leftT * static_cast<double>(barW)));
+    const int rangeRight = barX + static_cast<int>(std::round(rightT * static_cast<double>(barW)));
+
+    const int rangeW = std::max(3, rangeRight - rangeX);
+
+    gc->SetPen(wxPen(rangeBorder, 1));
+    gc->SetBrush(wxBrush(rangeFill));
+    gc->DrawRoundedRectangle(rangeX, barY - 2, rangeW, barH + 4, 4.0);
+
+    wxFont font
+    (
+        8,
+        wxFONTFAMILY_SWISS,
+        wxFONTSTYLE_NORMAL,
+        wxFONTWEIGHT_NORMAL
+    );
+
+    const wxColour labelColour = GetReadableLabelColour(m_BackgroundColour, m_LabelsColour);
+    gc->SetFont(font, labelColour);
+
+    const wxString label = wxString::Format(wxT("%u - %u"), viewMin, viewMax);
+
+    wxDouble tw{}, th{};
+    gc->GetTextExtent(label, &tw, &th);
+
+    gc->DrawText
+    (
+        label,
+        overviewX + std::max(4.0, (static_cast<double>(overviewW) - tw) / 2.0),
+        overviewY + overviewH - th - 4.0
+    );
+}
+
+void cSpectroscopyHistogramPanel::UpdateStatusBarFromCursor()
+{
+    if (!m_StatusBar || !m_MouseInside || m_Histogram.empty())
+        return;
+
+    const wxRect plotRect = GetPlotRect();
+
+    if (!plotRect.Contains(m_CursorPos))
+    {
+        ClearCursorStatusBar();
+        return;
+    }
+
+    const unsigned int bin = CanvasXToBin(m_CursorPos.x);
+
+    if (bin >= m_Histogram.size())
+    {
+        ClearCursorStatusBar();
+        return;
+    }
+
+    m_StatusBar->SetStatusText(FormatCursorStatusText(bin, m_Histogram[bin]));
+    m_StatusBarOwnsCursorText = true;
+}
+
+void cSpectroscopyHistogramPanel::ClearCursorStatusBar()
+{
+    if (!m_StatusBar || !m_StatusBarOwnsCursorText)
+        return;
+
+    m_StatusBar->SetStatusText(wxString());
+    m_StatusBarOwnsCursorText = false;
+}
+
+wxString cSpectroscopyHistogramPanel::FormatCursorStatusText(unsigned int bin, unsigned long long count) const
+{
+    wxString text = wxString::Format
+    (
+        wxT("Spectroscopy histogram: ADU %u, count %llu, visible range %u - %u"),
+        bin,
+        count,
+        m_ViewMin,
+        m_ViewMax
+    );
+
+    if (m_CurrentFrame > 0)
+    {
+        text += wxString::Format
+        (
+            wxT(", frame %llu / %llu"),
+            m_CurrentFrame,
+            m_FrameCount
+        );
+    }
+
+    if (m_CurrentCycle > 0)
+    {
+        text += wxString::Format
+        (
+            wxT(", cycle %llu"),
+            m_CurrentCycle
+        );
+    }
+
+    return text;
 }
 
 void cSpectroscopyHistogramPanel::ResetViewToFull()

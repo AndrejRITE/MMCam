@@ -24,6 +24,7 @@ public:
         wxWindow* parent, 
         wxSizer* parentSizer, 
         wxColour labelsColor,
+        wxStatusBar* statusBar = nullptr,
         const int borderSize = 1
     );
 
@@ -31,6 +32,14 @@ public:
     void ResetHistogram();
     void SetBackgroundColor(const wxColour& colour);
     void SetLogScale(bool enabled);
+
+	void SetStatusBar(wxStatusBar* statusBar) { m_StatusBar = statusBar; }
+    void SetAcquisitionPosition
+    (
+        unsigned long long currentFrame,
+        unsigned long long frameCount,
+        unsigned long long currentCycle
+    );
 
     bool HasHistogramData() const;
     bool ExportVisibleHistogramToCsv(const wxString& filePath, wxString* errorMessage = nullptr) const;
@@ -55,6 +64,13 @@ private:
     void DrawHorizontalScale(wxGraphicsContext* gc);
     void DrawXAxisScale(wxGraphicsContext* gc);
     void DrawCursorOverlay(wxGraphicsContext* gc);
+
+    void DrawAcquisitionOverlay(wxGraphicsContext* gc);
+    void DrawVisibleRangeOverview(wxGraphicsContext* gc);
+    void UpdateStatusBarFromCursor();
+    void ClearCursorStatusBar();
+    wxString FormatCursorStatusText(unsigned int bin, unsigned long long count) const;
+
     void ResetViewToFull();
     void UpdateViewPeak();
 
@@ -84,6 +100,13 @@ private:
     wxSize m_CanvasSize{};
     wxPoint m_CursorPos{};
     bool m_MouseInside{};
+
+    wxStatusBar* m_StatusBar{ nullptr };
+
+    unsigned long long m_CurrentFrame{ 0 };
+    unsigned long long m_FrameCount{ 1 };
+    unsigned long long m_CurrentCycle{ 0 };
+    bool m_StatusBarOwnsCursorText{ false };
 
     bool m_IsPanning{};
     int m_PanStartX{};
