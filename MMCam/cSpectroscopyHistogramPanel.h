@@ -29,7 +29,7 @@ public:
     );
 
     void SetHistogram(const unsigned long long* histogram, size_t histogramSize, unsigned long long totalEvents);
-    void ResetHistogram();
+    void ResetHistogram(const bool keepPreviousVisible = false);
     void SetBackgroundColor(const wxColour& colour);
     void SetLogScale(bool enabled);
 
@@ -59,6 +59,7 @@ private:
     void OnCaptureLost(wxMouseCaptureLostEvent& evt);
 
     void Render(wxBufferedPaintDC& dc);
+    void DrawPreviousHistogram(wxGraphicsContext* gc);
     void DrawHistogram(wxGraphicsContext* gc);
     void DrawAxes(wxGraphicsContext* gc);
     void DrawHorizontalScale(wxGraphicsContext* gc);
@@ -90,6 +91,10 @@ private:
     std::vector<unsigned long long> m_Histogram{};
     unsigned long long m_TotalEvents{};
     unsigned long long m_ViewPeak{};
+
+    std::vector<unsigned long long> m_PreviousHistogram{};
+    unsigned long long m_PreviousTotalEvents{};
+    unsigned long long m_PreviousViewPeak{};
 
     unsigned int m_ViewMin{};
     unsigned int m_ViewMax{};

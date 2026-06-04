@@ -4835,7 +4835,7 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 
 		exposure_time = static_cast<int>(std::max(1.0, std::round(smallExposureMs * 1000.0))); // [us]
 
-		ResetSpectroscopyHistogram();
+		ResetSpectroscopyHistogram(true);
 	}
 
 	auto start_live_capturing_after_ss = m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue();
@@ -7014,7 +7014,7 @@ auto cMain::UpdateSpectroscopySettingsFromControls() -> void
 	m_SpectroscopyNeighborRadiusPx = std::clamp(radius, 0, 8);
 }
 
-auto cMain::ResetSpectroscopyHistogram() -> void
+auto cMain::ResetSpectroscopyHistogram(const bool keepPreviousVisible) -> void
 {
 	std::lock_guard<std::mutex> lock(m_SpectroscopyMutex);
 
@@ -7026,10 +7026,7 @@ auto cMain::ResetSpectroscopyHistogram() -> void
 	m_SpectroscopyBatchStart = std::chrono::steady_clock::now();
 
 	if (m_SpectroscopyHistogramPanel)
-	{
-		m_SpectroscopyHistogramPanel->ResetHistogram();
-		m_SpectroscopyHistogramPanel->SetAcquisitionPosition(0, m_SpectroscopyCycleCount, 0);
-	}
+		m_SpectroscopyHistogramPanel->ResetHistogram(keepPreviousVisible);
 
 	UpdateSpectroscopyStatus();
 }
@@ -8492,6 +8489,30 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 				);
 			}
 
+			/*
+				Important ordering rule for live spectroscopy:
+
+				Do NOT reset when the previous cycle finishes. That hides the final
+				accumulated frame from the user.
+
+				Instead, keep the final histogram visible until the first frame of the
+				next cycle arrives. Then reset the accumulator immediately before
+				processing that first frame.
+
+				This gives the visual sequence:
+					cycle 1 frame 10 accumulated histogram
+					cycle 2 frame 1 accumulated histogram
+			*/
+			if
+				(
+					payload->spectroscopyBatch &&
+					payload->spectroscopyFrameIndex == 1 &&
+					payload->spectroscopyCycleIndex > 1
+					)
+			{
+				ResetSpectroscopyHistogram(true);
+			}
+
 			DisplayAndSaveImageFromTheCamera
 			(
 				payload->img.get(),
@@ -8534,13 +8555,6 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 							)
 						);
 					}
-
-					/*
-						Prepare the next live spectroscopy cycle.
-						Do not stop the live thread.
-						Do not simulate toggle-button events.
-					*/
-					ResetSpectroscopyHistogram();
 				}
 			}
 		}

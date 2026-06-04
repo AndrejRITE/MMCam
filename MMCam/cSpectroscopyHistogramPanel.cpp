@@ -285,6 +285,26 @@ void cSpectroscopyHistogramPanel::SetHistogram(const unsigned long long* histogr
     if (!histogram || histogramSize == 0)
         return;
 
+    /*
+        Do not replace the visible histogram with an all-zero histogram.
+
+        This prevents users from seeing a visually empty reset state between
+        spectroscopy batches or at the start of a single-shot spectroscopy run.
+    */
+    const bool hasNonZeroValue =
+        std::any_of
+        (
+            histogram,
+            histogram + histogramSize,
+            [](const unsigned long long value)
+            {
+                return value != 0;
+            }
+        );
+
+    if (!hasNonZeroValue)
+        return;
+
     m_Histogram.assign(histogram, histogram + histogramSize);
     m_TotalEvents = totalEvents;
 
@@ -300,17 +320,43 @@ void cSpectroscopyHistogramPanel::SetHistogram(const unsigned long long* histogr
     Refresh(false);
 }
 
-void cSpectroscopyHistogramPanel::ResetHistogram()
+void cSpectroscopyHistogramPanel::ResetHistogram(const bool keepPreviousVisible)
 {
-    m_Histogram.clear();
+    if (keepPreviousVisible && !m_Histogram.empty())
+    {
+        const bool currentHasNonZeroValue =
+            std::any_of
+            (
+                m_Histogram.begin(),
+                m_Histogram.end(),
+                [](const unsigned long long value)
+                {
+                    return value != 0;
+                }
+            );
 
+        if (currentHasNonZeroValue)
+        {
+            m_PreviousHistogram = m_Histogram;
+            m_PreviousTotalEvents = m_TotalEvents;
+            m_PreviousViewPeak = m_ViewPeak;
+        }
+    }
+    else if (!keepPreviousVisible)
+    {
+        m_PreviousHistogram.clear();
+        m_PreviousTotalEvents = 0;
+        m_PreviousViewPeak = 0;
+
+        m_ViewMin = 0;
+        m_ViewMax = 0;
+        m_ViewInitialized = false;
+        m_UserAdjustedView = false;
+    }
+
+    m_Histogram.clear();
     m_TotalEvents = 0;
     m_ViewPeak = 0;
-
-    m_ViewMin = 0;
-    m_ViewMax = 0;
-    m_ViewInitialized = false;
-    m_UserAdjustedView = false;
 
     m_IsPanning = false;
 
@@ -670,18 +716,158 @@ void cSpectroscopyHistogramPanel::Render(wxBufferedPaintDC& dc)
     UpdateViewPeak();
 
     DrawAxes(gc);
+    DrawPreviousHistogram(gc);
     DrawHistogram(gc);
-    DrawAcquisitionOverlay(gc);
-    DrawVisibleRangeOverview(gc);
+	DrawVisibleRangeOverview(gc);
     DrawCursorOverlay(gc);
 
     delete gc;
 }
 
+void cSpectroscopyHistogramPanel::DrawPreviousHistogram(wxGraphicsContext* gc)
+{
+    if
+        (
+            !gc ||
+            m_PreviousHistogram.empty() ||
+            m_CanvasSize.GetWidth() <= 2 ||
+            m_CanvasSize.GetHeight() <= 2
+            )
+    {
+        return;
+    }
+
+    const wxRect plotRect = GetPlotRect();
+
+    if (plotRect.GetWidth() <= 2 || plotRect.GetHeight() <= 2)
+        return;
+
+    const unsigned int histogramMax = static_cast<unsigned int>(m_PreviousHistogram.size() - 1);
+
+    const unsigned int viewMin = std::min<unsigned int>(m_ViewMin, histogramMax);
+    const unsigned int viewMax = std::min<unsigned int>(m_ViewMax, histogramMax);
+
+    if (viewMax < viewMin)
+        return;
+
+    unsigned long long previousPeak = 0;
+
+    for (unsigned int bin = viewMin; bin <= viewMax; ++bin)
+    {
+        previousPeak = std::max(previousPeak, m_PreviousHistogram[bin]);
+
+        if (bin == viewMax)
+            break;
+    }
+
+    if (previousPeak == 0)
+        return;
+
+    const wxColour previousColour
+    (
+        m_HistogramColour.Red(),
+        m_HistogramColour.Green(),
+        m_HistogramColour.Blue(),
+        45
+    );
+
+    gc->SetPen(wxPen(previousColour, 1));
+    gc->SetBrush(wxBrush(previousColour));
+
+    const int plotLeft = plotRect.GetLeft();
+    const int plotBottom = plotRect.GetBottom();
+    const int plotWidth = std::max(1, plotRect.GetWidth());
+
+    const unsigned int visibleBinCount = viewMax - viewMin + 1u;
+
+    const unsigned long long scalingPeak =
+        std::max(previousPeak, m_ViewPeak);
+
+    if (scalingPeak == 0)
+        return;
+
+    for (unsigned int bin = viewMin; bin <= viewMax; ++bin)
+    {
+        const unsigned long long count = m_PreviousHistogram[bin];
+
+        if (count == 0)
+            continue;
+
+        const unsigned int localBin = bin - viewMin;
+
+        const double x0 =
+            static_cast<double>(plotLeft) +
+            (
+                static_cast<double>(localBin) *
+                static_cast<double>(plotWidth) /
+                static_cast<double>(visibleBinCount)
+                );
+
+        const double x1 =
+            static_cast<double>(plotLeft) +
+            (
+                static_cast<double>(localBin + 1u) *
+                static_cast<double>(plotWidth) /
+                static_cast<double>(visibleBinCount)
+                );
+
+        const double rectX = std::floor(x0);
+        const double rectW = std::max(1.0, std::ceil(x1) - std::floor(x0));
+
+        double normalized{};
+
+        if (m_LogScale)
+        {
+            normalized =
+                std::log10(static_cast<double>(count) + 1.0) /
+                std::log10(static_cast<double>(scalingPeak) + 1.0);
+        }
+        else
+        {
+            normalized =
+                static_cast<double>(count) /
+                static_cast<double>(scalingPeak);
+        }
+
+        normalized = std::clamp(normalized, 0.0, 1.0);
+
+        const int y =
+            plotBottom -
+            static_cast<int>
+            (
+                std::round(normalized * static_cast<double>(plotRect.GetHeight()))
+                );
+
+        const double rectH = static_cast<double>(plotBottom - y);
+
+        if (rectH <= 0.0)
+            continue;
+
+        gc->DrawRectangle
+        (
+            rectX,
+            static_cast<double>(y),
+            rectW,
+            rectH
+        );
+
+        if (bin == viewMax)
+            break;
+    }
+}
+
 void cSpectroscopyHistogramPanel::DrawHistogram(wxGraphicsContext* gc)
 {
-    if (!gc || m_Histogram.empty() || m_CanvasSize.GetWidth() <= 2 || m_CanvasSize.GetHeight() <= 2)
+    if
+        (
+            !gc ||
+            m_Histogram.empty() ||
+            m_CanvasSize.GetWidth() <= 2 ||
+            m_CanvasSize.GetHeight() <= 2
+            )
+    {
         return;
+    }
 
     const wxRect plotRect = GetPlotRect();
 
@@ -1590,26 +1776,59 @@ wxString cSpectroscopyHistogramPanel::FormatCursorStatusText(unsigned int bin, u
 
 void cSpectroscopyHistogramPanel::ResetViewToFull()
 {
+    const std::size_t activeSize =
+        !m_Histogram.empty()
+        ? m_Histogram.size()
+        : m_PreviousHistogram.size();
+
     m_ViewMin = 0;
-    m_ViewMax = m_Histogram.empty() ? 0 : static_cast<unsigned int>(m_Histogram.size() - 1);
-    m_ViewInitialized = !m_Histogram.empty();
+    m_ViewMax = activeSize == 0
+        ? 0
+        : static_cast<unsigned int>(activeSize - 1);
+
+    m_ViewInitialized = activeSize != 0;
 }
 
 void cSpectroscopyHistogramPanel::UpdateViewPeak()
 {
     m_ViewPeak = 0;
 
-    if (m_Histogram.empty())
-        return;
+    auto updatePeakFromHistogram =
+        [this](const std::vector<unsigned long long>& histogram)
+        {
+            if (histogram.empty())
+                return;
 
-    const unsigned int viewMin = std::min<unsigned int>(m_ViewMin, static_cast<unsigned int>(m_Histogram.size() - 1));
-    const unsigned int viewMax = std::min<unsigned int>(m_ViewMax, static_cast<unsigned int>(m_Histogram.size() - 1));
+            const unsigned int histogramMax =
+                static_cast<unsigned int>(histogram.size() - 1);
 
-    if (viewMax < viewMin)
-        return;
+            const unsigned int viewMin =
+                std::min<unsigned int>(m_ViewMin, histogramMax);
 
-    for (unsigned int i = viewMin; i <= viewMax; ++i)
-        m_ViewPeak = std::max(m_ViewPeak, m_Histogram[i]);
+            const unsigned int viewMax =
+                std::min<unsigned int>(m_ViewMax, histogramMax);
+
+            if (viewMax < viewMin)
+                return;
+
+            for (unsigned int i = viewMin; i <= viewMax; ++i)
+            {
+                m_ViewPeak = std::max(m_ViewPeak, histogram[i]);
+
+                if (i == viewMax)
+                    break;
+            }
+        };
+
+    /*
+        Important:
+        The previous faded histogram must participate in axis scaling.
+        Otherwise the old cycle is drawn against the new cycle's peak and can
+        become nearly invisible, especially when frame 1 of the new cycle has
+        much lower counts than the finished previous cycle.
+    */
+    updatePeakFromHistogram(m_PreviousHistogram);
+    updatePeakFromHistogram(m_Histogram);
 }
 
 void cSpectroscopyHistogramPanel::ResetViewToAutomaticRange()
@@ -1765,13 +1984,18 @@ void cSpectroscopyHistogramPanel::ResetViewToAutomaticRange()
 
 void cSpectroscopyHistogramPanel::ClampViewToHistogram()
 {
-    if (m_Histogram.empty())
+    const std::size_t activeSize =
+        !m_Histogram.empty()
+        ? m_Histogram.size()
+        : m_PreviousHistogram.size();
+
+    if (activeSize == 0)
     {
         ResetViewToFull();
         return;
     }
 
-    const unsigned int fullMax = static_cast<unsigned int>(m_Histogram.size() - 1);
+    const unsigned int fullMax = static_cast<unsigned int>(activeSize - 1);
 
     m_ViewMin = std::min(m_ViewMin, fullMax);
     m_ViewMax = std::min(m_ViewMax, fullMax);

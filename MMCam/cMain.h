@@ -1279,7 +1279,7 @@ private:
 	auto OnSpectroscopyExportButton(wxCommandEvent& evt) -> void;
 
 	auto UpdateSpectroscopySettingsFromControls() -> void;
-	auto ResetSpectroscopyHistogram() -> void;
+	auto ResetSpectroscopyHistogram(const bool keepPreviousVisible = false) -> void;
 	auto ApplySpectroscopyProcessing
 	(
 		cv::Mat& frame,
