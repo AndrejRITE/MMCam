@@ -15,6 +15,7 @@
 .venv
 *.txt
 !requirements.txt
+!License.txt
 dbg_fld/
 *.raw
 *.tif

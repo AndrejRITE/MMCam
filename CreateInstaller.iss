@@ -17,9 +17,11 @@ SetupIconFile={#IconFullPath}
 DisableDirPage=no
 UninstallDisplayIcon={app}\{#RepoName}.exe
 PrivilegesRequired=admin
-; x64-only build
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
+LicenseFile=License.txt
+
+[Tasks]
+Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Additional options:"; Flags: checkedonce
+Name: "install_vcredist"; Description: "Install Microsoft Visual C++ 2015-2022 Redistributable (x64)"; GroupDescription: "Additional options:"; Flags: checkedonce
 
 [Dirs]
 Name: "{localappdata}\Programs"; Permissions: users-full
@@ -38,8 +40,6 @@ Source: "{#OutputDir}\xeryon_goCenter.py"; DestDir: "{app}"; Flags: ignoreversio
 Source: "{#OutputDir}\xeryon_setAbsolutePosition.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#IconFullPath}"; DestDir: "{app}"; Flags: ignoreversion
 
-; --- Bundle VC++ 2015–2022 (x64) redist ---
-; Place the official Microsoft installer at: .\redist\VC_redist.x64.exe
 Source: "redist\VC_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Code]
@@ -68,9 +68,17 @@ Name: "{commonprograms}\{#RepoName}"; Filename: "{app}\{#RepoName}.exe"; IconFil
 Root: HKCU; Subkey: "SOFTWARE\RITE\{#RepoName}"; ValueType: string; ValueName: "InstallPath"; ValueData: "{app}"; Flags: createvalueifdoesntexist uninsdeletekey
 
 [Run]
-; Install VC++ runtime only if missing
-Filename: "{tmp}\VC_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Microsoft Visual C++ 2015–2022 Redistributable (x64)…"; Check: NeedsVC2015To2022x64;
+; Install VC++ Redistributable only when:
+; 1. the user selected the checkbox,
+; 2. it is not already installed.
+Filename: "{tmp}\VC_redist.x64.exe"; \
+    Parameters: "/install /quiet /norestart"; \
+    StatusMsg: "Installing Microsoft Visual C++ Redistributable..."; \
+    Flags: waituntilterminated; \
+    Tasks: install_vcredist; \
+    Check: ShouldInstallVCRedist
 
+; Launch app after install
 Filename: "{app}\{#RepoName}.exe"; Description: "{cm:LaunchProgram,{#RepoName}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
@@ -78,31 +86,70 @@ function GetInstallPath: string;
 var
   InstallPath: string;
 begin
-  // Initialize result to empty string
   Result := '';
 
-  // Read the installation path from the registry
   if RegQueryStringValue(HKCU, 'SOFTWARE\RITE\{#RepoName}', 'InstallPath', InstallPath) then
   begin
     Result := InstallPath;
   end;
 end;
 
-// ---------- VC++ 2015–2022 presence check (x64) ----------
-function IsVC2015To2022x64Installed: Boolean;
+
+// ---------- VC++ 2015-2022 x64 Runtime Detection ----------
+
+function IsVCRedistInstalled: Boolean;
 var
   Installed: Cardinal;
+  Version: string;
 begin
-  { Official unified key for VS 2015–2022 runtimes }
-  Result :=
-    RegQueryDWordValue(
-      HKLM,
-      'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64',
-      'Installed',
-      Installed) and (Installed = 1);
+  Result := False;
+
+  if RegQueryDWordValue(
+       HKLM,
+       'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64',
+       'Installed',
+       Installed) then
+  begin
+    if Installed = 1 then
+    begin
+      if RegQueryStringValue(
+           HKLM,
+           'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64',
+           'Version',
+           Version) then
+      begin
+        Log(Format('VC++ Redistributable x64 detected. Version: %s', [Version]));
+      end
+      else
+      begin
+        Log('VC++ Redistributable x64 detected, but version value was not found.');
+      end;
+
+      Result := True;
+      Exit;
+    end;
+  end;
+
+  Log('VC++ Redistributable x64 was not detected.');
 end;
 
-function NeedsVC2015To2022x64: Boolean;
+
+function ShouldInstallVCRedist: Boolean;
 begin
-  Result := not IsVC2015To2022x64Installed;
+  Result := False;
+
+  if not WizardIsTaskSelected('install_vcredist') then
+  begin
+    Log('VC++ Redistributable installation skipped because the user did not select the task.');
+    Exit;
+  end;
+
+  if IsVCRedistInstalled then
+  begin
+    Log('VC++ Redistributable installation skipped because it is already installed.');
+    Exit;
+  end;
+
+  Log('VC++ Redistributable installation will run.');
+  Result := True;
 end;

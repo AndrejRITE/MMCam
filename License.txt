@@ -1,0 +1,13 @@
+License Agreement
+
+This software is provided by Rigaku Innovative Technologies Europe s.r.o.
+
+By installing or using this software, you agree to use it only in accordance with the documentation and applicable laws.
+
+This software is provided "as is", without warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement.
+
+Rigaku Innovative Technologies Europe shall not be liable for any direct, indirect, incidental, special, consequential, or other damages arising from the use of this software.
+
+You may not redistribute, reverse engineer, decompile, or modify this software unless explicitly permitted by a separate written agreement.
+
+If you do not agree with these terms, do not install or use this software.
