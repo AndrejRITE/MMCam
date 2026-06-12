@@ -19,6 +19,12 @@ $ximea_folder = "$env:XIMEA_LATEST"
 $misdk_folder = "$env:MISDK_LATEST\x64"
 $other_files_folder = "${path_to_repository}\${repository_name}"
 
+$redist_source_folder = "${path_to_repository}\redist"
+$redist_release_folder = "${release_folder}\redist"
+
+$vcredist_2013_source = "${redist_source_folder}\vcredist_2013_x64.exe"
+$vcredist_2015_2022_source = "${redist_source_folder}\VC_redist.x64.exe"
+
 # Set the path to MSBuild (you might need to adjust this depending on your VS installation)
 $msbuildPath = "C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe"
 
@@ -114,6 +120,24 @@ Get-ChildItem -Path $release_folder -Filter *.exe | Where-Object { $_.Name -ne "
 # Get all .7z files except About.7z
 Get-ChildItem -Path $release_folder -Filter *.7z | Where-Object { $_.Name -ne "About.7z" } | Remove-Item
 
+# Copy Visual C++ Redistributables
+Write-Output "Copying Visual C++ Redistributables into ${redist_release_folder} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
+
+if (-not (Test-Path -Path $vcredist_2013_source)) {
+    throw "Missing Visual C++ 2013 Redistributable: ${vcredist_2013_source}"
+}
+
+if (-not (Test-Path -Path $vcredist_2015_2022_source)) {
+    throw "Missing Visual C++ 2015-2022 Redistributable: ${vcredist_2015_2022_source}"
+}
+
+if (-not (Test-Path -Path $redist_release_folder)) {
+    New-Item -Path $redist_release_folder -ItemType Directory | Out-Null
+}
+
+Copy-Item -Path $vcredist_2013_source -Destination "${redist_release_folder}\vcredist_2013_x64.exe" -Force
+Copy-Item -Path $vcredist_2015_2022_source -Destination "${redist_release_folder}\VC_redist.x64.exe" -Force
+
 # Copy XIMC files
 Write-Output "Copying XIMC files into ${release_folder} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
 Copy-Item -Path "${libximc_folder}\bindy.dll" -Destination "${release_folder}\bindy.dll" -Force
@@ -192,6 +216,7 @@ Remove-Item -Path "$temp_folder" -Recurse
 # Specify files to include in the archive
 $files_to_archive = @(
     "${release_folder}\src",
+	"${release_folder}\redist",
     "${release_folder}\About.zip",
     "${release_folder}\keyfile.sqlite",
     "${release_folder}\${repository_name}.exe",
@@ -200,7 +225,7 @@ $files_to_archive = @(
     "${release_folder}\Xeryon.py",
     "${release_folder}\xeryon_goCenter.py",
     "${release_folder}\xeryon_setAbsolutePosition.py",
-    "${release_folder}\requirements.txt"
+    "${release_folder}\requirements.txt"	
 )
 
 # Add all .dll files from the release folder

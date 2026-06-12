@@ -21,6 +21,7 @@ LicenseFile=License.txt
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Additional options:"; Flags: checkedonce
+Name: "install_vcredist_2013"; Description: "Install Microsoft Visual C++ 2013 Redistributable (x64)"; GroupDescription: "Additional options:"; Flags: checkedonce
 Name: "install_vcredist"; Description: "Install Microsoft Visual C++ 2015-2022 Redistributable (x64)"; GroupDescription: "Additional options:"; Flags: checkedonce
 
 [Dirs]
@@ -40,6 +41,7 @@ Source: "{#OutputDir}\xeryon_goCenter.py"; DestDir: "{app}"; Flags: ignoreversio
 Source: "{#OutputDir}\xeryon_setAbsolutePosition.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#IconFullPath}"; DestDir: "{app}"; Flags: ignoreversion
 
+Source: "redist\vcredist_2013_x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "redist\VC_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Code]
@@ -68,6 +70,15 @@ Name: "{commonprograms}\{#RepoName}"; Filename: "{app}\{#RepoName}.exe"; IconFil
 Root: HKCU; Subkey: "SOFTWARE\RITE\{#RepoName}"; ValueType: string; ValueName: "InstallPath"; ValueData: "{app}"; Flags: createvalueifdoesntexist uninsdeletekey
 
 [Run]
+; Install VC++ 2013 Redistributable only when:
+; 1. the user selected the checkbox,
+; 2. it is not already installed.
+Filename: "{tmp}\vcredist_2013_x64.exe"; \
+    Parameters: "/install /quiet /norestart"; \
+    StatusMsg: "Installing Microsoft Visual C++ 2013 Redistributable..."; \
+    Flags: waituntilterminated; \
+    Tasks: install_vcredist_2013; \
+    Check: ShouldInstallVC2013Redist
 ; Install VC++ Redistributable only when:
 ; 1. the user selected the checkbox,
 ; 2. it is not already installed.
@@ -94,6 +105,64 @@ begin
   end;
 end;
 
+// ---------- VC++ 2013 x64 Runtime Detection ----------
+
+function IsVC2013RedistInstalled: Boolean;
+var
+  Installed: Cardinal;
+  Version: string;
+begin
+  Result := False;
+
+  if RegQueryDWordValue(
+       HKLM64,
+       'SOFTWARE\Microsoft\VisualStudio\12.0\VC\Runtimes\x64',
+       'Installed',
+       Installed) then
+  begin
+    if Installed = 1 then
+    begin
+      if RegQueryStringValue(
+           HKLM64,
+           'SOFTWARE\Microsoft\VisualStudio\12.0\VC\Runtimes\x64',
+           'Version',
+           Version) then
+      begin
+        Log(Format('VC++ 2013 Redistributable x64 detected. Version: %s', [Version]));
+      end
+      else
+      begin
+        Log('VC++ 2013 Redistributable x64 detected, but version value was not found.');
+      end;
+
+      Result := True;
+      Exit;
+    end;
+  end;
+
+  Log('VC++ 2013 Redistributable x64 was not detected.');
+end;
+
+
+function ShouldInstallVC2013Redist: Boolean;
+begin
+  Result := False;
+
+  if not WizardIsTaskSelected('install_vcredist_2013') then
+  begin
+    Log('VC++ 2013 Redistributable installation skipped because the user did not select the task.');
+    Exit;
+  end;
+
+  if IsVC2013RedistInstalled then
+  begin
+    Log('VC++ 2013 Redistributable installation skipped because it is already installed.');
+    Exit;
+  end;
+
+  Log('VC++ 2013 Redistributable installation will run.');
+  Result := True;
+end;
 
 // ---------- VC++ 2015-2022 x64 Runtime Detection ----------
 
