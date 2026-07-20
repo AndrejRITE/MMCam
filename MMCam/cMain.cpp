@@ -4333,7 +4333,7 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 		CreateCameraPage(m_CameraControlNotebook), 
 		"Camera",
 #ifdef _DEBUG
-		false,
+		true,
 #else
 		true,
 #endif // _DEBUG
@@ -4370,7 +4370,7 @@ void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side
 		CreateSpectroscopyPage(m_CameraControlNotebook), 
 		"Spectroscopy",
 #ifdef _DEBUG
-		true,
+		false,
 #else
 		false,
 #endif // _DEBUG
@@ -6249,7 +6249,7 @@ auto cMain::CoolDownTheCamera() -> void
 {
 	if (!m_CameraControl) return;
 
-	m_CameraControlNotebook->SetSelection(1);
+	m_CameraControlNotebook->SetSelection(2);
 
 	auto propertyColor = wxColour(0, 162, 232);
 
