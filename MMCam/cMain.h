@@ -43,6 +43,7 @@
 #include "cCamPreview.h"
 #include "cSettings.h"
 #include "cGenerateReportDialog.h"
+#include "cCameraTelemetryPanel.h"
 
 #include "XimeaControl.h"
 #include "MoravianInstrumentsControl.h"
@@ -266,6 +267,7 @@ namespace MainFrameVariables
 		CAMERA,
 		ROI,
 		CAMERA_PARAMETERS,
+		SPECTROSCOPY,
 		POSTPROCESSING
 	};
 
@@ -2275,6 +2277,8 @@ private:
 	wxNotebook* m_MeasurementNotebook{};
 
 	wxPropertyGrid* m_CurrentCameraSettingsPropertyGrid{};
+	cCameraTelemetryPanel* m_CameraTelemetryPanel{};
+
 	wxColour m_DefaultCellColor{};
 	std::unique_ptr<MainFrameVariables::PropertiesNames> m_PropertiesNames{};
 

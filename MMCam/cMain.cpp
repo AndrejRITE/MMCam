@@ -2801,7 +2801,27 @@ auto cMain::CreateCameraParametersPage(wxWindow* parent) -> wxWindow*
 
 	m_CurrentCameraSettingsPropertyGrid->Refresh();
 
-	sizerPage->Add(m_CurrentCameraSettingsPropertyGrid, 1, wxEXPAND);
+	m_CameraTelemetryPanel = new cCameraTelemetryPanel(page);
+
+	/*
+		The graph has a compact fixed vertical footprint. The property grid still
+		receives all remaining space.
+	*/
+	sizerPage->Add
+	(
+		m_CameraTelemetryPanel,
+		0,
+		wxEXPAND | wxLEFT | wxRIGHT | wxTOP,
+		FromDIP(5)
+	);
+
+	sizerPage->Add
+	(
+		m_CurrentCameraSettingsPropertyGrid,
+		1,
+		wxEXPAND | wxALL,
+		FromDIP(5)
+	);
 
 	page->SetSizer(sizerPage);
 	return page;
@@ -4577,7 +4597,6 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 		m_CamPreview->SetBackgroundColour(m_BlackAppearanceColor);
 
 		bckgColour = m_BlackAppearanceColor;
-		//bckgColour = wxColour(m_BlackAppearanceColor.GetRed() + 100, m_BlackAppearanceColor.GetGreen() + 100, m_BlackAppearanceColor.GetBlue() + 100);
 	}
 
 	m_Settings->SetBackgroundColour(bckgColour);
@@ -4595,6 +4614,8 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 	m_AuxControlsNotebook->SetBackgroundColour(bckgColour);
 	
 	m_CameraControlNotebook->SetBackgroundColour(bckgColour);
+
+	if (m_CameraTelemetryPanel) m_CameraTelemetryPanel->SetBackgroundColor(bckgColour);
 	
 	m_ToolsControlsNotebook->SetBackgroundColour(bckgColour);
 	
@@ -6005,9 +6026,11 @@ auto cMain::InitializeSelectedCamera() -> void
 
 	m_CameraControl->Initialize();
 
+	if (m_CameraTelemetryPanel)
+		m_CameraTelemetryPanel->ClearTelemetry();
+
 	if (!m_CameraControl || !m_CameraControl->IsConnected())
 	{
-		//m_SelectedCameraStaticTXT->SetLabel(defaultCameraName);
 		DisableControlsAfterUnsuccessfulCameraInitialization();
 		return;
 	}
@@ -6249,7 +6272,7 @@ auto cMain::CoolDownTheCamera() -> void
 {
 	if (!m_CameraControl) return;
 
-	m_CameraControlNotebook->SetSelection(2);
+	m_CameraControlNotebook->SetSelection(MainFrameVariables::CameraControlNotebookPage::CAMERA_PARAMETERS);
 
 	auto propertyColor = wxColour(0, 162, 232);
 
@@ -6263,24 +6286,6 @@ auto cMain::CoolDownTheCamera() -> void
 		propertyColor = wxColour(237, 28, 36); // Red
 
 	m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(m_PropertiesNames->temperature, propertyColor);
-
-	{
-		//auto currentTemperature = m_CameraControl->GetSensorTemperature();
-
-		//auto thresholdDegC = 0.1;
-		//while (currentTemperature > requestedTemperature + thresholdDegC || currentTemperature < requestedTemperature - thresholdDegC)
-		//{
-		//	std::this_thread::sleep_for(std::chrono::milliseconds(500));
-		//	currentTemperature = m_CameraControl->GetSensorTemperature();
-
-		//	auto tempString = CameraPreviewVariables::CreateStringWithPrecision(currentTemperature, 1);
-		//	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->temperature, tempString);
-		//}
-	}
-
-	//m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(m_PropertiesNames->temperature, m_DefaultCellColor);
-
-	//m_CameraControlNotebook->SetSelection(0);
 }
 
 void cMain::OnFullScreen(wxCommandEvent& evt)
@@ -8566,6 +8571,15 @@ auto cMain::LiveCapturingThread(wxThreadEvent& evt) -> void
 			m_MeasurementProgressStaticText->SetLabel(wxString::Format("Progress: %i%%", progress));
 		}
 
+		if (m_CameraTelemetryPanel)
+		{
+			m_CameraTelemetryPanel->AddTelemetrySample
+			(
+				payload->telemetry.temperature_degC,
+				payload->telemetry.power_utilization_pct
+			);
+		}
+
 		if (m_CurrentCameraSettingsPropertyGrid)
 		{
 			auto tempString = CameraPreviewVariables::CreateStringWithPrecision
@@ -9519,8 +9533,20 @@ void cMain::OnTemperatureUpdate(wxThreadEvent& evt)
 	// special case: camera got disconnected, stop polling & disable UI
 	if (td.power_utilization_pct == -999)
 	{
+		if (m_CameraTelemetryPanel)
+			m_CameraTelemetryPanel->ClearTelemetry();
+
 		HandleCameraDisconnected();
 		return;
+	}
+
+	if (m_CameraTelemetryPanel)
+	{
+		m_CameraTelemetryPanel->AddTelemetrySample
+		(
+			td.temperature_degC,
+			td.power_utilization_pct
+		);
 	}
 
 	if (!m_CurrentCameraSettingsPropertyGrid || !m_PropertiesNames) return;
@@ -9627,7 +9653,7 @@ void cMain::ExposureValueChanged(wxCommandEvent& evt)
 
 auto cMain::OnSensorTemperatureChanged(wxCommandEvent& evt) -> void
 {
-	wxBusyCursor busy;
+	//wxBusyCursor busy;
 
 	double desiredDegC{};
 	if (!m_CameraTabControls->camSensorTemperature->GetValue().ToDouble(&desiredDegC))
@@ -9642,9 +9668,9 @@ auto cMain::OnSensorTemperatureChanged(wxCommandEvent& evt) -> void
 	m_IsCoolingDown = true;
 
 	// 3) UI feedback but NON-BLOCKING
-	wxBeginBusyCursor();                  // stays until wxEndBusyCursor() is called later
-	wxWindowDisabler disabler(this);      // optional: temporarily disable clicks
-	m_CameraTabControls->EnableAllControls(); // keep Live toggle if you want
+	//wxBeginBusyCursor();                  // stays until wxEndBusyCursor() is called later
+	//wxWindowDisabler disabler(this);      // optional: temporarily disable clicks
+	//m_CameraTabControls->EnableAllControls(); // keep Live toggle if you want
 
 	// If you have a status bar/progress text:
 	SetStatusText(wxString::Format("Cooling to %.1f °C…", desiredDegC));
@@ -12775,6 +12801,9 @@ auto cMain::HandleCameraDisconnected() -> void
 
 	// Reuse what you already have for “no camera initialized”
 	DisableControlsAfterUnsuccessfulCameraInitialization();
+
+	if (m_CameraTelemetryPanel)
+		m_CameraTelemetryPanel->ClearTelemetry();
 
 	// Optionally hard-disable the camera notebook itself
 	if (m_CameraControlNotebook)
