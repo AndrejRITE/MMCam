@@ -2636,8 +2636,17 @@ public:
 
 	void Resume()
 	{
+		if (!IsRunning())
+		{
+			Start();
+			return;
+		}
+
 		wxMutexLocker lock(m_PauseMtx);
-		if (!m_Paused) return;
+
+		if (!m_Paused)
+			return;
+
 		m_Paused = false;
 		m_PauseCond.Broadcast();
 	}

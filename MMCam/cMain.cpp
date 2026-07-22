@@ -5962,9 +5962,20 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 
 	if (m_CameraControl)
 	{
-		m_TemperatureThread = std::make_unique<TemperatureThread>(this, m_CameraControl, 300);
+		m_TemperatureThread = std::make_unique<TemperatureThread>
+			(
+				this,
+				m_CameraControl,
+				300
+			);
 
-		if (!m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue()) m_TemperatureThread->Start();
+		// Always create the worker thread.
+		m_TemperatureThread->Start();
+
+		// If Live View is already running (Release startup),
+		// keep it paused until Live View finishes.
+		if (m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
+			m_TemperatureThread->Pause();
 	}
 
 	// Data Type
@@ -9575,13 +9586,13 @@ void cMain::OnTemperatureUpdate(wxThreadEvent& evt)
 			// End busy cursor + re-enable UI
 			if (wxIsBusy()) wxEndBusyCursor();
 			m_CameraTabControls->EnableAllControls();
-			SetStatusText(wxString::Format("Temperature stable at %.1f °C.", td.temperature_degC));
+			SetStatusText(wxString::Format("Temperature stable at %.1f [degC].", td.temperature_degC));
 			m_CurrentCameraSettingsPropertyGrid->SetPropertyBackgroundColour(m_PropertiesNames->temperature, m_DefaultCellColor);
 		}
 		else
 		{
 			// still cooling – optional UI pulse/update text here
-			 SetStatusText(wxString::Format("Cooling: %.1f → %.1f °C", td.temperature_degC, m_TargetSensorTempDegC));
+			 SetStatusText(wxString::Format("Cooling: %.1f -> %.1f [degC]", td.temperature_degC, m_TargetSensorTempDegC));
 		}
 	}
 }

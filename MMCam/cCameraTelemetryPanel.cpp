@@ -130,8 +130,8 @@ void cCameraTelemetryPanel::OnPaint(wxPaintEvent& event)
 		: wxColour(211, 216, 224);
 
 	const wxColour gridColour = m_DarkAppearance
-		? wxColour(68, 73, 81)
-		: wxColour(229, 232, 237);
+		? wxColour(95, 100, 110)
+		: wxColour(195, 200, 208);
 
 	const wxColour primaryText = m_DarkAppearance
 		? wxColour(235, 238, 242)
@@ -294,13 +294,13 @@ void cCameraTelemetryPanel::OnPaint(wxPaintEvent& event)
 	);
 
 	/*
-	Each side has:
-	- a rotated axis caption;
-	- numeric tick labels;
-	- spacing before the plot border.
-*/
-	const int leftAxisWidth = FromDIP(72);
-	const int rightAxisWidth = FromDIP(68);
+		Each side has:
+		- a rotated axis caption;
+		- numeric tick labels;
+		- spacing before the plot border.
+	*/
+	const int leftAxisWidth = FromDIP(56);
+	const int rightAxisWidth = FromDIP(48);
 	const int bottomAxisHeight = FromDIP(25);
 
 	const wxRect plotRect
