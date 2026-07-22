@@ -1478,7 +1478,11 @@ void cSpectroscopyHistogramPanel::DrawCursorOverlay(wxGraphicsContext* gc)
     const int x = BinToCanvasXCenter(bin);
     const int y = CountToCanvasY(count);
 
-    gc->SetPen(wxPen(wxColour(255, 255, 255, 120), 2, wxPENSTYLE_SHORT_DASH));
+    const bool darkBackground = IsDarkColour(m_BackgroundColour);
+
+    auto verticalLineColor = darkBackground ? wxColour(255, 255, 255, 120) : wxColour(0, 0, 0, 120);
+
+    gc->SetPen(wxPen(verticalLineColor, 2, wxPENSTYLE_SHORT_DASH));
     gc->StrokeLine(x, plotRect.GetTop(), x, plotRect.GetBottom());
 
     const wxString text = wxString::Format(wxT("ADU %u  |  %s"), bin, FormatCompactCount(count));
