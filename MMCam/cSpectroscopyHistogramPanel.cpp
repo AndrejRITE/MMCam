@@ -1086,7 +1086,7 @@ void cSpectroscopyHistogramPanel::DrawHorizontalScale(wxGraphicsContext* gc)
             if (y < plotRect.GetTop() || y > plotRect.GetBottom())
                 return false;
 
-            gc->SetPen(wxPen(majorLine ? majorGridColour : minorGridColour, majorLine ? 1 : 1));
+            gc->SetPen(wxPen(majorLine ? majorGridColour : minorGridColour, majorLine ? 1 : 1, wxPENSTYLE_DOT_DASH));
             gc->StrokeLine(plotRect.GetLeft() + 1, y, plotRect.GetRight() - 1, y);
 
             if (!drawLabel)
@@ -1359,7 +1359,7 @@ void cSpectroscopyHistogramPanel::DrawXAxisScale(wxGraphicsContext* gc)
             if (x < plotRect.GetLeft() || x > plotRect.GetRight())
                 return;
 
-            gc->SetPen(wxPen(majorGridColour, 1));
+            gc->SetPen(wxPen(majorGridColour, 1, wxPENSTYLE_DOT_DASH));
             gc->StrokeLine
             (
                 x,
@@ -1478,7 +1478,7 @@ void cSpectroscopyHistogramPanel::DrawCursorOverlay(wxGraphicsContext* gc)
     const int x = BinToCanvasXCenter(bin);
     const int y = CountToCanvasY(count);
 
-    gc->SetPen(wxPen(wxColour(255, 255, 255, 90), 1, wxPENSTYLE_DOT));
+    gc->SetPen(wxPen(wxColour(255, 255, 255, 120), 2, wxPENSTYLE_SHORT_DASH));
     gc->StrokeLine(x, plotRect.GetTop(), x, plotRect.GetBottom());
 
     const wxString text = wxString::Format(wxT("ADU %u  |  %s"), bin, FormatCompactCount(count));
