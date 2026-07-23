@@ -179,7 +179,6 @@
     <ClInclude Include="PostprocessingAlgorithms.h" />
     <ClInclude Include="IMotor.h" />
     <ClInclude Include="IMotorArray.h" />
-    <ClInclude Include="json.hpp" />
     <ClInclude Include="Profiler.h" />
     <ClInclude Include="SerialPortCommunication.h" />
     <ClInclude Include="StandaMotor.h" />

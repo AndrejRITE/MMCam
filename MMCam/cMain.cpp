@@ -11466,19 +11466,19 @@ wxThread::ExitCode WorkerThread::Entry()
 		}
 
 		/* Here we need to round values, for the correct positioning of motors */
-		auto correctedStart = static_cast<int>(m_FirstAxis->start * 1000.f + .5f);
-		auto correctedStep = static_cast<int>(m_FirstAxis->step * 1000.f + .5f);
+		auto correctedStart = static_cast<int>(std::round(m_FirstAxis->start * 1000.f));
+		auto correctedStep = static_cast<int>(std::round(m_FirstAxis->step * 1000.f));
 		auto correctedPos = static_cast<float>(correctedStart + i * correctedStep);
 		first_axis_rounded_go_to = correctedPos / 1000.f;
 
 		first_axis_position = MoveFirstStage(first_axis_rounded_go_to);
-		m_FirstAxisPositionsData[i] = first_axis_rounded_go_to;
+		m_FirstAxisPositionsData[i] = first_axis_position;
 		m_MainFrame->UpdateStagePositions();
 
 		auto fileName = PrepareFileName
 		(
 			i + 1, 
-			first_axis_rounded_go_to, 
+			first_axis_position, 
 			second_axis_position, 
 			cur_hours, cur_mins, cur_secs
 		);

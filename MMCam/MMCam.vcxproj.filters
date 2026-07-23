@@ -28,9 +28,6 @@
     <Filter Include="Source Files\Motors">
       <UniqueIdentifier>{da974a69-6438-4030-842e-1068edd01b0f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\ExternalLibraries">
-      <UniqueIdentifier>{8311a345-df65-4834-8a32-8a28e254ab9c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\OtherHeaders">
       <UniqueIdentifier>{7371b76b-cc46-4efe-b9b2-77ab602e2ab1}</UniqueIdentifier>
     </Filter>
@@ -59,9 +56,6 @@
     </ClInclude>
     <ClInclude Include="cPreviewTools.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="json.hpp">
-      <Filter>Header Files\ExternalLibraries</Filter>
     </ClInclude>
     <ClInclude Include="resource1.h">
       <Filter>Header Files</Filter>
