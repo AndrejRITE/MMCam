@@ -2,8 +2,6 @@
 #ifndef XIMEA_CONTROL_H
 #define XIMEA_CONTROL_H
 
-#define WIN32
-
 #include "CameraControl.h"
 #include "xiApi.h"
 #include <fstream>

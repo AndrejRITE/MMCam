@@ -2,7 +2,6 @@
 #ifndef MORAVIANINSTRUMENTS_CONTROL_H
 #define MORAVIANINSTRUMENTS_CONTROL_H
 
-#define WIN32
 #define NOMINMAX
 
 #include "CameraControl.h"

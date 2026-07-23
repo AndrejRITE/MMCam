@@ -133,8 +133,6 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 {	
 	m_MainPanel = std::make_unique<wxPanel>(this);
 
-	//m_MainPanel->SetBackgroundColour(m_BackgroundColour);
-
 	wxBoxSizer* main_panel_sizer = new wxBoxSizer(wxVERTICAL);
 
 	/* Work Station */
@@ -151,9 +149,7 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 		);
 		m_WorkStations->work_station_choice->SetSelection(m_WorkStations->initialized_work_station_num);
 
-		//work_station_static_box_sizer->AddStretchSpacer();
 		work_station_static_box_sizer->Add(m_WorkStations->work_station_choice, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
-		//work_station_static_box_sizer->AddStretchSpacer();
 	}
 	main_panel_sizer->Add(work_station_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
 
@@ -249,6 +245,7 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 auto cSettings::CreateDetectorPage(wxWindow* parent, const wxSize& txtCtrlSize, const int& topOffset) -> wxWindow*
 {
 	auto page = new wxPanel(parent);
+	page->SetBackgroundColour(m_backgroundColour);
 	auto sizerPage = new wxBoxSizer(wxVERTICAL);
 
 	/* X */
@@ -1036,12 +1033,14 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 	// CameraManufacturer
 	if (j.contains("camera_manufacturer")) {
 		const wxString cameraManufacturerStr = wxString(j["camera_manufacturer"].get<std::string>());
-		if (cameraManufacturerStr.Lower() == "ximea")
-			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::XIMEA;
+		if (cameraManufacturerStr.Lower() == "advacam")
+			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::ADVACAM;
 		else if (cameraManufacturerStr.Lower() == "moravian_instruments")
 			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::MORAVIAN_INSTRUMENTS;
 		else if (cameraManufacturerStr.Lower() == "tucsen")
 			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::TUCSEN;
+		else if (cameraManufacturerStr.Lower() == "ximea")
+			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::XIMEA;
 	}
 
 	// PixelSizeUM
@@ -1149,4 +1148,13 @@ auto cSettings::PrepareStagesDataAndWriteThemIntoJSONFile() -> void
 		}
 	}
 	WriteJson(m_StagesPositionsFilename, out);
+}
+
+auto cSettings::SetBackgroundColor(const wxColour& color) -> void
+{
+	m_MotorsNotebook->SetBackgroundColour(color);
+	
+	SetBackgroundColour(color);
+
+	Refresh();
 }

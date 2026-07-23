@@ -4599,7 +4599,7 @@ auto cMain::OnEnableDarkMode(wxCommandEvent& evt) -> void
 		bckgColour = m_BlackAppearanceColor;
 	}
 
-	m_Settings->SetBackgroundColour(bckgColour);
+	m_Settings->SetBackgroundColor(bckgColour);
 	
 	m_VerticalToolBar->tool_bar->SetBackgroundColour(bckgColour);
 
@@ -6028,12 +6028,16 @@ auto cMain::InitializeSelectedCamera() -> void
 	auto selectedCamera = m_Settings->GetSelectedCamera();
 	if (selectedCamera == defaultCameraName) return;
 
-	if (m_Settings->GetCameraManufacturer() == SettingsVariables::CameraManufacturers::XIMEA)
-		m_CameraControl = std::make_shared<XimeaControl>(selectedCamera.ToStdString());
-	else if (m_Settings->GetCameraManufacturer() == SettingsVariables::CameraManufacturers::MORAVIAN_INSTRUMENTS)
+	auto cameraManufacturer = m_Settings->GetCameraManufacturer();
+
+	if (cameraManufacturer == SettingsVariables::CameraManufacturers::ADVACAM)
+		m_CameraControl = std::make_shared<AdvacamControl>(selectedCamera.ToStdString());
+	else if (cameraManufacturer == SettingsVariables::CameraManufacturers::MORAVIAN_INSTRUMENTS)
 		m_CameraControl = std::make_shared<MoravianInstrumentsControl>(selectedCamera.ToStdString());
-	else if (m_Settings->GetCameraManufacturer() == SettingsVariables::CameraManufacturers::TUCSEN)
+	else if (cameraManufacturer == SettingsVariables::CameraManufacturers::TUCSEN)
 		m_CameraControl = std::make_shared<TucsenControl>(selectedCamera.ToStdString());
+	else if (cameraManufacturer == SettingsVariables::CameraManufacturers::XIMEA)
+		m_CameraControl = std::make_shared<XimeaControl>(selectedCamera.ToStdString());
 
 	m_CameraControl->Initialize();
 

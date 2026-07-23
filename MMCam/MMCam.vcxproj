@@ -113,10 +113,10 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(VcPkgRoot)\installed\$(VcPkgTriplet)\include\opencv4;$(MISDK_LATEST);$(XIMEA_LATEST);$(LIBXIMC_LATEST);$(SolutionDir)include;$(SolutionDir)include\Xeryon\inc;$(SolutionDir)include\Xeryon\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VcPkgRoot)\installed\$(VcPkgTriplet)\include\opencv4;$(MISDK_LATEST);$(XIMEA_LATEST);$(LIBXIMC_LATEST);$(ADVACAM_LATEST);$(SolutionDir)include;$(SolutionDir)include\Xeryon\inc;$(SolutionDir)include\Xeryon\src</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/bigobj /utf-8 %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -124,8 +124,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib;$(MISDK_LATEST)\x64\;$(XIMEA_LATEST);$(LIBXIMC_LATEST)\win64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>xiapi64.lib;libximc.lib;bindy.lib;cXusb.lib;gXeth.lib;gXusb.lib;TUCam.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib;$(MISDK_LATEST)\x64\;$(XIMEA_LATEST);$(LIBXIMC_LATEST)\win64;$(ADVACAM_LATEST)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>xiapi64.lib;libximc.lib;bindy.lib;cXusb.lib;gXeth.lib;gXusb.lib;TUCam.lib;pxcore.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -134,10 +134,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(VcPkgRoot)\installed\$(VcPkgTriplet)\include\opencv4;$(MISDK_LATEST);$(XIMEA_LATEST);$(LIBXIMC_LATEST);$(SolutionDir)include;$(SolutionDir)include\Xeryon\inc;$(SolutionDir)include\Xeryon\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VcPkgRoot)\installed\$(VcPkgTriplet)\include\opencv4;$(MISDK_LATEST);$(XIMEA_LATEST);$(LIBXIMC_LATEST);$(ADVACAM_LATEST);$(SolutionDir)include;$(SolutionDir)include\Xeryon\inc;$(SolutionDir)include\Xeryon\src</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/bigobj /utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -146,8 +146,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib;$(MISDK_LATEST)\x64\;$(XIMEA_LATEST);$(LIBXIMC_LATEST)\win64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>xiapi64.lib;libximc.lib;bindy.lib;cXusb.lib;gXeth.lib;gXusb.lib;TUCam.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib;$(MISDK_LATEST)\x64\;$(XIMEA_LATEST);$(LIBXIMC_LATEST)\win64;$(ADVACAM_LATEST)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>xiapi64.lib;libximc.lib;bindy.lib;cXusb.lib;gXeth.lib;gXusb.lib;TUCam.lib;pxcore.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -163,6 +163,7 @@
     <ClInclude Include="..\include\MaterialDesign\wxMaterialSharpArt.hpp" />
     <ClInclude Include="..\include\MaterialDesign\wxMaterialTwoToneArt.hpp" />
     <ClInclude Include="..\include\MaterialDesign\wxSimpleIconsArt.hpp" />
+    <ClInclude Include="AdvacamControl.h" />
     <ClInclude Include="CameraControl.h" />
     <ClInclude Include="cApp.h" />
     <ClInclude Include="cCameraTelemetryPanel.h" />
@@ -201,6 +202,7 @@
     <ClCompile Include="..\include\MaterialDesign\wxMaterialSharpArt.cpp" />
     <ClCompile Include="..\include\MaterialDesign\wxMaterialTwoToneArt.cpp" />
     <ClCompile Include="..\include\MaterialDesign\wxSimpleIconsArt.cpp" />
+    <ClCompile Include="AdvacamControl.cpp" />
     <ClCompile Include="cApp.cpp" />
     <ClCompile Include="cCameraTelemetryPanel.cpp" />
     <ClCompile Include="cCamPreview.cpp" />

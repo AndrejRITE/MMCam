@@ -75,9 +75,10 @@ namespace SettingsVariables
 
 	enum CameraManufacturers
 	{
-		XIMEA,
+		ADVACAM,
 		MORAVIAN_INSTRUMENTS,
-		TUCSEN
+		TUCSEN,
+		XIMEA
 	};
 
 	enum MotorsNames 
@@ -360,6 +361,7 @@ public:
 	};
 	
 	auto GetCameraManufacturer() const -> int { return m_CameraManufacturer; }
+	auto SetBackgroundColor(const wxColour& color) -> void;
 
 private:
 	void CreateMainFrame();
@@ -526,8 +528,6 @@ private:
 	std::unique_ptr<SettingsVariables::Camera> m_Camera{};
 	const int m_MotorsCount{ 6 };
 	std::unique_ptr<SettingsVariables::ProgressValues> m_Progress = std::make_unique<SettingsVariables::ProgressValues>();
-
-	wxColour m_BackgroundColour = wxColour(90, 90, 90);
 };
 
 #endif // !CSETTINGS_H

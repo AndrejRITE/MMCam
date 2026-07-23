@@ -45,14 +45,15 @@
 #include "cGenerateReportDialog.h"
 #include "cCameraTelemetryPanel.h"
 
-#include "XimeaControl.h"
+#include "AdvacamControl.h"
 #include "MoravianInstrumentsControl.h"
 #include "TucsenControl.h"
+#include "XimeaControl.h"
 
 #include "src/img/logo.xpm"
 
 #define MAJOR_VERSION 2
-#define MINOR_VERSION 2
+#define MINOR_VERSION 3
 
 #ifdef _DEBUG
 	//#define OPEN
