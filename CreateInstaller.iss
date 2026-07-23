@@ -29,6 +29,8 @@ Name: "{localappdata}\Programs"; Permissions: users-full
 
 [Files]
 Source: "{#OutputDir}\src\*"; DestDir: "{app}\src"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#OutputDir}\hwlibs\*"; DestDir: "{app}\hwlibs"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#OutputDir}\pixet.ini"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\About.zip"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputDir}\keyfile.sqlite"; DestDir: "{app}"; Flags: ignoreversion

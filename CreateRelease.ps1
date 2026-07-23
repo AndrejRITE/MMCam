@@ -13,6 +13,7 @@ $solutionPath = "${path_to_repository}\${repository_name}.sln"
 $temp_folder = "${path_to_repository}\.temp"
 $about_folder = "${path_to_repository}\${repository_name}\src\About"
 $release_folder = "${path_to_repository}\bin\x64\Release"
+$advacam_folder = "$env:ADVACAM_LATEST"
 $opencv_folder = "$env:OPENCV_LATEST\bin"
 $libximc_folder = "$env:LIBXIMC_LATEST\win64"
 $ximea_folder = "$env:XIMEA_LATEST"
@@ -148,6 +149,13 @@ Copy-Item -Path "${other_files_folder}\keyfile.sqlite" -Destination "${release_f
 # Copy INI file
 Write-Output "Copying INI file into ${release_folder} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
 Copy-Item -Path "${other_files_folder}\${repository_name}.ini" -Destination "${release_folder}\${repository_name}.ini" -Force
+
+# Copy Advacam files
+Write-Output "Copying Advacam files into ${release_folder} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
+Copy-Item -Path "${other_files_folder}\pixet.ini" -Destination "${release_folder}\pixet.ini" -Force
+Copy-Item -Path "${advacam_folder}\ftd2xx64.dll" -Destination "${release_folder}\ftd2xx64.dll" -Force
+Copy-Item -Path "${advacam_folder}\pxcore.dll" -Destination "${release_folder}\pxcore.dll" -Force
+Copy-Item -Path "${advacam_folder}\hwlibs" -Destination $release_folder -Recurse
 
 # Copy XIMEA files
 Write-Output "Copying XIMEA files into ${release_folder} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
