@@ -1244,6 +1244,7 @@ private:
 
 	void OnOpenSettings(wxCommandEvent& evt);
 	auto InitializeSelectedCamera() -> void;
+	auto UpdateTelemetryPanelVisibility() -> void;
 	auto UpdateDefaultWidgetParameters() -> void;
 	auto UpdateCameraROIParameters() -> void;
 	auto UpdateCameraParameters() -> void;

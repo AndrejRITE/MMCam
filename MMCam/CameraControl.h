@@ -44,7 +44,7 @@ public:
 
     virtual auto GetSupplyVoltage() -> double { return 0.0; }
 
-    virtual auto GetPowerUtilization() -> int { return -1; }
+    virtual auto GetPowerUtilization() -> int { return 0; }
 
     virtual auto GetShortestExposureMS() -> double { return 0.0; }
     virtual auto GetLongestExposureMS() -> double { return 0.0; }
@@ -63,6 +63,8 @@ public:
     virtual auto ResetHardwareROIToFullFrame() -> void { return; }
 
     virtual auto GetHardwareROI() -> CameraControlVariables::HardwareROI = 0;
+
+    virtual bool HasTelemetry() const { return true; }
 
 protected:
     std::string m_CameraSerialNumber{};

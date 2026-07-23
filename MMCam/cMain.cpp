@@ -5960,7 +5960,7 @@ void cMain::OnOpenSettings(wxCommandEvent& evt)
 	// Stop previous thread if any (e.g., user re-initialized camera)
 	if (m_TemperatureThread) { m_TemperatureThread->Stop(); }
 
-	if (m_CameraControl)
+	if (m_CameraControl && m_CameraControl->HasTelemetry())
 	{
 		m_TemperatureThread = std::make_unique<TemperatureThread>
 			(
@@ -6040,6 +6040,8 @@ auto cMain::InitializeSelectedCamera() -> void
 	if (m_CameraTelemetryPanel)
 		m_CameraTelemetryPanel->ClearTelemetry();
 
+	UpdateTelemetryPanelVisibility();
+
 	if (!m_CameraControl || !m_CameraControl->IsConnected())
 	{
 		DisableControlsAfterUnsuccessfulCameraInitialization();
@@ -6064,6 +6066,23 @@ auto cMain::InitializeSelectedCamera() -> void
 	wxCommandEvent evt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN);
 	ProcessEvent(evt);
 #endif // !_DEBUG
+}
+
+auto cMain::UpdateTelemetryPanelVisibility() -> void
+{
+	if (!m_CameraTelemetryPanel) return;
+
+	const bool hasTelemetry = m_CameraControl && m_CameraControl->HasTelemetry();
+
+	if (auto* sizer = m_CameraTelemetryPanel->GetContainingSizer())
+	{
+		sizer->Show(m_CameraTelemetryPanel, hasTelemetry);
+		sizer->Layout();
+	}
+	else
+	{
+		m_CameraTelemetryPanel->Show(hasTelemetry);
+	}
 }
 
 auto cMain::UpdateDefaultWidgetParameters() -> void
