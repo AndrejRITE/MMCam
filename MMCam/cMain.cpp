@@ -7151,15 +7151,21 @@ auto cMain::FilterSpectroscopyEvents(const cv::Mat& src, cv::Mat& dst) -> void
 	if (src.empty() || src.type() != CV_16UC1)
 		return;
 
-	dst = cv::Mat::zeros(src.rows, src.cols, CV_16UC1);
+	dst.create(src.rows, src.cols, CV_16UC1);
+	dst.setTo(0);
 
 	const int rows = src.rows;
 	const int cols = src.cols;
+
 	const int radius = m_SpectroscopyNeighborRadiusPx;
 	const unsigned short threshold = m_SpectroscopyThreshold;
 
-	const unsigned threadCount = std::max(1u, std::thread::hardware_concurrency());
-	const int chunk = (rows + static_cast<int>(threadCount) - 1) / static_cast<int>(threadCount);
+	const unsigned threadCount =
+		std::max(1u, std::thread::hardware_concurrency());
+
+	const int chunk =
+		(rows + static_cast<int>(threadCount) - 1) /
+		static_cast<int>(threadCount);
 
 	auto worker = [&](const int yBegin, const int yEnd)
 		{
@@ -7170,42 +7176,102 @@ auto cMain::FilterSpectroscopyEvents(const cv::Mat& src, cv::Mat& dst) -> void
 
 				for (int x = 0; x < cols; ++x)
 				{
-					const unsigned short v = srcRow[x];
+					const unsigned short seedValue = srcRow[x];
 
-					if (v <= threshold)
+					if (seedValue <= threshold)
 						continue;
 
+					//
+					// First determine whether this pixel is the deterministic
+					// local maximum of the event.
+					//
 					bool isLocalMaximum = true;
+
+					const int y0 = std::max(0, y - radius);
+					const int y1 = std::min(rows - 1, y + radius);
+					const int x0 = std::max(0, x - radius);
+					const int x1 = std::min(cols - 1, x + radius);
+
+					for (int yy = y0; yy <= y1 && isLocalMaximum; ++yy)
+					{
+						const auto* neighborRow =
+							src.ptr<unsigned short>(yy);
+
+						for (int xx = x0; xx <= x1; ++xx)
+						{
+							if (yy == y && xx == x)
+								continue;
+
+							const unsigned short neighborValue =
+								neighborRow[xx];
+
+							//
+							// Deterministic tie-breaking:
+							// if two pixels have the same value,
+							// only the first one is treated as the seed.
+							//
+							if (
+								neighborValue > seedValue ||
+								(
+									neighborValue == seedValue &&
+									(
+										yy < y ||
+										(yy == y && xx < x)
+										)
+									)
+								)
+							{
+								isLocalMaximum = false;
+								break;
+							}
+						}
+					}
+
+					if (!isLocalMaximum)
+						continue;
+
+					//
+					// Find the strongest neighboring split component.
+					//
+					unsigned short strongestNeighbor = 0;
 
 					if (radius > 0)
 					{
-						const int y0 = std::max(0, y - radius);
-						const int y1 = std::min(rows - 1, y + radius);
-						const int x0 = std::max(0, x - radius);
-						const int x1 = std::min(cols - 1, x + radius);
-
-						for (int yy = y0; yy <= y1 && isLocalMaximum; ++yy)
+						for (int yy = y0; yy <= y1; ++yy)
 						{
-							const auto* nRow = src.ptr<unsigned short>(yy);
+							const auto* neighborRow =
+								src.ptr<unsigned short>(yy);
 
 							for (int xx = x0; xx <= x1; ++xx)
 							{
 								if (yy == y && xx == x)
 									continue;
 
-								// Keep only local maxima.
-								// Tie-breaker keeps one deterministic pixel from a flat split event.
-								if (nRow[xx] > v || (nRow[xx] == v && (yy < y || (yy == y && xx < x))))
+								const unsigned short neighborValue =
+									neighborRow[xx];
+
+								if (
+									neighborValue > threshold &&
+									neighborValue <= seedValue &&
+									neighborValue > strongestNeighbor
+									)
 								{
-									isLocalMaximum = false;
-									break;
+									strongestNeighbor = neighborValue;
 								}
 							}
 						}
 					}
 
-					if (isLocalMaximum)
-						dstRow[x] = v;
+					const uint32_t reconstructedValue =
+						static_cast<uint32_t>(seedValue) +
+						static_cast<uint32_t>(strongestNeighbor);
+
+					dstRow[x] = static_cast<unsigned short>(
+						std::min<uint32_t>(
+							reconstructedValue,
+							std::numeric_limits<unsigned short>::max()
+						)
+						);
 				}
 			}
 		};
@@ -7215,12 +7281,14 @@ auto cMain::FilterSpectroscopyEvents(const cv::Mat& src, cv::Mat& dst) -> void
 
 	for (unsigned t = 0; t < threadCount; ++t)
 	{
-		const int yBegin = static_cast<int>(t) * chunk;
+		const int yBegin =
+			static_cast<int>(t) * chunk;
 
 		if (yBegin >= rows)
 			break;
 
-		const int yEnd = std::min(rows, yBegin + chunk);
+		const int yEnd =
+			std::min(rows, yBegin + chunk);
 
 		threads.emplace_back(worker, yBegin, yEnd);
 	}
