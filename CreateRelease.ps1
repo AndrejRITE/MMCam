@@ -264,11 +264,31 @@ $icon_full_path = "${path_to_repository}\${repository_name}\src\img\logo.ico"
 # Run Inno Setup to generate the installer
 Write-Output "Running Inno Setup to generate the installer [$(Get-Date)]" >> "${path_to_repository}\log.txt"
 & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" $inno_setup_script_temp
+if ($LASTEXITCODE -ne 0) {
+    throw "Inno Setup failed with exit code $LASTEXITCODE."
+}
 
 # Remove the Temp Inno file
 Remove-Item -Path "${inno_setup_script_temp}"
 
-# Define the path of the generated installer
+if (-not (Test-Path -LiteralPath $installer_path -PathType Leaf)) {
+    throw "The installer was not created: ${installer_path}"
+}
+
+# Sign the generated installer before calculating its checksum or publishing it.
+$code_sign_script = Join-Path $PSScriptRoot "CodeSign.ps1"
+if (-not (Test-Path -LiteralPath $code_sign_script -PathType Leaf)) {
+    throw "Code-signing script was not found: ${code_sign_script}"
+}
+
+Write-Output "Signing installer ${installer_name} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
+& $code_sign_script -file $installer_path
+if ($LASTEXITCODE -ne 0) {
+    throw "Code signing failed with exit code $LASTEXITCODE."
+}
+Write-Output "Finished signing installer ${installer_name} [$(Get-Date)]" >> "${path_to_repository}\log.txt"
+
+# Calculate the checksum only after signing, because signing changes the file.
 $fileHash = (Get-FileHash -Algorithm SHA256 -Path $installer_path).Hash
 Write-Output "SHA256: [$fileHash]" >> "${path_to_repository}\log.txt"
 
