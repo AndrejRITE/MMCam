@@ -3163,13 +3163,13 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 
 	addIntText
 	(
-		wxT("Merge radius [px]:"),
+		wxT("Charge-sharing radius [px]:"),
 		m_SpectroscopyTabControls->neighborRadiusTxtCtrl,
 		MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_NEIGHBOR_RADIUS_TXT_CTRL,
 		m_Config ? m_Config->spectroscopy_neighbor_radius_px : 1,
 		0,
 		8,
-		wxT("Neighbourhood radius used to suppress split/double events. Press Enter to apply.")
+		wxT("Neighbourhood radius used to combine pixels belonging to one split photon event. Press Enter to apply.")
 	);
 
 	gridSizer->Add(new wxStaticText(page, wxID_ANY, wxT("Output format:")), 0, wxALIGN_CENTER_VERTICAL);

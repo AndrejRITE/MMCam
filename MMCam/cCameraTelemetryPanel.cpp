@@ -231,7 +231,7 @@ void cCameraTelemetryPanel::OnPaint(wxPaintEvent& event)
 	}
 
 	const wxString temperatureText = latestTemperatureAvailable
-		? wxString::Format(wxT("%.1f °C"), latestTemperature)
+		? wxString::Format(wxT("%.2f °C"), latestTemperature)
 		: wxString(wxT("Temperature N/A"));
 
 	const wxString powerText = latestPowerAvailable
@@ -847,7 +847,7 @@ void cCameraTelemetryPanel::OnPaint(wxPaintEvent& event)
 				(
 					wxString::Format
 					(
-						wxT("Temperature: %.1f °C"),
+						wxT("Temperature: %.2f °C"),
 						hoveredSample->temperatureDegC
 					)
 				);
