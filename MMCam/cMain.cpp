@@ -3163,7 +3163,7 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 
 	addIntText
 	(
-		wxT("Charge-sharing radius [px]:"),
+		wxT("Charge-summarizing radius [px]:"),
 		m_SpectroscopyTabControls->neighborRadiusTxtCtrl,
 		MainFrameVariables::ID::RIGHT_CAM_SPECTROSCOPY_NEIGHBOR_RADIUS_TXT_CTRL,
 		m_Config ? m_Config->spectroscopy_neighbor_radius_px : 1,
