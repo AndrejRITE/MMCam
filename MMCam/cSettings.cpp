@@ -37,8 +37,17 @@ int cSettings::ShowModal()
 		needXeryon |= (vendor == SettingsVariables::XERYON);
 	}
 
-	if (needStanda)  m_StandaMotors = std::make_unique<StandaMotorArray>();
-	if (needXeryon)  m_XeryonMotors = std::make_unique<XeryonMotorArray>(), InitializeXeryonAndCheckPython();
+	if (needStanda)
+	{
+		// Empty address => StandaMotorArray probes USB/COM only, same as before.
+		// Non-empty address => it also enumerates Standa devices over the network.
+		m_StandaMotors = std::make_unique<StandaMotorArray>(ws.standaIPAddress.ToStdString());
+	}
+	if (needXeryon)
+	{
+		m_XeryonMotors = std::make_unique<XeryonMotorArray>();
+		InitializeXeryonAndCheckPython();
+	}
 
 	SetMotorStepsPerMM();
 
@@ -1022,6 +1031,17 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 			m_WorkStations->work_station_data[fileNum].motor_vendor_by_sn.emplace(wxString(sn), v);
 			m_WorkStations->work_station_data[fileNum].selected_motors_in_data_file.Add(wxString(sn));
 			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(sn), stepsPerMM));
+		}
+	}
+
+	// Standa IP address (optional; absent/empty => USB-only for this station)
+	if (j.contains("standa_ip")) {
+		const std::string ip = j["standa_ip"].get<std::string>();
+		if (!ip.empty()) {
+			if (SettingsVariables::IsValidIPAddress(ip))
+				m_WorkStations->work_station_data[fileNum].standaIPAddress = wxString(ip);
+			else
+				wxLogError("Work station file \"%s\": \"standa_ip\" is not a valid IP address.", wxString(fileName));
 		}
 	}
 

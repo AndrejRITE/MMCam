@@ -253,17 +253,22 @@ auto StandaMotorArray::InitAllMotors(const std::string ip_address) -> bool
 
 	device_enumeration_t devenum_c;
 
-#ifdef _DEBUG
-	const int probe_flags = ENUMERATE_PROBE;
-	const char* enumerate_hints = "addr=";
-	devenum_c = enumerate_devices(probe_flags, enumerate_hints);
-#else
-	const int probe_flags = ENUMERATE_PROBE | ENUMERATE_NETWORK;
-	std::string eh = std::string("addr=") + ip_address;
+	// Always probe local USB/COM devices, exactly as before - this keeps
+	// USB-only work stations working unchanged. Network enumeration is
+	// added on top only when this work station actually supplies a Standa
+	// IP address, so the transport is chosen per work station rather than
+	// per build configuration.
+	int probe_flags = ENUMERATE_PROBE;
+	std::string eh = "addr=";
+
+	if (!ip_address.empty())
+	{
+		probe_flags |= ENUMERATE_NETWORK;
+		eh += ip_address;
+	}
+
 	const char* enumerate_hints = eh.c_str();
-	//const char* enumerate_hints = "addr=10.0.0.134";
 	devenum_c = enumerate_devices(probe_flags, enumerate_hints);
-#endif // _DEBUG
 	if (!devenum_c) return false;
 
 	int names_count = get_device_count(devenum_c);

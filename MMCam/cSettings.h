@@ -15,6 +15,7 @@
 #include <fstream>
 #include <iostream>
 #include <filesystem>
+#include <regex>
 
 #include "rapidxml/rapidxml.hpp"
 #include "rapidxml/rapidxml_utils.hpp"
@@ -143,6 +144,11 @@ namespace SettingsVariables
 		CameraManufacturers camera_manufacturer{};
 		wxString work_station_name{};
 		double pixelSizeUM{};
+
+		// Optional. Empty => this station's Standa motors are USB-only,
+		// same as today. Non-empty => also enumerate Standa devices over
+		// the network at this address (see StandaMotorArray::InitAllMotors).
+		wxString standaIPAddress{};
 	};
 
 	struct WorkStations
@@ -236,6 +242,34 @@ namespace SettingsVariables
 		auto low = wxString(s).Lower();
 		if (low == "xeryon") return SettingsVariables::MotorManufacturers::XERYON;
 		return SettingsVariables::MotorManufacturers::STANDA; // default
+	}
+
+	static bool IsValidIPAddress(const std::string& ip)
+	{
+		std::regex ipPattern(R"(^(\d{1,3}\.){3}\d{1,3}$)");
+
+		if (!std::regex_match(ip, ipPattern))
+			return false;
+
+		std::stringstream ss(ip);
+		std::string octet;
+
+		while (std::getline(ss, octet, '.'))
+		{
+			try
+			{
+				const int value = std::stoi(octet);
+
+				if (value < 0 || value > 255)
+					return false;
+			}
+			catch (...)
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 }
