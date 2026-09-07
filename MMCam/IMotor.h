@@ -28,6 +28,10 @@ public:
     virtual bool GoHomeAndZero() = 0;
     virtual bool GoToAbsolutePosition(float stagePosition) = 0;
 
+    // Interrupts whatever move is currently in progress on this motor, if any.
+    // Must be safe to call from a different thread than the one performing the move.
+    virtual bool Stop() = 0;
+
     // Getters
     virtual std::string GetDeviceSerNum() const = 0;
     virtual std::string GetDeviceCOMPort() const = 0;

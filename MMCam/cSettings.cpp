@@ -107,6 +107,19 @@ void cSettings::SetCurrentProgress(const int& curr_capturing_num, const int& who
 	m_Progress->is_finished = curr_capturing_num >= whole_capturing_num ? true : false;
 }
 
+bool cSettings::StopAllMotors()
+{
+	bool stoppedAny = false;
+
+	if (m_StandaMotors)
+		stoppedAny |= m_StandaMotors->StopAll();
+
+	if (m_XeryonMotors)
+		stoppedAny |= m_XeryonMotors->StopAll();
+
+	return stoppedAny;
+}
+
 auto cSettings::GetSelectedCamera() const -> wxString
 {
 	return m_Camera->selectedCameraIDStr;

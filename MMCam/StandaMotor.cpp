@@ -1,6 +1,43 @@
 #include "StandaMotor.h"
 /* Motor */
 
+namespace
+{
+	// RAII device handle, scoped to a single StandaMotor. On construction it
+	// opens the device and registers it as that motor's "active" handle (so
+	// Stop(), called from another thread, knows what to send command_stop
+	// to); on destruction - including every early-return exit path - it
+	// unregisters the handle and closes it. This also fixes the previous
+	// behavior where an early return after open_device() skipped
+	// close_device() entirely.
+	class ActiveDevice
+	{
+	public:
+		ActiveDevice(StandaMotor& motor, const std::string& deviceName)
+			: m_Motor(motor)
+		{
+			m_Device = open_device(deviceName.c_str());
+			m_Motor.SetActiveDevice(m_Device);
+		}
+
+		~ActiveDevice()
+		{
+			m_Motor.SetActiveDevice(device_undefined);
+			close_device(&m_Device);
+		}
+
+		operator device_t() const { return m_Device; }
+		bool IsValid() const { return m_Device != device_undefined; }
+
+		ActiveDevice(const ActiveDevice&) = delete;
+		ActiveDevice& operator=(const ActiveDevice&) = delete;
+
+	private:
+		StandaMotor& m_Motor;
+		device_t m_Device{};
+	};
+}
+
 StandaMotor::StandaMotor()
 {
 	m_MotorSettings = std::make_unique<MotorVariables::Settings>();
@@ -9,60 +46,56 @@ StandaMotor::StandaMotor()
 
 bool StandaMotor::GoCenter()
 {
-	device_t device_c;
-	device_c = open_device(m_DeviceName.c_str());
+	ActiveDevice device(*this, m_DeviceName);
+	if (!device.IsValid()) return false;
 
+	if ((m_StandaSettings->result = command_move_calb
+	(
+		device,
+		m_MotorSettings->middleMotorPos,
+		&m_StandaSettings->calibration
+	)
+		) != result_ok)
 	{
-		if ((m_StandaSettings->result = command_move_calb
-		(
-			device_c,
-			m_MotorSettings->middleMotorPos,
-			&m_StandaSettings->calibration
-		)
-			) != result_ok)
-		{
-			/* Error command_move_calb */
-			return false;
-		}
-		/* Wait to Stop */
-		if ((m_StandaSettings->result = command_wait_for_stop
-		(
-			device_c,
-			100
-		)
-			) != result_ok)
-		{
-			/* Error command_wait_for_stop */
-			return false;
-		}
-		/* Wait for elimination of vibrations */
-		std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));
-		/* Get Status */
-		if ((m_StandaSettings->result = get_status
-		(
-			device_c,
-			&m_StandaSettings->state
-		)
-			) != result_ok)
-		{
-			/* Error getting status */
-			return false;
-		}
-		/* Get Calibrated Status */
-		if ((m_StandaSettings->result = get_status_calb
-		(
-			device_c,
-			&m_StandaSettings->calb_state,
-			&m_StandaSettings->calibration
-		)
-			) != result_ok)
-		{
-			/* Error getting status */
-			return false;
-		}
+		/* Error command_move_calb */
+		return false;
 	}
-
-	close_device(&device_c);
+	/* Wait to Stop */
+	if ((m_StandaSettings->result = command_wait_for_stop
+	(
+		device,
+		100
+	)
+		) != result_ok)
+	{
+		/* Error command_wait_for_stop */
+		return false;
+	}
+	/* Wait for elimination of vibrations */
+	std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));
+	/* Get Status */
+	if ((m_StandaSettings->result = get_status
+	(
+		device,
+		&m_StandaSettings->state
+	)
+		) != result_ok)
+	{
+		/* Error getting status */
+		return false;
+	}
+	/* Get Calibrated Status */
+	if ((m_StandaSettings->result = get_status_calb
+	(
+		device,
+		&m_StandaSettings->calb_state,
+		&m_StandaSettings->calibration
+	)
+		) != result_ok)
+	{
+		/* Error getting status */
+		return false;
+	}
 
 	UpdateCurrentPosition();
 
@@ -71,50 +104,46 @@ bool StandaMotor::GoCenter()
 
 bool StandaMotor::GoHomeAndZero()
 {
-	device_t device_c;
-	device_c = open_device(m_DeviceName.c_str());
+	ActiveDevice device(*this, m_DeviceName);
+	if (!device.IsValid()) return false;
 
+	if ((m_StandaSettings->result = command_homezero(device)) != result_ok) return false;
+	/* Wait to Stop */
+	if ((m_StandaSettings->result = command_wait_for_stop
+	(
+		device,
+		100
+	)
+		) != result_ok)
 	{
-		if ((m_StandaSettings->result = command_homezero(device_c) != result_ok)) return false;
-		/* Wait to Stop */
-		if ((m_StandaSettings->result = command_wait_for_stop
-		(
-			device_c,
-			100
-		)
-			) != result_ok)
-		{
-			/* Error command_wait_for_stop */
-			return false;
-		}
-		/* Wait for elimination of vibrations */
-		std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));
-		/* Get Status */
-		if ((m_StandaSettings->result = get_status
-		(
-			device_c,
-			&m_StandaSettings->state
-		)
-			) != result_ok)
-		{
-			/* Error getting status */
-			return false;
-		}
-		/* Get Calibrated Status */
-		if ((m_StandaSettings->result = get_status_calb
-		(
-			device_c,
-			&m_StandaSettings->calb_state,
-			&m_StandaSettings->calibration
-		)
-			) != result_ok)
-		{
-			/* Error getting status */
-			return false;
-		}
+		/* Error command_wait_for_stop */
+		return false;
 	}
-
-	close_device(&device_c);
+	/* Wait for elimination of vibrations */
+	std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));
+	/* Get Status */
+	if ((m_StandaSettings->result = get_status
+	(
+		device,
+		&m_StandaSettings->state
+	)
+		) != result_ok)
+	{
+		/* Error getting status */
+		return false;
+	}
+	/* Get Calibrated Status */
+	if ((m_StandaSettings->result = get_status_calb
+	(
+		device,
+		&m_StandaSettings->calb_state,
+		&m_StandaSettings->calibration
+	)
+		) != result_ok)
+	{
+		/* Error getting status */
+		return false;
+	}
 
 	UpdateCurrentPosition();
 
@@ -123,13 +152,13 @@ bool StandaMotor::GoHomeAndZero()
 
 bool StandaMotor::GoToAbsolutePosition(float stagePosition)
 {
-	device_t device_c;
-	device_c = open_device(&m_DeviceName[0]);
+	ActiveDevice device(*this, m_DeviceName);
+	if (!device.IsValid()) return false;
 
 	/* Get Status */
 	if ((m_StandaSettings->result = get_status_calb
 	(
-		device_c,
+		device,
 		&m_StandaSettings->calb_state,
 		&m_StandaSettings->calibration
 	)
@@ -144,60 +173,69 @@ bool StandaMotor::GoToAbsolutePosition(float stagePosition)
 		stagePosition > m_MotorSettings->maxStagePos)
 		return false;
 
+	//float motor_position = stage_position * deg_per_mm;
+	float motor_position = stagePosition * m_MotorSettings->stepsPerMMRatio;
+	if ((m_StandaSettings->result = command_move_calb
+	(
+		device,
+		motor_position,
+		&m_StandaSettings->calibration
+	) != result_ok))
+		return false;
+
+	/* Wait to Stop */
+	if ((m_StandaSettings->result = command_wait_for_stop
+	(
+		device,
+		100
+	)
+		) != result_ok)
 	{
-		//float motor_position = stage_position * deg_per_mm;
-		float motor_position = stagePosition * m_MotorSettings->stepsPerMMRatio;
-		if ((m_StandaSettings->result = command_move_calb
-		(
-			device_c,
-			motor_position,
-			&m_StandaSettings->calibration
-		) != result_ok))
-			return false;
-
-		/* Wait to Stop */
-		if ((m_StandaSettings->result = command_wait_for_stop
-		(
-			device_c,
-			100
-		)
-			) != result_ok)
-		{
-			/* Error command_wait_for_stop */
-			return false;
-		}
-
-		/* Wait for elimination of vibrations */
-		std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));
-		/* Get Status */
-		if ((m_StandaSettings->result = get_status
-		(
-			device_c,
-			&m_StandaSettings->state
-		)
-			) != result_ok)
-		{
-			/* Error getting status */
-			return false;
-		}
-		/* Get Calibrated Status */
-		if ((m_StandaSettings->result = get_status_calb
-		(
-			device_c,
-			&m_StandaSettings->calb_state,
-			&m_StandaSettings->calibration
-		)
-			) != result_ok)
-		{
-			/* Error getting status */
-			return false;
-		}
+		/* Error command_wait_for_stop */
+		return false;
 	}
-	close_device(&device_c);
+
+	/* Wait for elimination of vibrations */
+	std::this_thread::sleep_for(std::chrono::milliseconds(m_WaitAfterMovementMilliseconds));
+	/* Get Status */
+	if ((m_StandaSettings->result = get_status
+	(
+		device,
+		&m_StandaSettings->state
+	)
+		) != result_ok)
+	{
+		/* Error getting status */
+		return false;
+	}
+	/* Get Calibrated Status */
+	if ((m_StandaSettings->result = get_status_calb
+	(
+		device,
+		&m_StandaSettings->calb_state,
+		&m_StandaSettings->calibration
+	)
+		) != result_ok)
+	{
+		/* Error getting status */
+		return false;
+	}
 
 	UpdateCurrentPosition();
 
 	return true;
+}
+
+bool StandaMotor::Stop()
+{
+	if (!m_DeviceMutex) return false;
+
+	std::lock_guard<std::mutex> lock(*m_DeviceMutex);
+
+	// Nothing currently open for this motor => nothing in motion to stop.
+	if (m_ActiveDevice == device_undefined) return false;
+
+	return command_stop(m_ActiveDevice) == result_ok;
 }
 
 void StandaMotor::SetRange(const float minMotorDeg, const float maxMotorDeg)
@@ -454,6 +492,27 @@ float StandaMotorArray::GoMotorOffset(const std::string& motor_sn, float offset)
 	}
 	
 	return error_position;
+}
+
+bool StandaMotorArray::StopMotor(const std::string& motor_sn)
+{
+	if (motor_sn.empty() || motor_sn == "None") return false;
+
+	auto it = std::find_if(m_MotorsArray.begin(), m_MotorsArray.end(),
+		[&](StandaMotor& motor) { return motor.GetDeviceSerNum() == motor_sn; });
+
+	return (it != m_MotorsArray.end()) ? it->Stop() : false;
+}
+
+bool StandaMotorArray::StopAll()
+{
+	// Deliberately does not short-circuit: every motor currently mid-move
+	// should get a stop command, not just the first one found.
+	bool stoppedAny = false;
+	for (auto& motor : m_MotorsArray)
+		stoppedAny |= motor.Stop();
+
+	return stoppedAny;
 }
 
 auto StandaMotorArray::SetStepsPerMMForTheMotor(const std::string motor_sn, const int stepsPerMM) -> void

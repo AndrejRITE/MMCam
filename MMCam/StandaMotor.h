@@ -10,6 +10,7 @@
 #include <chrono>
 #include <string>
 #include <filesystem>
+#include <mutex>
 #include <ximc.h>
 
 #include "IMotor.h"
@@ -36,6 +37,17 @@ public:
 	bool GoCenter() override;
 	bool GoHomeAndZero() override;
 	bool GoToAbsolutePosition(float stagePosition) override;
+	bool Stop() override;
+
+	// Records/clears which device handle a move is currently using, so Stop()
+	// (likely called from another thread) knows what to send command_stop to.
+	// Thread-safe; used internally by the ActiveDevice RAII helper in the .cpp.
+	void SetActiveDevice(device_t device)
+	{
+		if (!m_DeviceMutex) return;
+		std::lock_guard<std::mutex> lock(*m_DeviceMutex);
+		m_ActiveDevice = device;
+	}
 
 	// Getters 
 	std::string GetDeviceSerNum() const override { return m_MotorSerialNumber; };
@@ -85,10 +97,13 @@ public:
 		: m_MotorSettings(std::move(other.m_MotorSettings)),
 		m_StandaSettings(std::move(other.m_StandaSettings)),
 		m_DeviceName(std::move(other.m_DeviceName)),
-		m_MotorSerialNumber(other.m_MotorSerialNumber)
+		m_MotorSerialNumber(other.m_MotorSerialNumber),
+		m_DeviceMutex(std::move(other.m_DeviceMutex)),
+		m_ActiveDevice(other.m_ActiveDevice)
 	{
 		other.m_MotorSerialNumber = "";
 		other.m_DeviceName = "";
+		other.m_ActiveDevice = device_undefined;
 	};
 
 	/* Move assignment */
@@ -100,6 +115,9 @@ public:
 			m_StandaSettings = std::move(other.m_StandaSettings);
 			m_DeviceName = std::move(other.m_DeviceName);
 			m_MotorSerialNumber = other.m_MotorSerialNumber;
+			m_DeviceMutex = std::move(other.m_DeviceMutex);
+			m_ActiveDevice = other.m_ActiveDevice;
+			other.m_ActiveDevice = device_undefined;
 		}
 		return *this;
 	};
@@ -136,6 +154,12 @@ private:
 	std::string m_MotorSerialNumber{};
 	//int m_CurrentMotorDeg{};
 	const long long m_WaitAfterMovementMilliseconds{ 500 };
+
+	// Heap-allocated so StandaMotor stays movable (std::mutex itself is not).
+	// Guards m_ActiveDevice, which Stop() reads from a different thread than
+	// the one currently blocked inside a move.
+	std::unique_ptr<std::mutex> m_DeviceMutex{ std::make_unique<std::mutex>() };
+	device_t m_ActiveDevice{ device_undefined };
 };
 
 class StandaMotorArray final : virtual public IMotorArray
@@ -154,6 +178,9 @@ public:
 	float GoMotorCenter(const std::string& motor_sn) override;
 	float GoMotorToAbsolutePosition(const std::string& motor_sn, float abs_pos) override;
 	float GoMotorOffset(const std::string& motor_sn, float offset) override;
+
+	bool StopMotor(const std::string& motor_sn) override;
+	bool StopAll() override;
 
 	void SetStepsPerMMForTheMotor(const std::string motor_sn, const int stepsPerMM) override;
 	void SetCurrentPositionForTheMotor(const std::string motor_sn, const float currentPosition) override {};

@@ -34,6 +34,8 @@
 #include <vector>
 #include <cmath>
 #include <cstring>
+#include <functional>
+#include <atomic>
 
 #include <nlohmann/json.hpp>
 
@@ -53,7 +55,7 @@
 #include "src/img/logo.xpm"
 
 #define MAJOR_VERSION 2
-#define MINOR_VERSION 5
+#define MINOR_VERSION 6
 
 #ifdef _DEBUG
 	//#define OPEN
@@ -167,6 +169,9 @@ namespace MainFrameVariables
 		RIGHT_SC_AUX_Z_CENTER_BTN,
 		RIGHT_SC_AUX_Z_HOME_BTN,
 
+		/* Stage controllers - shared stop button, below all three notebooks */
+		RIGHT_SC_STOP_ALL_BTN,
+
 		/* Tools */
 		RIGHT_TOOLS_CROSSHAIR_AVERAGING_WIDTH_TXT_CTRL,
 		RIGHT_TOOLS_CROSSHAIR_ADAPTIVE_SCALING_CHECKBOX,
@@ -256,6 +261,11 @@ namespace MainFrameVariables
 
 		/* Temperature polling */
 		THREAD_TEMPERATURE,
+
+		/* Stage moves triggered from the UI - run off the main thread so the
+		   Stop button stays clickable while a move is in progress */
+		THREAD_MOTOR_MOVE_FINISHED,
+		THREAD_STOP_ALL_FINISHED,
 
 		THREAD_SINGLE_SHOT_CAPTURE,	
 		SINGLE_SHOT_EXPOSURE_TIMER,
@@ -664,6 +674,13 @@ namespace MainFrameVariables
 		int power_utilization_pct{ -1 }; // -1 if unknown/unavailable
 	};
 
+	struct MotorMovePayload
+	{
+		float newPosition{};
+		int controlIndex{};
+		int motorType{}; // SettingsVariables::MotorsNames, stored as int for the payload
+	};
+
 	struct LiveFramePayload
 	{
 		std::unique_ptr<unsigned short[]> img; // owns image buffer
@@ -1054,6 +1071,8 @@ class ProgressPanel;
 class WorkerThread;
 class ProgressThread;
 class TemperatureThread;
+class MotorMoveThread;
+class StopAllMotorsThread;
 
 #define USE_MULTITHREAD
 
@@ -1067,6 +1086,12 @@ public:
 	auto UpdateStagePositions() -> void;
 
 	auto GoStageToAbsPos(SettingsVariables::MotorsNames motorName, float position) -> float;
+
+	/* Stop button - interrupts whatever is currently moving, regardless of
+	   which axis was commanded */
+	void OnStopAllMotors(wxCommandEvent& evt);
+	void OnStopAllMotorsFinished(wxThreadEvent& evt);
+	void OnMotorMoveFinished(wxThreadEvent& evt);
 
 private:
 	void CreateMainFrame();
@@ -1302,48 +1327,56 @@ private:
 		ProcessEvent(enter_evt);
 	}
 
+	// Dispatches one motor operation to a background MotorMoveThread instead
+	// of calling cSettings directly on the UI thread. This is what makes the
+	// Stop button able to interrupt a move instead of freezing behind it -
+	// see OnStopAllMotors/OnMotorMoveFinished. While a move is in flight,
+	// further move commands are ignored (not queued) and the three stage
+	// notebooks are disabled so the operator can't queue up a second command
+	// on top of one that hasn't finished yet; the Stop button itself is a
+	// sibling control and stays enabled throughout.
+	//
+	// Defined out-of-line in cMain.cpp (not inline here) because
+	// MotorMoveThread's full definition sits after cMain's closing brace -
+	// an inline body here would only ever see it as forward-declared.
+	void LaunchMotorMove(int index, SettingsVariables::MotorsNames motorType, std::function<float()> operation);
+
 	void OnSetAbsPos(wxCommandEvent& evt, int index, SettingsVariables::MotorsNames motorType)
 	{
-		wxBusyCursor cursor;
 		double absolute_position{};
 		auto& controlArray = (motorType <= SettingsVariables::MotorsNames::DETECTOR_Z) ? m_Detector : ((motorType <= SettingsVariables::MotorsNames::OPTICS_Z) ? m_Optics : m_Aux);
 
 		if (!controlArray[index % 3].absolute_text_ctrl->GetValue().ToDouble(&absolute_position)) return;
 
-		auto currentPosition = m_Settings->GoToAbsPos(motorType, (float)absolute_position);
+		auto settings = m_Settings.get();
+		const float target = (float)absolute_position;
 
-		controlArray[index % 3].absolute_text_ctrl->SetValue(CameraPreviewVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
+		LaunchMotorMove(index, motorType, [settings, motorType, target]() { return settings->GoToAbsPos(motorType, target); });
 	}
 
 	void OnOffsetAbsPos(wxCommandEvent& evt, int index, SettingsVariables::MotorsNames motorType, bool isIncrement)
 	{
-		wxBusyCursor cursor;
 		double delta_position{};
 		auto& controlArray = (motorType <= SettingsVariables::MotorsNames::DETECTOR_Z) ? m_Detector : ((motorType <= SettingsVariables::MotorsNames::OPTICS_Z) ? m_Optics : m_Aux);
 
 		if (!controlArray[index % 3].relative_text_ctrl->GetValue().ToDouble(&delta_position)) return;
 
-		auto currentPosition = m_Settings->GoOffsetMotor(motorType, (float)(isIncrement ? delta_position : -delta_position));
+		auto settings = m_Settings.get();
+		const float delta = (float)(isIncrement ? delta_position : -delta_position);
 
-		controlArray[index % 3].absolute_text_ctrl->SetValue(CameraPreviewVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
+		LaunchMotorMove(index, motorType, [settings, motorType, delta]() { return settings->GoOffsetMotor(motorType, delta); });
 	}
 
 	void OnCenterMotor(wxCommandEvent& evt, int index, SettingsVariables::MotorsNames motorType)
 	{
-		wxBusyCursor cursor;
-		auto currentPosition = m_Settings->CenterMotor(motorType);
-		auto& controlArray = (motorType <= SettingsVariables::MotorsNames::DETECTOR_Z) ? m_Detector : ((motorType <= SettingsVariables::MotorsNames::OPTICS_Z) ? m_Optics : m_Aux);
-
-		controlArray[index % 3].absolute_text_ctrl->SetValue(CameraPreviewVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
+		auto settings = m_Settings.get();
+		LaunchMotorMove(index, motorType, [settings, motorType]() { return settings->CenterMotor(motorType); });
 	}
 
 	void OnHomeMotor(wxCommandEvent& evt, int index, SettingsVariables::MotorsNames motorType)
 	{
-		wxBusyCursor cursor;
-		auto currentPosition = m_Settings->HomeMotor(motorType);
-		auto& controlArray = (motorType <= SettingsVariables::MotorsNames::DETECTOR_Z) ? m_Detector : ((motorType <= SettingsVariables::MotorsNames::OPTICS_Z) ? m_Optics : m_Aux);
-
-		controlArray[index % 3].absolute_text_ctrl->ChangeValue(CameraPreviewVariables::CreateStringWithPrecision(currentPosition, m_DecimalDigits));
+		auto settings = m_Settings.get();
+		LaunchMotorMove(index, motorType, [settings, motorType]() { return settings->HomeMotor(motorType); });
 	}
 
 	/* _____________________Detector X_____________________ */
@@ -2271,6 +2304,9 @@ private:
 	int m_MainSplitterNormalSashPosition{ -1 };
 
 	wxNotebook* m_DetectorControlsNotebook{}, * m_OpticsControlsNotebook{}, * m_AuxControlsNotebook{};
+	wxButton* m_StopMotorsBtn{};
+	std::atomic<bool> m_MotorMoveInProgress{ false };
+	std::atomic<bool> m_StopInProgress{ false };
 	
 	wxNotebook* m_CameraControlNotebook{};
 	
@@ -2725,6 +2761,91 @@ private:
 	bool m_Paused{ false };
 };
 /* ___ End Temperature Thread ___ */
+
+/* ___ Start Motor Move Thread ___ */
+// Runs a single stage move (set/offset/center/home) off the UI thread, so the
+// main event loop keeps pumping and a Stop click can be delivered and acted
+// on while the move is still in progress. One-shot: it performs exactly one
+// operation, posts the resulting position back to cMain, and exits.
+class MotorMoveThread final : public wxThread
+{
+public:
+	MotorMoveThread
+	(
+		cMain* frame,
+		std::function<float()> operation,
+		int controlIndex,
+		SettingsVariables::MotorsNames motorType
+	)
+		: wxThread(wxTHREAD_DETACHED),
+		m_Frame(frame),
+		m_Operation(std::move(operation)),
+		m_ControlIndex(controlIndex),
+		m_MotorType(motorType)
+	{ }
+
+protected:
+	ExitCode Entry() override
+	{
+		const float newPosition = m_Operation ? m_Operation() : 0.f;
+
+		if (m_Frame)
+		{
+			MainFrameVariables::MotorMovePayload payload{};
+			payload.newPosition = newPosition;
+			payload.controlIndex = m_ControlIndex;
+			payload.motorType = static_cast<int>(m_MotorType);
+
+			wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_MOTOR_MOVE_FINISHED);
+			evt.SetPayload(payload);
+			wxQueueEvent(m_Frame, evt.Clone());
+		}
+
+		return (ExitCode)0;
+	}
+
+private:
+	cMain* m_Frame{};
+	std::function<float()> m_Operation{};
+	int m_ControlIndex{};
+	SettingsVariables::MotorsNames m_MotorType{};
+};
+/* ___ End Motor Move Thread ___ */
+
+/* ___ Start Stop-All Thread ___ */
+// Runs cSettings::StopAllMotors() off the UI thread. Standa's stop is a
+// fast direct command_stop() call, but a real Xeryon stop has to terminate
+// a stuck helper process and then run another short script to send an
+// actual STOP=0 to the controller (see XeryonMotor::Stop), which can take
+// up to ~2 seconds. Keeping this off the UI thread means clicking Stop is
+// never itself the thing that freezes the app.
+class StopAllMotorsThread final : public wxThread
+{
+public:
+	StopAllMotorsThread(cMain* frame, cSettings* settings)
+		: wxThread(wxTHREAD_DETACHED), m_Frame(frame), m_Settings(settings)
+	{ }
+
+protected:
+	ExitCode Entry() override
+	{
+		if (m_Settings)
+			m_Settings->StopAllMotors();
+
+		if (m_Frame)
+		{
+			wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_STOP_ALL_FINISHED);
+			wxQueueEvent(m_Frame, evt.Clone());
+		}
+
+		return (ExitCode)0;
+	}
+
+private:
+	cMain* m_Frame{};
+	cSettings* m_Settings{};
+};
+/* ___ End Stop-All Thread ___ */
 
 /* ___ Start Progress Thread ___ */
 class ProgressThread final : public wxThreadHelper

@@ -369,6 +369,11 @@ public:
 	/* Progress */
 	void SetCurrentProgress(const int& curr_capturing_num, const int& whole_capturing_num);
 
+	/* Stops whatever motor(s) are currently moving, regardless of which one
+	   was commanded. Fast/non-blocking - safe to call directly from the UI
+	   thread even while a move is running on a background thread. */
+	bool StopAllMotors();
+
 	auto SetLastInitializedWorkStation(const wxString& workStation) -> void 
 	{ 
 		auto workStationPosition = m_WorkStations->work_station_choice->FindString(workStation);

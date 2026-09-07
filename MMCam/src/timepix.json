@@ -3,19 +3,20 @@
   "camera_manufacturer": "ADVACAM",
   "pixel_size_um": 55,
   "station": "TIMEPIX",
+  "standa_ip": "10.0.0.133",
   "detector": [
-    { "SerialNumber": "18808", "StepsPerMM": 800, "Manufacturer": "STANDA" },
-    { "SerialNumber": "15748", "StepsPerMM": 800, "Manufacturer": "STANDA" },
-    { "SerialNumber": "15715", "StepsPerMM": 800, "Manufacturer": "STANDA" }
+    { "SerialNumber": "33181", "StepsPerMM": 200, "Manufacturer": "STANDA" },
+	{ "SerialNumber": "33262", "StepsPerMM": 400, "Manufacturer": "STANDA" }
+    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" }
   ],
   "optics": [
-    { "SerialNumber": "12586", "StepsPerMM": 800, "Manufacturer": "STANDA" },
-    { "SerialNumber": "12538", "StepsPerMM": 800, "Manufacturer": "STANDA" },
-    { "SerialNumber": "None",  "StepsPerMM": 800, "Manufacturer": "STANDA" }
+    { "SerialNumber": "33230", "StepsPerMM": 200, "Manufacturer": "STANDA" },
+    { "SerialNumber": "33179", "StepsPerMM": 200, "Manufacturer": "STANDA" },
+	{ "SerialNumber": "33222", "StepsPerMM": 200, "Manufacturer": "STANDA" }
   ],
   "aux": [
-    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" },
-    { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" },
+    { "SerialNumber": "33248", "StepsPerMM": 34304, "Manufacturer": "STANDA" },
+    { "SerialNumber": "33247",  "StepsPerMM": 34304, "Manufacturer": "STANDA" },
     { "SerialNumber": "None",  "StepsPerMM": 800, "Manufacturer": "STANDA" }
   ]
 }

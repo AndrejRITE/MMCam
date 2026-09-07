@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <fstream>
+#include <mutex>
 
 #include "SerialPortCommunication.h"
 
@@ -46,6 +47,24 @@ public:
 	bool GoHomeAndZero() override { return GoCenter(); };
 	bool GoToAbsolutePosition(float stagePosition) override;
 
+	// Stops whatever move is currently running on this motor:
+	// - TerminateProcess on the stuck helper script, which frees the app
+	//   (Stop becomes clickable, the move thread unblocks) but does NOT by
+	//   itself stop the physical stage - see stopMovements() below.
+	// - Once the COM port is confirmed free, run xeryon_stop.py, which
+	//   calls Xeryon's controller.stopMovements() - a real STOP=0 sent to
+	//   the controller, in place, without homing or closing the port
+	//   (unlike controller.stop(), which does both) - then reads back the
+	//   stage's true position so the caller isn't left trusting a stale
+	//   value. This can take up to ~2 seconds; call it off the UI thread.
+	bool Stop() override;
+
+	// Records the process handle currently running a move (as an
+	// independently-owned duplicate - see the .cpp), so Stop() on another
+	// thread can find and terminate it without racing the owning thread's
+	// own cleanup. Pass nullptr to clear. Thread-safe.
+	void SetActiveProcessHandle(HANDLE handle);
+
 	// Getters
 	std::string GetDeviceSerNum() const override { return m_MotorSerialNumber; };
 	std::string GetDeviceCOMPort() const override { return m_MotorCOMPort; };
@@ -63,14 +82,23 @@ public:
 
 	void UpdateCurrentPosition() override {};
 
+	~XeryonMotor() override
+	{
+		if (m_ActiveProcessHandle)
+			CloseHandle(m_ActiveProcessHandle);
+	}
+
 	/* Move constructor */
 	XeryonMotor(XeryonMotor&& other) noexcept
 		: m_MotorSettings(std::move(other.m_MotorSettings)),
 		m_MotorCOMPort(std::move(other.m_MotorCOMPort)),
-		m_MotorSerialNumber(std::move(other.m_MotorSerialNumber))
+		m_MotorSerialNumber(std::move(other.m_MotorSerialNumber)),
+		m_ProcessMutex(std::move(other.m_ProcessMutex)),
+		m_ActiveProcessHandle(other.m_ActiveProcessHandle)
 	{
 		other.m_MotorSerialNumber = "";
 		other.m_MotorCOMPort = "";
+		other.m_ActiveProcessHandle = nullptr;
 	};
 
 	/* Move assignment */
@@ -78,9 +106,15 @@ public:
 	{
 		if (this != &other)
 		{
+			if (m_ActiveProcessHandle)
+				CloseHandle(m_ActiveProcessHandle);
+
 			m_MotorSettings = std::move(other.m_MotorSettings);
 			m_MotorCOMPort = std::move(other.m_MotorCOMPort);
 			m_MotorSerialNumber = std::move(other.m_MotorSerialNumber);
+			m_ProcessMutex = std::move(other.m_ProcessMutex);
+			m_ActiveProcessHandle = other.m_ActiveProcessHandle;
+			other.m_ActiveProcessHandle = nullptr;
 		}
 		return *this;
 	};
@@ -130,18 +164,31 @@ private:
 			&pi
 		);
 
-		if (success)
-		{
-			// Wait until the process exits
-			WaitForSingleObject(pi.hProcess, INFINITE);
-			CloseHandle(pi.hProcess);
-			CloseHandle(pi.hThread);
-			return true;
-		}
-		else
-		{
+		if (!success)
 			return false;
-		}
+
+		// Gives Stop() (on another thread) an independent, safe-to-use
+		// handle - see SetActiveProcessHandle in the .cpp.
+		SetActiveProcessHandle(pi.hProcess);
+
+		// Blocks here until the script exits on its own, OR until Stop()
+		// (on another thread) terminates it via its own duplicated handle.
+		WaitForSingleObject(pi.hProcess, INFINITE);
+
+		DWORD exitCode{};
+		GetExitCodeProcess(pi.hProcess, &exitCode);
+
+		// No-op if Stop() already took ownership of the tracked handle
+		// (see Stop() in the .cpp) - avoids a double-close race.
+		SetActiveProcessHandle(nullptr);
+
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+
+		// If Stop() terminated us (it sets this specific exit code), the
+		// script never finished writing a fresh temp position file, so the
+		// caller must not trust it.
+		return exitCode != m_StoppedByUserExitCode;
 	}
 
 private:
@@ -151,11 +198,23 @@ private:
 	
 	std::string m_AbsolutePositionScriptName{ "xeryon_setAbsolutePosition.py" };
 	std::string m_CenterScriptName{ "xeryon_goCenter.py" };
+	std::string m_StopScriptName{ "xeryon_stop.py" };
 
 	std::string m_AxisPositionTempFileName{ "temp\\axisPosition.temp" };
 
 	int m_MaxAttemptsToCallPythonFunction{ 5 };
 	const long long m_WaitAfterMovementMilliseconds{ 500 };
+
+	// Heap-allocated so XeryonMotor stays movable (std::mutex itself is not).
+	// Guards m_ActiveProcessHandle, which Stop() reads from a different
+	// thread than the one currently blocked in WaitForSingleObject.
+	std::unique_ptr<std::mutex> m_ProcessMutex{ std::make_unique<std::mutex>() };
+	HANDLE m_ActiveProcessHandle{ nullptr };
+
+	// Arbitrary, unlikely to collide with a real script's own exit code -
+	// passed to TerminateProcess() in Stop() and checked against in
+	// RunPowerShellCommandSilently() above.
+	static constexpr DWORD m_StoppedByUserExitCode = 0xDEAD10CCu;
 };
 
 class XeryonMotorArray final : public IMotorArray
@@ -174,6 +233,9 @@ public:
 	float GoMotorCenter(const std::string& motor_sn) override { return GoMotor(motor_sn, XeryonMotorVariables::Command::CENTER); };
 	float GoMotorToAbsolutePosition(const std::string& motor_sn, float abs_pos) override { return GoMotor(motor_sn, XeryonMotorVariables::Command::ABS_POSITION, abs_pos); };
 	float GoMotorOffset(const std::string& motor_sn, float offset) override { return GoMotor(motor_sn, XeryonMotorVariables::Command::OFFSET, offset); };
+
+	bool StopMotor(const std::string& motor_sn) override;
+	bool StopAll() override;
 
 	void SetStepsPerMMForTheMotor(const std::string motor_sn, const int stepsPerMM) override;
 	void SetCurrentPositionForTheMotor(const std::string motor_sn, const float currentPosition) override;

@@ -160,6 +160,7 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_Z_INC_BTN, cMain::OnIncrementAuxZAbsPos)
 	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_Z_CENTER_BTN, cMain::OnCenterAuxZ)
 	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_AUX_Z_HOME_BTN, cMain::OnHomeAuxZ)
+	EVT_BUTTON(MainFrameVariables::ID::RIGHT_SC_STOP_ALL_BTN, cMain::OnStopAllMotors)
 
 	/* Camera */
 	EVT_CHOICE(MainFrameVariables::ID::RIGHT_CAM_MANUFACTURER_CHOICE, cMain::ChangeCameraManufacturerChoice)
@@ -244,6 +245,9 @@ wxBEGIN_EVENT_TABLE(cMain, wxFrame)
 	EVT_THREAD(MainFrameVariables::ID::THREAD_PROGRESS_CAPTURING, cMain::UpdateProgress)
 	/* Temperature checking */
 	EVT_THREAD(MainFrameVariables::ID::THREAD_TEMPERATURE, cMain::OnTemperatureUpdate)
+	/* Stage moves */
+	EVT_THREAD(MainFrameVariables::ID::THREAD_MOTOR_MOVE_FINISHED, cMain::OnMotorMoveFinished)
+	EVT_THREAD(MainFrameVariables::ID::THREAD_STOP_ALL_FINISHED, cMain::OnStopAllMotorsFinished)
 
 wxEND_EVENT_TABLE()
 
@@ -4250,6 +4254,27 @@ void cMain::CreateSteppersControl(wxWindow* right_side_panel, wxSizer* right_sid
 	right_side_panel_sizer->Add(m_OpticsControlsNotebook, 0, wxEXPAND | wxALL, 5);
 	right_side_panel_sizer->Add(m_AuxControlsNotebook, 0, wxEXPAND | wxALL, 5);
 	//right_side_panel_sizer->Add(sc_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
+
+	/* Stop - shared across all three stage notebooks, always enabled, so a
+	   move started on the wrong axis can be interrupted from one place */
+	m_StopMotorsBtn = new wxButton
+	(
+		right_side_panel,
+		MainFrameVariables::ID::RIGHT_SC_STOP_ALL_BTN,
+		"STOP",
+		wxDefaultPosition,
+		wxSize(-1, 48)
+	);
+	m_StopMotorsBtn->SetBackgroundColour(wxColour(200, 30, 30));
+	m_StopMotorsBtn->SetForegroundColour(*wxWHITE);
+	{
+		wxFont stopFont = m_StopMotorsBtn->GetFont();
+		stopFont.SetPointSize(stopFont.GetPointSize() + 4);
+		stopFont.SetWeight(wxFONTWEIGHT_BOLD);
+		m_StopMotorsBtn->SetFont(stopFont);
+	}
+
+	right_side_panel_sizer->Add(m_StopMotorsBtn, 0, wxEXPAND | wxALL, 5);
 }
 
 void cMain::CreateCameraControls(wxWindow* right_side_panel, wxSizer* right_side_panel_sizer)
@@ -6603,6 +6628,75 @@ auto cMain::GoStageToAbsPos(SettingsVariables::MotorsNames motorName, float posi
 	return m_Settings->GoToAbsPos(motorName, position);
 }
 
+void cMain::LaunchMotorMove(int index, SettingsVariables::MotorsNames motorType, std::function<float()> operation)
+{
+	if (m_MotorMoveInProgress.exchange(true))
+		return; // a move is already running; ignore this click
+
+	wxBeginBusyCursor();
+	m_DetectorControlsNotebook->Enable(false);
+	m_OpticsControlsNotebook->Enable(false);
+	m_AuxControlsNotebook->Enable(false);
+
+	auto* thread = new MotorMoveThread(this, std::move(operation), index, motorType);
+
+	if (thread->Create() != wxTHREAD_NO_ERROR || thread->Run() != wxTHREAD_NO_ERROR)
+	{
+		delete thread;
+
+		m_DetectorControlsNotebook->Enable(true);
+		m_OpticsControlsNotebook->Enable(true);
+		m_AuxControlsNotebook->Enable(true);
+		wxEndBusyCursor();
+		m_MotorMoveInProgress = false;
+	}
+}
+
+void cMain::OnStopAllMotors(wxCommandEvent& evt)
+{
+	if (m_StopInProgress.exchange(true))
+		return; // a stop sequence is already running; ignore repeat clicks
+
+	auto* thread = new StopAllMotorsThread(this, m_Settings.get());
+
+	if (thread->Create() != wxTHREAD_NO_ERROR || thread->Run() != wxTHREAD_NO_ERROR)
+	{
+		delete thread;
+		m_StopInProgress = false;
+	}
+}
+
+void cMain::OnStopAllMotorsFinished(wxThreadEvent& evt)
+{
+	// Refreshes every position text ctrl from cSettings/IMotorArray, which
+	// now reflects the stage's true post-stop position for whichever
+	// Xeryon motor(s) actually got stopped (see XeryonMotor::Stop).
+	UpdateStagePositions();
+
+	m_StopInProgress = false;
+}
+
+void cMain::OnMotorMoveFinished(wxThreadEvent& evt)
+{
+	const auto payload = evt.GetPayload<MainFrameVariables::MotorMovePayload>();
+	const auto motorType = static_cast<SettingsVariables::MotorsNames>(payload.motorType);
+
+	auto& controlArray = (motorType <= SettingsVariables::MotorsNames::DETECTOR_Z) ? m_Detector : ((motorType <= SettingsVariables::MotorsNames::OPTICS_Z) ? m_Optics : m_Aux);
+
+	controlArray[payload.controlIndex % 3].absolute_text_ctrl->SetValue
+	(
+		CameraPreviewVariables::CreateStringWithPrecision(payload.newPosition, m_DecimalDigits)
+	);
+
+	m_DetectorControlsNotebook->Enable(true);
+	m_OpticsControlsNotebook->Enable(true);
+	m_AuxControlsNotebook->Enable(true);
+
+	wxEndBusyCursor();
+
+	m_MotorMoveInProgress = false;
+}
+
 void cMain::OnExit(wxCommandEvent& evt)
 {
 	wxCloseEvent artificialExit(wxEVT_CLOSE_WINDOW);
@@ -7425,6 +7519,11 @@ void cMain::EnableUsedAndDisableNonUsedMotors()
 	else
 		m_FirstStage->EnableAllControls();
 #endif // !_DEBUG
+
+	if (!isAnyDetectorActive && !isAnyOpticsActive && !isAnyAuxActive)
+		m_StopMotorsBtn->Hide();
+	else
+		m_StopMotorsBtn->Show();
 
 	ReLayoutRightPanel();
 }

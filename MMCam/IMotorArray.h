@@ -23,6 +23,11 @@ public:
 	virtual float GoMotorToAbsolutePosition(const std::string& motor_sn, float abs_pos) = 0;
 	virtual float GoMotorOffset(const std::string& motor_sn, float offset) = 0;
 
+	// Interrupts an in-progress move. Safe to call from the UI thread while a
+	// move is running on a background thread - implementations must not block.
+	virtual bool StopMotor(const std::string& motor_sn) = 0;
+	virtual bool StopAll() = 0;
+
 	virtual void SetStepsPerMMForTheMotor(const std::string motor_sn, const int stepsPerMM) = 0;
 	virtual void SetCurrentPositionForTheMotor(const std::string motor_sn, const float currentPosition) = 0;
 };
