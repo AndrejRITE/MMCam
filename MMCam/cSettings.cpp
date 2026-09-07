@@ -285,8 +285,6 @@ auto cSettings::CreateDetectorPage(wxWindow* parent, const wxSize& txtCtrlSize, 
 			wxTE_CENTRE | wxTE_READONLY
 		);
 		
-		m_Motors->m_Detector[0].motor->SetValue(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[0]);
-
 		sn_static_box_sizer->Add(m_Motors->m_Detector[0].motor);
 
 		det_x_static_box_sizer->Add(sn_static_box_sizer);
@@ -331,7 +329,6 @@ auto cSettings::CreateDetectorPage(wxWindow* parent, const wxSize& txtCtrlSize, 
 			//m_Motors->unique_motors[0]
 		);
 
-		m_Motors->m_Detector[1].motor->SetValue(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[1]);
 		//m_Motors->m_Detector[1].motors->SetSelection(0);
 
 		sn_static_box_sizer->Add(m_Motors->m_Detector[1].motor);
@@ -377,7 +374,6 @@ auto cSettings::CreateDetectorPage(wxWindow* parent, const wxSize& txtCtrlSize, 
 			//m_Motors->unique_motors[0]
 		);
 
-		m_Motors->m_Detector[2].motor->SetValue(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[2]);
 		//m_Motors->m_Detector[2].motors->SetSelection(0);
 
 		sn_static_box_sizer->Add(m_Motors->m_Detector[2].motor);
@@ -430,7 +426,6 @@ auto cSettings::CreateOpticsPage(wxWindow* parent, const wxSize& txtCtrlSize, co
 			//m_Motors->unique_motors[0]
 		);
 
-		m_Motors->m_Optics[0].motor->SetValue(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[3]);
 		//m_Motors->m_Optics[0].motors->SetSelection(0);
 
 		sn_static_box_sizer->Add(m_Motors->m_Optics[0].motor);
@@ -476,7 +471,6 @@ auto cSettings::CreateOpticsPage(wxWindow* parent, const wxSize& txtCtrlSize, co
 			//m_Motors->unique_motors[0]
 		);
 
-		m_Motors->m_Optics[1].motor->SetValue(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[4]);
 		//m_Motors->m_Optics[1].motors->SetSelection(0);
 
 		sn_static_box_sizer->Add(m_Motors->m_Optics[1].motor);
@@ -522,7 +516,6 @@ auto cSettings::CreateOpticsPage(wxWindow* parent, const wxSize& txtCtrlSize, co
 			//m_Motors->unique_motors[0]
 		);
 
-		m_Motors->m_Optics[2].motor->SetValue(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[5]);
 		//m_Motors->m_Optics[2].motors->SetSelection(0);
 
 		sn_static_box_sizer->Add(m_Motors->m_Optics[2].motor);
@@ -575,7 +568,6 @@ auto cSettings::CreateAuxPage(wxWindow* parent, const wxSize& txtCtrlSize, const
 			//m_Motors->unique_motors[0]
 		);
 
-		m_Motors->m_Aux[0].motor->SetValue(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[6]);
 		//m_Motors->m_Optics[0].motors->SetSelection(0);
 
 		sn_static_box_sizer->Add(m_Motors->m_Aux[0].motor);
@@ -623,8 +615,6 @@ auto cSettings::CreateAuxPage(wxWindow* parent, const wxSize& txtCtrlSize, const
 			//m_Motors->unique_motors[0]
 		);
 
-		m_Motors->m_Aux[1].motor->SetValue(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[7]);
-
 		sn_static_box_sizer->Add(m_Motors->m_Aux[1].motor);
 
 		opt_y_static_box_sizer->Add(sn_static_box_sizer);
@@ -670,7 +660,6 @@ auto cSettings::CreateAuxPage(wxWindow* parent, const wxSize& txtCtrlSize, const
 			//m_Motors->unique_motors[0]
 		);
 
-		m_Motors->m_Aux[2].motor->SetValue(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[8]);
 		//m_Motors->m_Aux[2].motors->SetSelection(0);
 
 		sn_static_box_sizer->Add(m_Motors->m_Aux[2].motor);
@@ -819,57 +808,89 @@ auto cSettings::OnWorkStationChoice(wxCommandEvent& evt) -> void
 
 auto cSettings::UpdateMotorsAndCameraTXTCtrls(const short selected_work_station) -> void
 {
-	if (selected_work_station > -1)
+	const auto stationCount = static_cast<int>(m_WorkStations->work_stations_count);
+	if (stationCount == 0)
 	{
-		m_WorkStations->initialized_work_station_num = selected_work_station;
+		wxMessageBox(
+			"No workstation JSON configuration files were found in \"" + work_stations_path + "\".",
+			"Workstation configuration error",
+			wxOK | wxICON_ERROR,
+			this);
+		return;
 	}
-	else
+
+	int stationIndex = selected_work_station;
+	if (stationIndex < 0)
+		stationIndex = static_cast<int>(m_WorkStations->initialized_work_station_num);
+
+	if (stationIndex < 0 || stationIndex >= stationCount)
 	{
-		m_WorkStations->work_station_choice->SetSelection(m_WorkStations->initialized_work_station_num);
+		wxMessageBox(
+			wxString::Format("Invalid workstation index %d. Valid range: 0..%d.", stationIndex, stationCount - 1),
+			"Workstation selection error",
+			wxOK | wxICON_ERROR,
+			this);
+		stationIndex = 0;
 	}
 
-	m_WorkStations->initialized_work_station = m_WorkStations->all_work_station_array_str[m_WorkStations->initialized_work_station_num];
+	m_WorkStations->initialized_work_station_num = static_cast<unsigned short>(stationIndex);
+	m_WorkStations->work_station_choice->SetSelection(stationIndex);
 
-	auto sizeOfSelectedMotors = m_WorkStations->work_station_data[0].selected_motors_in_data_file.size();
+	auto& workStation = m_WorkStations->work_station_data[stationIndex];
+	m_WorkStations->initialized_work_station = workStation.work_station_name;
 
-	for (auto i{ 0 }; i < sizeOfSelectedMotors; ++i)
+	SettingsVariables::MotorSettings* const controlGroups[] =
 	{
-		auto motorSN = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_motors_in_data_file[i];
-		auto steps_per_mm = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].motors_steps_per_mm[motorSN];
+		m_Motors->m_Detector.get(),
+		m_Motors->m_Optics.get(),
+		m_Motors->m_Aux.get()
+	};
 
-		auto label = wxString::Format(wxT("%i"), steps_per_mm);
+	for (size_t group = 0; group < 3; ++group)
+	{
+		for (size_t axis = 0; axis < 3; ++axis)
+		{
+			const size_t motorIndex = group * 3 + axis;
+			auto& control = controlGroups[group][axis];
 
-		if (i < 3)
-		{
-			// SN
-			m_Motors->m_Detector[i].motor->SetValue(motorSN);
-			m_Motors->m_Detector[i].motor_sn = motorSN;
-			// Steps/mm
-			m_Motors->m_Detector[i].steps_per_mm->SetLabel(label);
-		}
-		else if (i >= 3 && i < 6)
-		{
-			// SN
-			m_Motors->m_Optics[i - 3].motor->SetValue(motorSN);
-			m_Motors->m_Optics[i - 3].motor_sn = motorSN;
-			// Steps/mm
-			m_Motors->m_Optics[i - 3].steps_per_mm->SetLabel(label);
-		}
-		else if (i >= 6 && i < 9)
-		{
-			// SN
-			m_Motors->m_Aux[i - 6].motor->SetValue(motorSN);
-			m_Motors->m_Aux[i - 6].motor_sn = motorSN;
-			// Steps/mm
-			m_Motors->m_Aux[i - 6].steps_per_mm->SetLabel(label);
+			const wxString motorSN = motorIndex < workStation.selected_motors_in_data_file.size()
+				? workStation.selected_motors_in_data_file[motorIndex]
+				: wxString("None");
+
+			wxString stepsLabel = "None";
+			if (!motorSN.IsEmpty() && motorSN != "None")
+			{
+				const auto stepsIt = workStation.motors_steps_per_mm.find(motorSN);
+				if (stepsIt != workStation.motors_steps_per_mm.end())
+					stepsLabel = wxString::Format("%d", stepsIt->second);
+			}
+
+			if (control.motor)
+				control.motor->SetValue(motorSN.IsEmpty() ? wxString("None") : motorSN);
+			if (control.steps_per_mm)
+				control.steps_per_mm->SetLabel(stepsLabel);
+			control.motor_sn = motorSN.IsEmpty() ? wxString("None") : motorSN;
 		}
 	}
-	m_Camera->idTxtCtrl->SetValue(m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_camera_in_data_file);
-	m_Camera->selectedCameraIDStr = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].selected_camera_in_data_file;
 
-	m_PixelSizeUM = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].pixelSizeUM;
+	m_Camera->idTxtCtrl->SetValue(workStation.selected_camera_in_data_file);
+	m_Camera->selectedCameraIDStr = workStation.selected_camera_in_data_file;
+	m_PixelSizeUM = workStation.pixelSizeUM;
+	m_CameraManufacturer = workStation.camera_manufacturer;
 
-	m_CameraManufacturer = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num].camera_manufacturer;
+	if (!workStation.configuration_errors.IsEmpty() && !workStation.configuration_error_was_shown)
+	{
+		wxString message = "The application loaded the workstation with safe placeholder values, but the configuration must be corrected.\n\nFile: "
+			+ workStation.config_file_path + "\n\n";
+
+		for (const auto& error : workStation.configuration_errors)
+			message += "- " + error + "\n";
+
+		message += "\nEach motor section must contain exactly three entries in X, Y, Z order. Missing or invalid entries are shown as None; extra entries are ignored.";
+
+		wxMessageBox(message, "Workstation configuration error", wxOK | wxICON_ERROR, this);
+		workStation.configuration_error_was_shown = true;
+	}
 
 	m_MotorsNotebook->Layout();
 }
@@ -975,118 +996,205 @@ auto cSettings::LoadWorkStationFiles() -> void
 
 auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileNum) -> void
 {
+	auto& workStation = m_WorkStations->work_station_data[fileNum];
+	workStation.config_file_path = wxString::FromUTF8(fileName);
+	workStation.work_station_name = wxString::FromUTF8(std::filesystem::path(fileName).stem().string());
+
+	auto addEmptyMotorSlots = [&workStation]()
+	{
+		while (workStation.selected_motors_in_data_file.size() < 9)
+			workStation.selected_motors_in_data_file.Add("None");
+	};
+
 	std::ifstream fileStream(fileName);
 	if (!fileStream.is_open())
+	{
+		workStation.configuration_errors.Add("The file could not be opened.");
+		addEmptyMotorSlots();
+		m_WorkStations->all_work_station_array_str.Add(workStation.work_station_name);
 		return;
+	}
 
 	nlohmann::json j;
-	try {
+	try
+	{
 		fileStream >> j;
 	}
-	catch (...) {
-		return;  // Malformed JSON
+	catch (const nlohmann::json::exception& exception)
+	{
+		workStation.configuration_errors.Add(
+			"Malformed JSON: " + wxString::FromUTF8(exception.what()));
+		addEmptyMotorSlots();
+		m_WorkStations->all_work_station_array_str.Add(workStation.work_station_name);
+		return;
 	}
 
-	// Detector
-	if (j.contains("detector")) {
-		for (const auto& motor : j["detector"]) {
-			const std::string sn = motor["SerialNumber"];
-			const int stepsPerMM = motor["StepsPerMM"];
+	SettingsVariables::MotorManufacturers fallbackVendor = SettingsVariables::MotorManufacturers::STANDA;
+	if (j.contains("motor_manufacturer"))
+	{
+		if (j["motor_manufacturer"].is_string())
+			fallbackVendor = SettingsVariables::ParseVendor(j["motor_manufacturer"].get<std::string>());
+		else
+			workStation.configuration_errors.Add("\"motor_manufacturer\" must be a string.");
+	}
 
-			SettingsVariables::MotorManufacturers fallback =
-				(j.contains("motor_manufacturer") ? SettingsVariables::ParseVendor(j["motor_manufacturer"].get<std::string>())
-					: SettingsVariables::MotorManufacturers::STANDA);
+	auto readMotorSection = [&](const char* sectionName)
+	{
+		constexpr size_t expectedMotorCount = 3;
+		const wxString section = wxString::FromUTF8(sectionName);
 
-			SettingsVariables::MotorManufacturers v =
-				(motor.contains("Manufacturer") ? SettingsVariables::ParseVendor(motor["Manufacturer"].get<std::string>())
-					: fallback);
-
-			m_WorkStations->work_station_data[fileNum].motor_vendor_by_sn.emplace(wxString(sn), v);
-			m_WorkStations->work_station_data[fileNum].selected_motors_in_data_file.Add(wxString(sn));
-			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(sn), stepsPerMM));
+		if (!j.contains(sectionName) || !j[sectionName].is_array())
+		{
+			workStation.configuration_errors.Add(
+				"\"" + section + "\" must be an array containing exactly 3 entries; found 0.");
+			for (size_t i = 0; i < expectedMotorCount; ++i)
+				workStation.selected_motors_in_data_file.Add("None");
+			return;
 		}
-	}
 
-	// Optics
-	if (j.contains("optics")) {
-		for (const auto& motor : j["optics"]) {
-			const std::string sn = motor["SerialNumber"];
-			const int stepsPerMM = motor["StepsPerMM"];
+		const auto& motors = j[sectionName];
+		if (motors.size() != expectedMotorCount)
+		{
+			const wxString actualCount = wxString::Format(
+				"%llu",
+				static_cast<unsigned long long>(motors.size()));
 
-			SettingsVariables::MotorManufacturers fallback =
-				(j.contains("motor_manufacturer") ? SettingsVariables::ParseVendor(j["motor_manufacturer"].get<std::string>())
-					: SettingsVariables::MotorManufacturers::STANDA);
+			if (motors.size() < expectedMotorCount)
+			{
+				static const char* axisNames[] = { "X", "Y", "Z" };
+				wxString missingAxes;
+				for (size_t missing = motors.size(); missing < expectedMotorCount; ++missing)
+				{
+					if (!missingAxes.IsEmpty())
+						missingAxes += ", ";
+					missingAxes += wxString::FromUTF8(axisNames[missing]) + " (index "
+						+ wxString::Format("%llu", static_cast<unsigned long long>(missing)) + ")";
+				}
 
-			SettingsVariables::MotorManufacturers v =
-				(motor.contains("Manufacturer") ? SettingsVariables::ParseVendor(motor["Manufacturer"].get<std::string>())
-					: fallback);
-
-			m_WorkStations->work_station_data[fileNum].motor_vendor_by_sn.emplace(wxString(sn), v);
-			m_WorkStations->work_station_data[fileNum].selected_motors_in_data_file.Add(wxString(sn));
-			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(sn), stepsPerMM));
+				workStation.configuration_errors.Add(
+					"\"" + section + "\" contains " + actualCount
+					+ " entries; missing " + missingAxes + ". Expected X, Y and Z.");
+			}
+			else
+			{
+				workStation.configuration_errors.Add(
+					"\"" + section + "\" contains " + actualCount
+					+ " entries; extras begin at " + section + "[3] and are ignored. Expected exactly X, Y and Z.");
+			}
 		}
-	}
 
-	// Aux
-	if (j.contains("aux")) {
-		for (const auto& motor : j["aux"]) {
-			const std::string sn = motor["SerialNumber"];
-			const int stepsPerMM = motor["StepsPerMM"];
+		for (size_t position = 0; position < expectedMotorCount; ++position)
+		{
+			if (position >= motors.size())
+			{
+				workStation.selected_motors_in_data_file.Add("None");
+				continue;
+			}
 
-			SettingsVariables::MotorManufacturers fallback =
-				(j.contains("motor_manufacturer") ? SettingsVariables::ParseVendor(j["motor_manufacturer"].get<std::string>())
-					: SettingsVariables::MotorManufacturers::STANDA);
+			const auto& motor = motors[position];
+			const wxString itemPath = section + "["
+				+ wxString::Format("%llu", static_cast<unsigned long long>(position)) + "]";
+			if (!motor.is_object())
+			{
+				workStation.configuration_errors.Add(itemPath + " must be a JSON object.");
+				workStation.selected_motors_in_data_file.Add("None");
+				continue;
+			}
 
-			SettingsVariables::MotorManufacturers v =
-				(motor.contains("Manufacturer") ? SettingsVariables::ParseVendor(motor["Manufacturer"].get<std::string>())
-					: fallback);
+			if (!motor.contains("SerialNumber") || !motor["SerialNumber"].is_string())
+			{
+				workStation.configuration_errors.Add(itemPath + ".SerialNumber is missing or is not a string.");
+				workStation.selected_motors_in_data_file.Add("None");
+				continue;
+			}
 
-			m_WorkStations->work_station_data[fileNum].motor_vendor_by_sn.emplace(wxString(sn), v);
-			m_WorkStations->work_station_data[fileNum].selected_motors_in_data_file.Add(wxString(sn));
-			m_WorkStations->work_station_data[fileNum].motors_steps_per_mm.insert(std::make_pair(wxString(sn), stepsPerMM));
+			if (!motor.contains("StepsPerMM") || !motor["StepsPerMM"].is_number_integer())
+			{
+				workStation.configuration_errors.Add(itemPath + ".StepsPerMM is missing or is not an integer.");
+				workStation.selected_motors_in_data_file.Add("None");
+				continue;
+			}
+
+			const wxString serialNumber = wxString::FromUTF8(motor["SerialNumber"].get<std::string>());
+			const int stepsPerMM = motor["StepsPerMM"].get<int>();
+			auto vendor = fallbackVendor;
+
+			if (motor.contains("Manufacturer"))
+			{
+				if (motor["Manufacturer"].is_string())
+					vendor = SettingsVariables::ParseVendor(motor["Manufacturer"].get<std::string>());
+				else
+					workStation.configuration_errors.Add(itemPath + ".Manufacturer must be a string.");
+			}
+
+			workStation.selected_motors_in_data_file.Add(serialNumber.IsEmpty() ? wxString("None") : serialNumber);
+			if (!serialNumber.IsEmpty() && serialNumber != "None")
+			{
+				workStation.motor_vendor_by_sn.insert_or_assign(serialNumber, vendor);
+				workStation.motors_steps_per_mm.insert_or_assign(serialNumber, stepsPerMM);
+			}
 		}
-	}
+	};
+
+	readMotorSection("detector");
+	readMotorSection("optics");
+	readMotorSection("aux");
 
 	// Standa IP address (optional; absent/empty => USB-only for this station)
 	if (j.contains("standa_ip")) {
+		if (!j["standa_ip"].is_string()) {
+			workStation.configuration_errors.Add("\"standa_ip\" must be a string.");
+		}
+		else {
 		const std::string ip = j["standa_ip"].get<std::string>();
 		if (!ip.empty()) {
 			if (SettingsVariables::IsValidIPAddress(ip))
-				m_WorkStations->work_station_data[fileNum].standaIPAddress = wxString(ip);
+				workStation.standaIPAddress = wxString(ip);
 			else
-				wxLogError("Work station file \"%s\": \"standa_ip\" is not a valid IP address.", wxString(fileName));
+				workStation.configuration_errors.Add("\"standa_ip\" is not a valid IPv4 address.");
+		}
 		}
 	}
 
 	// Camera
-	if (j.contains("camera")) {
-		m_WorkStations->work_station_data[fileNum].selected_camera_in_data_file = wxString(j["camera"].get<std::string>());
-	}
+	if (j.contains("camera") && j["camera"].is_string())
+		workStation.selected_camera_in_data_file = wxString::FromUTF8(j["camera"].get<std::string>());
+	else
+		workStation.configuration_errors.Add("\"camera\" is missing or is not a string.");
 
 	// CameraManufacturer
-	if (j.contains("camera_manufacturer")) {
+	if (j.contains("camera_manufacturer") && j["camera_manufacturer"].is_string()) {
 		const wxString cameraManufacturerStr = wxString(j["camera_manufacturer"].get<std::string>());
 		if (cameraManufacturerStr.Lower() == "advacam")
-			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::ADVACAM;
+			workStation.camera_manufacturer = SettingsVariables::CameraManufacturers::ADVACAM;
 		else if (cameraManufacturerStr.Lower() == "moravian_instruments")
-			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::MORAVIAN_INSTRUMENTS;
+			workStation.camera_manufacturer = SettingsVariables::CameraManufacturers::MORAVIAN_INSTRUMENTS;
 		else if (cameraManufacturerStr.Lower() == "tucsen")
-			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::TUCSEN;
+			workStation.camera_manufacturer = SettingsVariables::CameraManufacturers::TUCSEN;
 		else if (cameraManufacturerStr.Lower() == "ximea")
-			m_WorkStations->work_station_data[fileNum].camera_manufacturer = SettingsVariables::CameraManufacturers::XIMEA;
+			workStation.camera_manufacturer = SettingsVariables::CameraManufacturers::XIMEA;
+		else
+			workStation.configuration_errors.Add("\"camera_manufacturer\" has unsupported value \"" + cameraManufacturerStr + "\".");
 	}
+	else
+		workStation.configuration_errors.Add("\"camera_manufacturer\" is missing or is not a string.");
 
 	// PixelSizeUM
-	if (j.contains("pixel_size_um")) {
-		m_WorkStations->work_station_data[fileNum].pixelSizeUM = j["pixel_size_um"].get<double>();
-	}
+	if (j.contains("pixel_size_um") && j["pixel_size_um"].is_number())
+		workStation.pixelSizeUM = j["pixel_size_um"].get<double>();
+	else
+		workStation.configuration_errors.Add("\"pixel_size_um\" is missing or is not a number.");
 
 	// Station
-	if (j.contains("station")) {
+	if (j.contains("station") && j["station"].is_string()) {
 		const wxString stationName = wxString(j["station"].get<std::string>());
-		m_WorkStations->work_station_data[fileNum].work_station_name = stationName;
-		m_WorkStations->all_work_station_array_str.Add(stationName);
+		if (!stationName.IsEmpty())
+			workStation.work_station_name = stationName;
 	}
+	else
+		workStation.configuration_errors.Add("\"station\" is missing or is not a string; the file name is used instead.");
+
+	m_WorkStations->all_work_station_array_str.Add(workStation.work_station_name);
 }
 
 void cSettings::UpdateUniqueArray()

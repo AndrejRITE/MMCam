@@ -143,6 +143,9 @@ namespace SettingsVariables
 		wxString selected_camera_in_data_file{};
 		CameraManufacturers camera_manufacturer{};
 		wxString work_station_name{};
+		wxString config_file_path{};
+		wxArrayString configuration_errors{};
+		bool configuration_error_was_shown{ false };
 		double pixelSizeUM{};
 
 		// Optional. Empty => this station's Standa motors are USB-only,

@@ -6,7 +6,7 @@
   "standa_ip": "10.0.0.133",
   "detector": [
     { "SerialNumber": "33181", "StepsPerMM": 200, "Manufacturer": "STANDA" },
-	{ "SerialNumber": "33262", "StepsPerMM": 400, "Manufacturer": "STANDA" }
+	{ "SerialNumber": "33262", "StepsPerMM": 400, "Manufacturer": "STANDA" },
     { "SerialNumber": "None", "StepsPerMM": 800, "Manufacturer": "STANDA" }
   ],
   "optics": [
