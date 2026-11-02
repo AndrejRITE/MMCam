@@ -186,6 +186,7 @@ try {
     $libximc_folder = Get-RequiredEnvironmentDirectory -VariableName 'LIBXIMC_LATEST' -Suffix 'win64'
     $ximea_folder = Get-RequiredEnvironmentDirectory -VariableName 'XIMEA_LATEST'
     $misdk_folder = Get-RequiredEnvironmentDirectory -VariableName 'MISDK_LATEST' -Suffix 'x64'
+	$tucam_folder = Get-RequiredEnvironmentDirectory -VariableName 'TUCAM_LATEST'
 
     # Validate all tools and static inputs before changing any files.
     Write-Log 'Validating release prerequisites.'
@@ -215,7 +216,8 @@ try {
         "${advacam_folder}\pxcore.dll",
         "${ximea_folder}\xiapi64.dll",
         "${misdk_folder}\cXusb.dll",
-        "${misdk_folder}\gXeth.dll"
+        "${misdk_folder}\gXeth.dll",
+		"${tucam_folder}\TUCam.dll"
     )) {
         Assert-FileExists $requiredFile
     }
@@ -343,6 +345,13 @@ try {
     Copy-RequiredFile "${other_files_folder}\pixet.ini" (Join-Path $release_folder 'pixet.ini')
     Copy-RequiredFile "${advacam_folder}\ftd2xx64.dll" (Join-Path $release_folder 'ftd2xx64.dll')
     Copy-RequiredFile "${advacam_folder}\pxcore.dll" (Join-Path $release_folder 'pxcore.dll')
+	$tucam_dlls = @(Get-ChildItem -LiteralPath $tucam_folder -Filter '*.dll' -File)
+    if ($tucam_dlls.Count -eq 0) {
+        throw "No DLL files were found in TUCAM folder: $tucam_folder"
+    }
+    foreach ($dll in $tucam_dlls) {
+        Copy-RequiredFile $dll.FullName (Join-Path $release_folder $dll.Name)
+    }
 
     $hwlibsDestination = Join-Path $release_folder 'hwlibs'
     if (Test-Path -LiteralPath $hwlibsDestination) {
