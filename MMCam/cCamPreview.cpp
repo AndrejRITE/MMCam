@@ -1018,8 +1018,8 @@ auto cCamPreview::DrawImageStatistics(wxGraphicsContext* gc) -> void
 	auto format_number = [](auto value) 
 		{
 			std::string str = std::format(std::locale("en_US.UTF-8"), "{:L}", value); // localized format
-			for (auto& ch : str)
-				if (ch == ',') ch = '\''; // replace comma with apostrophe
+			//for (auto& ch : str)
+				//if (ch == ',') ch = '\''; // replace comma with apostrophe
 			return str;
 		};
 
