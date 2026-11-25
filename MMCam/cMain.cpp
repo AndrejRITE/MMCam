@@ -1043,11 +1043,14 @@ void cMain::CreateLeftAndRightSide()
 	CreateBottomPanel(bottomSizer, border);    // you already have this
 
 	// OUTER split: Top(=inner splitter) vs Bottom
-	m_MainSplitter->SplitHorizontally(m_TopSplitter, m_BottomPanel, FromDIP(700));
+	// Negative position = height of the bottom (histogram) pane
+	m_MainSplitter->SplitHorizontally(m_TopSplitter, m_BottomPanel, -FromDIP(150));
 
 	// Put the OUTER splitter into the frame sizer and lay out
 	frameSizer->Add(m_MainSplitter, 1, wxEXPAND);
 	Layout();
+	// The split above happened before the frame had its size; set the histogram pane height now
+	m_MainSplitter->SetSashPosition(-FromDIP(150));
 }
 
 void cMain::CreateLeftSide(wxWindow* parent, wxSizer* left_side_sizer)
@@ -7003,7 +7006,7 @@ auto cMain::UpdateSpectroscopyPreviewLayout() -> void
 			const int sashPosition =
 				m_MainSplitterNormalSashPosition > 0
 				? m_MainSplitterNormalSashPosition
-				: FromDIP(700);
+				: -FromDIP(150); // negative = height of the histogram pane
 
 			m_MainSplitter->SetSashPosition(sashPosition, true);
 			m_MainSplitter->UpdateSize();

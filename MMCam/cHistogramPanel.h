@@ -5,6 +5,7 @@
 #include "wx/wx.h"
 #include "wx/dcbuffer.h"
 #include "wx/graphics.h"
+#include "wx/timer.h"
 
 #include <iostream>
 #include <fstream>
@@ -12,6 +13,8 @@
 #include <format>
 #include <algorithm>
 #include <optional>
+#include <cmath>
+#include <vector>
 
 // Macros
 #ifdef _DEBUG
@@ -27,8 +30,8 @@
 #define LOGST(message, number)
 #define LOGF(message, number)
 #define LOGI(message, number)
-#define LOG2I(first_message, first_number, second_message, second_number) 
-#define LOG2F(first_message, first_number, second_message, second_number) 
+#define LOG2I(first_message, first_number, second_message, second_number)
+#define LOG2F(first_message, first_number, second_message, second_number)
 #define LOG6F(first_message, first_number, second_message, second_number, third_message, third_number, fourth_message, fourth_number, fifth_message_fifth_number, sixth_message, sixth_number)
 #endif // _DEBUG
 
@@ -40,15 +43,39 @@ namespace HistogramPanelVariables
 		RAW_16BIT
 	};
 
-	static auto FormatNumber(auto value) -> std::string
+	/// 1234567 -> "1,234,567"
+	inline auto FormatNumber(long long value) -> wxString
 	{
-		std::string str = std::format(std::locale("en_US.UTF-8"), "{:L}", value); // localized format
-		for (auto& ch : str)
-			if (ch == ',') ch = '\''; // replace comma with apostrophe
-		return str;
-	};
+		const bool negative = value < 0;
+		std::string digits = std::to_string(negative ? -value : value);
+		std::string out;
+		out.reserve(digits.size() + digits.size() / 3 + 1);
+		for (size_t i = 0; i < digits.size(); ++i)
+		{
+			if (i && (digits.size() - i) % 3 == 0) out.push_back(',');
+			out.push_back(digits[i]);
+		}
+		return wxString(negative ? "-" + out : out);
+	}
+
+	/// Short axis labels: 950, 12.5k, 3.2M
+	inline auto FormatCompact(double value) -> wxString
+	{
+		if (value < 10'000.0) return FormatNumber((long long)std::llround(value));
+		if (value < 1'000'000.0) return wxString::Format(value < 100'000.0 ? "%.1fk" : "%.0fk", value / 1'000.0);
+		return wxString::Format(value < 100'000'000.0 ? "%.1fM" : "%.0fM", value / 1'000'000.0);
+	}
 }
 
+/// Interactive intensity histogram shown under the camera preview.
+///
+/// The two handles set the black/white display levels of the preview (they are
+/// reported to the parent through two hidden text controls). Mouse:
+///  - drag a handle (or its triangle on the ramp) to move a level
+///  - Shift+drag selects a new level range
+///  - drag elsewhere pans, wheel zooms the value axis
+///  - right-click or the LIN/LOG chip toggles the count axis scale
+///  - double-click or the RESET chip restores the automatic levels and view
 class cHistogramPanel final : public wxPanel
 {
 public:
@@ -71,125 +98,114 @@ public:
 	) -> std::optional<int>;
 
 	auto SetBackgroundColor(wxColour bckg_colour) -> void;
-	auto SetAutoBordersPos(const int leftBorder, const int rightBorder) -> void { m_AutoLeftBorder.x = leftBorder; m_AutoRightBorder.x = rightBorder; };
-	auto SetBordersPos(const int leftBorder, const int rightBorder) -> void 
-	{ 
-		m_WasRangeChanged = m_LeftBorder.x != leftBorder || m_RightBorder.x != rightBorder ? true : m_WasRangeChanged; 
-		m_LeftBorder.x = leftBorder; 
-		m_RightBorder.x = rightBorder; 
-		Refresh(); 
-	};
+	auto SetAutoBordersPos(const int leftBorder, const int rightBorder) -> void { m_AutoLeft = leftBorder; m_AutoRight = rightBorder; };
+	auto SetBordersPos(const int leftBorder, const int rightBorder) -> void;
 
 	auto GetWasHistogramRangeChanged() const -> bool { return m_WasRangeChanged; };
-	auto GetLeftBorderValue() const -> int { return m_LeftBorder.x; };
-	auto GetRightBorderValue() const -> int { return m_RightBorder.x; };
-	auto ResetHistogramRange() -> void 
-	{
-		wxMouseEvent event(wxEVT_LEFT_DCLICK);
-		
-		event.SetEventObject(this);
-
-		wxPostEvent(this, event);
-		ProcessEvent(event);
-	};
+	auto GetLeftBorderValue() const -> int { return m_Left; };
+	auto GetRightBorderValue() const -> int { return m_Right; };
+	/// Restores the automatic levels and the full view (called when the camera changes).
+	auto ResetHistogramRange() -> void { ResetRangeAndView(); };
 
 private:
-	auto SetWXImage() -> void;
+	enum class DragMode { None, Left, Right, Select, Pan };
+	enum class Hover { None, Left, Right, ScaleChip, ResetChip };
 
-	void InitDefaultComponents();
+	// Drawing
 	void PaintEvent(wxPaintEvent& evt);
-	void Render(wxBufferedPaintDC& dc);
-	void DrawImage(wxGraphicsContext* gc);
-	auto DrawTitle(wxGraphicsContext* gc) -> void;
-	auto DrawRectangleRange(wxGraphicsContext* gc) -> void;
-	void CreateGraphicsBitmapImage(wxGraphicsContext* gc_);
+	void Render(wxGraphicsContext* gc);
+	void DrawPlotBackground(wxGraphicsContext* gc);
+	void DrawGrid(wxGraphicsContext* gc);
+	void DrawHistogram(wxGraphicsContext* gc);
+	void DrawOutOfRangeShade(wxGraphicsContext* gc);
+	void DrawRamp(wxGraphicsContext* gc);
+	void DrawHandles(wxGraphicsContext* gc);
+	void DrawStats(wxGraphicsContext* gc);
+	void DrawChips(wxGraphicsContext* gc);
+	void DrawHoverReadout(wxGraphicsContext* gc);
+	void DrawEmptyState(wxGraphicsContext* gc);
+	/// Rounded "pill" with text; returns its rectangle.
+	wxRect2DDouble DrawPill(wxGraphicsContext* gc, const wxString& text, double x, double y,
+		const wxColour& fill, const wxColour& textColour, const wxColour& border = wxNullColour);
+
+	// Geometry / mapping
+	void UpdateLayout();
+	void RebuildOutline();
+	double ValueToX(double v) const;      ///< value (bin index, may be fractional) -> canvas x
+	int XToValue(double x) const;         ///< canvas x -> bin index inside the current view
+	double CountToY(double c) const;      ///< count -> canvas y (linear or log)
+	double LevelToX(int level) const { return ValueToX(level + 0.5); } ///< handle position (bin centre)
+	bool IsDark() const;
+
+	// Interaction
 	void OnSize(wxSizeEvent& evt);
-	void ChangeSizeOfImageInDependenceOnCanvasSize();
-
-	void CheckIfMouseAboveImage();
-	void CalculatePositionOnImage();
-
-	auto OnMouseWheel(wxMouseEvent& evt) -> void;
+	void OnMouseWheel(wxMouseEvent& evt);
 	void OnMouseDown(wxMouseEvent& evt);
 	void OnMouseMove(wxMouseEvent& evt);
 	void OnMouseUp(wxMouseEvent& evt);
 	void OnMouseCaptureLost(wxMouseCaptureLostEvent& evt);
-	auto OnToggleLogScale(wxMouseEvent& evt) -> void;
-	auto OnPreviewMouseLeftDoubleClick(wxMouseEvent& evt) -> void;
-	auto OnPreviewMouseEnteredWindow(wxMouseEvent& evt) -> void;
-	auto OnPreviewMouseLeftWindow(wxMouseEvent& evt) -> void;
+	void OnRightUp(wxMouseEvent& evt);
+	void OnDoubleClick(wxMouseEvent& evt);
+	void OnMouseEnter(wxMouseEvent& evt);
+	void OnMouseLeave(wxMouseEvent& evt);
 
-	void ResetViewToFull();
-
-	void InvalidateGraphicsBitmap() { m_IsGraphicsBitmapSet = false; }
-	void RebuildHistogramImageForCurrentView();
-
-	void ChangeCursorInDependenceOfCurrentParameters();
-
-	auto MedianBlur1D(unsigned long long* dataPtr, const size_t dataSize, size_t windowSize) -> void;
-
-	int CountToCanvasY(unsigned long long c) const;  // maps count->Y using current (log/linear) scale and H
-	void DrawGridAndAxes(wxGraphicsContext* gc);     // draws grid + tick labels over the bitmap
-
-private:
-	// Helpers to convert between value<->canvas X using current view
-	inline unsigned int DomainSpan() const { return (m_ViewMax > m_ViewMin) ? (m_ViewMax - m_ViewMin) : 1; }
-	inline int ValueToCanvasX(unsigned int v) const {
-		double t = (double)(std::clamp(v, m_ViewMin, m_ViewMax) - m_ViewMin) / (double)DomainSpan();
-		return (int)std::round(t * (m_CanvasSize.GetWidth() - 1));
-	}
-	inline unsigned int CanvasXToValue(int x) const {
-		x = std::clamp(x, 0, std::max(0, m_CanvasSize.GetWidth() - 1));
-		double t = (m_CanvasSize.GetWidth() > 1) ? (double)x / (double)(m_CanvasSize.GetWidth() - 1) : 0.0;
-		return m_ViewMin + (unsigned int)std::round(t * DomainSpan());
-	}
+	Hover HitTest(const wxPoint& pt) const;
+	void UpdateHoverAndCursor(const wxPoint& pt);
+	void SetLevelsFromDrag(int left, int right);
+	void NotifyParent();
+	void OnNotifyTimer(wxTimerEvent& evt);
+	void EndDrag();
+	void ToggleLogScale();
+	void ResetRangeAndView();
+	void FitViewToData();
+	void SetView(long long viewMin, long long viewMax);
 
 private:
-	wxColour m_HistogramDataColor = wxColour(180, 29, 47);
+	wxColour m_Accent{ 66, 146, 255 };
 
-	int m_Width{}, m_Height{};
-	bool m_IsGraphicsBitmapSet{}, m_IsImageSet{};
-	wxGraphicsBitmap m_GraphicsBitmapImage{};
-
-	wxImage m_Image{};
-
-	wxSize m_ImageSize{}, m_ImageOnCanvasSize{}, m_CanvasSize{};
-	wxRealPoint m_NotCheckedCursorPosOnImage{}, m_CheckedCursorPosOnImage{}, m_CursorPosOnCanvas{};
-	wxRealPoint m_NotZoomedGraphicsBitmapOffset{}, m_StartDrawPos{};
-	bool m_IsCursorInsideImage{};
-
+	// Data
 	HistogramPanelVariables::ImageDataTypes m_DataType{ HistogramPanelVariables::ImageDataTypes::RAW_16BIT };
-	unsigned long m_MaxHistogramValue{};
 	std::unique_ptr<unsigned long long[]> m_HistogramData{};
-	unsigned long long m_GlobalMin{}, m_GlobalMax{};
+	unsigned int m_MaxHistogramValue{};
+	unsigned int m_FirstNonZero{}, m_LastNonZero{};
+	double m_Mean{};
+	unsigned int m_Median{}, m_Mode{};
+	unsigned int m_UpperPercentile{}; ///< value below which 99.95 % of the pixels lie
+	unsigned long long m_TotalCount{};
 
-	wxRealPoint m_LeftBorderOnCanvas{}, m_RightBorderOnCanvas{};
-	wxPoint m_LeftBorder{}, m_RightBorder{};
-	wxPoint m_AutoLeftBorder{}, m_AutoRightBorder{};
-
-	bool m_IsCursorAboveLeftBorder{}, m_IsCursorAboveRightBorder{};
-	int m_RangeWhenMouseReactOnBordersPx{ 6 };
-	bool m_ChangingLeftBorder{}, m_ChangingRightBorder{};
+	// Levels (black / white) and the automatic ones computed by the parent
+	int m_Left{}, m_Right{};
+	int m_AutoLeft{}, m_AutoRight{};
 	bool m_WasRangeChanged{};
 
-	wxTextCtrl* m_ParentLeftBorder{},* m_ParentRightBorder{};
+	wxTextCtrl* m_ParentLeftBorder{}, * m_ParentRightBorder{};
 	wxString m_TitleStr{};
 
-	bool m_IsMouseInsidePanel{};
-
-	// View on the X axis (value domain)
+	// View on the value axis: bins [m_ViewMin, m_ViewMax] fill the plot width
 	unsigned int m_ViewMin{ 0 }, m_ViewMax{ USHRT_MAX };
-	bool m_LogScale{ false }; // toggle for low-signal visibility
+	bool m_UserAdjustedView{};
+	bool m_LogScale{};
+	unsigned long long m_ViewPeak{};
 
-	bool m_Panning{ false };
-	bool m_UserAdjustedView{ false }; ///< true after wheel-zoom / pan, until double-click reset
-	int  m_PanStartX{ 0 };
-	unsigned int m_ViewMinAtDragStart{ 0 }, m_ViewMaxAtDragStart{ 0 };
+	// Layout (canvas coordinates)
+	wxSize m_CanvasSize{};
+	wxRect2DDouble m_Plot{}, m_Ramp{};
+	std::vector<wxPoint2DDouble> m_Outline{};
+	wxRect2DDouble m_ScaleChipRect{}, m_ResetChipRect{};
 
-	unsigned long long m_ViewPeak{ 0 };
+	// Mouse state
+	DragMode m_Drag{ DragMode::None };
+	Hover m_Hover{ Hover::None };
+	bool m_IsMouseInside{};
+	wxPoint m_MousePos{};
+	int m_SelectAnchor{};
+	int m_PanStartX{};
+	unsigned int m_ViewMinAtDragStart{}, m_ViewMaxAtDragStart{};
+	wxTimer m_NotifyTimer{};   ///< merges level updates sent to the preview while dragging
+	bool m_NotifyPending{};
+	wxString m_CurrentTip{};
 
 	DECLARE_EVENT_TABLE();
 };
 
 #endif // !CHISTOGRAM_PANEL_H
-

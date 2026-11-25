@@ -1665,67 +1665,75 @@ auto cCamPreview::UpdateWXImage(int black, int white) -> void
 {
 	LOG("Started: " + wxString(__FUNCSIG__));
 
-	// Check number of threads on the current machine
 	const unsigned int imageHeight = static_cast<unsigned int>(std::max(0, m_ImageSize.GetHeight()));
-	if (!imageHeight || m_ImageSize.GetWidth() <= 0) return;
+	if (!imageHeight || m_ImageSize.GetWidth() <= 0 || !m_ImageData || !m_Image.IsOk()) return;
+
+	// Every pixel value maps to the same colour for given levels, so build a lookup
+	// table once (at most 65,536 entries) instead of running the colormap maths and a
+	// bounds-checked SetRGB for each of the (up to tens of millions of) pixels.
+	// This keeps level changes from the histogram fast enough to follow a drag.
+	const unsigned short maxValue = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
+	std::vector<unsigned char> lut((static_cast<size_t>(maxValue) + 1) * 3);
+	for (unsigned int v = 0; v <= maxValue; ++v)
+		MapValueToRGB(static_cast<unsigned short>(v), lut[v * 3], lut[v * 3 + 1], lut[v * 3 + 2], black, white);
 
 	// hardware_concurrency() may return 0, and there is no point in more threads than rows
 	const unsigned int numThreads = std::clamp(std::thread::hardware_concurrency(), 1u, imageHeight);
+	const unsigned int tileSize = (imageHeight + numThreads - 1) / numThreads;
 
 	std::vector<std::thread> threads;
 	threads.reserve(numThreads);
-
-	const unsigned int tileSize = (imageHeight + numThreads - 1) / numThreads;
-
-	for (auto i{ 0 }; i < (int)numThreads; ++i)
+	for (unsigned int i = 0; i < numThreads; ++i)
 	{
-		// With ceil-division the trailing tiles can start past the last row;
-		// launching them would read past the end of m_ImageData.
-		if (static_cast<unsigned int>(i) * tileSize >= imageHeight) break;
-
-		wxPoint start{}, finish{};
-		start.x = 0;
-		start.y = i * tileSize;
-
-		finish.x = m_ImageSize.GetWidth();
-		finish.y = (i + 1) * (int)tileSize > m_ImageSize.GetHeight() ? m_ImageSize.GetHeight() : (i + 1) * tileSize;
-
-		threads.emplace_back
-		(
-			std::thread
-			(
-				&cCamPreview::AdjustImageParts,
-				this,
-				&m_ImageData[start.y * m_ImageSize.GetWidth() + start.x],
-				start.x, start.y, finish.x, finish.y,
-				black, white
-			)
-		);
+		const unsigned int startY = i * tileSize;
+		if (startY >= imageHeight) break;
+		const unsigned int finishY = std::min(imageHeight, startY + tileSize);
+		threads.emplace_back(&cCamPreview::AdjustImageParts, this, 0u, startY, (unsigned int)m_ImageSize.GetWidth(), finishY, lut.data(), maxValue);
 	}
-	for (auto& thread : threads)
-	{
-		thread.join();
-	}
+	for (auto& thread : threads) thread.join();
 
 	LOG("Finished: " + wxString(__FUNCSIG__));
 }
 
 auto cCamPreview::AdjustImageParts
 (
-	const unsigned short* data_ptr, 
-	const unsigned int start_x, 
-	const unsigned int start_y, 
-	const unsigned int finish_x, 
+	const unsigned int start_x,
+	const unsigned int start_y,
+	const unsigned int finish_x,
 	const unsigned int finish_y,
+	const unsigned char* lut,
+	const unsigned short max_value
+) -> void
+{
+	if (!lut || finish_y <= start_y) return;
+
+	const size_t width = static_cast<size_t>(m_ImageSize.GetWidth());
+	unsigned char* rgb = m_Image.GetData();
+	for (size_t y = start_y; y < finish_y; ++y)
+	{
+		const unsigned short* src = &m_ImageData[y * width + start_x];
+		unsigned char* dst = rgb + (y * width + start_x) * 3;
+		for (size_t x = start_x; x < finish_x; ++x, ++src, dst += 3)
+		{
+			const unsigned char* c = lut + static_cast<size_t>(std::min(*src, max_value)) * 3;
+			dst[0] = c[0];
+			dst[1] = c[1];
+			dst[2] = c[2];
+		}
+	}
+}
+
+auto cCamPreview::MapValueToRGB
+(
+	const unsigned short current_value,
+	unsigned char& red,
+	unsigned char& green,
+	unsigned char& blue,
 	const int black,
 	const int white
 ) -> void
 {
-	if (!data_ptr || finish_y <= start_y) return;
-	unsigned short current_value{};
-	unsigned char red{}, green{}, blue{};
-
-	unsigned short max_value = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
+	const unsigned short max_value = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
 
 	const double black_d = static_cast<double>(black == max_value ? max_value - 1 : black);
 	const double white_d = static_cast<double>(white > max_value ? max_value : white);
@@ -1739,103 +1747,124 @@ auto cCamPreview::AdjustImageParts
 	const double max_range_d = std::max(max_minus_black - max_minus_white, 1.0);
 	const unsigned char uchar_max = UCHAR_MAX;
 
-	double adjustedValue{};
+	double adjustedValue = static_cast<double>(current_value);
+	red = green = blue = 0;
 
-	for (auto y{ start_y }; y < finish_y; ++y)
+	switch (m_ColormapMode)
 	{
-		auto row_offset = (y - start_y) * (finish_x - start_x);  // Precompute row offset
-		for (auto x{ start_x }; x < finish_x; ++x)
+	case CameraPreviewVariables::Colormaps::GRAYSCALE_COLORMAP:
+	{
+		adjustedValue = std::clamp(adjustedValue, black_d, white_d);
+		adjustedValue = ((adjustedValue - black_d) / range_d) * uchar_max;
+		red = green = blue = static_cast<unsigned char>(adjustedValue);
+		break;
+	}
+
+	case CameraPreviewVariables::Colormaps::INVERT_COLORMAP:
+	{
+		adjustedValue = max_value_d - adjustedValue;
+		adjustedValue = std::clamp(adjustedValue, max_minus_white, max_minus_black);
+		adjustedValue = ((adjustedValue - max_minus_white) / max_range_d) * uchar_max;
+		red = green = blue = static_cast<unsigned char>(adjustedValue);
+		break;
+	}
+
+	case CameraPreviewVariables::Colormaps::JET_COLORMAP:
+		CalculateJetColormapPixelRGB(current_value, red, green, blue, black, white);
+		break;
+
+	case CameraPreviewVariables::Colormaps::IMAGEJ_16_COLORS_COLORMAP:
+		Calculate16_ColorsImageJColormapPixelRGB(current_value, red, green, blue, black, white);
+		break;
+
+	case CameraPreviewVariables::Colormaps::COOL_COLORMAP:
+	{
+		// Normalize adjustedValue to [0.0, 1.0] based on actual black/white
+		float norm = 0.0f;
+		if (white > black)
 		{
-			int index = row_offset + (x - start_x);  // Calculate index
-			current_value = data_ptr[index];
-			adjustedValue = static_cast<double>(current_value);
-
-			switch (m_ColormapMode)
-			{
-			case CameraPreviewVariables::Colormaps::GRAYSCALE_COLORMAP:
-			{
-				adjustedValue = std::clamp(adjustedValue, black_d, white_d);
-				adjustedValue = ((adjustedValue - black_d) / range_d) * uchar_max;
-				red = green = blue = static_cast<unsigned char>(adjustedValue);
-				break;
-			}
-
-			case CameraPreviewVariables::Colormaps::INVERT_COLORMAP:
-			{
-				adjustedValue = max_value_d - adjustedValue;
-				adjustedValue = std::clamp(adjustedValue, max_minus_white, max_minus_black);
-				adjustedValue = ((adjustedValue - max_minus_white) / max_range_d) * uchar_max;
-				red = green = blue = static_cast<unsigned char>(adjustedValue);
-				break;
-			}
-
-			case CameraPreviewVariables::Colormaps::JET_COLORMAP:
-				CalculateJetColormapPixelRGB(current_value, red, green, blue, black, white);
-				break;
-
-			case CameraPreviewVariables::Colormaps::IMAGEJ_16_COLORS_COLORMAP:
-				Calculate16_ColorsImageJColormapPixelRGB(current_value, red, green, blue, black, white);
-				break;
-
-			case CameraPreviewVariables::Colormaps::COOL_COLORMAP:
-			{
-				// Normalize adjustedValue to [0.0, 1.0] based on actual black/white
-				float norm = 0.0f;
-				if (white > black)
-				{
-					int clamped = std::clamp((int)current_value, black, white);
-					norm = static_cast<float>(clamped - black) / (white - black);
-				}
-
-				// Apply cool colormap
-				red = static_cast<unsigned char>(std::round(norm * 255.0f));
-				green = static_cast<unsigned char>(std::round((1.0f - norm) * 255.0f));
-				blue = 255;
-				break;
-			}
-
-			case CameraPreviewVariables::Colormaps::HOT_COLORMAP:
-				CalculateHotColormapPixelRGB(current_value, red, green, blue, black, white);
-				break;
-
-			case CameraPreviewVariables::Colormaps::WINTER_COLORMAP:
-			{
-				// Normalize adjustedValue to [0.0, 1.0] range based on black and white
-				float norm = 0.0f;
-				if (white > black)
-				{
-					int clamped = std::clamp((int)current_value, black, white);
-					norm = static_cast<float>(clamped - black) / (white - black);
-				}
-
-				// Apply winter colormap logic
-				red = 0;
-				green = static_cast<unsigned char>(std::round(norm * 255.0f));
-				blue = static_cast<unsigned char>(std::round((1.0f - 0.5f * norm) * 255.0f));
-				break;
-			}
-
-			case CameraPreviewVariables::Colormaps::COPPER_COLORMAP:
-				CalculateCopperColormapPixelRGB(current_value, red, green, blue, black, white);
-				break;
-
-			default:
-				break;
-			}
-
-			m_Image.SetRGB(x, y, red, green, blue);
+			int clamped = std::clamp((int)current_value, black, white);
+			norm = static_cast<float>(clamped - black) / (white - black);
 		}
+
+		// Apply cool colormap
+		red = static_cast<unsigned char>(std::round(norm * 255.0f));
+		green = static_cast<unsigned char>(std::round((1.0f - norm) * 255.0f));
+		blue = 255;
+		break;
+	}
+
+	case CameraPreviewVariables::Colormaps::HOT_COLORMAP:
+		CalculateHotColormapPixelRGB(current_value, red, green, blue, black, white);
+		break;
+
+	case CameraPreviewVariables::Colormaps::WINTER_COLORMAP:
+	{
+		// Normalize adjustedValue to [0.0, 1.0] range based on black and white
+		float norm = 0.0f;
+		if (white > black)
+		{
+			int clamped = std::clamp((int)current_value, black, white);
+			norm = static_cast<float>(clamped - black) / (white - black);
+		}
+
+		// Apply winter colormap logic
+		red = 0;
+		green = static_cast<unsigned char>(std::round(norm * 255.0f));
+		blue = static_cast<unsigned char>(std::round((1.0f - 0.5f * norm) * 255.0f));
+		break;
+	}
+
+	case CameraPreviewVariables::Colormaps::COPPER_COLORMAP:
+		CalculateCopperColormapPixelRGB(current_value, red, green, blue, black, white);
+		break;
+
+	default:
+		break;
 	}
 
 }
 
 void cCamPreview::CreateGraphicsBitmapImage(wxGraphicsContext* gc_)
 {
-	if (!m_IsGraphicsBitmapSet && m_IsImageSet)
+	if (!m_IsImageSet || !m_Image.IsOk()) return;
+
+	// When the image is shown smaller than 1:1 (the usual "fit to window" view of a
+	// large sensor), converting every pixel into a GDI+ bitmap is wasted work: it took
+	// over 100 ms per repaint for a 26 MP frame. Build the bitmap from every n-th pixel
+	// instead, keeping at least one bitmap pixel per screen pixel so it looks the same.
+	const double screenPerImagePx = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 1.0;
+	const int step = screenPerImagePx > 0.0 ? std::clamp((int)std::floor(1.0 / screenPerImagePx), 1, 32) : 1;
+
+	if (m_IsGraphicsBitmapSet && step == m_GraphicsBitmapStep) return;
+
+	if (step == 1)
 	{
-		m_GraphicsBitmapImage = wxGraphicsBitmap(gc_->CreateBitmapFromImage(m_Image));;
-		m_IsGraphicsBitmapSet = true;
+		m_GraphicsBitmapImage = gc_->CreateBitmapFromImage(m_Image);
 	}
+	else
+	{
+		const int srcW = m_Image.GetWidth(), srcH = m_Image.GetHeight();
+		const int dstW = (srcW + step - 1) / step, dstH = (srcH + step - 1) / step;
+		wxImage reduced(dstW, dstH, false);
+		const unsigned char* src = m_Image.GetData();
+		unsigned char* dst = reduced.GetData();
+		for (int y = 0; y < dstH; ++y)
+		{
+			const unsigned char* srcRow = src + (static_cast<size_t>(y) * step * srcW) * 3;
+			unsigned char* dstRow = dst + static_cast<size_t>(y) * dstW * 3;
+			for (int x = 0; x < dstW; ++x)
+			{
+				const unsigned char* p = srcRow + static_cast<size_t>(x) * step * 3;
+				dstRow[x * 3] = p[0];
+				dstRow[x * 3 + 1] = p[1];
+				dstRow[x * 3 + 2] = p[2];
+			}
+		}
+		m_GraphicsBitmapImage = gc_->CreateBitmapFromImage(reduced);
+	}
+	m_GraphicsBitmapStep = step;
+	m_IsGraphicsBitmapSet = true;
 }
 
 void cCamPreview::DrawCameraCapturedImage(wxGraphicsContext* gc_)
@@ -1848,9 +1877,16 @@ void cCamPreview::DrawCameraCapturedImage(wxGraphicsContext* gc_)
 
 		gc_->SetInterpolationQuality(interpolation_quality);
 		gc_->Scale(m_Zoom / m_ZoomOnOriginalSizeImage, m_Zoom / m_ZoomOnOriginalSizeImage);
+		// A reduced bitmap covers whole steps, so draw it over that exact area to keep
+		// its pixels aligned with the image coordinates used by the overlays.
+		const int step = std::max(1, m_GraphicsBitmapStep);
+		const int drawW = (m_ImageSize.GetWidth() + step - 1) / step * step;
+		const int drawH = (m_ImageSize.GetHeight() + step - 1) / step * step;
+		gc_->Clip(m_StartDrawPos.x, m_StartDrawPos.y, m_ImageSize.GetWidth(), m_ImageSize.GetHeight());
 		gc_->DrawBitmap(m_GraphicsBitmapImage,
 			m_StartDrawPos.x, m_StartDrawPos.y,
-			m_ImageSize.GetWidth(), m_ImageSize.GetHeight());
+			drawW, drawH);
+		gc_->ResetClip();
 	}
 }
 

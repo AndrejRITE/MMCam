@@ -323,13 +323,23 @@ private:
 	void DrawImage(wxGraphicsContext* gc);
 	
 	auto UpdateWXImage(const int black, const int white) -> void;
+	/// Fills rows [start_y, finish_y) of m_Image from m_ImageData through an RGB lookup table.
 	auto AdjustImageParts
 	(
-		const unsigned short* data_ptr,
 		const unsigned int start_x,
 		const unsigned int start_y,
 		const unsigned int finish_x,
 		const unsigned int finish_y,
+		const unsigned char* lut,
+		const unsigned short max_value
+	) -> void;
+	/// Colour of one pixel value for the current colormap and black/white levels.
+	auto MapValueToRGB
+	(
+		const unsigned short current_value,
+		unsigned char& red,
+		unsigned char& green,
+		unsigned char& blue,
 		const int black,
 		const int white
 	) -> void;
@@ -416,6 +426,7 @@ private:
 	int m_Width{}, m_Height{};
 	bool m_IsGraphicsBitmapSet{}, m_IsImageSet{};
 	wxGraphicsBitmap m_GraphicsBitmapImage{};
+	int m_GraphicsBitmapStep{ 1 }; ///< pixel step used to build m_GraphicsBitmapImage (1 = full resolution)
 
 	wxImage m_Image{};
 	std::unique_ptr<unsigned short[]> m_ImageData{};
