@@ -2,12 +2,23 @@
 
 auto MoravianInstrumentsControl::Initialize() -> bool 
 {
-	auto cameraSN = std::stoi(m_CameraSerialNumber);
+	int cameraSN{};
+	try
+	{
+		cameraSN = std::stoi(m_CameraSerialNumber);
+	}
+	catch (const std::exception&)
+	{
+		// Empty or non-numeric serial number in the work-station config
+		return false;
+	}
 	m_CameraHandler = gxetha::Initialize(cameraSN);
 
 	auto isConnected = IsConnected();
 	if (!isConnected)
 	{
+		if (m_CameraHandler)
+			gxetha::Release(m_CameraHandler); // don't leak the driver handle on a failed connect
 		m_CameraHandler = nullptr;
 		return isConnected;
 	}
@@ -151,6 +162,8 @@ auto MoravianInstrumentsControl::SetExposureTime(int exposure_us) -> void
 
 auto MoravianInstrumentsControl::SetSensorTemperature(const double requiredTemperature) -> void
 {
+	std::lock_guard<std::recursive_mutex> lock(m_ApiMutex); // was unsynchronised with capture
+
 	if (!m_CameraHandler) return;
 	gxetha::SetTemperature(m_CameraHandler, static_cast<gxetha::REAL>(requiredTemperature));
 }
@@ -159,7 +172,8 @@ auto MoravianInstrumentsControl::GetSensorTemperature() -> double
 {
 	std::lock_guard<std::recursive_mutex> lock(m_ApiMutex);
 
-	if (!m_CameraHandler || !IsConnected()) return 0.0;
+	// NaN = "no data" (0.0 was plotted as a real 0 degC reading)
+	if (!m_CameraHandler || !IsConnected()) return std::numeric_limits<double>::quiet_NaN();
 
 	gxetha::REAL value{};
 
@@ -234,7 +248,7 @@ auto MoravianInstrumentsControl::GetFirmwareVersion() -> std::string
 	gxetha::GetIntegerParameter(m_CameraHandler, gipFirmwareMinor, &minor);
 	gxetha::GetIntegerParameter(m_CameraHandler, gipFirmwareBuild, &build);
 
-	return std::to_string(build) + "." + std::to_string(minor) + "." + std::to_string(major);
+	return std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(build); // was reversed
 }
 
 auto MoravianInstrumentsControl::SetHardwareROI(int startX, int startY, int width, int height) -> void

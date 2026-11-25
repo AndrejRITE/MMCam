@@ -490,7 +490,7 @@ void cStylishComboBox::OnDrawBackground
 
     // Two gentle shades: even = very light tint, odd = a bit darker (your current color).
     const wxColour evenBg = isDarkModeOn ? wxColour(50, 50, 50) : wxColour(246, 246, 252);  // slightly darker than white, lighter than odd
-    const wxColour oddBg = wxColour(evenBg.GetRed() - 30, evenBg.GetGreen() - 30, evenBg.GetRed() - 30);  // your existing alternate-row color
+    const wxColour oddBg = wxColour(evenBg.GetRed() - 30, evenBg.GetGreen() - 30, evenBg.GetBlue() - 30);  // your existing alternate-row color
 
     const wxColour bg = (item & 1) == 0 ? evenBg : oddBg;
 

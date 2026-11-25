@@ -377,7 +377,7 @@ wxPanel* cGenerateReportDialog::CreateReportVariablesPage(wxWindow* parent)
             m_StepTxtCtrl = std::make_unique<wxTextCtrl>
                 (
                     panel,
-                    GenerateReportVariables::ID_START_POSITION_TXT_CTRL,
+                    GenerateReportVariables::ID_STEP_TXT_CTRL,
                     wxString("0.025"),
                     wxDefaultPosition,
                     wxDefaultSize,
@@ -1748,6 +1748,10 @@ auto cGenerateReportDialog::OnExitButtonClicked(wxCommandEvent& evt) -> void
         raise_image_isnt_set();
         return;
     }
+
+    // We end the dialog ourselves, so the validators (e.g. minimum exposure) must be run explicitly
+    if (!Validate() || !TransferDataFromWindow())
+        return;
 
 	EndModal(buttonId);
 }

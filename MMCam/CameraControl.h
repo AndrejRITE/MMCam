@@ -44,7 +44,9 @@ public:
 
     virtual auto GetSupplyVoltage() -> double { return 0.0; }
 
-    virtual auto GetPowerUtilization() -> int { return 0; }
+    // -1 = "not supported"; the telemetry panel treats values outside 0..100 as missing
+    // (returning 0 plotted a misleading constant 0 % for cameras without this metric).
+    virtual auto GetPowerUtilization() -> int { return -1; }
 
     virtual auto GetShortestExposureMS() -> double { return 0.0; }
     virtual auto GetLongestExposureMS() -> double { return 0.0; }

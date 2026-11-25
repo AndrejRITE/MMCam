@@ -1027,7 +1027,14 @@ void cMain::CreateLeftAndRightSide()
 
 	// Split Left vs Right (vertical sash)
 	// Choose an initial sash position that fits your UI
-	m_TopSplitter->SplitVertically(m_LeftPanel, m_RightSidePanel, FromDIP(600));
+	// A negative sash position is measured from the right edge, i.e. it fixes the width of the
+	// right (controls) pane. Previously the pane got whatever was left of the frame's default size
+	// after 600 px, which was too narrow and clipped the controls.
+	{
+		const int scrollBarW = wxSystemSettings::GetMetric(wxSYS_VSCROLL_X, m_RightSidePanel);
+		const int rightPaneW = std::max(FromDIP(380), rightSizer->GetMinSize().GetWidth() + scrollBarW + FromDIP(4));
+		m_TopSplitter->SplitVertically(m_LeftPanel, m_RightSidePanel, -rightPaneW);
+	}
 
 	// ----- BOTTOM part: a simple panel built by your existing function -----
 	m_BottomPanel = new wxPanel(m_MainSplitter);
@@ -2094,24 +2101,22 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 	m_SpectroscopyTabControls = std::make_unique<MainFrameVariables::SpectroscopyTabControls>();
 
 	//wxSizer* const first_row_sizer = new wxBoxSizer(wxHORIZONTAL);
-	auto gridSizer = new wxGridSizer(2); 
-	gridSizer->SetVGap(5);
+	// Two-column form: label on the left, control stretching on the right
+	auto gridSizer = new wxFlexGridSizer(2, FromDIP(wxSize(12, 8)));
+	gridSizer->AddGrowableCol(1, 1);
 
-	wxSize txtCtrlSize = { 64, 20 };
+	auto addFormLabel = [page, gridSizer](const wxString& text, const wxString& tooltip)
+		{
+			auto label = new wxStaticText(page, wxID_ANY, text);
+			label->SetToolTip(tooltip);
+			gridSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL);
+		};
+
+	const wxSize txtCtrlSize = FromDIP(wxSize(110, -1));
 	{
 		// Temperature
 		{
-			gridSizer->Add
-			(
-				new wxStaticText
-				(
-					page, 
-					wxID_ANY, 
-					wxT("Set Temperature [degC]:")
-				), 
-				0, 
-				wxALIGN_CENTER
-			);
+			addFormLabel(wxString::FromUTF8("Sensor temperature [\xC2\xB0" "C]"), "Target temperature of the cooled sensor");
 
 			wxFloatingPointValidator<float>	temp_val(1, NULL);
 			temp_val.SetMin(-50.f);
@@ -2119,37 +2124,23 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 
 			m_CameraTabControls->camSensorTemperature = std::make_unique<wxTextCtrl>
 				(
-					page, 
-					MainFrameVariables::ID::RIGHT_CAM_TEMPERATURE_TXT_CTL, 
-#ifdef _DEBUG
-					wxT("15.0"), 
-#else
-					wxT("15.0"), 
-#endif // _DEBUG
-					wxDefaultPosition, 
-					txtCtrlSize, 
-					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
+					page,
+					MainFrameVariables::ID::RIGHT_CAM_TEMPERATURE_TXT_CTL,
+					wxT("15.0"),
+					wxDefaultPosition,
+					txtCtrlSize,
+					wxTE_CENTRE | wxTE_PROCESS_ENTER,
 					temp_val
 				);
 			m_CameraTabControls->camSensorTemperature->Disable();
 			m_CameraTabControls->camSensorTemperature->SetToolTip("Set desired temperature in [degC] and press Enter");
 
-			gridSizer->Add(m_CameraTabControls->camSensorTemperature.get(), 0, wxALIGN_CENTER);
+			gridSizer->Add(m_CameraTabControls->camSensorTemperature.get(), 0, wxEXPAND | wxALIGN_CENTER_VERTICAL);
 		}
 
 		// Exposure
 		{
-			gridSizer->Add
-			(
-				new wxStaticText
-				(
-					page, 
-					wxID_ANY, 
-					wxT("Exposure [ms]:")
-				), 
-				0, 
-				wxALIGN_CENTER
-			);
+			addFormLabel(wxT("Exposure [ms]"), "Exposure time of a single frame");
 
 			wxIntegerValidator<int>	exposure_val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
 			exposure_val.SetMin(1);
@@ -2157,37 +2148,23 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 
 			m_CameraTabControls->camExposure = std::make_unique<wxTextCtrl>
 				(
-					page, 
-					MainFrameVariables::ID::RIGHT_CAM_EXPOSURE_TXT_CTL, 
-#ifdef _DEBUG
-					wxT("100"), 
-#else
-					wxT("100"), 
-#endif // _DEBUG
-					wxDefaultPosition, 
-					txtCtrlSize, 
-					wxTE_CENTRE | wxTE_PROCESS_ENTER, 
+					page,
+					MainFrameVariables::ID::RIGHT_CAM_EXPOSURE_TXT_CTL,
+					wxT("100"),
+					wxDefaultPosition,
+					txtCtrlSize,
+					wxTE_CENTRE | wxTE_PROCESS_ENTER,
 					exposure_val
 				);
 			m_CameraTabControls->camExposure->Disable();
 			m_CameraTabControls->camExposure->SetToolTip("Set desired exposure in [ms] and press Enter");
 
-			gridSizer->Add(m_CameraTabControls->camExposure.get(), 0, wxALIGN_CENTER);
+			gridSizer->Add(m_CameraTabControls->camExposure.get(), 0, wxEXPAND | wxALIGN_CENTER_VERTICAL);
 		}
 
 		// Binning
 		{
-			gridSizer->Add
-			(
-				new wxStaticText
-				(
-					page, 
-					wxID_ANY, 
-					wxT("Binning [-]:")
-				), 
-				0, 
-				wxALIGN_CENTER
-			);
+			addFormLabel(wxT("Binning"), "Combine N x N pixels into one");
 
 			wxArrayString choices;
 			choices.Add("1");
@@ -2197,7 +2174,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 
 			m_CameraTabControls->camBinning = std::make_unique<wxChoice>
 				(
-					page, 
+					page,
 					MainFrameVariables::ID::RIGHT_CAM_BINNING_CHOICE
 				);
 			m_CameraTabControls->camBinning->SetExtraStyle(wxCB_READONLY);
@@ -2205,22 +2182,12 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			m_CameraTabControls->camBinning->SetSelection(0);
 			m_CameraTabControls->camBinning->Disable();
 
-			gridSizer->Add(m_CameraTabControls->camBinning.get(), 0, wxALIGN_CENTER);
+			gridSizer->Add(m_CameraTabControls->camBinning.get(), 0, wxEXPAND | wxALIGN_CENTER_VERTICAL);
 		}
 
 		// Colormap
 		{
-			gridSizer->Add
-			(
-				new wxStaticText
-				(
-					page, 
-					wxID_ANY, 
-					wxT("Colormap:")
-				), 
-				0, 
-				wxALIGN_CENTER
-			);
+			addFormLabel(wxT("Colormap"), "Colour palette used to display the image");
 
 			m_ImageColormapComboBox = std::make_unique<MainFrameVariables::ImageColormapComboBox>();
 			m_ImageColormapComboBox->stylish_combo_box = std::make_unique<cStylishComboBox>();
@@ -2230,7 +2197,7 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 				MainFrameVariables::ID::RIGHT_CAM_COLORMAP_COMBOBOX,
 				wxEmptyString,
 				wxDefaultPosition,
-				wxSize(100, 30),
+				FromDIP(wxSize(110, 28)),
 				m_ImageColormapComboBox->colormap_names,
 				wxCB_READONLY
 			);
@@ -2238,21 +2205,23 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 			m_ImageColormapComboBox->stylish_combo_box->SetSelection(0);
 			m_ImageColormapComboBox->stylish_combo_box->Disable();
 
-			gridSizer->Add(m_ImageColormapComboBox->stylish_combo_box.get(), 0, wxALIGN_CENTER);
+			gridSizer->Add(m_ImageColormapComboBox->stylish_combo_box.get(), 0, wxEXPAND | wxALIGN_CENTER_VERTICAL);
 		}
 	}
-	sizerPage->Add(gridSizer, 0, wxEXPAND | wxALL, 5);
+	sizerPage->Add(gridSizer, 0, wxEXPAND | wxALL, FromDIP(10));
 
 	// Exposure Gauge
 	{
 		m_ExposureGauge = std::make_unique<wxGauge>
 			(
 				page,
-				wxID_ANY, 
-				100
+				wxID_ANY,
+				100,
+				wxDefaultPosition,
+				FromDIP(wxSize(-1, 8))
 			);
 
-		sizerPage->Add(m_ExposureGauge.get(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+		sizerPage->Add(m_ExposureGauge.get(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
 
 #ifndef _DEBUG
 		m_ExposureGauge->Hide();
@@ -2268,104 +2237,75 @@ auto cMain::CreateCameraPage(wxWindow* parent) -> wxWindow*
 				wxT("Exposure Progress: 0%")
 			);
 
-		sizerPage->Add(m_ExposureProgressStaticText.get(), 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
+		sizerPage->Add(m_ExposureProgressStaticText.get(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
 
 #ifndef _DEBUG
 		m_ExposureProgressStaticText->Hide();
 #endif
 	}
 
-	sizerPage->AddStretchSpacer();
+	// Buttons sit directly under the form (no stretch spacer) so they are easy to reach
 
-	/* Preview And Start\Stop Live Capturing */
+	/* Acquisition: Single shot / Live view buttons with text labels */
 	{
-		auto hor_sizer = new wxBoxSizer(wxHORIZONTAL);
-		
-		auto size = wxSize(32, 32);
+		auto separator = new wxStaticLine(page);
+		sizerPage->Add(separator, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(10));
 
-		wxBitmap bmp{};
-		{
-			auto bitmap = wxART_PLUS_ONE;
-			auto client = wxART_CLIENT_MATERIAL_ROUND;
-			auto color = m_DefaultWidgetsColor;
-
-			bmp = wxMaterialDesignArtProvider::GetBitmap
-			(
-				bitmap,
-				client,
-				size,
-				color
-			);
-		}
-
-		m_CameraTabControls->singleShotBtn = std::make_unique<wxBitmapButton>
-			(
-			page,
-			MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN,
-			bmp
-			);
-
-		m_CameraTabControls->singleShotBtn->Disable();
-
-		m_CameraTabControls->singleShotBtn->SetMinSize(size);
-
-		m_CameraTabControls->singleShotBtn->SetToolTip("Single Shot (S)\nCapture single image and save it on disk");
-
-		auto vert_sizer = new wxBoxSizer(wxVERTICAL);
-
-		vert_sizer->AddStretchSpacer();
-		vert_sizer->Add(m_CameraTabControls->singleShotBtn.get());
-		vert_sizer->AddStretchSpacer();
-
-		hor_sizer->Add(vert_sizer, 0, wxEXPAND | wxTOP, 10);
-
-		hor_sizer->AddStretchSpacer(1);
+		auto buttonsSizer = new wxBoxSizer(wxHORIZONTAL);
+		const wxSize btnMinSize = FromDIP(wxSize(-1, 36));
 
 		{
-			auto hor_stat_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, wxT("Live Capturing"));
+			auto bmp = wxMaterialDesignArtProvider::GetBitmap
+			(
+				wxART_PLUS_ONE,
+				wxART_CLIENT_MATERIAL_ROUND,
+				wxSize(20, 20),
+				m_DefaultWidgetsColor
+			);
 
-			hor_stat_sizer->AddSpacer(5);
+			m_CameraTabControls->singleShotBtn = std::make_unique<wxButton>
+				(
+					page,
+					MainFrameVariables::ID::RIGHT_CAM_SINGLE_SHOT_BTN,
+					wxT("Single shot")
+				);
+			m_CameraTabControls->singleShotBtn->SetBitmap(bmp);
+			m_CameraTabControls->singleShotBtn->SetBitmapMargins(FromDIP(6), 0);
+			m_CameraTabControls->singleShotBtn->SetMinSize(btnMinSize);
+			m_CameraTabControls->singleShotBtn->Disable();
+			m_CameraTabControls->singleShotBtn->SetToolTip("Single Shot (S)\nCapture single image and save it on disk");
 
-			{
-				m_CameraTabControls->saveCapturedImagesCheckBox = std::make_unique<wxCheckBox>
-					(
-						page,
-						MainFrameVariables::ID::RIGHT_CAM_SAVE_LIVE_IMAGES_CHECKBOX,
-						wxT("Save Captured Images")
-					);
-				m_CameraTabControls->saveCapturedImagesCheckBox->Disable();
-				m_CameraTabControls->saveCapturedImagesCheckBox->SetToolTip("When checked, the captured images during live capturing are saved on disk");
-
-				hor_stat_sizer->Add(m_CameraTabControls->saveCapturedImagesCheckBox.get(), 0, wxALIGN_CENTER_VERTICAL);
-			}
-
-			hor_stat_sizer->AddSpacer(5);
-
-			{
-				auto bmp = m_CameraTabControls->GetLiveCapturingBitmap(false);
-
-				m_CameraTabControls->startStopLiveCapturingTglBtn = std::make_unique<wxBitmapToggleButton>
-					(
-						page,
-						MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN,
-						bmp
-					);
-				m_CameraTabControls->startStopLiveCapturingTglBtn->Disable();
-
-				// Force a tighter size (still may have minimum imposed by OS)
-				const auto bsz = bmp.GetSize();
-				m_CameraTabControls->startStopLiveCapturingTglBtn->SetMinSize(wxSize(bsz.x + 6, bsz.y + 6));
-
-				m_CameraTabControls->startStopLiveCapturingTglBtn->SetToolTip("Start/Stop live sequence of capturing images (L)");
-
-				hor_stat_sizer->Add(m_CameraTabControls->startStopLiveCapturingTglBtn.get());
-			}
-
-			hor_sizer->Add(hor_stat_sizer, 0, wxALIGN_CENTER_VERTICAL);
+			buttonsSizer->Add(m_CameraTabControls->singleShotBtn.get(), 1, wxEXPAND | wxRIGHT, FromDIP(8));
 		}
 
+		{
+			m_CameraTabControls->startStopLiveCapturingTglBtn = std::make_unique<wxToggleButton>
+				(
+					page,
+					MainFrameVariables::ID::RIGHT_CAM_START_STOP_LIVE_CAPTURING_TGL_BTN,
+					wxT("Live view")
+				);
+			m_CameraTabControls->startStopLiveCapturingTglBtn->SetBitmap(m_CameraTabControls->GetLiveCapturingBitmap(false));
+			m_CameraTabControls->startStopLiveCapturingTglBtn->SetBitmapMargins(FromDIP(6), 0);
+			m_CameraTabControls->startStopLiveCapturingTglBtn->SetMinSize(btnMinSize);
+			m_CameraTabControls->startStopLiveCapturingTglBtn->Disable();
+			m_CameraTabControls->startStopLiveCapturingTglBtn->SetToolTip("Start/Stop live sequence of capturing images (L)");
 
-		sizerPage->Add(hor_sizer, 0, wxEXPAND | wxALL, 5);
+			buttonsSizer->Add(m_CameraTabControls->startStopLiveCapturingTglBtn.get(), 1, wxEXPAND);
+		}
+
+		sizerPage->Add(buttonsSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(10));
+
+		m_CameraTabControls->saveCapturedImagesCheckBox = std::make_unique<wxCheckBox>
+			(
+				page,
+				MainFrameVariables::ID::RIGHT_CAM_SAVE_LIVE_IMAGES_CHECKBOX,
+				wxT("Save images captured during live view")
+			);
+		m_CameraTabControls->saveCapturedImagesCheckBox->Disable();
+		m_CameraTabControls->saveCapturedImagesCheckBox->SetToolTip("When checked, the captured images during live capturing are saved on disk");
+
+		sizerPage->Add(m_CameraTabControls->saveCapturedImagesCheckBox.get(), 0, wxALL, FromDIP(10));
 	}
 
 	{
@@ -3839,35 +3779,38 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 
 	//wxSizer* const mmt_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, right_side_panel, "&Measurement");
 
+	auto sectionCaption = [page](const wxString& text)
+		{
+			auto caption = new wxStaticText(page, wxID_ANY, text);
+			caption->SetFont(caption->GetFont().Bold());
+			return caption;
+		};
+
+	const int pad = FromDIP(10);
+
 	/* Output directory */
-	wxSizer* const out_dir_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Output directory");
+	sizerPage->Add(sectionCaption("Output directory"), 0, wxLEFT | wxRIGHT | wxTOP, pad);
 	{
+		auto outDirSizer = new wxBoxSizer(wxHORIZONTAL);
+
 		m_OutDirTextCtrl = std::make_unique<wxTextCtrl>(
-			page, 
-			MainFrameVariables::ID::RIGHT_MT_OUT_FLD_TEXT_CTRL, 
-			wxT("Save directory..."), 
-			wxDefaultPosition, 
-			wxDefaultSize, 
+			page,
+			MainFrameVariables::ID::RIGHT_MT_OUT_FLD_TEXT_CTRL,
+			wxT("Save directory..."),
+			wxDefaultPosition,
+			wxDefaultSize,
 			wxTE_LEFT | wxTE_READONLY
 			);
+		m_OutDirTextCtrl->SetToolTip("Folder where captured images are saved");
 
 		{
-			auto size = wxSize(24, 24);
-
-			wxBitmap bmp{};
-			{
-				auto bitmap = wxART_FOLDER_OPEN;
-				auto client = wxART_CLIENT_MATERIAL_ROUND;
-				auto color = m_DefaultWidgetsColor;
-
-				bmp = wxMaterialDesignArtProvider::GetBitmap
-				(
-					bitmap,
-					client,
-					size,
-					color
-				);
-			}
+			auto bmp = wxMaterialDesignArtProvider::GetBitmap
+			(
+				wxART_FOLDER_OPEN,
+				wxART_CLIENT_MATERIAL_ROUND,
+				wxSize(20, 20),
+				m_DefaultWidgetsColor
+			);
 
 			m_OutDirBtn = std::make_unique<wxBitmapButton>
 				(
@@ -3879,125 +3822,80 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 			m_OutDirBtn->SetToolTip(wxT("Set the output directory"));
 		}
 
-		out_dir_static_box_sizer->Add(m_OutDirTextCtrl.get(), 1, wxCENTER);
-		out_dir_static_box_sizer->AddSpacer(5);
-		out_dir_static_box_sizer->Add(m_OutDirBtn.get(), 0, wxALIGN_CENTER);
+		outDirSizer->Add(m_OutDirTextCtrl.get(), 1, wxALIGN_CENTER_VERTICAL);
+		outDirSizer->AddSpacer(FromDIP(6));
+		outDirSizer->Add(m_OutDirBtn.get(), 0, wxALIGN_CENTER_VERTICAL);
+
+		sizerPage->Add(outDirSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, pad);
 	}
-	sizerPage->Add(out_dir_static_box_sizer, 0, wxEXPAND);
 
-	wxSize start_text_ctrl_size = { 54, 20 }, step_text_ctrl_size = {start_text_ctrl_size}, finish_text_ctrl_size{start_text_ctrl_size};
+	/* Scan definition: Stage | Start | Step | Finish as a compact table */
+	sizerPage->Add(sectionCaption("Scan (first axis) [mm]"), 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(16));
 
+	const wxSize numCtrlSize = FromDIP(wxSize(64, -1));
 	auto defaultText = CameraPreviewVariables::CreateStringWithPrecision(123.456789, m_DecimalDigits);
-	wxSizer* const directions_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, page, "&Handling");
 	{
-		/* First axis */
+		auto grid = new wxFlexGridSizer(4, FromDIP(wxSize(8, 4)));
+		grid->AddGrowableCol(0, 2);
+		grid->AddGrowableCol(1, 1);
+		grid->AddGrowableCol(2, 1);
+		grid->AddGrowableCol(3, 1);
+
+		for (const auto& header : { "Stage", "Start", "Step", "Finish" })
 		{
-			wxSizer* const first_axis_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&First axis");
-
-			/* Stage */
-			{
-				wxSizer* const stage_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Stage");
-				m_FirstStage->stage = new wxChoice
-				(
-					page, 
-					MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_CHOICE, 
-					wxDefaultPosition, 
-					wxDefaultSize, 
-					m_FirstStage->motors
-				);
-
-				m_FirstStage->stage->SetSelection(0);
-				stage_static_box_sizer->Add(m_FirstStage->stage, 0, wxEXPAND);
-				first_axis_static_box_sizer->Add(stage_static_box_sizer, 0, wxEXPAND);
-			}
-
-			/* Start */
-			{
-				wxSizer* const start_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Start");
-
-				wxFloatingPointValidator<float>	start_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
-				start_val.SetMin(-1000.0);
-				start_val.SetMax(1000.0);
-
-				m_FirstStage->start = new wxTextCtrl(
-					page,
-					MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_START,
-					defaultText, 
-					wxDefaultPosition, 
-					start_text_ctrl_size, 
-					wxTE_CENTRE, 
-					start_val);
-
-				start_static_box_sizer->Add(m_FirstStage->start, 0, wxEXPAND);
-
-				first_axis_static_box_sizer->Add(start_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
-			}
-
-			/* Step */
-			{
-				wxSizer* const step_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Step");
-
-				wxFloatingPointValidator<float>	step_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
-				step_val.SetMin(-1000.0);
-				step_val.SetMax(1000.0);
-
-				m_FirstStage->step = new wxTextCtrl(
-					page, 
-					MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_STEP,
-					defaultText, 
-					wxDefaultPosition, 
-					step_text_ctrl_size, 
-					wxTE_CENTRE, 
-					step_val);
-				
-				step_static_box_sizer->Add(m_FirstStage->step, 0, wxEXPAND);
-				first_axis_static_box_sizer->Add(step_static_box_sizer, 0, wxEXPAND | wxRIGHT, 2);
-			}
-
-			/* Finish */
-			{
-				wxSizer* const finish_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Finish");
-
-				wxFloatingPointValidator<float>	finish_val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
-				finish_val.SetMin(-1000.0);
-				finish_val.SetMax(1000.0);
-
-				m_FirstStage->finish = new wxTextCtrl(
-					page, 
-					MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_FINISH,
-					defaultText, 
-					wxDefaultPosition, 
-					finish_text_ctrl_size, 
-					wxTE_CENTRE, 
-					finish_val);
-
-				finish_static_box_sizer->Add(m_FirstStage->finish, 0, wxEXPAND);
-				first_axis_static_box_sizer->Add(finish_static_box_sizer, 0, wxEXPAND);
-			}
-
-			directions_static_box_sizer->Add(first_axis_static_box_sizer, 0, wxEXPAND);
+			auto st = new wxStaticText(page, wxID_ANY, header);
+			st->SetFont(st->GetFont().Smaller());
+			grid->Add(st, 0, wxALIGN_BOTTOM);
 		}
+
+		m_FirstStage->stage = new wxChoice
+		(
+			page,
+			MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_CHOICE,
+			wxDefaultPosition,
+			wxDefaultSize,
+			m_FirstStage->motors
+		);
+		m_FirstStage->stage->SetSelection(0);
+		m_FirstStage->stage->SetToolTip("Stage moved between the captured images");
+		grid->Add(m_FirstStage->stage, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+
+		auto makeNumber = [&](int id, const wxString& tooltip) -> wxTextCtrl*
+			{
+				wxFloatingPointValidator<float>	val(m_DecimalDigits, NULL, wxNUM_VAL_DEFAULT);
+				val.SetMin(-1000.0);
+				val.SetMax(1000.0);
+
+				auto ctrl = new wxTextCtrl(page, id, defaultText, wxDefaultPosition, numCtrlSize, wxTE_CENTRE, val);
+				ctrl->SetToolTip(tooltip);
+				grid->Add(ctrl, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+				return ctrl;
+			};
+
+		m_FirstStage->start = makeNumber(MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_START, "First stage position [mm]");
+		m_FirstStage->step = makeNumber(MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_STEP, "Distance between two captures [mm]");
+		m_FirstStage->finish = makeNumber(MainFrameVariables::ID::RIGHT_MT_FIRST_STAGE_FINISH, "Last stage position [mm]");
+
+		sizerPage->Add(grid, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, pad);
 	}
-	sizerPage->Add(directions_static_box_sizer, 0, wxEXPAND);
-	
+
 	// ProgressBar
 	{
 		m_ProgressBar = std::make_unique<wxGauge>
 			(
 				page,
-				wxID_ANY, 
-				100
+				wxID_ANY,
+				100,
+				wxDefaultPosition,
+				FromDIP(wxSize(-1, 8))
 			);
 
-		// Optionally hide the panel in debug mode
 		m_ProgressBar->Hide();
-#ifndef _DEBUG
-#endif
 
-		sizerPage->Add(m_ProgressBar.get(), 0, wxEXPAND | wxALL, 5);
+		sizerPage->Add(m_ProgressBar.get(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, pad);
 	}
 
-	// Exposure progress static text
+	// Measurement progress static text
 	{
 		m_MeasurementProgressStaticText = std::make_unique<wxStaticText>
 			(
@@ -4007,73 +3905,57 @@ auto cMain::CreateMeasurementPage(wxWindow* parent) -> wxWindow*
 			);
 
 		m_MeasurementProgressStaticText->Hide();
-#ifndef _DEBUG
-#endif
 
-		sizerPage->Add(m_MeasurementProgressStaticText.get(), 0, wxEXPAND | wxALL, 5);
+		sizerPage->Add(m_MeasurementProgressStaticText.get(), 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, pad);
 	}
 
 	sizerPage->AddStretchSpacer();
 
-	auto horizontal_sizer = new wxBoxSizer(wxHORIZONTAL);
+	/* Action buttons: Report | Start/Stop measurement */
 	{
-		/* Report Generation */
-		auto report_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Report");
+		sizerPage->Add(new wxStaticLine(page), 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, pad);
+
+		auto horizontal_sizer = new wxBoxSizer(wxHORIZONTAL);
+		const wxSize btnMinSize = FromDIP(wxSize(-1, 36));
 
 		{
-			auto size = wxSize(32, 32);
+			auto bmp = wxMaterialDesignArtProvider::GetBitmap
+			(
+				wxART_SETTINGS_OVERSCAN,
+				wxART_CLIENT_MATERIAL_ROUND,
+				wxSize(20, 20),
+				m_DefaultWidgetsColor
+			);
 
-			wxBitmap bmp{};
-			{
-				auto bitmap = wxART_SETTINGS_OVERSCAN;
-				auto client = wxART_CLIENT_MATERIAL_ROUND;
-				auto color = m_DefaultWidgetsColor;
-
-				bmp = wxMaterialDesignArtProvider::GetBitmap
-				(
-					bitmap,
-					client,
-					size,
-					color
-				);
-			}
-
-			m_GenerateReportBtn = std::make_unique<wxBitmapButton>
+			m_GenerateReportBtn = std::make_unique<wxButton>
 				(
 					page,
 					MainFrameVariables::ID::RIGHT_MY_GENERATE_REPORT_BTN,
-					bmp
+					wxT("Report...")
 				);
+			m_GenerateReportBtn->SetBitmap(bmp);
+			m_GenerateReportBtn->SetBitmapMargins(FromDIP(6), 0);
+			m_GenerateReportBtn->SetMinSize(btnMinSize);
 			m_GenerateReportBtn->SetToolTip("Generate a verbose report");
 		}
-		
-		report_sizer->Add(m_GenerateReportBtn.get());
-
-		horizontal_sizer->Add(report_sizer);
-
-		/* Start/Stop Capturing */
-		wxSizer* const capturing_sizer = new wxStaticBoxSizer(wxVERTICAL, page, "&Measurement");
+		horizontal_sizer->Add(m_GenerateReportBtn.get(), 1, wxEXPAND | wxRIGHT, FromDIP(8));
 
 		{
-			wxBitmap bmp { GetMeasurementBitmap() };
-
-			m_StartStopMeasurementTglBtn = std::make_unique<wxBitmapToggleButton>
+			m_StartStopMeasurementTglBtn = std::make_unique<wxToggleButton>
 				(
 					page,
 					MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT,
-					bmp
+					wxT("Start measurement")
 				);
-			m_StartStopMeasurementTglBtn->SetMinSize(wxSize(bmp.GetSize().x + 6, bmp.GetSize().y + 6));
+			m_StartStopMeasurementTglBtn->SetBitmap(GetMeasurementBitmap());
+			m_StartStopMeasurementTglBtn->SetBitmapMargins(FromDIP(6), 0);
+			m_StartStopMeasurementTglBtn->SetMinSize(btnMinSize);
+			m_StartStopMeasurementTglBtn->SetToolTip("Start/Stop Measurement (M)\nRepeatedly move the stage, capture, and save images to disk.");
 		}
+		horizontal_sizer->Add(m_StartStopMeasurementTglBtn.get(), 2, wxEXPAND);
 
-		m_StartStopMeasurementTglBtn->SetToolTip("Start/Stop Measurement (M)\nRepeatedly move the stage, capture, and save images to disk.");
-
-		horizontal_sizer->AddStretchSpacer();
-		horizontal_sizer->Add(capturing_sizer);
-
-		capturing_sizer->Add(m_StartStopMeasurementTglBtn.get(), 0, wxCENTER);
+		sizerPage->Add(horizontal_sizer, 0, wxEXPAND | wxALL, pad);
 	}
-	sizerPage->Add(horizontal_sizer, 0, wxEXPAND);
 
 	page->SetSizer(sizerPage);
 	return page;
@@ -4852,14 +4734,9 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 
 	wxBusyCursor busy_cursor{};
 
-	auto out_dir = m_OutDirTextCtrl->GetValue();
-
-	while (!wxDir::Exists(out_dir))
-	{
-		wxCommandEvent artSetOutDir(wxEVT_BUTTON, MainFrameVariables::ID::RIGHT_MT_OUT_FLD_BTN);
-		ProcessEvent(artSetOutDir);
-		out_dir = m_OutDirTextCtrl->GetValue();
-	}
+	auto out_dir = EnsureOutputDirectory();
+	if (out_dir.IsEmpty())
+		return;
 
 	UpdateSpectroscopySettingsFromControls();
 
@@ -4944,6 +4821,9 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 	// The exposure gauge always represents one camera exposure, not the whole spectroscopy cycle.
 	StartSingleShotExposureUI(singleExposureMs);
 
+	// Counted so that OnExit can wait for this detached thread before the frame is destroyed
+	m_SingleShotInFlight.fetch_add(1);
+
 	std::thread
 	(
 		[
@@ -4962,6 +4842,12 @@ void cMain::OnSingleShotCameraImage(wxCommandEvent& evt)
 			spectroscopyEnabled = m_SpectroscopyEnabled
 		]()
 	{
+		struct InFlightGuard
+		{
+			std::atomic<int>& counter;
+			~InFlightGuard() { counter.fetch_sub(1); }
+		} inFlightGuard{ m_SingleShotInFlight };
+
 		try
 		{
 			if (!m_CameraControl || !m_CameraControl->IsConnected())
@@ -5852,6 +5738,38 @@ void cMain::OnSetOutDirectoryBtn(wxCommandEvent& evt)
 	m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, true);
 }
 
+auto cMain::EnsureOutputDirectory() -> wxString
+{
+	auto out_dir = m_OutDirTextCtrl->GetValue();
+	if (!out_dir.IsEmpty() && wxDir::Exists(out_dir))
+		return out_dir;
+
+	// Ask once. Previously this was a `while` loop which never terminated when
+	// the user pressed Cancel (or when no camera was connected).
+	wxCommandEvent artSetOutDir(wxEVT_BUTTON, MainFrameVariables::ID::RIGHT_MT_OUT_FLD_BTN);
+	ProcessEvent(artSetOutDir);
+	out_dir = m_OutDirTextCtrl->GetValue();
+
+#ifdef _DEBUG
+	if (!out_dir.IsEmpty() && !wxDir::Exists(out_dir))
+		wxFileName::Mkdir(out_dir, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+#endif // _DEBUG
+
+	if (out_dir.IsEmpty() || !wxDir::Exists(out_dir))
+	{
+		wxMessageBox
+		(
+			"No valid output directory is selected.\nPlease choose a folder where the images should be saved.",
+			"Output directory",
+			wxICON_WARNING | wxOK,
+			this
+		);
+		return {};
+	}
+
+	return out_dir;
+}
+
 auto cMain::ReadInitializationFile() -> void
 {
 	std::ifstream file(m_InitializationFilePath.ToStdString());
@@ -6290,7 +6208,7 @@ auto cMain::UpdateCameraParameters() -> void
 	auto supplyVoltage = m_CameraControl->GetSupplyVoltage();
 	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->voltage, supplyVoltage);
 
-	auto powerUtilization = m_CameraControl->GetPowerUtilization();
+	auto powerUtilization = std::max(0, m_CameraControl->GetPowerUtilization()); // -1 = not supported
 	m_CurrentCameraSettingsPropertyGrid->SetPropertyValue(m_PropertiesNames->power_utilization, powerUtilization);
 
 	auto shortestExposureMS = m_CameraControl->GetShortestExposureMS();
@@ -6545,6 +6463,36 @@ void cMain::OnExit(wxCloseEvent& evt)
 		}
 	}
 #endif // !_DEBUG
+
+	// Background operations hold raw pointers to this frame and to cSettings. Let them
+	// finish (stage moves are stopped) before the window is destroyed; otherwise closing
+	// during a move or a long single shot was a use-after-free.
+	{
+		auto busy = [this]()
+			{
+				return m_MotorMoveInProgress.load() || m_StopInProgress.load() || m_SingleShotInFlight.load() > 0;
+			};
+
+		if (busy())
+		{
+			wxBusyCursor waitCursor;
+			SetStatusText("Waiting for running operations to finish before closing...");
+
+			if (m_MotorMoveInProgress.load() && !m_StopInProgress.load())
+			{
+				wxCommandEvent stopEvt(wxEVT_BUTTON, MainFrameVariables::ID::RIGHT_SC_STOP_ALL_BTN);
+				OnStopAllMotors(stopEvt);
+			}
+
+			const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+			while (busy() && std::chrono::steady_clock::now() < deadline)
+			{
+				wxYield(); // lets the "finished" events reset the in-progress flags
+				wxMilliSleep(50);
+			}
+		}
+	}
+
 	if (m_CameraControl && m_CameraControl->IsConnected())
 	{
 		if (m_CameraTabControls->startStopLiveCapturingTglBtn->GetValue())
@@ -8177,8 +8125,8 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		if (m_StartedThreads.size())
 		{
 			LOGI("StartedThreads.size(): ", (int)m_StartedThreads.size());
-			m_StartedThreads.back().second = false;
-			LOG("StartedThreads.back(): " + m_StartedThreads.back().first);
+			m_StartedThreads.back().alive.store(false);
+			LOG("StartedThreads.back(): " + m_StartedThreads.back().id);
 
 			{
 				m_MenuBar->menu_edit->Enable(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, false);
@@ -8187,9 +8135,10 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 				m_CameraTabControls->EnableAllControls(false);
 			}
 
-			while (!m_StartedThreads.back().first.empty())
-				wxThread::This()->Sleep(100);
+			while (!m_StartedThreads.back().finished.load(std::memory_order_acquire))
+				wxMilliSleep(50);
 
+			m_StartedThreads.back().Release();
 			m_StartedThreads.pop_back();
 
 			{
@@ -8220,10 +8169,80 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		EnableControlsAfterCapturing();
 		//m_StartStopMeasurementTglBtn->SetLabel("Start Measurement (M)");
 		m_StartStopMeasurementTglBtn->SetBitmap(GetMeasurementBitmap());
+		m_StartStopMeasurementTglBtn->SetLabel("Start measurement");
 
 		StopContinuousExposureUI();
 		ReLayoutRightPanel();
 
+		return;
+	}
+
+	// Any validation failure below must leave the UI exactly as it was:
+	// toggle released, controls enabled, temperature polling running.
+	auto abortStart = [this](const wxString& message, const wxString& title)
+		{
+			m_StartStopMeasurementTglBtn->SetValue(false);
+			m_MenuBar->menu_edit->Check(MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT, false);
+			if (!message.IsEmpty())
+				wxMessageBox(message, title, wxICON_WARNING | wxOK, this);
+		};
+
+	auto first_axis = std::make_unique<MainFrameVariables::AxisMeasurement>();
+	auto second_axis = std::make_unique<MainFrameVariables::AxisMeasurement>();
+	double start_first_stage_value{}, step_first_stage_value{}, finish_first_stage_value{};
+
+	/* Validate everything BEFORE switching the UI into the "measuring" state */
+	{
+		// Two threads must never drive the same stage controller concurrently
+		if (m_MotorMoveInProgress.load() || m_StopInProgress.load())
+		{
+			abortStart("A stage is still moving. Please wait until the move has finished.", "Measurement");
+			return;
+		}
+
+		if (m_FirstStage->stage->GetCurrentSelection() <= 0)
+		{
+			abortStart("Please select a stage for the first axis before starting the measurement.", "Measurement");
+			return;
+		}
+		first_axis->axis_number = m_FirstStage->stage->GetCurrentSelection() - 1;
+
+		if (!m_FirstStage->start->GetValue().ToDouble(&start_first_stage_value)
+			|| !m_FirstStage->step->GetValue().ToDouble(&step_first_stage_value)
+			|| !m_FirstStage->finish->GetValue().ToDouble(&finish_first_stage_value))
+		{
+			abortStart("START, STEP and FINISH must be valid numbers.", "Measurement");
+			return;
+		}
+
+		// Work in integer micrometres; round (not truncate) so e.g. 4.35 mm -> 4350 um, not 4349 um.
+		const long start_um = std::lround(start_first_stage_value * 1000.0);
+		const long step_um = std::lround(step_first_stage_value * 1000.0);
+		const long finish_um = std::lround(finish_first_stage_value * 1000.0);
+
+		if (step_um == 0)
+		{
+			abortStart("STEP must be non-zero (at least 0.001 mm).", "Measurement");
+			return;
+		}
+
+		if ((finish_um - start_um < 0 && step_um > 0) || (finish_um - start_um > 0 && step_um < 0))
+		{
+			raise_exception_msg("first");
+			abortStart({}, {});
+			return;
+		}
+
+		first_axis->start = start_um / 1000.f;
+		first_axis->step = step_um / 1000.f;
+		first_axis->finish = finish_um / 1000.f;
+		first_axis->step_number = static_cast<int>((finish_um - start_um) / step_um) + 1;
+	}
+
+	auto out_dir = EnsureOutputDirectory();
+	if (out_dir.IsEmpty())
+	{
+		abortStart({}, {});
 		return;
 	}
 
@@ -8238,48 +8257,8 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 		m_TemperatureThread->Pause();
 
 	DisableControlsBeforeCapturing();
-	//m_StartStopMeasurementTglBtn->SetLabel("Stop Measurement (M)");
 	m_StartStopMeasurementTglBtn->SetBitmap(GetMeasurementBitmap(true));
-
-	auto first_axis = std::make_unique<MainFrameVariables::AxisMeasurement>();
-	auto second_axis = std::make_unique<MainFrameVariables::AxisMeasurement>();
-	double start_first_stage_value{}, step_first_stage_value{}, finish_first_stage_value{};
-	double start_second_stage_value{}, step_second_stage_value{}, finish_second_stage_value{};
-	int first_stage_step_count{}, second_stage_step_count{};
-
-	/* Checking if user selected None as a stage */
-	{
-		/* Checking first stage */
-		{
-			if (m_FirstStage->stage->GetCurrentSelection() == 0) return;
-			else first_axis->axis_number = m_FirstStage->stage->GetCurrentSelection() - 1;
-		}
-
-		/* Checking Start, Step and Finish values */
-		{
-			if (!m_FirstStage->start->GetValue().ToDouble(&start_first_stage_value)) return;
-			first_axis->start = (int)(start_first_stage_value * 1000.0) / 1000.f;
-			if (!m_FirstStage->step->GetValue().ToDouble(&step_first_stage_value)) return;
-			first_axis->step = (int)(step_first_stage_value * 1000.0) / 1000.f;
-			if (!m_FirstStage->finish->GetValue().ToDouble(&finish_first_stage_value)) return;
-			first_axis->finish = (int)(finish_first_stage_value * 1000.0) / 1000.f;
-			if (
-				(finish_first_stage_value - start_first_stage_value < 0.0 && step_first_stage_value > 0.0)
-				|| (finish_first_stage_value - start_first_stage_value > 0.0 && step_first_stage_value < 0.0)
-				) 
-				raise_exception_msg("first");
-			first_axis->step_number = ((int)(finish_first_stage_value * 1000.0) - 
-				(int)(start_first_stage_value * 1000.0)) / 
-				(int)(step_first_stage_value * 1000.0) + 1;
-		}
-		
-		/* Checking second stage */
-		//if (m_SecondStage->stage->GetCurrentSelection() - 1 == first_axis->axis_number) return;
-		/* 
-		if (m_SecondStage->stage->GetCurrentSelection() == 0) return;
-		else selected_second_stage = m_SecondStage->stage->GetCurrentSelection() - 1;		
-		*/
-	}
+	m_StartStopMeasurementTglBtn->SetLabel("Stop measurement");
 
 	{
 		CreateMetadataFile();
@@ -8305,7 +8284,7 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 	}
 
 	auto currThreadTimeStamp = timePointToWxString();
-	m_StartedThreads.push_back(std::make_pair(currThreadTimeStamp, true));
+	m_StartedThreads.emplace_back(currThreadTimeStamp);
 
 	int binning{ 1 };
 	m_CameraTabControls->camBinning->GetString(m_CameraTabControls->camBinning->GetCurrentSelection()).ToInt(&binning);
@@ -8316,14 +8295,6 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 
 	/* Worker and Progress Threads */
 	{
-		auto out_dir = m_OutDirTextCtrl->GetValue();
-		while (!wxDir::Exists(out_dir))
-		{
-			wxCommandEvent artSetOutDir(wxEVT_BUTTON, MainFrameVariables::ID::RIGHT_MT_OUT_FLD_BTN);
-			ProcessEvent(artSetOutDir);
-			out_dir = m_OutDirTextCtrl->GetValue();
-		}
-
 		wxString exposure_time_str = m_CameraTabControls->camExposure->GetValue().IsEmpty() 
 			? wxString("0") 
 			: m_CameraTabControls->camExposure->GetValue();
@@ -8343,8 +8314,8 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			binning,
 			binningMode,
 			m_MedianBlurCheckBox->IsChecked() ? m_Config->median_blur_ksize : 0,
-			&m_StartedThreads.back().first,
-			&m_StartedThreads.back().second,
+			&m_StartedThreads.back().finished,
+			&m_StartedThreads.back().alive,
 			isDrawExecutionFinished,
 			out_dir,
 			first_axis.release(), 
@@ -8353,17 +8324,24 @@ void cMain::OnStartStopCapturingTglButton(wxCommandEvent& evt)
 			m_DecimalDigits
 		);
 
-		if (worker_thread->CreateThread() != wxTHREAD_NO_ERROR)
-		{
-			delete worker_thread;
-			worker_thread = nullptr;
-			return;
-		}
+		// If the worker cannot be started, roll the UI back to the idle state
+		// (otherwise the toggle stays pressed and the controls stay disabled).
+		auto rollBack = [this]()
+			{
+				m_StartedThreads.pop_back();
+				m_StartStopMeasurementTglBtn->SetValue(false);
+				wxCommandEvent stopEvt(wxEVT_TOGGLEBUTTON, MainFrameVariables::ID::RIGHT_MT_START_STOP_MEASUREMENT);
+				ProcessEvent(stopEvt);
+				wxMessageBox("The measurement thread could not be started.", "Measurement", wxICON_ERROR | wxOK, this);
+			};
 
-		if (worker_thread->GetThread()->Run() != wxTHREAD_NO_ERROR)
+		m_StartedThreads.back().helper.reset(worker_thread); // owned; freed after the thread finished
+
+		if (worker_thread->CreateThread() != wxTHREAD_NO_ERROR
+			|| worker_thread->GetThread()->Run() != wxTHREAD_NO_ERROR)
 		{
-			delete worker_thread;
-			worker_thread = nullptr;
+			m_StartedThreads.back().helper.reset();
+			rollBack();
 			return;
 		}
 	}
@@ -8413,7 +8391,7 @@ void cMain::StartLiveCapturing()
 	StartContinuousExposureUI(static_cast<int>(std::max(1, (int)(exposure_time / 1000))));
 
 	auto currThreadTimeStamp = timePointToWxString();
-	m_StartedThreads.push_back(std::make_pair(currThreadTimeStamp, true));
+	m_StartedThreads.emplace_back(currThreadTimeStamp);
 
 	auto isDrawExecutionFinished = m_CamPreview->GetExecutionFinishedPtr();
 
@@ -8450,23 +8428,25 @@ void cMain::StartLiveCapturing()
 		binning,
 		binningMode,
 		m_MedianBlurCheckBox->IsChecked() ? m_Config->median_blur_ksize : 0,
-		&m_StartedThreads.back().first,
-		&m_StartedThreads.back().second,
+		&m_StartedThreads.back().finished,
+		&m_StartedThreads.back().alive,
 		isDrawExecutionFinished,
 		spectroscopyMode,
 		spectroscopyFrameCount
 	);
 
-	if (live_capturing->CreateThread() != wxTHREAD_NO_ERROR)
+	m_StartedThreads.back().helper.reset(live_capturing); // owned; freed after the thread finished
+
+	if (live_capturing->CreateThread() != wxTHREAD_NO_ERROR
+		|| live_capturing->GetThread()->Run() != wxTHREAD_NO_ERROR)
 	{
-		delete live_capturing;
-		live_capturing = nullptr;
-		return;
-	}
-	if (live_capturing->GetThread()->Run() != wxTHREAD_NO_ERROR)
-	{
-		delete live_capturing;
-		live_capturing = nullptr;
+		// Don't leave a stale entry behind; let the UI return to idle via the normal error path
+		m_StartedThreads.back().helper.reset();
+		m_StartedThreads.pop_back();
+		StopContinuousExposureUI();
+		wxThreadEvent failEvt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_LIVE_CAPTURING);
+		failEvt.SetInt(-1);
+		wxQueueEvent(this, failEvt.Clone());
 		return;
 	}
 }
@@ -9953,7 +9933,7 @@ auto cMain::OnROITxtCtrls(wxCommandEvent& evt) -> void
 	{
 		m_CameraROIToolsControls->width_px->GetValue().ToInt(&width);
 
-		width = !width ? 1 : width;
+		width = std::max(1, width); // also rejects negative input
 
 		width = width > sensorWidth ? sensorWidth : width;
 	}
@@ -9962,7 +9942,7 @@ auto cMain::OnROITxtCtrls(wxCommandEvent& evt) -> void
 	{
 		m_CameraROIToolsControls->height_px->GetValue().ToInt(&height);
 
-		height = !height ? 1 : height;
+		height = std::max(1, height);
 
 		height = height > sensorHeight ? sensorHeight : height;
 	}
@@ -9985,11 +9965,11 @@ auto cMain::OnROITxtCtrls(wxCommandEvent& evt) -> void
 	else
 	{
 		m_CameraROIToolsControls->startX_px->GetValue().ToInt(&centricalStartX);
-		centricalStartX = !centricalStartX ? 1 : centricalStartX;
+		centricalStartX = std::max(1, centricalStartX);
 		centricalStartX = centricalStartX > sensorWidth - 1 ? sensorWidth : centricalStartX;
 
 		m_CameraROIToolsControls->startY_px->GetValue().ToInt(&centricalStartY);
-		centricalStartY = !centricalStartY ? 1 : centricalStartY;
+		centricalStartY = std::max(1, centricalStartY);
 		centricalStartY = centricalStartY > sensorHeight - 1 ? sensorHeight : centricalStartY;
 
 		width = centricalStartX - 1 + width > sensorWidth ? sensorWidth - centricalStartX + 1 : width;
@@ -10216,7 +10196,20 @@ auto cMain::OnGenerateReportBtn(wxCommandEvent& evt) -> void
 	inputParameters.xRayImagesDefaultCaption = m_Settings->GetXRayImagesDefaultCaption();
 	auto uploadReportFolder = m_Settings->GetUploadReportFolder();
 
-	auto cropWindowSize = static_cast<int>(std::ceil(inputParameters.widthROIMM / (inputParameters.pixelSizeUM / 1000.0)));
+	if (inputParameters.pixelSizeUM <= 0.0)
+	{
+		wxMessageBox
+		(
+			"The pixel size of the selected work station is not set (pixel_size_um must be > 0).\n"
+			"Please fix the work station file before generating a report.",
+			"Report generation",
+			wxICON_ERROR | wxOK,
+			this
+		);
+		return;
+	}
+
+	auto cropWindowSize =static_cast<int>(std::ceil(inputParameters.widthROIMM / (inputParameters.pixelSizeUM / 1000.0)));
 	auto cropCircleWindowSize = static_cast<int>(std::ceil(inputParameters.widthCircleROIMM / (inputParameters.pixelSizeUM / 1000.0)));
 
 	cGenerateReportDialog dialog
@@ -11194,12 +11187,13 @@ void cMain::OnStartStopLiveCapturingTglBtn(wxCommandEvent& evt)
 		if (!m_StartedThreads.empty())
 		{
 			LOGI("StartedThreads.size(): ", static_cast<int>(m_StartedThreads.size()));
-			m_StartedThreads.back().second = false;
-			LOG("StartedThreads.back(): " + m_StartedThreads.back().first);
+			m_StartedThreads.back().alive.store(false);
+			LOG("StartedThreads.back(): " + m_StartedThreads.back().id);
 
-			while (!m_StartedThreads.back().first.empty())
-				wxThread::This()->Sleep(100);
+			while (!m_StartedThreads.back().finished.load(std::memory_order_acquire))
+				wxMilliSleep(50);
 
+			m_StartedThreads.back().Release();
 			m_StartedThreads.pop_back();
 		}
 
@@ -11275,8 +11269,8 @@ LiveCapturing::LiveCapturing
 	const unsigned short& binning,
 	const MainFrameVariables::BinningModes& binningMode,
 	const int& medianBlurRadius,
-	wxString* uniqueThreadKey,
-	bool* aliveOrDeadThread,
+	std::atomic<bool>* threadFinished,
+	std::atomic<bool>* aliveOrDeadThread,
 	std::atomic<bool>* isDrawExecutionFinished,
 	const bool spectroscopyMode,
 	const unsigned long long spectroscopyFrameCount
@@ -11289,7 +11283,7 @@ LiveCapturing::LiveCapturing
 	m_Binning(binning),
 	m_BinningMode(binningMode),
 	m_MedianBlurRadius(medianBlurRadius),
-	m_UniqueThreadKey(uniqueThreadKey),
+	m_ThreadFinished(threadFinished),
 	m_AliveOrDeadThread(aliveOrDeadThread),
 	m_IsDrawExecutionFinished(isDrawExecutionFinished),
 	m_SpectroscopyMode(spectroscopyMode),
@@ -11301,32 +11295,22 @@ LiveCapturing::LiveCapturing
 
 wxThread::ExitCode LiveCapturing::Entry()
 {
+	// No message boxes from this worker thread (GUI calls are only allowed on the main
+	// thread); the -1 event below makes the UI report the problem.
 	constexpr auto raise_exception_msg = []()
 		{
-			wxString title = "Connection error";
-
-			wxMessageBox
-			(
-				wxT
-				(
-					"Current camera can't capture an image."
-					"\nPlease, check if the camera is connected properly and restart the program."
-				),
-				title,
-				wxICON_ERROR
-			);
+			LOG("Live capturing: current camera can't capture an image.");
 		};
 
 	auto exit_thread = [&]()
 		{
-			*m_UniqueThreadKey = "";
 			m_CameraControl = nullptr;
+			m_ThreadFinished->store(true, std::memory_order_release);
 		};
 
 	wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_LIVE_CAPTURING);
 
-	auto text_id = "LiveCapturing ID: " + *m_UniqueThreadKey;
-	LOG(text_id);
+	LOG("LiveCapturing thread started");
 
 	if (!m_CameraControl || !m_CameraControl->IsConnected())
 	{
@@ -11539,8 +11523,8 @@ WorkerThread::WorkerThread
 	const unsigned short& binning,
 	const MainFrameVariables::BinningModes& binningMode,
 	const int& medianBlurRadius,
-	wxString* uniqueThreadKey,
-	bool* aliveOrDeadThread,
+	std::atomic<bool>* threadFinished,
+	std::atomic<bool>* aliveOrDeadThread,
 	std::atomic<bool>* isDrawExecutionFinished,
 	const wxString& path, 
 	MainFrameVariables::AxisMeasurement* first_axis, 
@@ -11558,7 +11542,7 @@ WorkerThread::WorkerThread
 		binning,
 		binningMode,
 		medianBlurRadius,
-		uniqueThreadKey, 
+		threadFinished, 
 		aliveOrDeadThread, 
 		isDrawExecutionFinished
 	),
@@ -11583,24 +11567,18 @@ wxThread::ExitCode WorkerThread::Entry()
 {
 	wxThreadEvent evt(wxEVT_THREAD, MainFrameVariables::ID::THREAD_LIVE_CAPTURING);
 	
-	constexpr auto raise_exception_msg = [](wxString camera_name) 
+	// No message boxes from this worker thread (GUI calls are only allowed on the main
+	// thread); the -1 event makes the UI report the problem.
+	auto raise_exception_msg = [](const wxString& camera_name)
 	{
-		wxString title = "Connection error";
-		wxMessageBox(
-			wxT
-			(
-				"The " + camera_name + " camera can't capture an image."
-				"\nPlease, check if the " + camera_name + " camera is connected properly and restart the program."
-			),
-			title,
-			wxICON_ERROR);
+		LOG("Measurement: the " + camera_name + " camera can't capture an image.");
 	};
 
 	auto exit_thread = [&](const int exitCode = -1)
 	{
-		*m_UniqueThreadKey = "";
 		evt.SetInt(exitCode);
 		wxQueueEvent(m_MainFrame, evt.Clone());
+		m_ThreadFinished->store(true, std::memory_order_release);
 	};
 
 	if (!m_CameraControl)
@@ -11624,15 +11602,52 @@ wxThread::ExitCode WorkerThread::Entry()
 	auto measurementGraphFilePath = graphFileName + wxString(".bmp");
 	wxFileName measurementFileName(measurementGraphFilePath);
 
-	m_ImageSize.Set(m_RequestedRoi0.GetWidth() / m_Binning, m_RequestedRoi0.GetHeight() / m_Binning);
-
-	auto dataSize = m_ImageSize.GetWidth() * m_ImageSize.GetHeight();
-
 	if (!m_CameraControl->IsConnected())
 	{
 		exit_thread();
 		return (wxThread::ExitCode)0;
 	}
+
+	/*
+		The camera delivers frames of its *hardware* ROI size (the full sensor when the
+		camera has no hardware ROI). Copy exactly that (like Live View does); the preview
+		path crops/bins it later. For saving and FWHM we build a separate buffer that is
+		cropped to the requested ROI and binned once.
+		Previously the raw frame was read as if it were already binned (wrong stride and
+		only a fraction of the frame), and then divided by the binning a second time.
+	*/
+	const auto hwRoi = m_CameraControl->GetHardwareROI();
+	const int frameW = hwRoi.width ? static_cast<int>(hwRoi.width) : static_cast<int>(m_CameraControl->GetWidth());
+	const int frameH = hwRoi.height ? static_cast<int>(hwRoi.height) : static_cast<int>(m_CameraControl->GetHeight());
+	m_ImageSize.Set(frameW, frameH);
+
+	// Requested ROI expressed relative to the delivered frame
+	wxRect roiInFrame
+	(
+		m_RequestedRoi0.GetX() - static_cast<int>(hwRoi.width ? hwRoi.startX : 0),
+		m_RequestedRoi0.GetY() - static_cast<int>(hwRoi.height ? hwRoi.startY : 0),
+		m_RequestedRoi0.GetWidth(),
+		m_RequestedRoi0.GetHeight()
+	);
+	if (roiInFrame.GetWidth() <= 0 || roiInFrame.GetHeight() <= 0
+		|| !wxRect(0, 0, frameW, frameH).Contains(roiInFrame))
+	{
+		roiInFrame = wxRect(0, 0, frameW, frameH);
+	}
+	const bool needsCrop = roiInFrame != wxRect(0, 0, frameW, frameH);
+
+	const int binning = std::max<int>(1, m_Binning);
+	const wxSize processedSize(roiInFrame.GetWidth() / binning, roiInFrame.GetHeight() / binning);
+	if (processedSize.GetWidth() <= 0 || processedSize.GetHeight() <= 0)
+	{
+		exit_thread();
+		return (wxThread::ExitCode)0;
+	}
+
+	auto croppedBuffer = needsCrop
+		? std::make_unique<unsigned short[]>(static_cast<size_t>(roiInFrame.GetWidth()) * roiInFrame.GetHeight())
+		: nullptr;
+	auto processedBuffer = std::make_unique<unsigned short[]>(static_cast<size_t>(processedSize.GetWidth()) * processedSize.GetHeight());
 
 	m_CameraControl->SetExposureTime(m_ExposureUS);
 	m_HorizontalFWHMData = std::make_unique<double[]>(m_FirstAxis->step_number);
@@ -11663,7 +11678,9 @@ wxThread::ExitCode WorkerThread::Entry()
 
 		first_axis_position = MoveFirstStage(first_axis_rounded_go_to);
 		m_FirstAxisPositionsData[i] = first_axis_position;
-		m_MainFrame->UpdateStagePositions();
+		// Marshal to the UI thread: calling wx controls from this worker thread can deadlock
+		// with the UI thread, which waits for this thread to finish when Stop is pressed.
+		m_MainFrame->CallAfter([frame = m_MainFrame]() { frame->UpdateStagePositions(); });
 
 		auto fileName = PrepareFileName
 		(
@@ -11688,21 +11705,36 @@ wxThread::ExitCode WorkerThread::Entry()
 
 		if (
 			!m_CameraControl->IsConnected() || 
-			!CaptureImage(payload->img.get()) || 
-			!SaveImage
-			(
-				payload->img.get(), 
-				w / m_Binning, 
-				h / m_Binning, 
-				fileName
-			) ||
-			!CalculateFWHM
-			(
-				payload->img.get(), 
-				w / m_Binning, 
-				h / m_Binning,
-				i
+			!CaptureImage(payload->img.get())
 			)
+		{
+			exit_thread(1);
+			return (wxThread::ExitCode)0;
+		}
+
+		// Crop to the requested ROI (software ROI) and bin once
+		{
+			unsigned short* roiData = payload->img.get();
+			if (needsCrop)
+			{
+				MainFrameVariables::CropU16Rect(payload->img.get(), frameW, frameH, roiInFrame, croppedBuffer.get());
+				roiData = croppedBuffer.get();
+			}
+
+			MainFrameVariables::BinImageData
+			(
+				roiData,
+				processedBuffer.get(),
+				static_cast<unsigned short>(binning),
+				roiInFrame.GetWidth(),
+				processedSize,
+				m_BinningMode
+			);
+		}
+
+		if (
+			!SaveImage(processedBuffer.get(), processedSize.GetWidth(), processedSize.GetHeight(), fileName) ||
+			!CalculateFWHM(processedBuffer.get(), processedSize.GetWidth(), processedSize.GetHeight(), i)
 			)
 		{
 			exit_thread(1);
@@ -11798,7 +11830,9 @@ wxThread::ExitCode WorkerThread::Entry()
 			m_FirstAxisPositionsData.get()
 		);
 
-		m_MainFrame->UpdateStagePositions();
+		// Marshal to the UI thread: calling wx controls from this worker thread can deadlock
+		// with the UI thread, which waits for this thread to finish when Stop is pressed.
+		m_MainFrame->CallAfter([frame = m_MainFrame]() { frame->UpdateStagePositions(); });
 
 		//if (wxMessageBox
 		//(
@@ -11859,7 +11893,7 @@ auto WorkerThread::CalculateFWHM
 	const int& stepNumber
 ) -> bool
 {
-	if (!m_AliveOrDeadThread) return false;
+	if (!m_AliveOrDeadThread || !m_AliveOrDeadThread->load()) return false;
 	auto horizontalSumArray = std::make_unique<unsigned int[]>(imgWidth);
 	auto verticalSumArray = std::make_unique<unsigned int[]>(imgHeight);
 
@@ -13034,7 +13068,7 @@ auto cMain::HandleCameraDisconnected() -> void
 
 auto cMain::GetMeasurementBitmap(const bool isCapturing) -> wxBitmap
 {
-	const wxSize bitmapSize = wxSize(32, 32);
+	const wxSize bitmapSize = wxSize(20, 20);
 	const char* bitmap = wxART_MOVE_UP;
 	const char* client = wxART_CLIENT_MATERIAL_ROUND;
 	const wxColour startBitmapColor = wxColour(34, 177, 76);

@@ -352,7 +352,8 @@ auto CrossHairTool::DrawDataOnHorizontalLine
 
 	// --- Averaging logic parameters ---
 	const int half_avg_height = m_AveragingWidthPX / 2;
-	const int avg_start_y = std::max(0, crosshair_image_y - half_avg_height);
+	// Same band as the overlay drawn in cCamPreview: [c-(W-1)/2, c+W/2] = exactly W rows
+	const int avg_start_y = std::max(0, crosshair_image_y - (m_AveragingWidthPX - 1) / 2);
 	const int avg_end_y = std::min(image_height - 1, crosshair_image_y + half_avg_height);
 	const int avg_height = avg_end_y - avg_start_y + 1;
 
@@ -425,7 +426,8 @@ auto CrossHairTool::DrawDataOnVerticalLine
 
 	// --- Averaging logic parameters ---
 	const int half_avg_width = m_AveragingWidthPX / 2;
-	const int avg_start_x = std::max(0, crosshair_image_x - half_avg_width);
+	// Same band as the overlay drawn in cCamPreview: [c-(W-1)/2, c+W/2] = exactly W columns
+	const int avg_start_x = std::max(0, crosshair_image_x - (m_AveragingWidthPX - 1) / 2);
 	const int avg_end_x = std::min(image_width - 1, crosshair_image_x + half_avg_width);
 	const int avg_width = avg_end_x - avg_start_x + 1;
 

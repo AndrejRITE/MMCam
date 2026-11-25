@@ -63,7 +63,7 @@ public:
 	// independently-owned duplicate - see the .cpp), so Stop() on another
 	// thread can find and terminate it without racing the owning thread's
 	// own cleanup. Pass nullptr to clear. Thread-safe.
-	void SetActiveProcessHandle(HANDLE handle);
+	void SetActiveProcessHandle(HANDLE handle, HANDLE job = nullptr);
 
 	// Getters
 	std::string GetDeviceSerNum() const override { return m_MotorSerialNumber; };
@@ -150,14 +150,26 @@ private:
 		si.dwFlags = STARTF_USESHOWWINDOW;
 		si.wShowWindow = SW_HIDE;  // Hide the window
 
-		// Create the process silently
+		// powershell.exe starts py.exe, which starts python.exe. Killing only
+		// powershell (as before) left the Python move script running with the COM
+		// port open, so Stop() could not actually stop the stage. Put the whole
+		// process tree into a Job object and kill the job instead.
+		HANDLE job = CreateJobObjectW(nullptr, nullptr);
+		if (job)
+		{
+			JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{};
+			limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+			SetInformationJobObject(job, JobObjectExtendedLimitInformation, &limits, sizeof(limits));
+		}
+
+		// Create the process silently (suspended, so it can join the job before it spawns children)
 		BOOL success = CreateProcessW(
 			nullptr,
 			&fullCommand[0],  // Command line must be writable
 			nullptr,
 			nullptr,
 			FALSE,
-			CREATE_NO_WINDOW,  // Important flag to hide window
+			CREATE_NO_WINDOW | CREATE_SUSPENDED,  // Important flag to hide window
 			nullptr,
 			nullptr,
 			&si,
@@ -165,11 +177,22 @@ private:
 		);
 
 		if (!success)
+		{
+			if (job) CloseHandle(job);
 			return false;
+		}
+
+		if (job && !AssignProcessToJobObject(job, pi.hProcess))
+		{
+			CloseHandle(job);
+			job = nullptr; // fall back to killing just the process
+		}
+
+		ResumeThread(pi.hThread);
 
 		// Gives Stop() (on another thread) an independent, safe-to-use
 		// handle - see SetActiveProcessHandle in the .cpp.
-		SetActiveProcessHandle(pi.hProcess);
+		SetActiveProcessHandle(pi.hProcess, job);
 
 		// Blocks here until the script exits on its own, OR until Stop()
 		// (on another thread) terminates it via its own duplicated handle.
@@ -184,6 +207,9 @@ private:
 
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
+
+		// KILL_ON_JOB_CLOSE: also cleans up any orphaned python.exe left behind
+		if (job) CloseHandle(job);
 
 		// If Stop() terminated us (it sets this specific exit code), the
 		// script never finished writing a fresh temp position file, so the
@@ -210,6 +236,7 @@ private:
 	// thread than the one currently blocked in WaitForSingleObject.
 	std::unique_ptr<std::mutex> m_ProcessMutex{ std::make_unique<std::mutex>() };
 	HANDLE m_ActiveProcessHandle{ nullptr };
+	HANDLE m_ActiveJobHandle{ nullptr }; ///< job containing the script's whole process tree
 
 	// Arbitrary, unlikely to collide with a real script's own exit code -
 	// passed to TerminateProcess() in Stop() and checked against in

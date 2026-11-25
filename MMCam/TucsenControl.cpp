@@ -1,6 +1,8 @@
 #include "TucsenControl.h"
 #include <cstring>
 #include <cstdlib>
+#include <cmath>
+#include <limits>
 
 using std::size_t;
 
@@ -62,7 +64,7 @@ TUCAMRET TucsenControl::InitApi()
 
 TUCAMRET TucsenControl::UnInitApi()
 {
-    if (m_opCam.hIdxTUCam) TUCAM_Buf_Release(m_opCam.hIdxTUCam);
+    // The frame buffer is released in CloseCamera() (it needs the still-open device handle)
 
 	m_ApiInitialized = false;
 
@@ -80,7 +82,18 @@ TUCAMRET TucsenControl::OpenCamera(UINT uiIdx)
 
 TUCAMRET TucsenControl::CloseCamera()
 {
-    if (NULL != m_opCam.hIdxTUCam) TUCAM_Dev_Close(m_opCam.hIdxTUCam);
+    if (NULL != m_opCam.hIdxTUCam)
+    {
+        // Release the frame buffer BEFORE closing the device. Previously it was released
+        // after TUCAM_Dev_Close (on a closed handle), leaking the buffer on every reconnect.
+        if (m_frame.pBuffer)
+        {
+            TUCAM_Buf_Release(m_opCam.hIdxTUCam);
+            m_frame.pBuffer = NULL;
+        }
+        TUCAM_Dev_Close(m_opCam.hIdxTUCam);
+        m_opCam.hIdxTUCam = NULL;
+    }
 
 	m_CameraOpened = false;
 
@@ -251,7 +264,15 @@ auto TucsenControl::GetImage() -> unsigned short*
     // SDK delivers 8/16; we requested “USUAl”. For RAW16, ucElemBytes==2.
     if (img && m_ImageBuffer) {
         const size_t bytes = elems * sizeof(unsigned short);
-        std::memcpy(m_ImageBuffer.get(), img, bytes);
+        // Only copy if the SDK frame really holds that many 16-bit samples
+        // (an 8-bit or truncated frame would otherwise be read past its end).
+        if (m_frame.uiImgSize >= bytes)
+            std::memcpy(m_ImageBuffer.get(), img, bytes);
+        else
+        {
+            if (startedHere) StopAcquisition();
+            return nullptr;
+        }
     }
 
     if (startedHere) StopAcquisition();
@@ -274,7 +295,8 @@ auto TucsenControl::SetExposureTime(int exposure_us) -> void
 	auto desired_exposure_ms = toMsFromUs(exposure_us);
 
 	// We need to correct the exposure time to the nearest step supported by the camera.
-	desired_exposure_ms = std::round(desired_exposure_ms / m_ExposureStep) * m_ExposureStep;
+	if (m_ExposureStep > 0.0) // step stays 0 if reading the attribute failed -> avoid NaN
+		desired_exposure_ms = std::round(desired_exposure_ms / m_ExposureStep) * m_ExposureStep;
 
     TUCAM_Prop_SetValue(m_opCam.hIdxTUCam, TUIDP_EXPOSURETM, desired_exposure_ms);
 
@@ -293,8 +315,11 @@ auto TucsenControl::SetSensorTemperature(const double requiredTemperature) -> vo
 
 auto TucsenControl::GetSensorTemperature() -> double
 {
-    double v = 1.0;
-    (void)TUCAM_Prop_GetValue(m_opCam.hIdxTUCam, TUIDP_TEMPERATURE, &v);
+    // Report "no data" (NaN) instead of a made-up 1.0 degC when the read fails
+    double v = std::numeric_limits<double>::quiet_NaN();
+    if (!m_CameraOpened || !m_opCam.hIdxTUCam
+        || TUCAM_Prop_GetValue(m_opCam.hIdxTUCam, TUIDP_TEMPERATURE, &v) != TUCAMRET_SUCCESS)
+        v = std::numeric_limits<double>::quiet_NaN();
     m_SensorTemperature = v;
     return m_SensorTemperature;
 }

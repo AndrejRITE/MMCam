@@ -130,16 +130,21 @@ namespace CameraPreviewVariables
 		return wxString::FromUTF8(stream.str());
 	};
 
-	static auto FormatWithApostropheDelimiter = [](unsigned long long value) -> wxString
+	static auto FormatWithThousandsDelimiter = [](long long value, const wxString& delimiter = ",") -> wxString
 	{
-		wxString formatted = wxString::Format("%llu", value);
+		const bool negative = value < 0;
+		const unsigned long long magnitude = negative
+			? static_cast<unsigned long long>(-(value + 1)) + 1ull
+			: static_cast<unsigned long long>(value);
+
+		wxString formatted = wxString::Format("%llu", magnitude);
 
 		for (int insertPos = static_cast<int>(formatted.Length()) - 3; insertPos > 0; insertPos -= 3)
 		{
-			formatted.insert(static_cast<size_t>(insertPos), "'");
+			formatted.insert(static_cast<size_t>(insertPos), delimiter);
 		}
 
-		return formatted;
+		return negative ? "-" + formatted : formatted;
 	};
 }
 
@@ -346,6 +351,9 @@ private:
 	auto DrawHorizontalSumLine(wxGraphicsContext* gc_) -> void;
 	auto DrawVerticalSumLine(wxGraphicsContext* gc_) -> void;
 	auto DrawActualImageSize(wxGraphicsContext* gc_) -> void;
+	auto DrawEmptyState(wxGraphicsContext* gc) -> void;
+	/// Bottom edge of the badges stacked in the top-left corner (FPS, HEW, ...), reset on every paint
+	wxDouble m_TopLeftOverlayBottom{};
 	auto DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> void;
 
 	auto DrawROI(wxGraphicsContext* gc_) -> void;

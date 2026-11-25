@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <mutex>
 #include <atomic>
+#include <limits>
 
 #include <gxeth.h>
 

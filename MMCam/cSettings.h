@@ -410,6 +410,8 @@ private:
 	void CreateSettings();
 	void CreateMotorsSelection(wxBoxSizer* panel_sizer);
 
+	/// Builds one "Axis | Serial number | Steps/mm" table page for three motors (X, Y, Z)
+	auto CreateMotorsTablePage(wxWindow* parent, SettingsVariables::MotorSettings* motors, const int firstID) -> wxWindow*;
 	auto CreateDetectorPage(wxWindow* parent, const wxSize& txtCtrlSize, const int& topOffset) -> wxWindow*;
 	auto CreateOpticsPage(wxWindow* parent, const wxSize& txtCtrlSize, const int& topOffset) -> wxWindow*;
 	auto CreateAuxPage(wxWindow* parent, const wxSize& txtCtrlSize, const int& topOffset) -> wxWindow*;
@@ -493,19 +495,35 @@ private:
 
 		std::vector<SettingsVariables::Stage> stages;
 
-		if (fs::exists(filename)) {
-			std::ifstream file(filename);
-			json j;
-			file >> j;
-
-			// Deserialize JSON into stages
-			for (const auto& item : j) 
+		std::error_code ec;
+		if (fs::exists(filename, ec)) {
+			// A truncated/corrupt file (e.g. power loss during a write) must not
+			// throw out of the Settings dialog - just ignore the bad content.
+			try
 			{
-				SettingsVariables::Stage stage;
-				stage.SerialNumber = item.at("SerialNumber").get<std::string>();
-				stage.COMPort = item.at("COMPort").get<std::string>();
-				stage.LastKnownPosition = item.at("LastKnownPosition").get<double>();
-				stages.push_back(stage);
+				std::ifstream file(filename);
+				json j;
+				file >> j;
+
+				if (!j.is_array()) return stages;
+
+				// Deserialize JSON into stages
+				for (const auto& item : j) 
+				{
+					try
+					{
+						SettingsVariables::Stage stage;
+						stage.SerialNumber = item.at("SerialNumber").get<std::string>();
+						stage.COMPort = item.at("COMPort").get<std::string>();
+						stage.LastKnownPosition = item.at("LastKnownPosition").get<double>();
+						stages.push_back(stage);
+					}
+					catch (const std::exception&) { /* skip malformed entry */ }
+				}
+			}
+			catch (const std::exception&)
+			{
+				stages.clear();
 			}
 		}
 

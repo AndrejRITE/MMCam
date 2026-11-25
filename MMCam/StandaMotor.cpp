@@ -246,7 +246,7 @@ void StandaMotor::SetRange(const float minMotorDeg, const float maxMotorDeg)
 	m_MotorSettings->minStagePos = minMotorDeg / m_MotorSettings->stepsPerMMRatio;
 
 	/* Middle position */
-	m_MotorSettings->middleMotorPos = (maxMotorDeg - minMotorDeg) / 2.f;
+	m_MotorSettings->middleMotorPos = (maxMotorDeg + minMotorDeg) / 2.f; // midpoint, not half-range
 	//m_MotorSettings->middleStagePos = m_MotorSettings->middleMotorPos / deg_per_mm;
 	m_MotorSettings->middleStagePos = m_MotorSettings->middleMotorPos / m_MotorSettings->stepsPerMMRatio;
 
@@ -334,7 +334,22 @@ auto StandaMotorArray::InitAllMotors(const std::string ip_address) -> bool
 		strcpy(device_name, get_device_name(devenum_c, i));
 		m_MotorsArray[i].SetDeviceName(device_name);
 		device_c = open_device(device_name);
-		get_serial_number(device_c, &device_sn_int);
+
+		// Always close the device again, including on the early "continue" paths
+		// below (previously each of those leaked the handle and could block later opens).
+		struct DeviceCloser
+		{
+			device_t& dev;
+			~DeviceCloser() { if (dev != device_undefined) close_device(&dev); }
+		} deviceCloser{ device_c };
+
+		// Reset per device; a failed read must not reuse the previous motor's serial number
+		device_sn_int = 0;
+		if (device_c == device_undefined || get_serial_number(device_c, &device_sn_int) != result_ok)
+		{
+			appendUninitializedMotor(std::string{}, i);
+			continue;
+		}
 		device_sn = std::to_string(device_sn_int);
 		m_MotorsArray[i].SetMotorSerialNumber(device_sn);
 
@@ -367,12 +382,16 @@ auto StandaMotorArray::InitAllMotors(const std::string ip_address) -> bool
 		}
 		m_MotorsArray[i].SetCurrentMotorPosition(static_cast<float>(state_c.CurPosition));
 
-		get_edges_settings_calb(device_c, &edges_settings_calb_c, &calibration_c);
+		edges_settings_calb_c = {};
+		if ((result_c = get_edges_settings_calb(device_c, &edges_settings_calb_c, &calibration_c)) != result_ok)
+		{
+			appendUninitializedMotor(device_sn, i);
+			continue;
+		}
 		m_MotorsArray[i].SetRange(edges_settings_calb_c.LeftBorder, edges_settings_calb_c.RightBorder);
 
 		m_MotorsArray[i].UpdateCurrentPosition();
-
-		close_device(&device_c);
+		// device closed by deviceCloser
 	}
 
 	std::sort(m_MotorsArray.begin(), m_MotorsArray.end(),

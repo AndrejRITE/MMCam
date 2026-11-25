@@ -5,11 +5,25 @@ XeryonMotor::XeryonMotor()
 	m_MotorSettings = std::make_unique<MotorVariables::Settings>();
 }
 
-void XeryonMotor::SetActiveProcessHandle(HANDLE handle)
+void XeryonMotor::SetActiveProcessHandle(HANDLE handle, HANDLE job)
 {
 	if (!m_ProcessMutex) return;
 
 	std::lock_guard<std::mutex> lock(*m_ProcessMutex);
+
+	if (m_ActiveJobHandle)
+	{
+		CloseHandle(m_ActiveJobHandle);
+		m_ActiveJobHandle = nullptr;
+	}
+
+	// Own an independent reference to the job as well (same reasoning as below)
+	if (handle && job)
+	{
+		HANDLE duplicatedJob{ nullptr };
+		if (DuplicateHandle(GetCurrentProcess(), job, GetCurrentProcess(), &duplicatedJob, 0, FALSE, DUPLICATE_SAME_ACCESS))
+			m_ActiveJobHandle = duplicatedJob;
+	}
 
 	// Close whatever we were previously tracking - either the caller is
 	// replacing it, or clearing it (Stop() already took ownership of the
@@ -36,19 +50,30 @@ void XeryonMotor::SetActiveProcessHandle(HANDLE handle)
 bool XeryonMotor::Stop()
 {
 	HANDLE handleToKill{ nullptr };
+	HANDLE jobToKill{ nullptr };
 	{
 		std::lock_guard<std::mutex> lock(*m_ProcessMutex);
-		// Take exclusive ownership of the tracked handle so
+		// Take exclusive ownership of the tracked handles so
 		// RunPowerShellCommandSilently()'s later SetActiveProcessHandle(nullptr)
-		// call becomes a safe no-op instead of double-closing it.
+		// call becomes a safe no-op instead of double-closing them.
 		handleToKill = m_ActiveProcessHandle;
 		m_ActiveProcessHandle = nullptr;
+		jobToKill = m_ActiveJobHandle;
+		m_ActiveJobHandle = nullptr;
 	}
 
 	// Nothing running for this motor right now.
-	if (!handleToKill) return false;
+	if (!handleToKill)
+	{
+		if (jobToKill) CloseHandle(jobToKill);
+		return false;
+	}
 
-	TerminateProcess(handleToKill, m_StoppedByUserExitCode);
+	// Kill the whole tree (powershell -> py.exe -> python.exe) so the move script
+	// really stops and releases the COM port; fall back to the single process.
+	if (!jobToKill || !TerminateJobObject(jobToKill, m_StoppedByUserExitCode))
+		TerminateProcess(handleToKill, m_StoppedByUserExitCode);
+	if (jobToKill) CloseHandle(jobToKill);
 
 	// Give the killed process (and the COM port it held) a moment to fully
 	// release before we try to reopen the same port below. TerminateProcess

@@ -20,9 +20,27 @@ int cSettings::ShowModal()
 {
 	int result = wxID_OK;
 
+	// Choosing a work station in the combo box changes the active station immediately.
+	// Remember the current one so that Cancel really discards the change; otherwise the
+	// motors were rebuilt for the new station while the camera/pixel size stayed on the old one.
+	const auto previousWorkStation = m_WorkStations->initialized_work_station_num;
+
+	// Start with the OK button focused: Enter confirms and Esc cancels. With the work
+	// station drop-down focused, the native combo box swallowed both keys.
+	CallAfter([this]()
+		{
+			if (auto okBtn = FindWindow(wxID_OK))
+				okBtn->SetFocus();
+		});
+
 	result = wxDialog::ShowModal();  // Call the base class method
-#ifndef _DEBUG
-#endif // !_DEBUG
+
+	if (result != wxID_OK && m_WorkStations->initialized_work_station_num != previousWorkStation)
+	{
+		m_WorkStations->initialized_work_station_num = previousWorkStation;
+		m_WorkStations->work_station_choice->SetSelection(previousWorkStation);
+		UpdateMotorsAndCameraTXTCtrls(previousWorkStation);
+	}
 
 	wxBusyCursor busy;
 
@@ -117,6 +135,11 @@ bool cSettings::StopAllMotors()
 	if (m_XeryonMotors)
 		stoppedAny |= m_XeryonMotors->StopAll();
 
+	// XeryonMotor::Stop() reads back the true post-stop position; persist it so
+	// the next start does not restore the stale value the move thread wrote.
+	if (stoppedAny)
+		PrepareStagesDataAndWriteThemIntoJSONFile();
+
 	return stoppedAny;
 }
 
@@ -146,9 +169,18 @@ void cSettings::CreateSettings()
 
 	main_sizer->Add(ms_sizer, 1, wxEXPAND);
 
-	auto btnSizer = CreateButtonSizer(wxOK | wxCANCEL | wxOK_DEFAULT);
-	main_sizer->Add(btnSizer, 0, wxCENTER | wxALL, 5);
+	// Standard OK/Cancel row, separated from the content by a thin line
+	auto btnSizer = CreateSeparatedButtonSizer(wxOK | wxCANCEL | wxOK_DEFAULT);
+	if (btnSizer)
+		main_sizer->Add(btnSizer, 0, wxEXPAND | wxALL, FromDIP(12));
+
+	if (auto okBtn = FindWindow(wxID_OK))
+		okBtn->SetToolTip("Apply the selected work station (motors and camera are re-initialized)");
+	if (auto cancelBtn = FindWindow(wxID_CANCEL))
+		cancelBtn->SetToolTip("Close without changing the work station");
+
 	SetSizerAndFit(main_sizer);
+	SetMinSize(GetSize());
 }
 
 void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
@@ -157,10 +189,24 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 
 	wxBoxSizer* main_panel_sizer = new wxBoxSizer(wxVERTICAL);
 
-	/* Work Station */
-	wxSizer* const work_station_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, m_MainPanel.get(), "&Work Station");
+	/* Header: title + short explanation */
 	{
-		auto work_station_txt_ctrl_size = wxSize(120, 24);
+		auto title = new wxStaticText(m_MainPanel.get(), wxID_ANY, "Work station");
+		title->SetFont(title->GetFont().Larger().Larger().Bold());
+		main_panel_sizer->Add(title, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(12));
+
+		auto hint = new wxStaticText
+		(
+			m_MainPanel.get(), 
+			wxID_ANY, 
+			"Choose the instrument configuration. Motors and the camera listed below\n"
+			"are taken from the selected work station file."
+		);
+		main_panel_sizer->Add(hint, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(12));
+	}
+
+	/* Work Station */
+	{
 		m_WorkStations->work_station_choice = new wxChoice
 		(
 			m_MainPanel.get(), 
@@ -170,10 +216,17 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 			m_WorkStations->all_work_station_array_str
 		);
 		m_WorkStations->work_station_choice->SetSelection(m_WorkStations->initialized_work_station_num);
+		m_WorkStations->work_station_choice->SetToolTip("Work station configuration file (.json files in the src folder)");
 
-		work_station_static_box_sizer->Add(m_WorkStations->work_station_choice, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
+		main_panel_sizer->Add(m_WorkStations->work_station_choice, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(12));
 	}
-	main_panel_sizer->Add(work_station_static_box_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
+
+	/* Section caption for motors */
+	{
+		auto motorsCaption = new wxStaticText(m_MainPanel.get(), wxID_ANY, "Motors");
+		motorsCaption->SetFont(motorsCaption->GetFont().Bold());
+		main_panel_sizer->Add(motorsCaption, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(12));
+	}
 
 	/* Motors */
 	auto motorTxtCtrlSize = wxSize(150, 24);
@@ -242,7 +295,7 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 		auxImgIndex
 	);
 
-	main_panel_sizer->Add(m_MotorsNotebook, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
+	main_panel_sizer->Add(m_MotorsNotebook, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(12));
 
 	//wxSizer* const motors_static_box_sizer = new wxStaticBoxSizer(wxVERTICAL, m_MainPanel.get(), "&Motors");
 	{
@@ -257,479 +310,122 @@ void cSettings::CreateMotorsSelection(wxBoxSizer* panel_sizer)
 	/* Camera */
 	CreateCameraSection(m_MainPanel.get(), main_panel_sizer);
 
-	main_panel_sizer->AddSpacer(5);
 	main_panel_sizer->AddStretchSpacer();
 
 	m_MainPanel->SetSizer(main_panel_sizer);
 	panel_sizer->Add(m_MainPanel.get(), 1, wxEXPAND);
 }
 
-auto cSettings::CreateDetectorPage(wxWindow* parent, const wxSize& txtCtrlSize, const int& topOffset) -> wxWindow*
+auto cSettings::CreateMotorsTablePage
+(
+	wxWindow* parent,
+	SettingsVariables::MotorSettings* motors,
+	const int firstID
+) -> wxWindow*
 {
 	auto page = new wxPanel(parent);
-	page->SetBackgroundColour(m_backgroundColour);
 	auto sizerPage = new wxBoxSizer(wxVERTICAL);
 
-	/* X */
-	wxSizer* const det_x_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&X");
-	/* Serial Number */
+	// Three rows (X, Y, Z) laid out as a simple table: Axis | Serial number | Steps/mm
+	auto grid = new wxFlexGridSizer(3, FromDIP(wxSize(12, 8)));
+	grid->AddGrowableCol(1, 1);
+
+	auto makeHeader = [page](const wxString& text)
+		{
+			auto st = new wxStaticText(page, wxID_ANY, text);
+			st->SetFont(st->GetFont().Smaller().Bold());
+			return st;
+		};
+
+	grid->Add(makeHeader("Axis"), 0, wxALIGN_CENTER_VERTICAL);
+	grid->Add(makeHeader("Serial number"), 0, wxALIGN_CENTER_VERTICAL);
+	grid->Add(makeHeader("Steps / mm"), 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
+
+	const wxString axisNames[3] = { "X", "Y", "Z" };
+	for (int i = 0; i < 3; ++i)
 	{
-		wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&S/N");
+		auto axisLabel = new wxStaticText(page, wxID_ANY, axisNames[i]);
+		axisLabel->SetFont(axisLabel->GetFont().Larger().Bold());
+		grid->Add(axisLabel, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(6));
 
-		m_Motors->m_Detector[0].motor = new wxTextCtrl(
-			page, 
-			SettingsVariables::ID::MOT_DET_X_MOTOR_TXT_CTRL, 
-			wxT("None"),
-			wxDefaultPosition, 
-			txtCtrlSize,
-			wxTE_CENTRE | wxTE_READONLY
-		);
-		
-		sn_static_box_sizer->Add(m_Motors->m_Detector[0].motor);
-
-		det_x_static_box_sizer->Add(sn_static_box_sizer);
-	}
-	/* Steps/mm */
-	det_x_static_box_sizer->AddSpacer(2);
-	{
-		wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Steps/mm");
-
-		m_Motors->m_Detector[0].steps_per_mm = new wxStaticText(
+		motors[i].motor = new wxTextCtrl
+		(
 			page,
-			SettingsVariables::ID::MOT_DET_X_STEPS_PER_MM_ST_TEXT,
-			wxT("None"), 
-			wxDefaultPosition, 
-			wxDefaultSize, 
-			wxALIGN_CENTRE_HORIZONTAL);
-
-		range_static_box_sizer->AddStretchSpacer();
-		range_static_box_sizer->Add(m_Motors->m_Detector[0].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
-		range_static_box_sizer->AddStretchSpacer();
-
-		det_x_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
-	}
-	sizerPage->Add(det_x_static_box_sizer, 0, wxCENTRE);
-
-	sizerPage->AddSpacer(2);
-	sizerPage->AddStretchSpacer();
-
-	/* Y */
-	wxSizer* const det_y_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Y");
-	/* Serial Number */
-	{
-		wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&S/N");
-
-		m_Motors->m_Detector[1].motor = new wxTextCtrl(
-			page, 
-			SettingsVariables::ID::MOT_DET_Y_MOTOR_TXT_CTRL, 
+			firstID + 2 * i,
 			wxT("None"),
-			wxDefaultPosition, 
-			txtCtrlSize,
+			wxDefaultPosition,
+			FromDIP(wxSize(170, -1)),
 			wxTE_CENTRE | wxTE_READONLY
-			//m_Motors->unique_motors[0]
 		);
+		motors[i].motor->SetToolTip("Serial number of the motor assigned to this axis (from the work station file)");
+		grid->Add(motors[i].motor, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
 
-		//m_Motors->m_Detector[1].motors->SetSelection(0);
-
-		sn_static_box_sizer->Add(m_Motors->m_Detector[1].motor);
-
-		det_y_static_box_sizer->Add(sn_static_box_sizer);
-	}
-	/* Steps/mm */
-	det_y_static_box_sizer->AddSpacer(2);
-	{
-		wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Steps/mm");
-
-		m_Motors->m_Detector[1].steps_per_mm = new wxStaticText(
-			page, 
-			SettingsVariables::ID::MOT_DET_Y_STEPS_PER_MM_ST_TEXT, 	
-			wxT("None"), 
-			wxDefaultPosition, 
-			wxDefaultSize,
-			wxALIGN_CENTRE_HORIZONTAL);
-
-		range_static_box_sizer->AddStretchSpacer();
-		range_static_box_sizer->Add(m_Motors->m_Detector[1].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
-		range_static_box_sizer->AddStretchSpacer();
-
-		det_y_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
-	}
-	sizerPage->Add(det_y_static_box_sizer, 0, wxCENTRE);
-	sizerPage->AddSpacer(2);
-	sizerPage->AddStretchSpacer();
-
-	/* Z */
-	wxSizer* const det_z_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Z");
-	/* Serial Number */
-	{
-		wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&S/N");
-
-		m_Motors->m_Detector[2].motor = new wxTextCtrl(
-			page, 
-			SettingsVariables::ID::MOT_DET_Z_MOTOR_TXT_CTRL, 
+		motors[i].steps_per_mm = new wxStaticText
+		(
+			page,
+			firstID + 2 * i + 1,
 			wxT("None"),
-			wxDefaultPosition, 
-			txtCtrlSize,
-			wxTE_CENTRE | wxTE_READONLY
-			//m_Motors->unique_motors[0]
+			wxDefaultPosition,
+			FromDIP(wxSize(70, -1)),
+			wxALIGN_RIGHT | wxST_NO_AUTORESIZE
 		);
-
-		//m_Motors->m_Detector[2].motors->SetSelection(0);
-
-		sn_static_box_sizer->Add(m_Motors->m_Detector[2].motor);
-
-		det_z_static_box_sizer->Add(sn_static_box_sizer);
+		grid->Add(motors[i].steps_per_mm, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT | wxRIGHT, FromDIP(6));
 	}
-	/* Steps/mm */
-	det_z_static_box_sizer->AddSpacer(2);
-	{
-		wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Steps/mm");
 
-		m_Motors->m_Detector[2].steps_per_mm = new wxStaticText(
-			page, 
-			SettingsVariables::ID::MOT_DET_Z_STEPS_PER_MM_ST_TEXT, 	
-			wxT("None"), 
-			wxDefaultPosition, 
-			wxDefaultSize, 
-			wxALIGN_CENTRE_HORIZONTAL);
-
-		range_static_box_sizer->AddStretchSpacer();
-		range_static_box_sizer->Add(m_Motors->m_Detector[2].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
-		range_static_box_sizer->AddStretchSpacer();
-
-		det_z_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
-	}
-	sizerPage->Add(det_z_static_box_sizer, 0, wxCENTRE);
+	sizerPage->Add(grid, 0, wxEXPAND | wxALL, FromDIP(12));
 
 	page->SetSizer(sizerPage);
 	return page;
 }
 
-auto cSettings::CreateOpticsPage(wxWindow* parent, const wxSize& txtCtrlSize, const int& topOffset) -> wxWindow*
+auto cSettings::CreateDetectorPage(wxWindow* parent, const wxSize&, const int&) -> wxWindow*
 {
-	auto page = new wxPanel(parent);
-	auto sizerPage = new wxBoxSizer(wxVERTICAL);
-
-	/* X */
-	wxSizer* const opt_x_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&X");
-	/* Serial Number */
-	{
-		wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&S/N");
-
-		m_Motors->m_Optics[0].motor = new wxTextCtrl(
-			page, 
-			SettingsVariables::ID::MOT_OPT_X_MOTOR_TXT_CTRL, 
-			wxT("None"),
-			wxDefaultPosition, 
-			txtCtrlSize,
-			wxTE_CENTRE | wxTE_READONLY
-			//m_Motors->unique_motors[0]
-		);
-
-		//m_Motors->m_Optics[0].motors->SetSelection(0);
-
-		sn_static_box_sizer->Add(m_Motors->m_Optics[0].motor);
-
-		opt_x_static_box_sizer->Add(sn_static_box_sizer);
-	}
-	/* Steps/mm */
-	opt_x_static_box_sizer->AddSpacer(2);
-	{
-		wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Steps/mm");
-
-		m_Motors->m_Optics[0].steps_per_mm = new wxStaticText(
-			page, 
-			SettingsVariables::ID::MOT_OPT_X_STEPS_PER_MM_ST_TEXT, 	
-			wxT("None"), 
-			wxDefaultPosition, 
-			wxDefaultSize, 
-			wxALIGN_CENTRE_HORIZONTAL);
-
-		range_static_box_sizer->AddStretchSpacer();
-		range_static_box_sizer->Add(m_Motors->m_Optics[0].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
-		range_static_box_sizer->AddStretchSpacer();
-
-		opt_x_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
-	}
-	sizerPage->Add(opt_x_static_box_sizer, 0, wxCENTRE);
-	sizerPage->AddSpacer(2);
-	sizerPage->AddStretchSpacer();
-
-	/* Y */
-	wxSizer* const opt_y_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Y");
-	/* Serial Number */
-	{
-		wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&S/N");
-
-		m_Motors->m_Optics[1].motor = new wxTextCtrl(
-			page, 
-			SettingsVariables::ID::MOT_OPT_Y_MOTOR_TXT_CTRL, 
-			wxT("None"),
-			wxDefaultPosition, 
-			txtCtrlSize,
-			wxTE_CENTRE | wxTE_READONLY
-			//m_Motors->unique_motors[0]
-		);
-
-		//m_Motors->m_Optics[1].motors->SetSelection(0);
-
-		sn_static_box_sizer->Add(m_Motors->m_Optics[1].motor);
-
-		opt_y_static_box_sizer->Add(sn_static_box_sizer);
-	}
-	/* Steps/mm */
-	opt_y_static_box_sizer->AddSpacer(2);
-	{
-		wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Steps/mm");
-
-		m_Motors->m_Optics[1].steps_per_mm = new wxStaticText(
-			page, 
-			SettingsVariables::ID::MOT_OPT_Y_STEPS_PER_MM_ST_TEXT, 
-			wxT("None"), 
-			wxDefaultPosition, 
-			wxDefaultSize, 
-			wxALIGN_CENTRE_HORIZONTAL);
-
-		range_static_box_sizer->AddStretchSpacer();
-		range_static_box_sizer->Add(m_Motors->m_Optics[1].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
-		range_static_box_sizer->AddStretchSpacer();
-
-		opt_y_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
-	}
-	sizerPage->Add(opt_y_static_box_sizer, 0, wxCENTRE);
-	sizerPage->AddSpacer(2);
-	sizerPage->AddStretchSpacer();
-
-	/* Z */
-	wxSizer* const opt_z_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Z");
-	/* Serial Number */
-	{
-		wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&S/N");
-
-		m_Motors->m_Optics[2].motor = new wxTextCtrl(
-			page, 
-			SettingsVariables::ID::MOT_OPT_Z_MOTOR_TXT_CTRL, 
-			wxT("None"),
-			wxDefaultPosition, 
-			txtCtrlSize,
-			wxTE_CENTRE | wxTE_READONLY
-			//m_Motors->unique_motors[0]
-		);
-
-		//m_Motors->m_Optics[2].motors->SetSelection(0);
-
-		sn_static_box_sizer->Add(m_Motors->m_Optics[2].motor);
-
-		opt_z_static_box_sizer->Add(sn_static_box_sizer);
-	}
-	/* Steps/mm */
-	opt_z_static_box_sizer->AddSpacer(2);
-	{
-		wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Steps/mm");
-
-		m_Motors->m_Optics[2].steps_per_mm = new wxStaticText(
-			page, 
-			SettingsVariables::ID::MOT_OPT_Z_STEPS_PER_MM_ST_TEXT, 
-			wxT("None"), 
-			wxDefaultPosition, 
-			wxDefaultSize, 
-			wxALIGN_CENTRE_HORIZONTAL);
-
-		range_static_box_sizer->AddStretchSpacer();
-		range_static_box_sizer->Add(m_Motors->m_Optics[2].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
-		range_static_box_sizer->AddStretchSpacer();
-
-		opt_z_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
-	}
-	sizerPage->Add(opt_z_static_box_sizer, 0, wxCENTRE);
-
-	page->SetSizer(sizerPage);
-	return page;
+	return CreateMotorsTablePage(parent, m_Motors->m_Detector.get(), SettingsVariables::ID::MOT_DET_X_MOTOR_TXT_CTRL);
 }
 
-auto cSettings::CreateAuxPage(wxWindow* parent, const wxSize& txtCtrlSize, const int& topOffset) -> wxWindow*
+auto cSettings::CreateOpticsPage(wxWindow* parent, const wxSize&, const int&) -> wxWindow*
 {
-	auto page = new wxPanel(parent);
-	auto sizerPage = new wxBoxSizer(wxVERTICAL);
+	return CreateMotorsTablePage(parent, m_Motors->m_Optics.get(), SettingsVariables::ID::MOT_OPT_X_MOTOR_TXT_CTRL);
+}
 
-	/* X */
-	wxSizer* const x_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&X");
-	/* Serial Number */
-	{
-		wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&S/N");
-
-		m_Motors->m_Aux[0].motor = new wxTextCtrl(
-			page, 
-			SettingsVariables::ID::MOT_AUX_X_MOTOR_TXT_CTRL, 
-			wxT("None"),
-			wxDefaultPosition, 
-			txtCtrlSize,
-			wxTE_CENTRE | wxTE_READONLY
-			//m_Motors->unique_motors[0]
-		);
-
-		//m_Motors->m_Optics[0].motors->SetSelection(0);
-
-		sn_static_box_sizer->Add(m_Motors->m_Aux[0].motor);
-
-		x_static_box_sizer->Add(sn_static_box_sizer);
-	}
-
-	/* Steps/mm */
-	x_static_box_sizer->AddSpacer(2);
-	{
-		wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Steps/mm");
-
-		m_Motors->m_Aux[0].steps_per_mm = new wxStaticText(
-			page, 
-			SettingsVariables::ID::MOT_AUX_X_STEPS_PER_MM_ST_TEXT, 	
-			wxT("None"), 
-			wxDefaultPosition, 
-			wxDefaultSize, 
-			wxALIGN_CENTRE_HORIZONTAL);
-
-		range_static_box_sizer->AddStretchSpacer();
-		range_static_box_sizer->Add(m_Motors->m_Aux[0].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
-		range_static_box_sizer->AddStretchSpacer();
-
-		x_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
-	}
-
-	sizerPage->Add(x_static_box_sizer, 0, wxCENTRE);
-	sizerPage->AddSpacer(2);
-	sizerPage->AddStretchSpacer();
-
-	/* Y */
-	wxSizer* const opt_y_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Y");
-	/* Serial Number */
-	{
-		wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&S/N");
-
-		m_Motors->m_Aux[1].motor = new wxTextCtrl(
-			page, 
-			SettingsVariables::ID::MOT_AUX_Y_MOTOR_TXT_CTRL, 
-			wxT("None"),
-			wxDefaultPosition, 
-			txtCtrlSize,
-			wxTE_CENTRE | wxTE_READONLY
-			//m_Motors->unique_motors[0]
-		);
-
-		sn_static_box_sizer->Add(m_Motors->m_Aux[1].motor);
-
-		opt_y_static_box_sizer->Add(sn_static_box_sizer);
-	}
-
-	/* Steps/mm */
-	opt_y_static_box_sizer->AddSpacer(2);
-	{
-		wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Steps/mm");
-
-		m_Motors->m_Aux[1].steps_per_mm = new wxStaticText(
-			page, 
-			SettingsVariables::ID::MOT_AUX_Y_STEPS_PER_MM_ST_TEXT, 
-			wxT("None"), 
-			wxDefaultPosition, 
-			wxDefaultSize, 
-			wxALIGN_CENTRE_HORIZONTAL);
-
-		range_static_box_sizer->AddStretchSpacer();
-		range_static_box_sizer->Add(m_Motors->m_Aux[1].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
-		range_static_box_sizer->AddStretchSpacer();
-
-		opt_y_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
-	}
-
-	sizerPage->Add(opt_y_static_box_sizer, 0, wxCENTRE);
-	sizerPage->AddSpacer(2);
-	sizerPage->AddStretchSpacer();
-
-	/* Z */
-	wxSizer* const opt_z_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Z");
-	/* Serial Number */
-	{
-		wxSizer* const sn_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&S/N");
-
-		m_Motors->m_Aux[2].motor = new wxTextCtrl(
-			page, 
-			SettingsVariables::ID::MOT_AUX_Z_MOTOR_TXT_CTRL, 
-			wxT("None"),
-			wxDefaultPosition, 
-			txtCtrlSize,
-			wxTE_CENTRE | wxTE_READONLY
-			//m_Motors->unique_motors[0]
-		);
-
-		//m_Motors->m_Aux[2].motors->SetSelection(0);
-
-		sn_static_box_sizer->Add(m_Motors->m_Aux[2].motor);
-
-		opt_z_static_box_sizer->Add(sn_static_box_sizer);
-	}
-
-	/* Steps/mm */
-	opt_z_static_box_sizer->AddSpacer(2);
-	{
-		wxSizer* const range_static_box_sizer = new wxStaticBoxSizer(wxHORIZONTAL, page, "&Steps/mm");
-
-		m_Motors->m_Aux[2].steps_per_mm = new wxStaticText(
-			page, 
-			SettingsVariables::ID::MOT_AUX_Z_STEPS_PER_MM_ST_TEXT, 
-			wxT("None"), 
-			wxDefaultPosition, 
-			wxDefaultSize, 
-			wxALIGN_CENTRE_HORIZONTAL);
-
-		range_static_box_sizer->AddStretchSpacer();
-		range_static_box_sizer->Add(m_Motors->m_Aux[2].steps_per_mm, 0, wxEXPAND | wxTOP, topOffset);
-		range_static_box_sizer->AddStretchSpacer();
-
-		opt_z_static_box_sizer->Add(range_static_box_sizer, 0, wxEXPAND);
-	}
-
-	sizerPage->Add(opt_z_static_box_sizer, 0, wxCENTRE);
-
-	page->SetSizer(sizerPage);
-	return page;
+auto cSettings::CreateAuxPage(wxWindow* parent, const wxSize&, const int&) -> wxWindow*
+{
+	return CreateMotorsTablePage(parent, m_Motors->m_Aux.get(), SettingsVariables::ID::MOT_AUX_X_MOTOR_TXT_CTRL);
 }
 
 auto cSettings::CreateCameraSection(wxPanel* panel, wxBoxSizer* panel_sizer) -> void
 {
-	wxSizer* const cameraStaticBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "&Camera");
+	auto cameraStaticBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "Camera");
+	auto box = cameraStaticBoxSizer->GetStaticBox();
 
-	// ID
+	auto label = new wxStaticText(box, wxID_ANY, "Serial number / ID:");
+	cameraStaticBoxSizer->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxALL, FromDIP(6));
+
+	m_Camera->idTxtCtrl = new wxTextCtrl
+	(
+		box,
+		SettingsVariables::ID::CAM_ID_TXT_CTRL,
+		wxT("None"),
+		wxDefaultPosition,
+		wxDefaultSize,
+		wxTE_CENTRE | wxTE_READONLY
+	);
+	m_Camera->idTxtCtrl->SetToolTip("Camera assigned to the selected work station");
+
+	for (auto i{ 0 }; i < m_WorkStations->work_stations_count; ++i)
 	{
-		auto idBoxSizer = new wxStaticBoxSizer(wxHORIZONTAL, panel, "&ID");
-		auto txtCtrlSize = wxSize(80, 24);
-		m_Camera->idTxtCtrl = new wxTextCtrl
-		(
-			panel, 
-			SettingsVariables::ID::CAM_ID_TXT_CTRL, 
-			wxT("None"),
-			wxDefaultPosition, 
-			txtCtrlSize,
-			wxTE_CENTRE | wxTE_READONLY
-		);
-
+		if (m_WorkStations->work_station_data[i].work_station_name == m_WorkStations->initialized_work_station)
 		{
-			for (auto i{ 0 }; i < m_WorkStations->work_stations_count; ++i)
-			{
-				if (m_WorkStations->work_station_data[i].work_station_name == m_WorkStations->initialized_work_station)
-				{
-					m_Camera->selectedCameraIDStr = m_WorkStations->work_station_data[i].selected_camera_in_data_file;
-					m_WorkStations->initialized_work_station_num = i;
-					break;
-				}
-			}
-
-			m_Camera->idTxtCtrl->SetValue(m_Camera->selectedCameraIDStr);
+			m_Camera->selectedCameraIDStr = m_WorkStations->work_station_data[i].selected_camera_in_data_file;
+			m_WorkStations->initialized_work_station_num = i;
+			break;
 		}
-
-		idBoxSizer->Add(m_Camera->idTxtCtrl, 1, wxEXPAND | wxLEFT | wxRIGHT, 5);
-		cameraStaticBoxSizer->Add(idBoxSizer, 1, wxEXPAND);
 	}
+	m_Camera->idTxtCtrl->SetValue(m_Camera->selectedCameraIDStr);
 
-	panel_sizer->Add(cameraStaticBoxSizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 2);
+	cameraStaticBoxSizer->Add(m_Camera->idTxtCtrl, 1, wxEXPAND | wxALL, FromDIP(6));
+
+	panel_sizer->Add(cameraStaticBoxSizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(12));
 }
 
 auto cSettings::CreateOtherSettings(wxBoxSizer* panel_sizer) -> void
@@ -973,25 +669,53 @@ auto cSettings::LoadWorkStationFiles() -> void
 {
 	std::string fileNameWithPath{};
 	m_WorkStations->work_stations_count = 0;
-	for (const auto& entry : std::filesystem::directory_iterator(work_stations_path.ToStdString()))
+
+	// Collect the file names once; the error_code overload does not throw when
+	// the src folder is missing (previously an uncaught filesystem_error on startup).
+	std::vector<std::filesystem::path> jsonFiles;
 	{
-		if (entry.is_regular_file() && entry.path().extension() == ".json")
+		std::error_code ec;
+		for (std::filesystem::directory_iterator it(work_stations_path.ToStdString(), ec), end; !ec && it != end; it.increment(ec))
 		{
-			++m_WorkStations->work_stations_count;
+			std::error_code fileEc;
+			if (it->is_regular_file(fileEc) && it->path().extension() == ".json")
+				jsonFiles.push_back(it->path());
 		}
 	}
+
+	if (jsonFiles.empty())
+	{
+		// Every accessor indexes work_station_data[initialized_work_station_num];
+		// provide one placeholder station so nothing reads out of bounds.
+		m_WorkStations->work_stations_count = 1;
+		m_WorkStations->work_station_data = std::make_unique<SettingsVariables::WorkStationData[]>(1);
+
+		auto& placeholder = m_WorkStations->work_station_data[0];
+		placeholder.work_station_name = "None";
+		placeholder.selected_camera_in_data_file = "None";
+		for (int m = 0; m < 9; ++m)
+			placeholder.selected_motors_in_data_file.Add("None");
+		placeholder.configuration_errors.Add("No work station files (*.json) were found in \"" + work_stations_path + "\".");
+
+		m_WorkStations->all_work_station_array_str.Add(placeholder.work_station_name);
+		m_WorkStations->initialized_work_station_num = 0;
+		return;
+	}
+
+	m_WorkStations->work_stations_count = static_cast<unsigned short>(jsonFiles.size());
 	m_WorkStations->work_station_data = std::make_unique<SettingsVariables::WorkStationData[]>(m_WorkStations->work_stations_count);
 
 	auto i{ 0 };
-	for (const auto& entry : std::filesystem::directory_iterator(work_stations_path.ToStdString())) 
+	for (const auto& path : jsonFiles)
 	{
-		if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
-
-		fileNameWithPath = work_stations_path.ToStdString() + entry.path().filename().string();
+		fileNameWithPath = work_stations_path.ToStdString() + path.filename().string();
 		ReadWorkStationFile(fileNameWithPath, i);
 
 		++i;
 	}
+
+	if (m_WorkStations->initialized_work_station_num >= m_WorkStations->work_stations_count)
+		m_WorkStations->initialized_work_station_num = 0;
 }
 
 auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileNum) -> void
@@ -1180,10 +904,11 @@ auto cSettings::ReadWorkStationFile(const std::string& fileName, const int fileN
 		workStation.configuration_errors.Add("\"camera_manufacturer\" is missing or is not a string.");
 
 	// PixelSizeUM
-	if (j.contains("pixel_size_um") && j["pixel_size_um"].is_number())
+	if (j.contains("pixel_size_um") && j["pixel_size_um"].is_number() && j["pixel_size_um"].get<double>() > 0.0)
 		workStation.pixelSizeUM = j["pixel_size_um"].get<double>();
 	else
-		workStation.configuration_errors.Add("\"pixel_size_um\" is missing or is not a number.");
+		// 0 would later be used as a divisor (report generation, scale bar)
+		workStation.configuration_errors.Add("\"pixel_size_um\" is missing, not a number, or not greater than 0.");
 
 	// Station
 	if (j.contains("station") && j["station"].is_string()) {
@@ -1277,16 +1002,38 @@ auto cSettings::ReadStagePositionsFromJSONFile() -> void
 
 auto cSettings::PrepareStagesDataAndWriteThemIntoJSONFile() -> void
 {
-	std::vector<SettingsVariables::Stage> out;
-	if (m_XeryonMotors) {
-		auto serials = m_XeryonMotors->GetSerialNumbersWithRanges();
-		for (auto& s : serials) {
-			SettingsVariables::Stage st;
-			st.SerialNumber = s.first;
-			st.COMPort = m_XeryonMotors->GetMotorCOMPort(s.first);
-			st.LastKnownPosition = m_XeryonMotors->GetActualStagePos(s.first);
-			out.push_back(st);
+	// Nothing to update: don't overwrite the stored Xeryon positions (previously a
+	// Standa-only station wiped the whole file on every move).
+	if (!m_XeryonMotors) return;
+
+	// Merge into the existing file instead of replacing it: only motors that are
+	// selected in the current work station have a trustworthy position (unselected
+	// ones are never restored and would otherwise be stored as 0).
+	auto out = ReadJson(m_StagesPositionsFilename);
+
+	const auto& ws = m_WorkStations->work_station_data[m_WorkStations->initialized_work_station_num];
+	auto isSelected = [&ws](const std::string& sn)
+		{
+			for (const auto& selected : ws.selected_motors_in_data_file)
+				if (selected.ToStdString() == sn) return true;
+			return false;
+		};
+
+	auto serials = m_XeryonMotors->GetSerialNumbersWithRanges();
+	for (auto& s : serials)
+	{
+		if (!isSelected(s.first)) continue;
+
+		auto it = std::find_if(out.begin(), out.end(),
+			[&s](const SettingsVariables::Stage& st) { return st.SerialNumber == s.first; });
+		if (it == out.end())
+		{
+			out.emplace_back();
+			it = std::prev(out.end());
+			it->SerialNumber = s.first;
 		}
+		it->COMPort = m_XeryonMotors->GetMotorCOMPort(s.first);
+		it->LastKnownPosition = m_XeryonMotors->GetActualStagePos(s.first);
 	}
 	WriteJson(m_StagesPositionsFilename, out);
 }

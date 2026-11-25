@@ -949,13 +949,11 @@ void cCameraTelemetryPanel::OnPaint(wxPaintEvent& event)
 					FromDIP(10);
 			}
 
-			tooltipX = std::clamp
+			// std::clamp is UB when hi < lo (plot narrower than the tooltip)
+			tooltipX = std::max
 			(
-				tooltipX,
 				plotRect.GetLeft() + FromDIP(3),
-				plotRect.GetRight() -
-				tooltipWidth -
-				FromDIP(3)
+				std::min(tooltipX, plotRect.GetRight() - tooltipWidth - FromDIP(3))
 			);
 
 			int tooltipY =
@@ -970,13 +968,10 @@ void cCameraTelemetryPanel::OnPaint(wxPaintEvent& event)
 					FromDIP(10);
 			}
 
-			tooltipY = std::clamp
+			tooltipY = std::max
 			(
-				tooltipY,
 				plotRect.GetTop() + FromDIP(3),
-				plotRect.GetBottom() -
-				tooltipHeight -
-				FromDIP(3)
+				std::min(tooltipY, plotRect.GetBottom() - tooltipHeight - FromDIP(3))
 			);
 
 			wxRect tooltipRect

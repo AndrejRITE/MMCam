@@ -8,6 +8,7 @@
 #include "wx/filefn.h"
 #include "wx/textfile.h"
 #include "wx/tglbtn.h"
+#include "wx/statline.h"
 #include "wx/valnum.h"
 #include "wx/thread.h"
 #include "wx/appprogress.h"
@@ -36,6 +37,7 @@
 #include <cstring>
 #include <functional>
 #include <atomic>
+#include <list>
 
 #include <nlohmann/json.hpp>
 
@@ -54,8 +56,8 @@
 
 #include "src/img/logo.xpm"
 
-#define MAJOR_VERSION 2
-#define MINOR_VERSION 7
+#define MAJOR_VERSION 3
+#define MINOR_VERSION 0
 
 #ifdef _DEBUG
 	//#define OPEN
@@ -67,6 +69,27 @@
 
 namespace MainFrameVariables
 {
+	/// State shared between the UI thread and one capture thread (live view or measurement).
+	/// Stored in a std::list so addresses stay valid while threads hold pointers into it.
+	struct ThreadControl
+	{
+		explicit ThreadControl(const wxString& id_) : id(id_) {}
+
+		wxString id;
+		std::atomic<bool> alive{ true };      ///< UI -> thread: keep running
+		std::atomic<bool> finished{ false };  ///< thread -> UI: Entry() has returned / is returning
+		std::unique_ptr<wxThreadHelper> helper{}; ///< owns the LiveCapturing/WorkerThread object
+
+		/// Waits for the OS thread and frees the helper (fixes the per-start leak of thread objects)
+		auto Release() -> void
+		{
+			if (!helper) return;
+			if (auto* t = helper->GetThread(); t && t->IsAlive())
+				t->Wait();
+			helper.reset();
+		}
+	};
+
 	enum ID
 	{
 		/* Menu Bar */
@@ -452,9 +475,9 @@ namespace MainFrameVariables
 	{
 		std::unique_ptr<wxTextCtrl> camSensorTemperature{}, camExposure{};
 		std::unique_ptr<wxChoice> camBinning{};
-		std::unique_ptr<wxBitmapButton> singleShotBtn{};
+		std::unique_ptr<wxButton> singleShotBtn{};
 		std::unique_ptr<wxCheckBox> saveCapturedImagesCheckBox{};
-		std::unique_ptr<wxBitmapToggleButton> startStopLiveCapturingTglBtn{};
+		std::unique_ptr<wxToggleButton> startStopLiveCapturingTglBtn{};
 		std::unique_ptr<wxTextCtrl> crossHairPosXTxtCtrl{}, crossHairPosYTxtCtrl{};
 
 		auto SetLiveCapturingBitmapColor(const bool isCapturing) -> void
@@ -462,11 +485,12 @@ namespace MainFrameVariables
 			if (!startStopLiveCapturingTglBtn) return;
 
 			startStopLiveCapturingTglBtn->SetBitmap(GetLiveCapturingBitmap(isCapturing));
+			startStopLiveCapturingTglBtn->SetLabel(isCapturing ? "Stop live view" : "Live view");
 		}
 
 		auto GetLiveCapturingBitmap(const bool isCapturing) -> wxBitmap
 		{
-			const wxSize bitmapSize = wxSize(32, 32);
+			const wxSize bitmapSize = wxSize(20, 20);
 			const char* liveCapturingBitmap = wxART_VIDEOCAM;
 			const char* liveCapturingClient = wxART_CLIENT_MATERIAL_ROUND;
 			const wxColour liveCapturingStartBitmapColor = wxColour(34, 177, 76);
@@ -1262,6 +1286,9 @@ private:
 	) -> void;
 
 	void OnSetOutDirectoryBtn(wxCommandEvent& evt);
+	/// Returns an existing output directory, asking the user (once) if needed.
+	/// Returns an empty string if the user cancelled or the folder is unusable.
+	auto EnsureOutputDirectory() -> wxString;
 
 	auto ReadInitializationFile() -> void;
 	auto RewriteInitializationFile() -> void;
@@ -2247,10 +2274,10 @@ private:
 	std::unique_ptr<wxTextCtrl> m_OutDirTextCtrl{};
 	std::unique_ptr<wxBitmapButton> m_OutDirBtn{};
 	std::unique_ptr<MainFrameVariables::MeasurementStage> m_FirstStage{};
-	std::unique_ptr<wxBitmapToggleButton> m_StartStopMeasurementTglBtn{};
+	std::unique_ptr<wxToggleButton> m_StartStopMeasurementTglBtn{};
 
 	/* Report Generation */
-	std::unique_ptr<wxBitmapButton> m_GenerateReportBtn{};
+	std::unique_ptr<wxButton> m_GenerateReportBtn{};
 
 	/* Progress */
 	bool m_Cancelled{}, m_DataCalculatedInThisApp{};
@@ -2307,6 +2334,7 @@ private:
 	wxButton* m_StopMotorsBtn{};
 	std::atomic<bool> m_MotorMoveInProgress{ false };
 	std::atomic<bool> m_StopInProgress{ false };
+	std::atomic<int> m_SingleShotInFlight{ 0 };
 	
 	wxNotebook* m_CameraControlNotebook{};
 	
@@ -2320,7 +2348,7 @@ private:
 	wxColour m_DefaultCellColor{};
 	std::unique_ptr<MainFrameVariables::PropertiesNames> m_PropertiesNames{};
 
-	std::vector<std::pair<wxString, bool>> m_StartedThreads{};
+	std::list<MainFrameVariables::ThreadControl> m_StartedThreads{};
 
 	int m_DecimalDigits = 4;
 
@@ -2427,8 +2455,8 @@ public:
 		const unsigned short& binning,
 		const MainFrameVariables::BinningModes& binningMode,
 		const int& medianBlurRadius,
-		wxString* uniqueThreadKey,
-		bool* aliveOrDeadThread,
+		std::atomic<bool>* threadFinished,
+		std::atomic<bool>* aliveOrDeadThread,
 		std::atomic<bool>* isDrawExecutionFinished,
 		const bool spectroscopyMode = false,
 		const unsigned long long spectroscopyFrameCount = 0
@@ -2459,8 +2487,8 @@ protected:
 	wxSize m_ImageSize{};
 
 	// Thread
-	wxString* m_UniqueThreadKey{};
-	bool* m_AliveOrDeadThread{};
+	std::atomic<bool>* m_ThreadFinished{};
+	std::atomic<bool>* m_AliveOrDeadThread{};
 
 	std::atomic<bool>* m_IsDrawExecutionFinished{};
 
@@ -2496,8 +2524,8 @@ public:
 		const unsigned short& binning,
 		const MainFrameVariables::BinningModes& binningMode,
 		const int& medianBlurRadius,
-		wxString* uniqueThreadKey,
-		bool* aliveOrDeadThread,
+		std::atomic<bool>* threadFinished,
+		std::atomic<bool>* aliveOrDeadThread,
 		std::atomic<bool>* isDrawExecutionFinished,
 		const wxString& path, 
 		MainFrameVariables::AxisMeasurement* first_axis, 

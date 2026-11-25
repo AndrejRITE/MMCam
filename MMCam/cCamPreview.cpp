@@ -1014,13 +1014,12 @@ auto cCamPreview::DrawImageStatistics(wxGraphicsContext* gc) -> void
 
 	const auto& s = m_LastStats;
 
-	// Format integers with thousands separator using single quote as separator
-	auto format_number = [](auto value) 
+	// Integers use a comma as the thousands separator (formatted manually so
+	// we do not depend on an OS locale being installed, and do not construct
+	// a std::locale on every repaint).
+	auto format_number = [](auto value) -> wxString
 		{
-			std::string str = std::format(std::locale("en_US.UTF-8"), "{:L}", value); // localized format
-			//for (auto& ch : str)
-				//if (ch == ',') ch = '\''; // replace comma with apostrophe
-			return str;
+			return CameraPreviewVariables::FormatWithThousandsDelimiter(static_cast<long long>(value), ",");
 		};
 
 	auto format_scientific10 = [](unsigned long long v) -> wxString
@@ -1032,46 +1031,77 @@ auto cCamPreview::DrawImageStatistics(wxGraphicsContext* gc) -> void
 			return wxString::FromUTF8(os.str());
 		};
 
-	wxString txt;
-	txt.Printf(
-		"Min: %s\nMax: %s\nSum: %s\nMean: %.2f\nStdDev: %.2f\nBlack-clipped count: %s\nSaturated count: %s",
-		format_number(s.minV),
-		format_number(s.maxV),
-		format_scientific10(s.sum),
-		s.mean,
-		s.stddev,
-		format_number(s.blackClippedPixelsCount),
-		format_number(s.saturatedPixelsCount)
-	);
-
-	wxFont font(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
-	gc->SetFont(font, m_ContrastDefaultColor);
-
-	wxDouble widthText{}, heightText{};
-	gc->GetTextExtent(txt, &widthText, &heightText);
-
-	// Render background badge
+	const std::pair<wxString, wxString> rows[] =
 	{
-		// Badge rect (bottom-left)
-		const wxDouble pad = 6.0;
-		const wxDouble rx = 6.0; // rounded corners
+		{ "Min",           format_number(s.minV) },
+		{ "Max",           format_number(s.maxV) },
+		{ "Sum",           format_scientific10(s.sum) },
+		{ "Mean",          wxString::Format("%.2f", s.mean) },
+		{ "StdDev",        wxString::Format("%.2f", s.stddev) },
+		{ "Black-clipped", format_number(s.blackClippedPixelsCount) },
+		{ "Saturated",     format_number(s.saturatedPixelsCount) },
+	};
 
-		wxDouble x = pad, y = GetSize().GetHeight() - pad - heightText - 2 * pad;
-		wxDouble w = widthText + 2 * pad, h = heightText + 2 * pad;
+	const wxFont labelFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+	const wxFont valueFont(10, wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+	const wxColour labelColour(200, 200, 200);
+	const wxColour valueColour(255, 255, 255);
+	const wxColour alertColour(255, 110, 90);
 
-		// Background with slight transparency
-		gc->SetBrush(wxBrush(wxColour(0, 0, 0, 120)));
-		gc->SetPen(*wxTRANSPARENT_PEN);
-		wxGraphicsPath path = gc->CreatePath();
-		path.AddRoundedRectangle(x, y, w, h, rx);
-		gc->FillPath(path);
+	// Measure both columns
+	wxDouble labelColW{}, valueColW{}, rowH{};
+	for (const auto& [label, value] : rows)
+	{
+		wxDouble w{}, h{};
+		gc->SetFont(labelFont, labelColour);
+		gc->GetTextExtent(label, &w, &h);
+		labelColW = std::max(labelColW, w);
+		rowH = std::max(rowH, h);
 
-		gc->DrawText
-		(
-			txt,
-			x + pad,
-			y + pad
-		);
+		gc->SetFont(valueFont, valueColour);
+		gc->GetTextExtent(value, &w, &h);
+		valueColW = std::max(valueColW, w);
+		rowH = std::max(rowH, h);
+	}
+
+	const wxDouble pad = 8.0;
+	const wxDouble colGap = 14.0;
+	const wxDouble lineGap = 2.0;
+	const wxDouble rx = 6.0;
+	const auto rowCount = static_cast<int>(std::size(rows));
+
+	const wxDouble w = pad + labelColW + colGap + valueColW + pad;
+	const wxDouble h = pad + rowCount * rowH + (rowCount - 1) * lineGap + pad;
+
+	// Badge sits in the bottom-left corner, so it never collides with the FPS
+	// badge (top-left) or the image-size annotations (left / bottom sides).
+	const wxDouble margin = 6.0;
+	const wxDouble x = margin;
+	const wxDouble y = std::max(margin, GetSize().GetHeight() - margin - h);
+
+	gc->SetBrush(wxBrush(wxColour(20, 20, 24, 170)));
+	gc->SetPen(wxPen(wxColour(255, 255, 255, 40), 1));
+	wxGraphicsPath path = gc->CreatePath();
+	path.AddRoundedRectangle(x, y, w, h, rx);
+	gc->DrawPath(path);
+
+	for (int i = 0; i < rowCount; ++i)
+	{
+		const auto& [label, value] = rows[i];
+		const wxDouble rowY = y + pad + i * (rowH + lineGap);
+
+		gc->SetFont(labelFont, labelColour);
+		gc->DrawText(label, x + pad, rowY);
+
+		// Highlight non-zero clipping counts — they usually mean the exposure needs attention
+		const bool isClippingRow = (i >= rowCount - 2);
+		const bool alert = isClippingRow &&
+			((i == rowCount - 2 && s.blackClippedPixelsCount > 0) || (i == rowCount - 1 && s.saturatedPixelsCount > 0));
+
+		wxDouble vw{}, vh{};
+		gc->SetFont(valueFont, alert ? alertColour : valueColour);
+		gc->GetTextExtent(value, &vw, &vh);
+		gc->DrawText(value, x + w - pad - vw, rowY); // right-aligned numbers
 	}
 }
 
@@ -1306,30 +1336,100 @@ void cCamPreview::DrawFPS(wxGraphicsContext* gc)
 	if (m_FPSInstant > 0.0)
 	{
 		txt += " | Frames: ";
-		txt += CameraPreviewVariables::FormatWithApostropheDelimiter(m_FrameCount + 1);
+		txt += CameraPreviewVariables::FormatWithThousandsDelimiter(static_cast<long long>(m_FrameCount) + 1);
 	}
 
 	// Font & metrics
-	wxFont font(11, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+	wxFont font(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
 	gc->SetFont(font, *wxWHITE);
 	wxDouble tw{}, th{};
 	gc->GetTextExtent(txt, &tw, &th);
 
-	// Badge rect (top-left)
-	const wxDouble pad = 6.0;
-	const wxDouble rx = 8.0; // rounded corners
-	wxDouble x = pad, y = pad;
+	// Badge rect (top-left) — same look as the statistics badge
+	const wxDouble pad = 8.0;
+	const wxDouble rx = 6.0; // rounded corners
+	wxDouble x = 6.0, y = 6.0;
 	wxDouble w = tw + 2 * pad, h = th + 2 * pad;
 
-	// Background with slight transparency
-	gc->SetBrush(wxBrush(wxColour(0, 0, 0, 120)));
-	gc->SetPen(*wxTRANSPARENT_PEN);
+	gc->SetBrush(wxBrush(wxColour(20, 20, 24, 170)));
+	gc->SetPen(wxPen(wxColour(255, 255, 255, 40), 1));
 	wxGraphicsPath path = gc->CreatePath();
 	path.AddRoundedRectangle(x, y, w, h, rx);
-	gc->FillPath(path);
+	gc->DrawPath(path);
 
 	// Text
 	gc->DrawText(txt, x + pad, y + pad);
+
+	m_TopLeftOverlayBottom = std::max(m_TopLeftOverlayBottom, y + h);
+}
+
+auto cCamPreview::DrawEmptyState(wxGraphicsContext* gc) -> void
+{
+	if (!gc) return;
+
+	const wxSize size = GetClientSize();
+	if (size.GetWidth() < 120 || size.GetHeight() < 120) return;
+
+	// Pick foreground colours that read well on both the light and the dark background
+	const wxColour bg = GetBackgroundColour();
+	const bool darkBg = (0.299 * bg.Red() + 0.587 * bg.Green() + 0.114 * bg.Blue()) < 128.0;
+	const wxColour primary = darkBg ? wxColour(210, 210, 210) : wxColour(70, 70, 70);
+	const wxColour secondary = darkBg ? wxColour(150, 150, 150) : wxColour(120, 120, 120);
+	const wxColour frame = darkBg ? wxColour(255, 255, 255, 45) : wxColour(0, 0, 0, 45);
+
+	const int iconSide = std::clamp(std::min(size.GetWidth(), size.GetHeight()) / 6, 32, 96);
+
+	const wxString title = "No image";
+	const wxString hint = "Capture a frame with the camera controls on the right,\nor open an existing image via File → Open (Ctrl+O).";
+
+	const wxFont titleFont(14, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+	const wxFont hintFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+
+	wxDouble titleW{}, titleH{}, hintW{}, hintH{};
+	gc->SetFont(titleFont, primary);
+	gc->GetTextExtent(title, &titleW, &titleH);
+	gc->SetFont(hintFont, secondary);
+	gc->GetTextExtent(hint, &hintW, &hintH);
+
+	const wxDouble gap = 12.0;
+	const wxDouble blockH = iconSide + gap + titleH + gap / 2 + hintH;
+	const wxDouble cx = size.GetWidth() / 2.0;
+	wxDouble top = (size.GetHeight() - blockH) / 2.0;
+
+	// Dashed frame around the message
+	{
+		const wxDouble boxW = std::max<wxDouble>(hintW, titleW) + 64.0;
+		const wxDouble boxH = blockH + 48.0;
+		wxPen pen(frame, 2, wxPENSTYLE_SHORT_DASH);
+		gc->SetPen(pen);
+		gc->SetBrush(*wxTRANSPARENT_BRUSH);
+		gc->DrawRoundedRectangle(cx - boxW / 2.0, top - 24.0, boxW, boxH, 10.0);
+	}
+
+	auto bmp = wxMaterialDesignArtProvider::GetBitmap
+	(
+		wxART_CAMERA,
+		wxART_CLIENT_FLUENTUI_FILLED,
+		wxSize(iconSide, iconSide),
+		secondary
+	);
+	if (bmp.IsOk())
+		gc->DrawBitmap(bmp, cx - iconSide / 2.0, top, iconSide, iconSide);
+	top += iconSide + gap;
+
+	gc->SetFont(titleFont, primary);
+	gc->DrawText(title, cx - titleW / 2.0, top);
+	top += titleH + gap / 2;
+
+	// Centre each hint line individually
+	gc->SetFont(hintFont, secondary);
+	for (const auto& line : wxSplit(hint, '\n'))
+	{
+		wxDouble lw{}, lh{};
+		gc->GetTextExtent(line, &lw, &lh);
+		gc->DrawText(line, cx - lw / 2.0, top);
+		top += lh;
+	}
 }
 
 auto cCamPreview::AddAnnulusOnCurrentImage() -> CameraPreviewVariables::Annulus
@@ -1370,10 +1470,27 @@ auto cCamPreview::AddAnnulusOnCurrentImage() -> CameraPreviewVariables::Annulus
 
 auto cCamPreview::RemoveAnnulusByID(const long& id) -> void
 {
+	// Remember which annulus was selected (by ID), because erasing shifts the indices
+	long selectedID = -1;
+	const bool hadSelection = m_ActivatedAnnulusNum >= 0 && m_ActivatedAnnulusNum < (int)m_AnnulusVec.size();
+	if (hadSelection)
+		selectedID = m_AnnulusVec[m_ActivatedAnnulusNum].GetID();
+
 	std::erase_if(m_AnnulusVec, [id](const CameraPreviewVariables::Annulus& a) 
 		{ return a.GetID() == id; });
 
-	m_ActivatedAnnulusNum = std::clamp(m_ActivatedAnnulusNum, -1, (int)m_AnnulusVec.size() - 1);
+	m_ActivatedAnnulusNum = -1;
+	if (hadSelection && selectedID != id)
+	{
+		for (int i = 0; i < (int)m_AnnulusVec.size(); ++i)
+		{
+			if (m_AnnulusVec[i].GetID() == selectedID)
+			{
+				m_ActivatedAnnulusNum = i;
+				break;
+			}
+		}
+	}
 }
 
 auto cCamPreview::CalculateSumInsideAnnulus(CameraPreviewVariables::Annulus& annulus) -> void
@@ -1420,6 +1537,8 @@ auto cCamPreview::UpdateAnnulusValues(CameraPreviewVariables::Annulus& annulus) 
 	annulus.m_Center.x = std::clamp(annulus.m_Center.x, 0, m_ImageSize.GetWidth() - 1);
 	annulus.m_Center.y = std::clamp(annulus.m_Center.y, 0, m_ImageSize.GetHeight() - 1);
 
+	// Ensure a valid range for std::clamp (hi >= lo), e.g. when the spot sits on an image edge
+	annulus.m_OuterRadius = std::max(annulus.m_OuterRadius, 1.5);
 	annulus.m_InnerRadius = std::clamp(annulus.m_InnerRadius, 1.0, annulus.m_OuterRadius - 0.5);
 	annulus.m_OuterRadius = std::max(annulus.m_InnerRadius + 0.5, annulus.m_OuterRadius);
 
@@ -1459,7 +1578,12 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 
 	{
 		auto gc = wxGraphicsContext::Create(dc);
-		if (!gc) return;
+		if (!gc)
+		{
+			// Live view waits for this flag; leaving it false would freeze the preview
+			SetExecutionFinished(true);
+			return;
+		}
 
 		DrawCameraCapturedImage(gc);
 		delete gc;
@@ -1467,6 +1591,11 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 
 	if (!m_IsImageSet)
 	{
+		if (auto gc = wxGraphicsContext::Create(dc))
+		{
+			DrawEmptyState(gc);
+			delete gc;
+		}
 		SetExecutionFinished(true);
 		return;
 	}
@@ -1487,6 +1616,8 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 			memDC.Blit(0, 0, m_CanvasSize.GetWidth(), m_CanvasSize.GetHeight(), &dc, 0, 0);
 			m_LastBufferImage = buffer.ConvertToImage();
 		}
+
+		m_TopLeftOverlayBottom = 0.0;
 
 		DrawActualZoomedPositionOverImage(gc);
 		DrawROI(gc);
@@ -1535,20 +1666,23 @@ auto cCamPreview::UpdateWXImage(int black, int white) -> void
 	LOG("Started: " + wxString(__FUNCSIG__));
 
 	// Check number of threads on the current machine
-	auto numThreads = std::thread::hardware_concurrency();
+	const unsigned int imageHeight = static_cast<unsigned int>(std::max(0, m_ImageSize.GetHeight()));
+	if (!imageHeight || m_ImageSize.GetWidth() <= 0) return;
 
-#ifdef _DEBUG
-	//numThreads = 1;
-#endif // _DEBUG
+	// hardware_concurrency() may return 0, and there is no point in more threads than rows
+	const unsigned int numThreads = std::clamp(std::thread::hardware_concurrency(), 1u, imageHeight);
 
 	std::vector<std::thread> threads;
 	threads.reserve(numThreads);
 
-	unsigned int tileSize{};
-	tileSize = m_ImageSize.GetHeight() % numThreads > 0 ? m_ImageSize.GetHeight() / numThreads + 1 : m_ImageSize.GetHeight() / numThreads;
+	const unsigned int tileSize = (imageHeight + numThreads - 1) / numThreads;
 
 	for (auto i{ 0 }; i < (int)numThreads; ++i)
 	{
+		// With ceil-division the trailing tiles can start past the last row;
+		// launching them would read past the end of m_ImageData.
+		if (static_cast<unsigned int>(i) * tileSize >= imageHeight) break;
+
 		wxPoint start{}, finish{};
 		start.x = 0;
 		start.y = i * tileSize;
@@ -1587,20 +1721,22 @@ auto cCamPreview::AdjustImageParts
 	const int white
 ) -> void
 {
-	if (!data_ptr) return;
-	auto current_value{ data_ptr[0] };
+	if (!data_ptr || finish_y <= start_y) return;
+	unsigned short current_value{};
 	unsigned char red{}, green{}, blue{};
 
 	unsigned short max_value = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
 
 	const double black_d = static_cast<double>(black == max_value ? max_value - 1 : black);
 	const double white_d = static_cast<double>(white > max_value ? max_value : white);
-	const double range_d = white_d - black_d;
+	// Guard against black == white (e.g. a flat image or a collapsed histogram range),
+	// which would otherwise divide by zero and produce NaN -> undefined uchar conversion.
+	const double range_d = std::max(white_d - black_d, 1.0);
 
 	const double max_value_d = static_cast<double>(max_value);
 	const double max_minus_white = max_value_d - white_d;
 	const double max_minus_black = max_value_d - black_d;
-	const double max_range_d = max_minus_black - max_minus_white;
+	const double max_range_d = std::max(max_minus_black - max_minus_white, 1.0);
 	const unsigned char uchar_max = UCHAR_MAX;
 
 	double adjustedValue{};
@@ -1785,13 +1921,15 @@ auto cCamPreview::DrawHEWValues(wxGraphicsContext* gc_) -> void
 	if (!m_Image.IsOk() || !m_DisplayFocusCenter || !m_HorizontalSumArray || !m_VerticalSumArray) return;
 	if (m_HEWDiameter <= 0.0) return;
 
-	wxColour fontColour(234, 54, 128, 200);
-	wxFont font = wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+	wxColour fontColour(255, 120, 175);
+	wxFont font = wxFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
 	gc_->SetFont(font, fontColour);
 
 	wxDouble widthText{}, heightText{};
 
-	wxDouble offsetX{ 5.0 }, offsetY{ 5.0 };
+	// Stack below the FPS badge instead of drawing on top of it
+	const wxDouble pad = 8.0;
+	wxDouble offsetX{ 6.0 }, offsetY{ m_TopLeftOverlayBottom > 0.0 ? m_TopLeftOverlayBottom + 4.0 : 6.0 };
 	wxRealPoint drawPoint{};
 	wxString curr_value{};
 
@@ -1808,10 +1946,19 @@ auto cCamPreview::DrawHEWValues(wxGraphicsContext* gc_) -> void
 		curr_value += wxString::Format(wxT("%i"), (int)m_HEWDiameter);
 
 		gc_->GetTextExtent(curr_value, &widthText, &heightText);
-		drawPoint.x = offsetX;
-		drawPoint.y = offsetY;
+
+		// Badge background so the values stay readable on bright images
+		gc_->SetBrush(wxBrush(wxColour(20, 20, 24, 170)));
+		gc_->SetPen(wxPen(wxColour(255, 255, 255, 40), 1));
+		wxGraphicsPath path = gc_->CreatePath();
+		path.AddRoundedRectangle(offsetX, offsetY, widthText + 2 * pad, heightText + 2 * pad, 6.0);
+		gc_->DrawPath(path);
+
+		drawPoint.x = offsetX + pad;
+		drawPoint.y = offsetY + pad;
 
 		gc_->DrawText(curr_value, drawPoint.x, drawPoint.y);
+		m_TopLeftOverlayBottom = offsetY + heightText + 2 * pad;
 	}
 
 	LOG("Finished: " + wxString(__FUNCSIG__))

@@ -7,6 +7,7 @@ BEGIN_EVENT_TABLE(cHistogramPanel, wxPanel)
 	EVT_LEFT_DOWN(cHistogramPanel::OnMouseDown)
 	EVT_MOTION(cHistogramPanel::OnMouseMove)
 	EVT_LEFT_UP(cHistogramPanel::OnMouseUp)
+	EVT_MOUSE_CAPTURE_LOST(cHistogramPanel::OnMouseCaptureLost)
 	EVT_RIGHT_UP(cHistogramPanel::OnToggleLogScale)
 	EVT_LEFT_DCLICK(cHistogramPanel::OnPreviewMouseLeftDoubleClick)
 	EVT_ENTER_WINDOW(cHistogramPanel::OnPreviewMouseEnteredWindow)
@@ -44,10 +45,14 @@ auto cHistogramPanel::SetHistogram
 	unsigned long long max_value
 ) -> std::optional<int>
 {
+	// Take ownership first: callers hand over a released buffer, so returning
+	// early without owning it leaked 512 KB per frame while the panel was hidden.
+	std::unique_ptr<unsigned long long[]> owned(data);
+
 	if (!m_CanvasSize.GetWidth() || !m_CanvasSize.GetHeight()) return std::optional<int>(1);
 
 	m_DataType = data_type;
-	m_HistogramData.reset(data);
+	m_HistogramData = std::move(owned);
 
 	m_MaxHistogramValue = m_DataType == HistogramPanelVariables::ImageDataTypes::RAW_12BIT ? 4'095UL : 65'535UL;
 
@@ -89,8 +94,18 @@ auto cHistogramPanel::SetHistogram
 	m_RightBorder = m_AutoRightBorder;
 	m_WasRangeChanged = false;
 
-	m_ViewMin = (unsigned int)std::max<unsigned long long>(0, std::distance(m_HistogramData.get(), firstNonZeroFromLeft));
-	m_ViewMax = (unsigned int)std::min<unsigned long long>(m_MaxHistogramValue, histSize - 1 - std::distance(std::make_reverse_iterator(m_HistogramData.get() + histSize), firstNonZeroFromRight));
+	// Auto-fit the view to the data only while the user hasn't zoomed/panned;
+	// otherwise every live frame threw the user's zoom away.
+	if (!m_UserAdjustedView)
+	{
+		m_ViewMin = (unsigned int)std::max<unsigned long long>(0, std::distance(m_HistogramData.get(), firstNonZeroFromLeft));
+		m_ViewMax = (unsigned int)std::min<unsigned long long>(m_MaxHistogramValue, histSize - 1 - std::distance(std::make_reverse_iterator(m_HistogramData.get() + histSize), firstNonZeroFromRight));
+	}
+	else
+	{
+		m_ViewMax = (unsigned int)std::min<unsigned long long>(m_ViewMax, m_MaxHistogramValue);
+		m_ViewMin = std::min(m_ViewMin, m_ViewMax);
+	}
 
 	RebuildHistogramImageForCurrentView();
 	InvalidateGraphicsBitmap();
@@ -103,7 +118,10 @@ auto cHistogramPanel::SetHistogram
 auto cHistogramPanel::SetBackgroundColor(wxColour color) -> void
 {
 	SetBackgroundColour(color);
-	SetWXImage();
+	// Re-render the *current* (possibly zoomed / log) view, not the full linear one
+	RebuildHistogramImageForCurrentView();
+	InvalidateGraphicsBitmap();
+	Refresh();
 }
 
 auto cHistogramPanel::SetWXImage() -> void
@@ -366,6 +384,8 @@ void cHistogramPanel::OnSize(wxSizeEvent& evt)
 	m_CanvasSize = evt.GetSize();
 
 	ChangeSizeOfImageInDependenceOnCanvasSize();
+	// Re-render at the new size (the old image was stretched and misaligned with the axes)
+	RebuildHistogramImageForCurrentView();
 	InvalidateGraphicsBitmap();
 	Refresh();
 }
@@ -446,6 +466,7 @@ void cHistogramPanel::OnMouseMove(wxMouseEvent& evt)
 
 		m_ViewMin = (unsigned int)newMinLL;
 		m_ViewMax = (unsigned int)newMaxLL;
+		m_UserAdjustedView = true;
 
 		RebuildHistogramImageForCurrentView();
 		InvalidateGraphicsBitmap();
@@ -504,6 +525,13 @@ auto cHistogramPanel::OnPreviewMouseLeftDoubleClick(wxMouseEvent& evt) -> void
 	Refresh();
 }
 
+void cHistogramPanel::OnMouseCaptureLost(wxMouseCaptureLostEvent& WXUNUSED(evt))
+{
+	// e.g. Alt+Tab or a modal dialog while dragging: end the pan cleanly
+	// (wx asserts if this event is not handled after CaptureMouse()).
+	m_Panning = false;
+}
+
 void cHistogramPanel::OnMouseUp(wxMouseEvent& evt)
 {
 	if (m_Panning && evt.LeftUp()) 
@@ -544,6 +572,7 @@ auto cHistogramPanel::OnPreviewMouseLeftWindow(wxMouseEvent& evt) -> void
 
 void cHistogramPanel::ResetViewToFull()
 {
+	m_UserAdjustedView = false; // back to automatic fitting
 	m_ViewMin = 0;
 	m_ViewMax = (unsigned int)m_MaxHistogramValue;
 	RebuildHistogramImageForCurrentView();
@@ -600,6 +629,7 @@ auto cHistogramPanel::OnMouseWheel(wxMouseEvent& evt) -> void
 
 		m_ViewMin = (unsigned int)newMinLL;
 		m_ViewMax = (unsigned int)newMaxLL;
+		m_UserAdjustedView = true;
 	}
 
 	RebuildHistogramImageForCurrentView();

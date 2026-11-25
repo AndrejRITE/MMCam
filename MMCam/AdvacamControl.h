@@ -49,7 +49,9 @@ class AdvacamControl final : public CameraControl
 public:
 	explicit AdvacamControl(std::string cameraSN) : m_CameraSN(std::move(cameraSN))
 	{
-		m_WantedSerial = std::stoi(m_CameraSN);
+		// A missing/non-numeric serial in the config must not terminate the app
+		try { m_WantedSerial = std::stoi(m_CameraSN); }
+		catch (const std::exception&) { m_WantedSerial = -1; }
 		// Timepix counting modes can exceed 12-bit range (0-4095), so treat frames as 16-bit.
 		m_ImageDataType = CameraControlVariables::ImageDataTypes::RAW_16BIT;
 	};

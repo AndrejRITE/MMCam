@@ -410,6 +410,10 @@ namespace PostprocessingAlgorithms
 
 		auto maxValue = dataPtr[spotCenterPosY * imgWidth + spotCenterPosX];
 
+		// Unsigned subtraction would underflow for ring/donut spots whose centre is below
+		// the background level, making the walk stop at once (reported HEW of 2 px).
+		if (static_cast<unsigned int>(maxValue) <= minValueInData) return -1;
+
 		auto wholeDataHeight = maxValue - minValueInData;
 
 		auto percentageToInclude = 90; // Max 100%

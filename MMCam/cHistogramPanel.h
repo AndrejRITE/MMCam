@@ -113,6 +113,7 @@ private:
 	void OnMouseDown(wxMouseEvent& evt);
 	void OnMouseMove(wxMouseEvent& evt);
 	void OnMouseUp(wxMouseEvent& evt);
+	void OnMouseCaptureLost(wxMouseCaptureLostEvent& evt);
 	auto OnToggleLogScale(wxMouseEvent& evt) -> void;
 	auto OnPreviewMouseLeftDoubleClick(wxMouseEvent& evt) -> void;
 	auto OnPreviewMouseEnteredWindow(wxMouseEvent& evt) -> void;
@@ -181,6 +182,7 @@ private:
 	bool m_LogScale{ false }; // toggle for low-signal visibility
 
 	bool m_Panning{ false };
+	bool m_UserAdjustedView{ false }; ///< true after wheel-zoom / pan, until double-click reset
 	int  m_PanStartX{ 0 };
 	unsigned int m_ViewMinAtDragStart{ 0 }, m_ViewMaxAtDragStart{ 0 };
 
