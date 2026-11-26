@@ -1090,6 +1090,11 @@ void cMain::CreateLeftSide(wxWindow* parent, wxSizer* left_side_sizer)
 		);
 
 	m_CamPreview = std::make_unique<cCamPreview>(std::move(input_args));
+	// Dragging a mesh centre on the preview updates the X / Y boxes of that mesh
+	m_CamPreview->SetMeshCentreChangedHandler([this](cCamPreview::MeshKind kind, wxPoint)
+		{
+			ShowMeshCentreInControls(kind);
+		});
 
 	m_SpectroscopyHistogramPanel = std::make_unique<cSpectroscopyHistogramPanel>
 		(
@@ -3258,114 +3263,149 @@ auto cMain::CreateSpectroscopyPage(wxWindow* parent) -> wxWindow*
 
 auto cMain::CreateGridMeshPage(wxWindow* parent) -> wxWindow*
 {
+	return CreateMeshPage(parent, cCamPreview::MeshKind::Grid, m_ToolsControls->gridMeshStepTxtCtrl,
+		MainFrameVariables::ID::RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL, wxT("100"));
+}
+
+auto cMain::CreateCircleMeshPage(wxWindow* parent) -> wxWindow*
+{
+	return CreateMeshPage(parent, cCamPreview::MeshKind::Circle, m_ToolsControls->circleMeshStepTxtCtrl,
+		MainFrameVariables::ID::RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL, wxT("200"));
+}
+
+auto cMain::CreateMeshPage
+(
+	wxWindow* parent,
+	cCamPreview::MeshKind kind,
+	std::unique_ptr<wxTextCtrl>& stepTxtCtrl,
+	const int stepCtrlId,
+	const wxString& defaultStep
+) -> wxWindow*
+{
 	if (!m_ToolsControls) return nullptr;
 
+	const bool isGrid = kind == cCamPreview::MeshKind::Grid;
 	wxPanel* page = new wxPanel(parent);
-	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
-	
-	auto gridSizer = new wxGridSizer(2); 
-	gridSizer->SetVGap(5);
+	auto sizerPage = new wxBoxSizer(wxVERTICAL);
+	const wxSize txtCtrlSize = FromDIP(wxSize(64, 22));
 
-	wxSize txtCtrlSize = { 64, 20 };
+	auto form = new wxFlexGridSizer(4, FromDIP(6), FromDIP(8));
 
-	// Grid Mesh
+	// Step
 	{
-		gridSizer->Add
-		(
-			new wxStaticText
-			(
-				page, 
-				wxID_ANY, 
-				wxT("Step [px]:")
-			), 
-			0, 
-			wxALIGN_CENTER
-		);
-
-		wxIntegerValidator<int>	val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
+		wxIntegerValidator<int> val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
 		val.SetMin(1);
 		val.SetMax(1'000'000);
 
-		m_ToolsControls->gridMeshStepTxtCtrl = std::make_unique<wxTextCtrl>
+		stepTxtCtrl = std::make_unique<wxTextCtrl>
 			(
-				page, 
-				MainFrameVariables::ID::RIGHT_TOOLS_GRID_MESH_STEP_TXT_CTRL, 
-#ifdef _DEBUG
-				wxT("100"), 
-#else
-				wxT("100"), 
-#endif // _DEBUG
-				wxDefaultPosition, 
-				txtCtrlSize, 
-				wxTE_CENTRE | wxTE_PROCESS_ENTER, 
-				val
+				page, stepCtrlId, defaultStep, wxDefaultPosition, txtCtrlSize,
+				wxTE_CENTRE | wxTE_PROCESS_ENTER, val
 			);
-		
-		//m_ToolsControls->gridMeshStepTxtCtrl->Disable();
-		m_ToolsControls->gridMeshStepTxtCtrl->SetToolTip("Set desired step in [px] and press Enter");
+		stepTxtCtrl->SetToolTip(isGrid
+			? "Distance between grid lines in image pixels. Press Enter to apply."
+			: "Distance between circles in image pixels. Press Enter to apply.");
 
-		gridSizer->Add(m_ToolsControls->gridMeshStepTxtCtrl.get(), 0, wxALIGN_CENTER);
+		form->Add(new wxStaticText(page, wxID_ANY, isGrid ? "Step [px]:" : "Ring step [px]:"), 0, wxALIGN_CENTER_VERTICAL);
+		form->Add(stepTxtCtrl.get(), 0, wxALIGN_CENTER_VERTICAL);
+		form->AddSpacer(0);
+		form->AddSpacer(0);
 	}
-	sizerPage->Add(gridSizer, 0, wxEXPAND | wxALL, 5);
+
+	// Centre X / Y: empty = image centre
+	auto makeCentreCtrl = [&](const wxString& axis) -> wxTextCtrl*
+		{
+			wxIntegerValidator<int> val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
+			val.SetMin(1);
+			val.SetMax(1'000'000);
+			auto ctrl = new wxTextCtrl(page, wxID_ANY, wxEmptyString, wxDefaultPosition, txtCtrlSize, wxTE_CENTRE | wxTE_PROCESS_ENTER, val);
+			ctrl->SetHint("auto");
+			ctrl->SetToolTip(wxString::Format("%s position of the %s centre in pixels (1-based). "
+				"Leave empty to use the image centre. Press Enter to apply.", axis, isGrid ? "grid" : "circle"));
+			ctrl->Bind(wxEVT_TEXT_ENTER, [this, kind](wxCommandEvent&) { ApplyMeshCentreFromControls(kind); });
+			return ctrl;
+		};
+	auto centreX = makeCentreCtrl("Horizontal");
+	auto centreY = makeCentreCtrl("Vertical");
+	(isGrid ? m_ToolsControls->gridMeshCentreXTxtCtrl : m_ToolsControls->circleMeshCentreXTxtCtrl) = centreX;
+	(isGrid ? m_ToolsControls->gridMeshCentreYTxtCtrl : m_ToolsControls->circleMeshCentreYTxtCtrl) = centreY;
+
+	form->Add(new wxStaticText(page, wxID_ANY, "Centre X:"), 0, wxALIGN_CENTER_VERTICAL);
+	form->Add(centreX, 0, wxALIGN_CENTER_VERTICAL);
+	form->Add(new wxStaticText(page, wxID_ANY, "Y:"), 0, wxALIGN_CENTER_VERTICAL);
+	form->Add(centreY, 0, wxALIGN_CENTER_VERTICAL);
+	sizerPage->Add(form, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(8));
+
+	// Quick centre presets
+	auto buttons = new wxBoxSizer(wxHORIZONTAL);
+	auto imageCentreBtn = new wxButton(page, wxID_ANY, "Image centre", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+	imageCentreBtn->SetToolTip("Centre the mesh on the middle of the image (follows the image size)");
+	imageCentreBtn->Bind(wxEVT_BUTTON, [this, kind](wxCommandEvent&)
+		{
+			m_CamPreview->SetMeshCentre(kind, std::nullopt);
+			ShowMeshCentreInControls(kind);
+		});
+	auto crossHairBtn = new wxButton(page, wxID_ANY, "Crosshair position", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+	crossHairBtn->SetToolTip("Copy the current crosshair position once; moving the crosshair later does not move the mesh");
+	crossHairBtn->Bind(wxEVT_BUTTON, [this, kind](wxCommandEvent&)
+		{
+			m_CamPreview->SetMeshCentre(kind, m_CamPreview->GetCrossHairPixel());
+			ShowMeshCentreInControls(kind);
+		});
+	buttons->Add(imageCentreBtn, 0, wxRIGHT, FromDIP(6));
+	buttons->Add(crossHairBtn, 0);
+	sizerPage->Add(buttons, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(8));
+
+	auto hint = new wxStaticText(page, wxID_ANY, "Tip: drag the centre marker on the preview to move the mesh.");
+	hint->SetForegroundColour(wxColour(150, 150, 155));
+	sizerPage->Add(hint, 0, wxALL, FromDIP(8));
 
 	page->SetSizer(sizerPage);
 	return page;
 }
 
-auto cMain::CreateCircleMeshPage(wxWindow* parent) -> wxWindow*
+auto cMain::ShowMeshCentreInControls(cCamPreview::MeshKind kind) -> void
 {
-	if (!m_ToolsControls) return nullptr;
+	if (!m_ToolsControls || !m_CamPreview) return;
+	const bool isGrid = kind == cCamPreview::MeshKind::Grid;
+	auto x = isGrid ? m_ToolsControls->gridMeshCentreXTxtCtrl : m_ToolsControls->circleMeshCentreXTxtCtrl;
+	auto y = isGrid ? m_ToolsControls->gridMeshCentreYTxtCtrl : m_ToolsControls->circleMeshCentreYTxtCtrl;
+	if (!x || !y) return;
 
-	wxPanel* page = new wxPanel(parent);
-	wxSizer* sizerPage = new wxBoxSizer(wxVERTICAL);
-	
-	auto gridSizer = new wxGridSizer(2); 
-	gridSizer->SetVGap(5);
-
-	wxSize txtCtrlSize = { 64, 20 };
-
-	// Circle Mesh
+	if (!m_CamPreview->IsMeshCentreCustom(kind))
 	{
-		gridSizer->Add
-		(
-			new wxStaticText
-			(
-				page, 
-				wxID_ANY, 
-				wxT("Step [px]:")
-			), 
-			0, 
-			wxALIGN_CENTER
-		);
-
-		wxIntegerValidator<int>	val(NULL, wxNUM_VAL_ZERO_AS_BLANK);
-		val.SetMin(1);
-		val.SetMax(1'000'000);
-
-		m_ToolsControls->circleMeshStepTxtCtrl = std::make_unique<wxTextCtrl>
-			(
-				page, 
-				MainFrameVariables::ID::RIGHT_TOOLS_CIRCLE_MESH_STEP_TXT_CTRL, 
-#ifdef _DEBUG
-				wxT("200"), 
-#else
-				wxT("200"), 
-#endif // _DEBUG
-				wxDefaultPosition, 
-				txtCtrlSize, 
-				wxTE_CENTRE | wxTE_PROCESS_ENTER, 
-				val
-			);
-		
-		//m_ToolsControls->circleMeshStepTxtCtrl->Disable();
-		m_ToolsControls->circleMeshStepTxtCtrl->SetToolTip("Set desired step in [px] and press Enter");
-
-		gridSizer->Add(m_ToolsControls->circleMeshStepTxtCtrl.get(), 0, wxALIGN_CENTER);
+		x->ChangeValue(wxEmptyString);
+		y->ChangeValue(wxEmptyString);
+		return;
 	}
-	sizerPage->Add(gridSizer, 0, wxEXPAND | wxALL, 5);
+	const wxPoint p = m_CamPreview->GetMeshCentrePixel(kind);
+	x->ChangeValue(wxString::Format("%i", p.x + 1));
+	y->ChangeValue(wxString::Format("%i", p.y + 1));
+}
 
-	page->SetSizer(sizerPage);
-	return page;
+auto cMain::ApplyMeshCentreFromControls(cCamPreview::MeshKind kind) -> void
+{
+	if (!m_ToolsControls || !m_CamPreview) return;
+	const bool isGrid = kind == cCamPreview::MeshKind::Grid;
+	auto xCtrl = isGrid ? m_ToolsControls->gridMeshCentreXTxtCtrl : m_ToolsControls->circleMeshCentreXTxtCtrl;
+	auto yCtrl = isGrid ? m_ToolsControls->gridMeshCentreYTxtCtrl : m_ToolsControls->circleMeshCentreYTxtCtrl;
+	if (!xCtrl || !yCtrl) return;
+
+	const wxString xs = xCtrl->GetValue().Strip(wxString::both), ys = yCtrl->GetValue().Strip(wxString::both);
+	if (xs.empty() && ys.empty())
+	{
+		m_CamPreview->SetMeshCentre(kind, std::nullopt);
+	}
+	else
+	{
+		// A missing coordinate keeps its current value
+		const wxPoint current = m_CamPreview->GetMeshCentrePixel(kind);
+		long x = current.x + 1, y = current.y + 1;
+		if (!xs.empty()) xs.ToLong(&x);
+		if (!ys.empty()) ys.ToLong(&y);
+		m_CamPreview->SetMeshCentre(kind, wxPoint((int)x - 1, (int)y - 1));
+	}
+	ShowMeshCentreInControls(kind); // shows the value after clamping to the image
 }
 
 auto cMain::CreateAnnulusPage(wxWindow* parent) -> wxWindow*

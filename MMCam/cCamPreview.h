@@ -13,6 +13,8 @@
 #include <string>
 #include <format>
 #include <algorithm>
+#include <functional>
+#include <optional>
 
 #include <opencv2/opencv.hpp>
 
@@ -303,6 +305,18 @@ public:
 		m_GridMeshStepPX = std::clamp(step, 1, 10'000);
 	};
 
+	/* Grid / circle mesh centres. Each mesh has its own centre: the image centre unless
+	   a pixel was set (typed in, copied from the crosshair or dragged on the preview). */
+	enum class MeshKind { Grid, Circle };
+	/// nullopt = follow the image centre; otherwise the 0-based pixel to centre on
+	auto SetMeshCentre(MeshKind kind, std::optional<wxPoint> pixel) -> void;
+	/// 0-based pixel the mesh is centred on (the middle pixel when it follows the image centre)
+	auto GetMeshCentrePixel(MeshKind kind) const -> wxPoint;
+	auto IsMeshCentreCustom(MeshKind kind) const -> bool { return (kind == MeshKind::Grid ? m_GridCentre : m_CircleCentre).has_value(); }
+	auto GetCrossHairPixel() const -> wxPoint { return m_CrossHairPos; }
+	/// Called while a mesh centre is dragged on the preview, so the parent can update its controls
+	auto SetMeshCentreChangedHandler(std::function<void(MeshKind, wxPoint)> handler) -> void { m_OnMeshCentreChanged = std::move(handler); }
+
 	auto SetCircleMeshStepPX(const int& step)
 	{
 		m_CircleMeshStepPX = std::clamp(step, 1, 10'000);
@@ -348,6 +362,15 @@ private:
 
 	auto DrawGridMesh(wxGraphicsContext* gc_) -> void;
 	auto DrawCircleMesh(wxGraphicsContext* gc_) -> void;
+	/// Centre of a mesh in image coordinates (continuous: pixel p spans [p, p + 1))
+	auto MeshCentreImage(MeshKind kind) const -> wxRealPoint;
+	auto DrawMeshCentreMarker(wxGraphicsContext* gc, MeshKind kind, const wxColour& colour) -> void;
+	/// Mesh whose centre marker is under the canvas point, if any (circle wins over grid)
+	auto HitTestMeshCentre(const wxPoint& canvasPos) const -> std::optional<MeshKind>;
+	auto MoveMeshCentreTo(MeshKind kind, const wxPoint& canvasPos) -> void;
+	std::optional<wxPoint> m_GridCentre{}, m_CircleCentre{};
+	std::optional<MeshKind> m_MeshCentreDrag{}, m_MeshCentreHover{};
+	std::function<void(MeshKind, wxPoint)> m_OnMeshCentreChanged{};
 
 	auto DrawScaleBar(wxGraphicsContext* gc_) -> void;
 	

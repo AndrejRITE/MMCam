@@ -549,6 +549,19 @@ void cCamPreview::OnMouseMoved(wxMouseEvent& evt)
 
 	ChangeCursorInDependenceOfCurrentParameters();
 
+	if (m_MeshCentreDrag)
+	{
+		if (evt.LeftIsDown())
+			MoveMeshCentreTo(*m_MeshCentreDrag, evt.GetPosition());
+		else
+		{
+			m_MeshCentreDrag.reset();
+			if (HasCapture()) ReleaseMouse();
+		}
+		SetCursor(wxCURSOR_SIZING);
+		return;
+	}
+
 	if (m_CrossHairDrag.Any())
 	{
 		if (evt.LeftIsDown())
@@ -562,6 +575,19 @@ void cCamPreview::OnMouseMoved(wxMouseEvent& evt)
 
 	if (!m_Panning && !m_MinimapDragging)
 	{
+		const auto meshHit = MinimapHitTest(evt.GetPosition()) ? std::nullopt : HitTestMeshCentre(evt.GetPosition());
+		if (meshHit != m_MeshCentreHover)
+		{
+			m_MeshCentreHover = meshHit;
+			Refresh(false);
+		}
+		if (meshHit)
+		{
+			SetCrossHairHover({});
+			SetCursor(wxCURSOR_SIZING);
+			return;
+		}
+
 		const auto hit = MinimapHitTest(evt.GetPosition()) ? CrossHairHit{} : HitTestCrossHair(evt.GetPosition());
 		SetCrossHairHover(hit);
 		if (hit.Any())
@@ -599,8 +625,13 @@ auto cCamPreview::OnEnterPanel(wxMouseEvent& evt) -> void
 
 auto cCamPreview::OnLeavePanel(wxMouseEvent& evt) -> void
 {
-	// A line being dragged keeps the mouse captured, so it may leave the panel
-	if (m_CrossHairDrag.Any()) return;
+	// A line or marker being dragged keeps the mouse captured, so it may leave the panel
+	if (m_CrossHairDrag.Any() || m_MeshCentreDrag) return;
+	if (m_MeshCentreHover)
+	{
+		m_MeshCentreHover.reset();
+		Refresh(false);
+	}
 
 	m_CTRLPressed = false;
 	SetCrossHairHover({});
@@ -609,6 +640,7 @@ auto cCamPreview::OnLeavePanel(wxMouseEvent& evt) -> void
 
 void cCamPreview::OnMouseCaptureLost(wxMouseCaptureLostEvent& evt)
 {
+	m_MeshCentreDrag.reset();
 	EndCrossHairDrag();
 }
 
@@ -803,6 +835,14 @@ void cCamPreview::OnPreviewMouseLeftPressed(wxMouseEvent& evt)
 		return;
 	}
 
+	if (const auto meshHit = HitTestMeshCentre(evt.GetPosition()); meshHit && !m_CTRLPressed)
+	{
+		m_MeshCentreDrag = meshHit;
+		if (!HasCapture()) CaptureMouse();
+		MoveMeshCentreTo(*meshHit, evt.GetPosition());
+		return;
+	}
+
 	if (!m_CTRLPressed)
 	{
 		const auto hit = HitTestCrossHair(evt.GetPosition());
@@ -847,6 +887,12 @@ void cCamPreview::OnPreviewMouseLeftPressed(wxMouseEvent& evt)
 void cCamPreview::OnPreviewMouseLeftReleased(wxMouseEvent& evt)
 {
 	m_MinimapDragging = false;
+	if (m_MeshCentreDrag)
+	{
+		m_MeshCentreDrag.reset();
+		if (HasCapture()) ReleaseMouse();
+		Refresh(false);
+	}
 	EndCrossHairDrag();
 	if (m_Panning)
 	{
@@ -1725,6 +1771,10 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 
 		m_TopLeftOverlayBottom = 0.0;
 
+		// Meshes first: the cards drawn afterwards (minimap, profiles, statistics) stay readable
+		DrawGridMesh(gc);
+		DrawCircleMesh(gc);
+
 		DrawActualZoomedPositionOverImage(gc);
 		DrawROI(gc);
 		DrawScaleBar(gc);
@@ -1737,9 +1787,6 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 		DrawFPS(gc);
 
 		DrawAnnulus(gc);
-
-		DrawGridMesh(gc);
-		DrawCircleMesh(gc);
 
 		DrawHEWCircle(gc);
 		DrawHEWValues(gc);
@@ -2082,154 +2129,252 @@ auto cCamPreview::DrawHEWValues(wxGraphicsContext* gc_) -> void
 	LOG("Finished: " + wxString(__FUNCSIG__))
 }
 
+auto cCamPreview::SetMeshCentre(MeshKind kind, std::optional<wxPoint> pixel) -> void
+{
+	if (pixel && HasImage())
+	{
+		pixel->x = std::clamp(pixel->x, 0, m_ImageSize.GetWidth() - 1);
+		pixel->y = std::clamp(pixel->y, 0, m_ImageSize.GetHeight() - 1);
+	}
+	(kind == MeshKind::Grid ? m_GridCentre : m_CircleCentre) = pixel;
+	Refresh(false);
+}
+
+auto cCamPreview::GetMeshCentrePixel(MeshKind kind) const -> wxPoint
+{
+	const auto& custom = kind == MeshKind::Grid ? m_GridCentre : m_CircleCentre;
+	if (custom) return *custom;
+	return wxPoint(m_ImageSize.GetWidth() / 2, m_ImageSize.GetHeight() / 2);
+}
+
+auto cCamPreview::MeshCentreImage(MeshKind kind) const -> wxRealPoint
+{
+	const auto& custom = kind == MeshKind::Grid ? m_GridCentre : m_CircleCentre;
+	if (custom)
+	{
+		// A centre kept from a larger image is pulled back inside this one
+		const int x = std::clamp(custom->x, 0, std::max(0, m_ImageSize.GetWidth() - 1));
+		const int y = std::clamp(custom->y, 0, std::max(0, m_ImageSize.GetHeight() - 1));
+		return wxRealPoint(x + 0.5, y + 0.5);
+	}
+	return wxRealPoint(m_ImageSize.GetWidth() / 2.0, m_ImageSize.GetHeight() / 2.0);
+}
+
+namespace
+{
+	/// Small rounded label used for mesh distances
+	void DrawMeshLabel(wxGraphicsContext* gc, const wxString& text, double x, double y, const wxColour& colour)
+	{
+		gc->SetFont(wxFont(8, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL), colour);
+		wxDouble w{}, h{};
+		gc->GetTextExtent(text, &w, &h);
+		gc->SetPen(*wxTRANSPARENT_PEN);
+		gc->SetBrush(wxBrush(wxColour(20, 20, 24, 190)));
+		gc->DrawRoundedRectangle(x - 3.0, y - 1.0, w + 6.0, h + 2.0, 3.0);
+		gc->DrawText(text, x, y);
+	}
+
+	/// Multiple of the mesh step drawn so that lines are at least minGapPx apart on screen
+	int MeshThinning(double stepPx, double scale, double minGapPx)
+	{
+		const double screenStep = stepPx * scale;
+		return screenStep >= minGapPx ? 1 : static_cast<int>(std::ceil(minGapPx / std::max(screenStep, 1e-9)));
+	}
+}
+
 auto cCamPreview::DrawGridMesh(wxGraphicsContext* gc_) -> void
-{	
-	if (!HasImage() || !m_DisplayGridMesh) return;
+{
+	if (!HasImage() || !m_DisplayGridMesh || m_GridMeshStepPX <= 0) return;
 
-	auto penColour = wxColour(195, 195, 195, 100);
-	auto penSize = 1;
-	auto penStyle = wxPENSTYLE_LONG_DASH;
-	gc_->SetPen(wxPen(penColour, penSize, penStyle));
+	const double k = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 0.0;
+	if (k <= 0.0) return;
 
-	//wxDouble offsetX{ 5.0 }, offsetY{ 5.0 };
-	wxRealPoint drawPointStart{}, drawPointFinish{};
+	const wxSize canvas = GetClientSize();
+	const double ox = m_StartDrawPos.x * k, oy = m_StartDrawPos.y * k;
+	const double left = std::max(0.0, ox), top = std::max(0.0, oy);
+	const double right = std::min<double>(canvas.GetWidth(), ox + m_ImageSize.GetWidth() * k);
+	const double bottom = std::min<double>(canvas.GetHeight(), oy + m_ImageSize.GetHeight() * k);
+	if (right <= left || bottom <= top) return;
 
-	auto centerPoint = wxRealPoint();
-	centerPoint.x = (m_StartDrawPos.x + m_ImageSize.GetWidth() / 2 - 0.5) * m_Zoom / m_ZoomOnOriginalSizeImage;
-	centerPoint.y = (m_StartDrawPos.y + m_ImageSize.GetHeight() / 2 - 0.5) * m_Zoom / m_ZoomOnOriginalSizeImage;
+	// Lines are drawn at multiples of the step from the centre, in image pixels, and
+	// thinned out when zoomed out so that they never get closer than 16 px on screen.
+	const wxRealPoint c = MeshCentreImage(MeshKind::Grid);
+	const int thin = MeshThinning(m_GridMeshStepPX, k, 16.0);
+	const double step = static_cast<double>(m_GridMeshStepPX) * thin;
 
-	auto rightBottomBoundary = wxRealPoint();
-	rightBottomBoundary.x = (m_StartDrawPos.x + m_ImageSize.GetWidth()) * m_Zoom / m_ZoomOnOriginalSizeImage;
-	rightBottomBoundary.y = (m_StartDrawPos.y + m_ImageSize.GetHeight()) * m_Zoom / m_ZoomOnOriginalSizeImage;
+	// Visible image range
+	const double ix0 = left / k - m_StartDrawPos.x, ix1 = right / k - m_StartDrawPos.x;
+	const double iy0 = top / k - m_StartDrawPos.y, iy1 = bottom / k - m_StartDrawPos.y;
+	const long long i0 = (long long)std::ceil((ix0 - c.x) / step), i1 = (long long)std::floor((ix1 - c.x) / step);
+	const long long j0 = (long long)std::ceil((iy0 - c.y) / step), j1 = (long long)std::floor((iy1 - c.y) / step);
 
+	gc_->Clip(left, top, right - left, bottom - top);
+
+	wxGraphicsPath lines = gc_->CreatePath(), axes = gc_->CreatePath();
+	for (long long i = i0; i <= i1; ++i)
 	{
-		rightBottomBoundary.x = rightBottomBoundary.x > GetSize().GetWidth() ? GetSize().GetWidth() : rightBottomBoundary.x;
-		rightBottomBoundary.y = rightBottomBoundary.y > GetSize().GetHeight() ? GetSize().GetHeight() : rightBottomBoundary.y;
+		const double x = ox + (c.x + i * step) * k;
+		auto& path = i == 0 ? axes : lines;
+		path.MoveToPoint(x, top);
+		path.AddLineToPoint(x, bottom);
+	}
+	for (long long j = j0; j <= j1; ++j)
+	{
+		const double y = oy + (c.y + j * step) * k;
+		auto& path = j == 0 ? axes : lines;
+		path.MoveToPoint(left, y);
+		path.AddLineToPoint(right, y);
 	}
 
-	auto leftUpperBoundary = m_StartDrawPos;
+	// Dark halo first so the lines read on bright and dark images alike
+	gc_->SetBrush(*wxTRANSPARENT_BRUSH);
+	gc_->SetPen(wxPen(wxColour(0, 0, 0, 70), 3));
+	gc_->StrokePath(lines);
+	gc_->StrokePath(axes);
+	gc_->SetPen(wxPen(wxColour(255, 255, 255, 110), 1));
+	gc_->StrokePath(lines);
+	gc_->SetPen(wxPen(wxColour(120, 200, 255, 220), 1.5));
+	gc_->StrokePath(axes);
+
+	// Distance labels (pixels from the centre) along the top and left edges, at least 60 px apart
+	const int labelEvery = std::max(1, (int)std::ceil(60.0 / (step * k)));
+	const wxColour labelColour(215, 225, 235);
+	for (long long i = i0; i <= i1; ++i)
 	{
-		leftUpperBoundary.x = leftUpperBoundary.x > 0.0 ? leftUpperBoundary.x : 0.0;
-		leftUpperBoundary.y = leftUpperBoundary.y > 0.0 ? leftUpperBoundary.y : 0.0;
+		if (i == 0 || i % labelEvery) continue;
+		const double x = ox + (c.x + i * step) * k;
+		DrawMeshLabel(gc_, CameraPreviewVariables::FormatWithThousandsDelimiter((long long)(i * step), ","), x + 3.0, top + 4.0, labelColour);
 	}
-	leftUpperBoundary.x *= m_Zoom / m_ZoomOnOriginalSizeImage;
-	leftUpperBoundary.y *= m_Zoom / m_ZoomOnOriginalSizeImage;
-
-	/* Vertical Lines */
-	// Draw the right side from the center
+	for (long long j = j0; j <= j1; ++j)
 	{
-		drawPointStart.x = centerPoint.x;
-		drawPointStart.y = leftUpperBoundary.y;
-		while (drawPointStart.x <= rightBottomBoundary.x)
-		{
-			gc_->StrokeLine
-			(
-				drawPointStart.x,
-				drawPointStart.y,
-				drawPointStart.x,
-				rightBottomBoundary.y
-			);
-
-			drawPointStart.x += m_GridMeshStepPX / m_ZoomOnOriginalSizeImage;
-		}
-	}
-
-	// Draw the left side from the center
-	{
-		drawPointStart.x = centerPoint.x;
-		drawPointStart.x -= m_GridMeshStepPX / m_ZoomOnOriginalSizeImage;
-
-		while (drawPointStart.x >= leftUpperBoundary.x)
-		{
-			gc_->StrokeLine
-			(
-				drawPointStart.x,
-				drawPointStart.y,
-				drawPointStart.x,
-				rightBottomBoundary.y
-			);
-
-			drawPointStart.x -= m_GridMeshStepPX / m_ZoomOnOriginalSizeImage;
-		}
+		if (j == 0 || j % labelEvery) continue;
+		const double y = oy + (c.y + j * step) * k;
+		DrawMeshLabel(gc_, CameraPreviewVariables::FormatWithThousandsDelimiter((long long)(j * step), ","), left + 4.0, y + 2.0, labelColour);
 	}
 
-	/* Horizontal Lines */
-	// Draw the bottom side from the center
-	{
-		drawPointStart.x = leftUpperBoundary.x;
-		drawPointStart.y = centerPoint.y;
-		while (drawPointStart.y <= rightBottomBoundary.y)
-		{
-			gc_->StrokeLine
-			(
-				drawPointStart.x,
-				drawPointStart.y,
-				rightBottomBoundary.x,
-				drawPointStart.y
-			);
-
-			drawPointStart.y += m_GridMeshStepPX / m_ZoomOnOriginalSizeImage;
-		}
-	}
-
-	// Draw the top side from the center
-	{
-		drawPointStart.x = leftUpperBoundary.x;
-		drawPointStart.y = centerPoint.y;
-		drawPointStart.y -= m_GridMeshStepPX / m_ZoomOnOriginalSizeImage;
-		while (drawPointStart.y >= leftUpperBoundary.y)
-		{
-			gc_->StrokeLine
-			(
-				drawPointStart.x,
-				drawPointStart.y,
-				rightBottomBoundary.x,
-				drawPointStart.y
-			);
-
-			drawPointStart.y -= m_GridMeshStepPX / m_ZoomOnOriginalSizeImage;
-		}
-	}
+	gc_->ResetClip();
+	DrawMeshCentreMarker(gc_, MeshKind::Grid, wxColour(120, 200, 255));
 }
 
 auto cCamPreview::DrawCircleMesh(wxGraphicsContext* gc_) -> void
 {
-	if (!HasImage() || !m_DisplayCircleMesh) return;
+	if (!HasImage() || !m_DisplayCircleMesh || m_CircleMeshStepPX <= 0) return;
 
-	auto penColour = wxColour(237, 28, 36, 100);
-	auto penSize = 4;
-	auto penStyle = wxPENSTYLE_LONG_DASH;
-	gc_->SetPen(wxPen(penColour, penSize, penStyle));
+	const double k = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 0.0;
+	if (k <= 0.0) return;
 
-	auto centerPoint = wxRealPoint();
+	const wxSize canvas = GetClientSize();
+	const double ox = m_StartDrawPos.x * k, oy = m_StartDrawPos.y * k;
+	const double left = std::max(0.0, ox), top = std::max(0.0, oy);
+	const double right = std::min<double>(canvas.GetWidth(), ox + m_ImageSize.GetWidth() * k);
+	const double bottom = std::min<double>(canvas.GetHeight(), oy + m_ImageSize.GetHeight() * k);
+	if (right <= left || bottom <= top) return;
 
-	if (m_DisplayCrossHair)
+	const wxRealPoint ci = MeshCentreImage(MeshKind::Circle);
+	const double cx = ox + ci.x * k, cy = oy + ci.y * k;
+
+	// Only rings that cross the visible part of the image: between the nearest and the
+	// farthest point of that rectangle from the centre
+	const double dxNear = std::max({ left - cx, 0.0, cx - right }), dyNear = std::max({ top - cy, 0.0, cy - bottom });
+	const double rMin = std::hypot(dxNear, dyNear);
+	const double rMax = std::hypot(std::max(std::abs(cx - left), std::abs(cx - right)), std::max(std::abs(cy - top), std::abs(cy - bottom)));
+
+	const int thin = MeshThinning(m_CircleMeshStepPX, k, 12.0);
+	const double stepScreen = static_cast<double>(m_CircleMeshStepPX) * thin * k;
+	const long long n0 = std::max(1LL, (long long)std::ceil(rMin / stepScreen));
+	const long long n1 = (long long)std::floor(rMax / stepScreen);
+	if (n1 < n0 && !(cx >= left && cx <= right && cy >= top && cy <= bottom)) return;
+
+	gc_->Clip(left, top, right - left, bottom - top);
+
+	wxGraphicsPath rings = gc_->CreatePath();
+	for (long long n = n0; n <= n1 && n - n0 < 5000; ++n)
+		rings.AddCircle(cx, cy, n * stepScreen);
+
+	const wxColour ringColour(255, 105, 105);
+	gc_->SetBrush(*wxTRANSPARENT_BRUSH);
+	gc_->SetPen(wxPen(wxColour(0, 0, 0, 80), 3.5));
+	gc_->StrokePath(rings);
+	gc_->SetPen(wxPen(wxColour(ringColour.Red(), ringColour.Green(), ringColour.Blue(), 210), 1.5));
+	gc_->StrokePath(rings);
+
+	// Radius labels on the upper-right diagonal, at least 45 px apart
+	const int labelEvery = std::max(1, (int)std::ceil(45.0 / stepScreen));
+	const double diag = std::sqrt(0.5);
+	for (long long n = n0; n <= n1 && n - n0 < 5000; ++n)
 	{
-		centerPoint.x = (m_StartDrawPos.x + m_CrossHairPos.x + 0.5) * m_Zoom / m_ZoomOnOriginalSizeImage;
-		centerPoint.y = (m_StartDrawPos.y + m_CrossHairPos.y + 0.5) * m_Zoom / m_ZoomOnOriginalSizeImage;
-	}
-	else
-	{
-		centerPoint.x = (m_StartDrawPos.x + m_ImageSize.GetWidth() / 2 - 0.5) * m_Zoom / m_ZoomOnOriginalSizeImage;
-		centerPoint.y = (m_StartDrawPos.y + m_ImageSize.GetHeight() / 2 - 0.5) * m_Zoom / m_ZoomOnOriginalSizeImage;
+		if (n % labelEvery) continue;
+		const double r = n * stepScreen;
+		const double lx = cx + r * diag + 3.0, ly = cy - r * diag - 14.0;
+		if (lx < left || lx > right - 30.0 || ly < top || ly > bottom - 12.0) continue;
+		DrawMeshLabel(gc_, CameraPreviewVariables::FormatWithThousandsDelimiter((long long)(n * thin) * m_CircleMeshStepPX, ","), lx, ly, wxColour(255, 200, 200));
 	}
 
-	auto maxRadius = std::min(m_CanvasSize.GetWidth(), m_CanvasSize.GetHeight()) / 2.0;
-	auto currRadius = m_CircleMeshStepPX / m_ZoomOnOriginalSizeImage;
+	gc_->ResetClip();
+	DrawMeshCentreMarker(gc_, MeshKind::Circle, ringColour);
+}
 
-	wxGraphicsPath path = gc_->CreatePath();
-	while ((int)currRadius <= maxRadius)
-	{
-		path.AddCircle
-		(
-			centerPoint.x, 
-			centerPoint.y, 
-			currRadius
-		);
+auto cCamPreview::DrawMeshCentreMarker(wxGraphicsContext* gc, MeshKind kind, const wxColour& colour) -> void
+{
+	const double k = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 0.0;
+	const wxRealPoint ci = MeshCentreImage(kind);
+	const double x = (m_StartDrawPos.x + ci.x) * k, y = (m_StartDrawPos.y + ci.y) * k;
+	const wxSize canvas = GetClientSize();
+	if (x < -10 || y < -10 || x > canvas.GetWidth() + 10 || y > canvas.GetHeight() + 10) return;
 
-		currRadius += m_CircleMeshStepPX / m_ZoomOnOriginalSizeImage;
-	}
-	gc_->StrokePath(path);
+	const bool active = m_MeshCentreDrag == kind || m_MeshCentreHover == kind;
+	const double r = active ? 8.0 : 6.0, arm = r + 5.0;
+
+	wxGraphicsPath cross = gc->CreatePath();
+	cross.MoveToPoint(x - arm, y); cross.AddLineToPoint(x - r + 2.0, y);
+	cross.MoveToPoint(x + r - 2.0, y); cross.AddLineToPoint(x + arm, y);
+	cross.MoveToPoint(x, y - arm); cross.AddLineToPoint(x, y - r + 2.0);
+	cross.MoveToPoint(x, y + r - 2.0); cross.AddLineToPoint(x, y + arm);
+	cross.AddCircle(x, y, r);
+
+	gc->SetBrush(*wxTRANSPARENT_BRUSH);
+	gc->SetPen(wxPen(wxColour(0, 0, 0, 170), 4));
+	gc->StrokePath(cross);
+	gc->SetPen(wxPen(active ? *wxWHITE : colour, active ? 2 : 1.5));
+	gc->StrokePath(cross);
+	gc->SetPen(*wxTRANSPARENT_PEN);
+	gc->SetBrush(wxBrush(active ? *wxWHITE : colour));
+	gc->DrawEllipse(x - 1.5, y - 1.5, 3.0, 3.0);
+}
+
+auto cCamPreview::HitTestMeshCentre(const wxPoint& canvasPos) const -> std::optional<MeshKind>
+{
+	const double k = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 0.0;
+	if (!HasImage() || k <= 0.0) return std::nullopt;
+
+	auto isNear = [&](MeshKind kind)
+		{
+			const wxRealPoint ci = MeshCentreImage(kind);
+			const double x = (m_StartDrawPos.x + ci.x) * k, y = (m_StartDrawPos.y + ci.y) * k;
+			return std::hypot(canvasPos.x - x, canvasPos.y - y) <= 10.0;
+		};
+	if (m_DisplayCircleMesh && isNear(MeshKind::Circle)) return MeshKind::Circle;
+	if (m_DisplayGridMesh && isNear(MeshKind::Grid)) return MeshKind::Grid;
+	return std::nullopt;
+}
+
+auto cCamPreview::MoveMeshCentreTo(MeshKind kind, const wxPoint& canvasPos) -> void
+{
+	const double k = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 0.0;
+	if (!HasImage() || k <= 0.0) return;
+
+	const wxPoint pixel
+	(
+		std::clamp((int)std::floor(canvasPos.x / k - m_StartDrawPos.x), 0, m_ImageSize.GetWidth() - 1),
+		std::clamp((int)std::floor(canvasPos.y / k - m_StartDrawPos.y), 0, m_ImageSize.GetHeight() - 1)
+	);
+	auto& centre = kind == MeshKind::Grid ? m_GridCentre : m_CircleCentre;
+	if (centre && *centre == pixel) return;
+	centre = pixel;
+
+	if (m_OnMeshCentreChanged) m_OnMeshCentreChanged(kind, pixel);
+	Refresh(false);
+	Update();
 }
 
 auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void

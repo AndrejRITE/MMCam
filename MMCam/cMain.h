@@ -596,6 +596,9 @@ namespace MainFrameVariables
 		std::unique_ptr<wxTextCtrl> crosshairAveragingWidthTxtCtrl{};
 		std::unique_ptr<wxCheckBox> crosshairAdaptiveScalingCheckBox{};
 		std::unique_ptr<wxTextCtrl> gridMeshStepTxtCtrl{}, circleMeshStepTxtCtrl{};
+		/// Mesh centre (1-based pixels); empty = follow the image centre. Owned by their page.
+		wxTextCtrl* gridMeshCentreXTxtCtrl{}, * gridMeshCentreYTxtCtrl{};
+		wxTextCtrl* circleMeshCentreXTxtCtrl{}, * circleMeshCentreYTxtCtrl{};
 		std::unique_ptr<wxTextCtrl> annulusCenterXTxtCtrl{}, annulusCenterYTxtCtrl{}, annulusR1TxtCtrl{}, annulusR2TxtCtrl{};
 		std::unique_ptr<wxListCtrl> annulusListCtrl{};
 		std::unique_ptr<wxBitmapButton> addAnnulusToListBtn{}, removeAnnulusFromListBtn{};
@@ -1200,6 +1203,19 @@ private:
 	(
 		wxWindow* parent
 	) -> wxWindow*;
+
+	/// Shared layout of the grid and circle mesh pages: step plus an independent centre
+	auto CreateMeshPage
+	(
+		wxWindow* parent,
+		cCamPreview::MeshKind kind,
+		std::unique_ptr<wxTextCtrl>& stepTxtCtrl,
+		const int stepCtrlId,
+		const wxString& defaultStep
+	) -> wxWindow*;
+	/// Shows the mesh centre in its X / Y boxes (empty when it follows the image centre)
+	auto ShowMeshCentreInControls(cCamPreview::MeshKind kind) -> void;
+	auto ApplyMeshCentreFromControls(cCamPreview::MeshKind kind) -> void;
 
 	auto CreateAnnulusPage
 	(
