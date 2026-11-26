@@ -1,5 +1,37 @@
 #include "cPreviewTools.h"
 
+#include <algorithm>
+#include <cmath>
+#include <string>
+
+namespace
+{
+	/// 12345 -> "12,345"
+	wxString FormatThousands(long long value)
+	{
+		const bool negative = value < 0;
+		const std::string digits = std::to_string(negative ? -value : value);
+		std::string out;
+		for (size_t i = 0; i < digits.size(); ++i)
+		{
+			if (i && (digits.size() - i) % 3 == 0) out.push_back(',');
+			out.push_back(digits[i]);
+		}
+		return wxString(negative ? "-" + out : out);
+	}
+
+	/// Averages of several pixels get one decimal, single pixels are whole numbers
+	wxString FormatProfileValue(double v, bool averaged)
+	{
+		if (!averaged) return FormatThousands(std::llround(v));
+		const long long tenths = std::llround(v * 10.0);
+		return FormatThousands(tenths / 10) + wxString::Format(".%lld", std::llabs(tenths % 10));
+	}
+
+	const wxColour kRowColour(96, 214, 140);    ///< horizontal line and its profile
+	const wxColour kColumnColour(255, 152, 72); ///< vertical line and its profile
+}
+
 Tool::Tool()
 {
 
@@ -207,42 +239,323 @@ wxStockCursor CrossHairTool::UpdateCursor(const wxStockCursor& current_cursor)
 	return edited_cursor;
 }
 
-void CrossHairTool::DrawCrossHair(wxGraphicsContext* graphics_context_, unsigned short* data_)
+void CrossHairTool::DrawCrossHair(wxGraphicsContext* gc, const ToolsVariables::ProfileView& view)
 {
-	wxGraphicsPath path = graphics_context_->CreatePath();	
-	
-	/* Vertical line */
-	if (m_ShowVerticalLine)
-	{
-		path.MoveToPoint
-		(
-			m_CrossHairOnCanvas.x + m_ImageStartDraw.x + m_ActualHalfPixelSize.x, 
-			m_ImageStartDraw.y
-		);
-		path.AddLineToPoint
-		(
-			m_CrossHairOnCanvas.x + m_ImageStartDraw.x + m_ActualHalfPixelSize.x, 
-			m_ImageStartDraw.y + (double)m_ActualZoomedSizeOfImageOnCanvas.y
-		);
-	}
+	if (!gc || !view.data || view.imageSize.GetWidth() <= 0 || view.imageSize.GetHeight() <= 0 || view.scale <= 0.0)
+		return;
+	if (!m_ShowVerticalLine && !m_ShowHorizontalLine) return;
 
-	/* Horizontal line */
+	const int W = view.imageSize.GetWidth(), H = view.imageSize.GetHeight();
+	const double k = view.scale;
+	const int cx = std::clamp(view.position.x, 0, W - 1);
+	const int cy = std::clamp(view.position.y, 0, H - 1);
+
+	// Visible part of the image on the canvas
+	const double left = std::max(0.0, view.origin.x), right = std::min<double>(view.canvas.GetWidth(), view.origin.x + W * k);
+	const double top = std::max(0.0, view.origin.y), bottom = std::min<double>(view.canvas.GetHeight(), view.origin.y + H * k);
+	if (right <= left || bottom <= top) return;
+
+	// Same band as the profile: [c - (w - 1) / 2, c + w / 2], clipped to the image
+	const int band = std::max(1, m_AveragingWidthPX);
+	auto bandLimits = [band](int c, int size) { return std::make_pair(std::max(0, c - (band - 1) / 2), std::min(size - 1, c + band / 2)); };
+
+	gc->Clip(left, top, right - left, bottom - top);
+
+	auto drawLine = [&](double x0, double y0, double x1, double y1, const wxColour& colour, bool highlighted)
+		{
+			gc->SetPen(wxPen(wxColour(0, 0, 0, highlighted ? 160 : 130), highlighted ? 5 : 3));
+			gc->StrokeLine(x0, y0, x1, y1);
+			gc->SetPen(wxPen(highlighted ? colour.ChangeLightness(125) : colour, highlighted ? 2 : 1));
+			gc->StrokeLine(x0, y0, x1, y1);
+		};
+
 	if (m_ShowHorizontalLine)
 	{
-		path.MoveToPoint
-		(
-			m_ImageStartDraw.x, 
-			m_ImageStartDraw.y + m_CrossHairOnCanvas.y + m_ActualHalfPixelSize.y 
-		);
-		path.AddLineToPoint
-		(
-			m_ImageStartDraw.x + (double)m_ActualZoomedSizeOfImageOnCanvas.x, 
-			m_ImageStartDraw.y + m_CrossHairOnCanvas.y + m_ActualHalfPixelSize.y
-		);
+		const auto [y0, y1] = bandLimits(cy, H);
+		if (band > 1)
+		{
+			gc->SetPen(*wxTRANSPARENT_PEN);
+			gc->SetBrush(wxBrush(wxColour(kRowColour.Red(), kRowColour.Green(), kRowColour.Blue(), 22)));
+			gc->DrawRectangle(left, view.origin.y + y0 * k, right - left, std::max(1.0, (y1 - y0 + 1) * k));
+			wxPen edge(wxColour(kRowColour.Red(), kRowColour.Green(), kRowColour.Blue(), 170), 1, wxPENSTYLE_SHORT_DASH);
+			gc->SetPen(edge);
+			gc->StrokeLine(left, view.origin.y + y0 * k, right, view.origin.y + y0 * k);
+			gc->StrokeLine(left, view.origin.y + (y1 + 1) * k, right, view.origin.y + (y1 + 1) * k);
+		}
+		const double ly = view.origin.y + (cy + 0.5) * k;
+		drawLine(left, ly, right, ly, kRowColour, m_HighlightRow);
+	}
+	if (m_ShowVerticalLine)
+	{
+		const auto [x0, x1] = bandLimits(cx, W);
+		if (band > 1)
+		{
+			gc->SetPen(*wxTRANSPARENT_PEN);
+			gc->SetBrush(wxBrush(wxColour(kColumnColour.Red(), kColumnColour.Green(), kColumnColour.Blue(), 22)));
+			gc->DrawRectangle(view.origin.x + x0 * k, top, std::max(1.0, (x1 - x0 + 1) * k), bottom - top);
+			wxPen edge(wxColour(kColumnColour.Red(), kColumnColour.Green(), kColumnColour.Blue(), 170), 1, wxPENSTYLE_SHORT_DASH);
+			gc->SetPen(edge);
+			gc->StrokeLine(view.origin.x + x0 * k, top, view.origin.x + x0 * k, bottom);
+			gc->StrokeLine(view.origin.x + (x1 + 1) * k, top, view.origin.x + (x1 + 1) * k, bottom);
+		}
+		const double lx = view.origin.x + (cx + 0.5) * k;
+		drawLine(lx, top, lx, bottom, kColumnColour, m_HighlightColumn);
+	}
+	if (m_ShowHorizontalLine && m_ShowVerticalLine)
+	{
+		const double hx = view.origin.x + (cx + 0.5) * k, hy = view.origin.y + (cy + 0.5) * k;
+		const double r = (m_HighlightRow && m_HighlightColumn) ? 6.0 : 4.0;
+		gc->SetPen(wxPen(wxColour(20, 20, 24, 200), 1.5));
+		gc->SetBrush(wxBrush(*wxWHITE));
+		gc->DrawEllipse(hx - r, hy - r, 2 * r, 2 * r);
+	}
+	gc->ResetClip();
+
+	if (m_ShowDataOnHorizontalLine && m_ShowHorizontalLine)
+	{
+		UpdateProfile(m_RowProfile, true, view);
+		DrawProfilePanel(gc, m_RowProfile, true, view, kRowColour);
+	}
+	if (m_ShowDataOnVerticalLine && m_ShowVerticalLine)
+	{
+		UpdateProfile(m_ColumnProfile, false, view);
+		DrawProfilePanel(gc, m_ColumnProfile, false, view, kColumnColour);
+	}
+}
+
+void CrossHairTool::UpdateProfile(ProfileCache& cache, bool alongRow, const ToolsVariables::ProfileView& view)
+{
+	const int W = view.imageSize.GetWidth(), H = view.imageSize.GetHeight();
+	const int centre = alongRow ? std::clamp(view.position.y, 0, H - 1) : std::clamp(view.position.x, 0, W - 1);
+	const int across = alongRow ? H : W;
+	const int band = std::max(1, m_AveragingWidthPX);
+	const int first = std::max(0, centre - (band - 1) / 2);
+	const int last = std::min(across - 1, centre + band / 2);
+
+	if (cache.revision == view.revision && cache.data == view.data && cache.imageSize == view.imageSize &&
+		cache.position == centre && cache.first == first && cache.last == last && !cache.values.empty())
+		return;
+
+	const int length = alongRow ? W : H;
+	const int count = last - first + 1;
+	cache.values.assign(length, 0.0f);
+
+	if (alongRow)
+	{
+		// Sum whole rows (contiguous memory), then divide
+		std::vector<unsigned long long> sums(W, 0ull);
+		for (int y = first; y <= last; ++y)
+		{
+			const unsigned short* row = view.data + static_cast<size_t>(y) * W;
+			for (int x = 0; x < W; ++x) sums[x] += row[x];
+		}
+		for (int x = 0; x < W; ++x) cache.values[x] = static_cast<float>(static_cast<double>(sums[x]) / count);
+	}
+	else
+	{
+		for (int y = 0; y < H; ++y)
+		{
+			const unsigned short* row = view.data + static_cast<size_t>(y) * W;
+			unsigned long long sum = 0;
+			for (int x = first; x <= last; ++x) sum += row[x];
+			cache.values[y] = static_cast<float>(static_cast<double>(sum) / count);
+		}
 	}
 
-	graphics_context_->StrokePath(path);
-	DrawData(graphics_context_, data_);
+	const auto [mn, mx] = std::minmax_element(cache.values.begin(), cache.values.end());
+	cache.minValue = *mn;
+	cache.maxValue = *mx;
+	cache.position = centre;
+	cache.first = first;
+	cache.last = last;
+	cache.revision = view.revision;
+	cache.data = view.data;
+	cache.imageSize = view.imageSize;
+}
+
+void CrossHairTool::DrawProfilePanel(wxGraphicsContext* gc, const ProfileCache& cache, bool alongRow,
+	const ToolsVariables::ProfileView& view, const wxColour& colour)
+{
+	if (cache.values.empty()) return;
+
+	const int W = view.imageSize.GetWidth(), H = view.imageSize.GetHeight();
+	const double k = view.scale;
+	const int length = static_cast<int>(cache.values.size());
+
+	// Along the profile ("u"): visible span of the image on the canvas. Across it ("v"): panel.
+	const double originU = alongRow ? view.origin.x : view.origin.y;
+	const double canvasU = alongRow ? view.canvas.GetWidth() : view.canvas.GetHeight();
+	const double canvasV = alongRow ? view.canvas.GetHeight() : view.canvas.GetWidth();
+	const double u0 = std::max(0.0, originU), u1 = std::min(canvasU, originU + length * k);
+	if (u1 - u0 < 40.0) return;
+
+	// Panel thickness and placement: before the line (above / left) if there is room, else after it
+	const double thickness = std::clamp(canvasV * 0.2, 70.0, 150.0);
+	const int centre = alongRow ? std::clamp(view.position.y, 0, H - 1) : std::clamp(view.position.x, 0, W - 1);
+	const double originV = alongRow ? view.origin.y : view.origin.x;
+	const double bandStart = originV + cache.first * k, bandEnd = originV + (cache.last + 1) * k;
+	const double gap = 6.0;
+	double v0 = bandStart - gap - thickness;
+	if (v0 < 4.0) v0 = bandEnd + gap;
+	v0 = std::clamp(v0, 4.0, std::max(4.0, canvasV - 4.0 - thickness));
+	const double v1 = v0 + thickness;
+
+	auto toXY = [alongRow](double u, double v) { return alongRow ? wxPoint2DDouble(u, v) : wxPoint2DDouble(v, u); };
+
+	// Card
+	{
+		const auto a = toXY(u0, v0), b = toXY(u1, v1);
+		gc->SetBrush(wxBrush(wxColour(20, 20, 24, 170)));
+		gc->SetPen(wxPen(wxColour(255, 255, 255, 40), 1));
+		gc->DrawRoundedRectangle(a.m_x, a.m_y, b.m_x - a.m_x, b.m_y - a.m_y, 6.0);
+	}
+
+	// Labels
+	const wxFont font(8, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+	const wxFont bold(8, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+	gc->SetFont(font, *wxWHITE);
+	wxDouble tw{}, th{};
+	gc->GetTextExtent("Ag", &tw, &th);
+	const double pad = 6.0;
+
+	// Value axis: adaptive = this profile's range, otherwise the full data range
+	const bool averaged = cache.last > cache.first;
+	const double lo = m_AdaptiveScaling ? cache.minValue : 0.0;
+	double hi = m_AdaptiveScaling ? cache.maxValue : (m_DataType == ToolsVariables::DATA_U12 ? 4095.0 : 65535.0);
+	if (hi - lo < 1e-6) hi = lo + 1.0;
+
+	// Plot area inside the card (across: value, along: position)
+	const double plotV0 = alongRow ? v0 + pad + th + 2.0 : v0 + pad;          // value = hi
+	const double plotV1 = alongRow ? v1 - pad : v1 - pad - th - 2.0;           // value = lo
+	if (plotV1 - plotV0 < 10.0) return;
+	// For rows the value grows upwards (v decreases); for columns it grows to the right (v increases)
+	auto valueToV = [&](double value)
+		{
+			const double t = std::clamp((value - lo) / (hi - lo), 0.0, 1.0);
+			return alongRow ? plotV1 - t * (plotV1 - plotV0) : plotV0 + t * (plotV1 - plotV0);
+		};
+	const double baseV = alongRow ? plotV1 : plotV0;
+
+	// Curve: one or two points per canvas pixel. Zoomed out, each canvas pixel covers
+	// several image pixels; its min and max are both drawn so narrow peaks never vanish.
+	std::vector<wxPoint2DDouble> pts;
+	if (k >= 1.0)
+	{
+		const int i0 = std::max(0, (int)std::floor((u0 - originU) / k));
+		const int i1 = std::min(length - 1, (int)std::ceil((u1 - originU) / k));
+		pts.reserve(i1 - i0 + 1);
+		for (int i = i0; i <= i1; ++i)
+			pts.push_back(toXY(std::clamp(originU + (i + 0.5) * k, u0, u1), valueToV(cache.values[i])));
+	}
+	else
+	{
+		pts.reserve(static_cast<size_t>((u1 - u0) * 2) + 2);
+		for (double u = std::floor(u0); u < u1; u += 1.0)
+		{
+			const int i0 = std::clamp((int)std::floor((u - originU) / k), 0, length - 1);
+			const int i1 = std::clamp((int)std::floor((u + 1.0 - originU) / k) - 1, i0, length - 1);
+			const auto [mn, mx] = std::minmax_element(cache.values.begin() + i0, cache.values.begin() + i1 + 1);
+			const double uc = std::clamp(u + 0.5, u0, u1);
+			pts.push_back(toXY(uc, valueToV(*mx)));
+			if (*mn != *mx) pts.push_back(toXY(uc, valueToV(*mn)));
+		}
+	}
+	if (pts.size() < 2) return;
+
+	// Area under the curve, then the curve itself
+	{
+		wxGraphicsPath area = gc->CreatePath();
+		const auto& f = pts.front();
+		const auto& l = pts.back();
+		area.MoveToPoint(alongRow ? wxPoint2DDouble(f.m_x, baseV) : wxPoint2DDouble(baseV, f.m_y));
+		for (const auto& pt : pts) area.AddLineToPoint(pt);
+		area.AddLineToPoint(alongRow ? wxPoint2DDouble(l.m_x, baseV) : wxPoint2DDouble(baseV, l.m_y));
+		area.CloseSubpath();
+		gc->SetPen(*wxTRANSPARENT_PEN);
+		gc->SetBrush(wxBrush(wxColour(colour.Red(), colour.Green(), colour.Blue(), 55)));
+		gc->FillPath(area);
+
+		wxGraphicsPath line = gc->CreatePath();
+		line.MoveToPoint(pts.front());
+		for (size_t i = 1; i < pts.size(); ++i) line.AddLineToPoint(pts[i]);
+		gc->SetBrush(*wxTRANSPARENT_BRUSH);
+		gc->SetPen(wxPen(colour, 1.5));
+		gc->StrokePath(line);
+	}
+
+	// Title and scale labels
+	const wxString title = (alongRow ? wxString("Row ") : wxString("Column ")) + FormatThousands(centre + 1) +
+		(averaged ? wxString::FromUTF8("  \xC2\xB7  avg ") + wxString::Format("%d px", cache.last - cache.first + 1) : wxString());
+	const wxString hiText = FormatProfileValue(hi, averaged && m_AdaptiveScaling);
+	const wxString loText = FormatProfileValue(lo, averaged && m_AdaptiveScaling);
+	wxDouble hw{}, hh{}, lw{}, lh{};
+	gc->SetFont(font, wxColour(185, 185, 190));
+	gc->GetTextExtent(hiText, &hw, &hh);
+	gc->GetTextExtent(loText, &lw, &lh);
+
+	// Labels sit on a small dark backdrop so the curve never makes them unreadable
+	const wxColour muted(190, 190, 196);
+	auto drawLabel = [&](const wxString& text, double x, double y, const wxFont& f, const wxColour& c)
+		{
+			gc->SetFont(f, c);
+			wxDouble w{}, h{};
+			gc->GetTextExtent(text, &w, &h);
+			gc->SetPen(*wxTRANSPARENT_PEN);
+			gc->SetBrush(wxBrush(wxColour(20, 20, 24, 210)));
+			gc->DrawRoundedRectangle(x - 3.0, y - 1.0, w + 6.0, h + 2.0, 3.0);
+			gc->DrawText(text, x, y);
+		};
+
+	if (alongRow)
+	{
+		drawLabel(title, u0 + pad, v0 + pad, bold, colour);
+		drawLabel(hiText, u1 - pad - hw, v0 + pad, font, muted);
+		drawLabel(loText, u1 - pad - lw, plotV1 - lh, font, muted);
+	}
+	else
+	{
+		// Columns: title at the top, value range along the bottom (low left, high right)
+		gc->SetFont(bold, colour);
+		wxDouble titleW{}, titleH{};
+		gc->GetTextExtent(title, &titleW, &titleH);
+		if (titleW <= v1 - v0 - 2 * pad)
+			drawLabel(title, v0 + pad, u0 + pad, bold, colour);
+		else
+			drawLabel((wxString("Col ") + FormatThousands(centre + 1)), v0 + pad, u0 + pad, bold, colour);
+		drawLabel(loText, v0 + pad, u1 - pad - lh, font, muted);
+		if (lw + hw + 12.0 <= v1 - v0 - 2 * pad)
+			drawLabel(hiText, v1 - pad - hw, u1 - pad - hh, font, muted);
+	}
+
+	// Value where the other line crosses this profile
+	const bool otherShown = alongRow ? m_ShowVerticalLine : m_ShowHorizontalLine;
+	if (!otherShown) return;
+	const int crossIndex = alongRow ? std::clamp(view.position.x, 0, W - 1) : std::clamp(view.position.y, 0, H - 1);
+	const double crossU = originU + (crossIndex + 0.5) * k;
+	if (crossU < u0 || crossU > u1) return;
+
+	const double value = cache.values[crossIndex];
+	const auto dot = toXY(crossU, valueToV(value));
+	gc->SetPen(wxPen(wxColour(20, 20, 24), 1.5));
+	gc->SetBrush(wxBrush(*wxWHITE));
+	gc->DrawEllipse(dot.m_x - 3.5, dot.m_y - 3.5, 7.0, 7.0);
+
+	const wxString valueText = FormatProfileValue(value, averaged);
+	gc->SetFont(bold, *wxBLACK);
+	wxDouble vw{}, vh{};
+	gc->GetTextExtent(valueText, &vw, &vh);
+	const double pillW = vw + 10.0, pillH = vh + 4.0;
+	// Next to the dot, kept inside the card
+	const auto cardA = toXY(u0, v0), cardB = toXY(u1, v1);
+	double px = dot.m_x + 8.0, py = dot.m_y - pillH - 4.0;
+	if (px + pillW > cardB.m_x - 2.0) px = dot.m_x - 8.0 - pillW;
+	if (py < cardA.m_y + 2.0) py = dot.m_y + 6.0;
+	px = std::clamp(px, cardA.m_x + 2.0, std::max(cardA.m_x + 2.0, cardB.m_x - 2.0 - pillW));
+	py = std::clamp(py, cardA.m_y + 2.0, std::max(cardA.m_y + 2.0, cardB.m_y - 2.0 - pillH));
+	gc->SetPen(*wxTRANSPARENT_PEN);
+	gc->SetBrush(wxBrush(colour));
+	gc->DrawRoundedRectangle(px, py, pillW, pillH, pillH / 2.0);
+	gc->DrawText(valueText, px + 5.0, py + 2.0);
 }
 
 bool CrossHairTool::PositionCanBeChanged() const
@@ -307,172 +620,6 @@ void CrossHairTool::ProcessChangingCrossHairPos()
 	}
 
 	LoopChangingCrossHairPos();
-}
-
-void CrossHairTool::DrawData(wxGraphicsContext* graphics_context, uint16_t* data)
-{
-	int offset_from_line{ 5 }; // start draw data curve above horizontal line from this value
-	int data_preview_height{ (int)(m_ImageSize.GetHeight() / m_ZoomOriginalSizeImage * 0.2) }, data_preview_width{ data_preview_height }; // equal to max of uint16_t 65'535
-	//uint16_t max_uint16_t{ 65535 };
-	uint16_t max_value = m_DataType == ToolsVariables::DATA_U12 ? 4095 : 65535;
-
-	if (m_ShowDataOnVerticalLine)
-	{
-		/* Creating curve for vertical line */
-		DrawDataOnVerticalLine(graphics_context, data, offset_from_line, data_preview_width, max_value);
-	}
-	if (m_ShowDataOnHorizontalLine)
-	{
-		/* Creating curve for horizontal line */
-		DrawDataOnHorizontalLine(graphics_context, data, offset_from_line, data_preview_height, max_value);
-	}
-}
-
-auto CrossHairTool::DrawDataOnHorizontalLine
-(
-	wxGraphicsContext* gc, 
-	uint16_t* image_data, 
-	const int& curve_height_offset, 
-	const int& curve_max_height, 
-	const uint16_t& fixed_max_value
-) -> void
-{
-	wxGraphicsPath path = gc->CreatePath();
-	const int crosshair_image_y = m_CrossHairOnImage.y;
-	const int image_width = m_ImageSize.GetWidth();
-	const int image_height = m_ImageSize.GetHeight();
-
-	// Determine vertical start point of the curve
-	const int draw_start_y = m_CrossHairOnCanvas.y > static_cast<double>(curve_max_height)
-		? m_CrossHairOnCanvas.y + m_ImageStartDraw.y - curve_height_offset
-		: m_CrossHairOnCanvas.y + m_ImageStartDraw.y + curve_height_offset + curve_max_height;
-
-	const double pixel_step_x = m_ActualHalfPixelSize.x * 2.0;
-	double current_draw_x = m_ImageStartDraw.x + m_ActualHalfPixelSize.x;
-
-	// --- Averaging logic parameters ---
-	const int half_avg_height = m_AveragingWidthPX / 2;
-	// Same band as the overlay drawn in cCamPreview: [c-(W-1)/2, c+W/2] = exactly W rows
-	const int avg_start_y = std::max(0, crosshair_image_y - (m_AveragingWidthPX - 1) / 2);
-	const int avg_end_y = std::min(image_height - 1, crosshair_image_y + half_avg_height);
-	const int avg_height = avg_end_y - avg_start_y + 1;
-
-	std::vector<double> averaged_values(image_width, 0.0);
-	double adaptive_min = std::numeric_limits<double>::max();
-	double adaptive_max = std::numeric_limits<double>::lowest();
-
-	// Compute vertical averaging for each horizontal pixel (x)
-	for (int x = 0; x < image_width; ++x)
-	{
-		double sum = 0.0;
-		for (int y = avg_start_y; y <= avg_end_y; ++y)
-		{
-			sum += image_data[y * image_width + x];
-		}
-		double avg_value = sum / avg_height;
-		averaged_values[x] = avg_value;
-
-		if (m_AdaptiveScaling)
-		{
-			if (avg_value < adaptive_min) adaptive_min = avg_value;
-			if (avg_value > adaptive_max) adaptive_max = avg_value;
-		}
-	}
-
-	// Determine scale range
-	double value_range = m_AdaptiveScaling ? (adaptive_max - adaptive_min) : static_cast<double>(fixed_max_value);
-	if (value_range == 0.0) value_range = 1.0;  // Avoid divide-by-zero
-
-	// Draw the horizontal line curve
-	for (int x = 0; x < image_width - 1; ++x)
-	{
-		double scaled_value_current = (averaged_values[x] - (m_AdaptiveScaling ? adaptive_min : 0.0)) / value_range;
-		double y_offset_current = curve_max_height * scaled_value_current;
-
-		path.MoveToPoint(current_draw_x, static_cast<double>(draw_start_y) - y_offset_current);
-		current_draw_x += pixel_step_x;
-
-		double scaled_value_next = (averaged_values[x + 1] - (m_AdaptiveScaling ? adaptive_min : 0.0)) / value_range;
-		double y_offset_next = curve_max_height * scaled_value_next;
-
-		path.AddLineToPoint(current_draw_x, static_cast<double>(draw_start_y) - y_offset_next);
-	}
-
-	gc->SetPen(*wxGREEN_PEN);
-	gc->DrawPath(path);
-}
-
-auto CrossHairTool::DrawDataOnVerticalLine
-(
-	wxGraphicsContext* gc, 
-	uint16_t* image_data, 
-	const int& curve_width_px, 
-	const int& curve_max_width, 
-	const uint16_t& fixed_max_value
-) -> void
-{
-	wxGraphicsPath path = gc->CreatePath();
-	const int crosshair_image_x = m_CrossHairOnImage.x;
-	const int image_width = m_ImageSize.GetWidth();
-	const int image_height = m_ImageSize.GetHeight();
-
-	// Calculate start position of drawing in X based on whether the curve is to the right or left of the crosshair
-	const int draw_start_x = m_CrossHairOnCanvas.x > static_cast<double>(curve_max_width)
-		? m_CrossHairOnCanvas.x + m_ImageStartDraw.x - static_cast<double>(curve_width_px)
-		: m_CrossHairOnCanvas.x + m_ImageStartDraw.x + static_cast<double>(curve_width_px) + static_cast<double>(curve_max_width);
-
-	const double pixel_step_y = m_ActualHalfPixelSize.y * 2.0;
-	double current_draw_y = m_ImageStartDraw.y + m_ActualHalfPixelSize.y;
-
-	// --- Averaging logic parameters ---
-	const int half_avg_width = m_AveragingWidthPX / 2;
-	// Same band as the overlay drawn in cCamPreview: [c-(W-1)/2, c+W/2] = exactly W columns
-	const int avg_start_x = std::max(0, crosshair_image_x - (m_AveragingWidthPX - 1) / 2);
-	const int avg_end_x = std::min(image_width - 1, crosshair_image_x + half_avg_width);
-	const int avg_width = avg_end_x - avg_start_x + 1;
-
-	std::vector<double> averaged_values(image_height, 0.0);
-	double adaptive_min = std::numeric_limits<double>::max();
-	double adaptive_max = std::numeric_limits<double>::lowest();
-
-	// Compute horizontal averaging for each vertical position (y)
-	for (int y = 0; y < image_height; ++y)
-	{
-		double sum = 0.0;
-		for (int x = avg_start_x; x <= avg_end_x; ++x)
-		{
-			sum += image_data[y * image_width + x];
-		}
-		double avg_value = sum / avg_width;
-		averaged_values[y] = avg_value;
-
-		if (m_AdaptiveScaling)
-		{
-			if (avg_value < adaptive_min) adaptive_min = avg_value;
-			if (avg_value > adaptive_max) adaptive_max = avg_value;
-		}
-	}
-
-	// Compute vertical line path
-	double value_range = m_AdaptiveScaling ? (adaptive_max - adaptive_min) : static_cast<double>(fixed_max_value);
-	if (value_range == 0) value_range = 1.0; // avoid division by zero
-
-	for (int y = 0; y < image_height - 1; ++y)
-	{
-		double scaled_value_current = (averaged_values[y] - (m_AdaptiveScaling ? adaptive_min : 0.0)) / value_range;
-		double x_offset_current = curve_max_width * scaled_value_current;
-
-		path.MoveToPoint(draw_start_x - x_offset_current, current_draw_y);
-		current_draw_y += pixel_step_y;
-
-		double scaled_value_next = (averaged_values[y + 1] - (m_AdaptiveScaling ? adaptive_min : 0.0)) / value_range;
-		double x_offset_next = curve_max_width * scaled_value_next;
-
-		path.AddLineToPoint(draw_start_x - x_offset_next, current_draw_y);
-	}
-
-	gc->SetPen(wxColour(240, 134, 80));
-	gc->DrawPath(path);
 }
 
 void CrossHairTool::UpdateParentCrossHairTextCtrlsWithRefresh()

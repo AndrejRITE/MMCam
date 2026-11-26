@@ -11,6 +11,7 @@ BEGIN_EVENT_TABLE(cCamPreview, wxPanel)
 	EVT_KEY_UP(cCamPreview::OnKeyReleased)
 	EVT_ENTER_WINDOW(cCamPreview::OnEnterPanel)
 	EVT_LEAVE_WINDOW(cCamPreview::OnLeavePanel)
+	EVT_MOUSE_CAPTURE_LOST(cCamPreview::OnMouseCaptureLost)
 END_EVENT_TABLE()
 
 cCamPreview::cCamPreview
@@ -38,6 +39,11 @@ auto cCamPreview::ActivateCrossHairDisplaying(bool activate) -> void
 {
 	m_DisplayCrossHair = activate;
 	m_CrossHairTool->ActivateToolButton(activate, activate);
+	if (!activate)
+	{
+		EndCrossHairDrag();
+		SetCrossHairHover({});
+	}
 	//m_CrossHairTool->SetCursorPosOnCanvas(m_CursorPosOnCanvas);
 	ChangeCursorInDependenceOfCurrentParameters();
 	Refresh();
@@ -177,6 +183,11 @@ void cCamPreview::UpdateImageParameters(const wxSize oldImageSize)
 			m_CrossHairPos.y = m_ImageSize.GetHeight() / 2;
 			m_CrossHairTool->SetXPosFromParent(m_CrossHairPos.x);
 			m_CrossHairTool->SetYPosFromParent(m_CrossHairPos.y);
+			if (m_ParentArguments && m_ParentArguments->x_pos_crosshair && m_ParentArguments->y_pos_crosshair)
+			{
+				m_ParentArguments->x_pos_crosshair->ChangeValue(wxString::Format("%i", m_CrossHairPos.x + 1));
+				m_ParentArguments->y_pos_crosshair->ChangeValue(wxString::Format("%i", m_CrossHairPos.y + 1));
+			}
 		}
 	}
 
@@ -192,6 +203,25 @@ void cCamPreview::UpdateImageParameters(const wxSize oldImageSize)
 	Refresh();
 
 	LOG("Finished: " + wxString(__FUNCSIG__))
+}
+
+namespace
+{
+	/// Dark translucent rounded card used behind every overlay on the preview.
+	void DrawOverlayCard(wxGraphicsContext* gc, double x, double y, double w, double h, double radius = 6.0)
+	{
+		gc->SetBrush(wxBrush(wxColour(20, 20, 24, 205)));
+		gc->SetPen(wxPen(wxColour(255, 255, 255, 40), 1));
+		wxGraphicsPath path = gc->CreatePath();
+		path.AddRoundedRectangle(x, y, w, h, radius);
+		gc->DrawPath(path);
+	}
+
+	/// 12,345 for integers that are shown to the user
+	wxString FormatInt(long long v)
+	{
+		return CameraPreviewVariables::FormatWithThousandsDelimiter(v, ",");
+	}
 }
 
 auto cCamPreview::GetImagePixelColour(int x, int y) const -> wxColour
@@ -519,6 +549,38 @@ void cCamPreview::OnMouseMoved(wxMouseEvent& evt)
 
 	ChangeCursorInDependenceOfCurrentParameters();
 
+	if (m_CrossHairDrag.Any())
+	{
+		if (evt.LeftIsDown())
+			MoveCrossHairTo(evt.GetPosition());
+		else
+			EndCrossHairDrag();
+		const auto& d = m_CrossHairDrag;
+		SetCursor(d.row && d.column ? wxCURSOR_SIZING : d.row ? wxCURSOR_SIZENS : wxCURSOR_SIZEWE);
+		return;
+	}
+
+	if (!m_Panning && !m_MinimapDragging)
+	{
+		const auto hit = MinimapHitTest(evt.GetPosition()) ? CrossHairHit{} : HitTestCrossHair(evt.GetPosition());
+		SetCrossHairHover(hit);
+		if (hit.Any())
+			SetCursor(hit.row && hit.column ? wxCURSOR_SIZING : hit.row ? wxCURSOR_SIZENS : wxCURSOR_SIZEWE);
+	}
+
+	if (m_MinimapDragging)
+	{
+		if (evt.LeftIsDown())
+			CenterViewOnImagePoint(MinimapToImage(evt.GetPosition()));
+		else
+			m_MinimapDragging = false;
+		SetCursor(wxCURSOR_HAND);
+		return;
+	}
+
+	if (MinimapHitTest(evt.GetPosition()) && !m_Panning)
+		SetCursor(wxCURSOR_HAND);
+
 	if (m_Panning)
 	{
 		ProcessPan(m_CursorPosOnCanvas, true);
@@ -537,8 +599,94 @@ auto cCamPreview::OnEnterPanel(wxMouseEvent& evt) -> void
 
 auto cCamPreview::OnLeavePanel(wxMouseEvent& evt) -> void
 {
+	// A line being dragged keeps the mouse captured, so it may leave the panel
+	if (m_CrossHairDrag.Any()) return;
+
 	m_CTRLPressed = false;
+	SetCrossHairHover({});
 	OnPreviewMouseLeftReleased(evt);
+}
+
+void cCamPreview::OnMouseCaptureLost(wxMouseCaptureLostEvent& evt)
+{
+	EndCrossHairDrag();
+}
+
+auto cCamPreview::HitTestCrossHair(const wxPoint& canvasPos) const -> CrossHairHit
+{
+	CrossHairHit hit{};
+	if (!m_DisplayCrossHair || !HasImage() || !m_CrossHairTool) return hit;
+
+	const double k = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 0.0;
+	if (k <= 0.0) return hit;
+
+	const double ox = m_StartDrawPos.x * k, oy = m_StartDrawPos.y * k;
+	const double imgRight = ox + m_ImageSize.GetWidth() * k, imgBottom = oy + m_ImageSize.GetHeight() * k;
+	const double grab = 5.0; // px either side of a line
+
+	const double lineX = ox + (m_CrossHairPos.x + 0.5) * k;
+	const double lineY = oy + (m_CrossHairPos.y + 0.5) * k;
+	const bool insideX = canvasPos.x >= ox - grab && canvasPos.x <= imgRight + grab;
+	const bool insideY = canvasPos.y >= oy - grab && canvasPos.y <= imgBottom + grab;
+
+	hit.column = m_CrossHairTool->GetShowVerticalLine() && insideY && std::abs(canvasPos.x - lineX) <= grab;
+	hit.row = m_CrossHairTool->GetShowHorizontalLine() && insideX && std::abs(canvasPos.y - lineY) <= grab;
+	return hit;
+}
+
+auto cCamPreview::MoveCrossHairTo(const wxPoint& canvasPos) -> void
+{
+	const double k = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 0.0;
+	if (k <= 0.0 || !HasImage()) return;
+
+	bool changed = false;
+	if (m_CrossHairDrag.column)
+	{
+		const int x = std::clamp((int)std::floor(canvasPos.x / k - m_StartDrawPos.x), 0, m_ImageSize.GetWidth() - 1);
+		if (x != m_CrossHairPos.x)
+		{
+			m_CrossHairPos.x = x;
+			m_CrossHairTool->SetXPosFromParent(x);
+			if (m_ParentArguments && m_ParentArguments->x_pos_crosshair)
+				m_ParentArguments->x_pos_crosshair->ChangeValue(wxString::Format("%i", x + 1));
+			changed = true;
+		}
+	}
+	if (m_CrossHairDrag.row)
+	{
+		const int y = std::clamp((int)std::floor(canvasPos.y / k - m_StartDrawPos.y), 0, m_ImageSize.GetHeight() - 1);
+		if (y != m_CrossHairPos.y)
+		{
+			m_CrossHairPos.y = y;
+			m_CrossHairTool->SetYPosFromParent(y);
+			if (m_ParentArguments && m_ParentArguments->y_pos_crosshair)
+				m_ParentArguments->y_pos_crosshair->ChangeValue(wxString::Format("%i", y + 1));
+			changed = true;
+		}
+	}
+
+	if (changed)
+	{
+		// Repaint now so the line and its profile follow the mouse without lag
+		Refresh(false);
+		Update();
+	}
+}
+
+auto cCamPreview::SetCrossHairHover(const CrossHairHit& hit) -> void
+{
+	if (hit.row == m_CrossHairHover.row && hit.column == m_CrossHairHover.column) return;
+	m_CrossHairHover = hit;
+	if (m_CrossHairTool) m_CrossHairTool->SetHighlight(hit.row, hit.column);
+	Refresh(false);
+}
+
+auto cCamPreview::EndCrossHairDrag() -> void
+{
+	if (!m_CrossHairDrag.Any()) return;
+	m_CrossHairDrag = {};
+	if (HasCapture()) ReleaseMouse();
+	Refresh(false);
 }
 
 void cCamPreview::OnMouseWheelMoved(wxMouseEvent& evt)
@@ -648,6 +796,26 @@ void cCamPreview::CalculatePositionOnImage()
 
 void cCamPreview::OnPreviewMouseLeftPressed(wxMouseEvent& evt)
 {
+	if (MinimapHitTest(evt.GetPosition()))
+	{
+		m_MinimapDragging = true;
+		CenterViewOnImagePoint(MinimapToImage(evt.GetPosition()));
+		return;
+	}
+
+	if (!m_CTRLPressed)
+	{
+		const auto hit = HitTestCrossHair(evt.GetPosition());
+		if (hit.Any())
+		{
+			m_CrossHairDrag = hit;
+			SetCrossHairHover(hit);
+			if (!HasCapture()) CaptureMouse();
+			MoveCrossHairTo(evt.GetPosition());
+			return;
+		}
+	}
+
 	if (m_Zoom > m_MinZoom && m_IsCursorInsideImage && !m_CTRLPressed)
 	{
 		m_Panning = true;
@@ -678,6 +846,8 @@ void cCamPreview::OnPreviewMouseLeftPressed(wxMouseEvent& evt)
 
 void cCamPreview::OnPreviewMouseLeftReleased(wxMouseEvent& evt)
 {
+	m_MinimapDragging = false;
+	EndCrossHairDrag();
 	if (m_Panning)
 	{
 		FinishPan(true);
@@ -698,92 +868,20 @@ void cCamPreview::ChangeCursorInDependenceOfCurrentParameters()
 
 void cCamPreview::DrawCrossHair(wxGraphicsContext* graphics_context)
 {
-	graphics_context->SetPen(*wxRED_PEN);
-	m_CrossHairTool->DrawCrossHair(graphics_context, m_ImageData.get());
-}
+	if (!m_DisplayCrossHair || !HasImage()) return;
 
-void cCamPreview::DrawCrossHairAveragingOverlay(wxGraphicsContext* gc_)
-{
-	if (!m_DisplayCrossHair) return;
-	if (!m_ImageData) return;
+	const double k = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 0.0;
+	if (k <= 0.0) return;
 
-	// Only at maximum zoom
-	if ((m_Zoom / m_ZoomOnOriginalSizeImage) < m_MaxZoom) return;
-
-	// Pixel geometry on canvas
-	const wxRealPoint half =
-	{
-		m_Zoom / m_ZoomOnOriginalSizeImage / 2.0,
-		m_Zoom / m_ZoomOnOriginalSizeImage / 2.0
-	};
-	if (half.x < 0.5 || half.y < 0.5) return; // degenerate guard
-
-	const double pw = half.x * 2.0;
-	const double ph = half.y * 2.0;
-
-	// Image top-left on canvas
-	const wxRealPoint img0 =
-	{
-		m_StartDrawPos.x * m_Zoom / m_ZoomOnOriginalSizeImage,
-		m_StartDrawPos.y * m_Zoom / m_ZoomOnOriginalSizeImage
-	};
-
-	// Crosshair center in image coords
-	const int cx = std::clamp(m_CrossHairPos.x, 0, m_ImageSize.GetWidth() - 1);
-	const int cy = std::clamp(m_CrossHairPos.y, 0, m_ImageSize.GetHeight() - 1);
-
-	// Averaging width in pixels
-	const int W = std::clamp(m_CrossHairAveragingWidthPX, 1, std::max(m_ImageSize.GetWidth(), m_ImageSize.GetHeight()));
-
-	// Band extents (inclusive) around center
-	const int hx0 = std::max(0, cx - (W - 1) / 2);
-	const int hx1 = std::min(m_ImageSize.GetWidth() - 1, cx + W / 2);
-	const int hy0 = std::max(0, cy - (W - 1) / 2);
-	const int hy1 = std::min(m_ImageSize.GetHeight() - 1, cy + W / 2);
-
-	// Semi-transparent brush using contrast color
-	wxColour c = m_ContrastDefaultColor;
-	c.Set(c.Red(), c.Green(), c.Blue(), 90);
-	gc_->SetBrush(wxBrush(c, wxBRUSHSTYLE_SOLID));
-	gc_->SetPen(*wxTRANSPARENT_PEN);
-
-	// Vertical band: columns [hx0..hx1], all rows
-	for (int x = hx0; x <= hx1; ++x)
-	{
-		const double canvasX = img0.x + x * pw;
-		if (canvasX > m_CanvasSize.GetWidth()) break;
-		if (canvasX + pw < 0) continue;
-
-		// Clip to visible rows by canvas Y
-		// Compute the first and last visible row roughly by canvas bounds
-		int yStart = 0, yEnd = m_ImageSize.GetHeight() - 1;
-		// Quick cull using canvas bounds
-		// Per-pixel check is still cheap but this avoids work when fully off-screen
-		for (int y = yStart; y <= yEnd; ++y)
-		{
-			const double canvasY = img0.y + y * ph;
-			if (canvasY + ph < 0) continue;
-			if (canvasY > m_CanvasSize.GetHeight()) break;
-			gc_->DrawRectangle(canvasX, canvasY, pw, ph);
-		}
-	}
-
-	// Horizontal band: rows [hy0..hy1], all columns
-	for (int y = hy0; y <= hy1; ++y)
-	{
-		const double canvasY = img0.y + y * ph;
-		if (canvasY > m_CanvasSize.GetHeight()) break;
-		if (canvasY + ph < 0) continue;
-
-		int xStart = 0, xEnd = m_ImageSize.GetWidth() - 1;
-		for (int x = xStart; x <= xEnd; ++x)
-		{
-			const double canvasX = img0.x + x * pw;
-			if (canvasX + pw < 0) continue;
-			if (canvasX > m_CanvasSize.GetWidth()) break;
-			gc_->DrawRectangle(canvasX, canvasY, pw, ph);
-		}
-	}
+	ToolsVariables::ProfileView view{};
+	view.data = m_ImageData.get();
+	view.imageSize = m_ImageSize;
+	view.scale = k;
+	view.origin = wxRealPoint(m_StartDrawPos.x * k, m_StartDrawPos.y * k);
+	view.canvas = GetClientSize();
+	view.position = wxPoint(m_CrossHairPos.x, m_CrossHairPos.y);
+	view.revision = m_ImageRevision;
+	m_CrossHairTool->DrawCrossHair(graphics_context, view);
 }
 
 auto cCamPreview::DrawPixelValues(wxGraphicsContext* gc) -> void
@@ -1632,7 +1730,6 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 		DrawScaleBar(gc);
 
 		DrawCrossHair(gc);
-		DrawCrossHairAveragingOverlay(gc);
 		DrawPixelValues(gc);
 
 		DrawImageStatistics(gc);
@@ -1678,6 +1775,7 @@ auto cCamPreview::UpdateColourLut(int black, int white) -> void
 	const unsigned short maxValue = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
 	m_ColourLut.resize((static_cast<size_t>(maxValue) + 1) * 3);
 	m_ColourLutMax = maxValue;
+	++m_ImageRevision;
 	for (unsigned int v = 0; v <= maxValue; ++v)
 		MapValueToRGB(static_cast<unsigned short>(v), m_ColourLut[v * 3], m_ColourLut[v * 3 + 1], m_ColourLut[v * 3 + 2], black, white);
 }
@@ -2136,97 +2234,63 @@ auto cCamPreview::DrawCircleMesh(wxGraphicsContext* gc_) -> void
 
 auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 {
-	if (!m_ImageData || !HasImage() || m_PixelSizeUM <= 0.0) return;
+	if (!HasImage() || m_PixelSizeUM <= 0.0) return;
 
-	// --- Placement & style
-	const wxRealPoint anchor(m_CanvasSize.GetWidth() - 70, m_CanvasSize.GetHeight() - 20);
-	const int pen_thickness = 4;
+	// Sensor pixels per displayed image pixel (binning). Without a connected camera the
+	// sensor size is unknown; treat the image as unbinned instead of a zero-length scale.
+	const double binFactor = m_SensorSize.GetWidth() > 0
+		? static_cast<double>(m_SensorSize.GetWidth()) / std::max(1, m_ImageSize.GetWidth())
+		: 1.0;
 
-	// image bin factor (how many sensor pixels per displayed image pixel)
-	const double binFactor =
-		static_cast<double>(m_SensorSize.GetWidth()) /
-		std::max(1, m_ImageSize.GetWidth()); // NOTE: double division
+	const double canvasPerImagePx = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 0.0;
+	if (canvasPerImagePx <= 0.0) return;
+	const double umPerCanvasPx = m_PixelSizeUM * binFactor / canvasPerImagePx;
+	if (umPerCanvasPx <= 0.0 || !std::isfinite(umPerCanvasPx)) return;
 
-	// canvas scale: how many canvas pixels per image pixel
-	const double canvasScale = std::max(1e-12, m_Zoom / std::max(1e-12, m_ZoomOnOriginalSizeImage));
+	// Longest 1-2-5 x 10^n length that fits in ~120 px (so the bar is 48-120 px long)
+	const double maxBarPx = 120.0;
+	const double maxUm = maxBarPx * umPerCanvasPx;
+	const double p10 = std::pow(10.0, std::floor(std::log10(maxUm)));
+	const double d = maxUm / p10;
+	const double scaleUm = (d >= 5.0 ? 5.0 : d >= 2.0 ? 2.0 : 1.0) * p10;
+	const double barPx = scaleUm / umPerCanvasPx;
 
-	// µm per canvas pixel = (µm per image pixel) / (canvas px per image px)
-	const double umPerCanvasPixel = (m_PixelSizeUM * binFactor) / canvasScale;
-
-	// --- Choose a readable target bar length in pixels
-	// Aim for ~1/4 of the canvas width, clamp to [80, 280] px
-	const double targetPx = std::clamp(m_CanvasSize.GetWidth() * 0.25, 80.0, 280.0);
-
-	// --- Convert target pixels to microns, then snap to 1–2–5×10^n
-	auto nice125 = [](double v) -> double {
-		if (v <= 0.0) return 1.0;
-		const double p10 = std::pow(10.0, std::floor(std::log10(v)));
-		const double d = v / p10;
-		double m = 1.0;
-		if (d >= 5.0)      m = 5.0;
-		else if (d >= 2.0) m = 2.0;
-		else              m = 1.0;
-		return m * p10;
+	// Label in a unit that keeps the number short: nm, um, mm or m
+	auto formatLength = [](double um) -> wxString
+		{
+			auto num = [](double v) { return std::fabs(v - std::round(v)) < 1e-9 ? wxString::Format("%.0f", v) : wxString::Format("%g", v); };
+			if (um >= 1e6) return num(um / 1e6) + " m";
+			if (um >= 1e3) return num(um / 1e3) + " mm";
+			if (um >= 1.0) return num(um) + wxString::FromUTF8(" \xC2\xB5m");
+			return num(um * 1e3) + " nm";
 		};
+	const wxString label = formatLength(scaleUm);
 
-	const double targetUm = targetPx * umPerCanvasPixel;
-	const double scaleUm = nice125(targetUm);
-
-	// --- Compute final drawn pixel length
-	double lengthPx = scaleUm / std::max(1e-12, umPerCanvasPixel);
-
-	// If still too large (tiny zoom), shrink by stepping down the 1–2–5 series
-	if (lengthPx > m_CanvasSize.GetWidth() / 3.0) {
-		double v = scaleUm;
-		while (lengthPx > m_CanvasSize.GetWidth() / 3.0) {
-			// step down: divide by 2, then if not 1–2–5, divide to previous 'nice' decade
-			v /= 2.0;
-			if (std::fmod(v, 5.0) == 0.0) { /* keep */ }
-			else if (std::fmod(v, 2.0) == 0.0) { /* keep */ }
-			else { v = nice125(v / 2.5); }
-			if (v <= 0.0) break;
-			lengthPx = v / std::max(1e-12, umPerCanvasPixel);
-		}
-	}
-
-	// If too small to be useful, bail out quietly
-	if (lengthPx < 40.0) return;
-
-	// --- Pick contrast color against the local background (as you already do)
-	const auto bg = GetCanvasColour(anchor.x - lengthPx / 2.0, anchor.y);
-	wxColour widgetColor(255 - bg.Red(), 255 - bg.Green(), 255 - bg.Blue());
-	if (bg.Red() == bg.Green() && bg.Green() == bg.Blue())
-		widgetColor = m_ContrastDefaultColor;
-
-	gc_->SetPen(wxPen(widgetColor, pen_thickness));
-
-	// --- Draw the bar
-	gc_->StrokeLine(anchor.x, anchor.y, anchor.x - lengthPx, anchor.y);
-
-	// --- Label: use K/M/G for microns (as requested)
-	auto format_um_KMG = [](double um) -> wxString {
-		const double a = std::fabs(um);
-		wxString suff = " [micron";
-		suff += a == 1.0 ? "" : "s";
-		suff += "]";
-
-		if (a >= 1e9)  return wxString::Format(wxT("%.0fG"), um / 1e9) + suff;
-		if (a >= 1e6)  return wxString::Format(wxT("%.0fM"), um / 1e6) + suff;
-		if (a >= 1e3)  return wxString::Format(wxT("%.0fk"), um / 1e3) + suff;
-		// fall back to integer µm for small values
-		return wxString::Format(wxT("%.0f"), um) + suff;
-		};
-
-	// --- Draw the text centered above the bar
-	wxFont font(16, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
-	gc_->SetFont(font, widgetColor);
-
-	const wxString label = format_um_KMG(scaleUm); // or format_with_units(scaleUm);
+	const wxFont font(9, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+	gc_->SetFont(font, wxColour(240, 240, 240));
 	wxDouble tw{}, th{};
 	gc_->GetTextExtent(label, &tw, &th);
-	const wxDouble tx = anchor.x - lengthPx / 2.0 - tw / 2.0;
-	const wxDouble ty = anchor.y - 25 - th / 2.0;
-	gc_->DrawText(label, tx, ty);
+
+	// Card in the bottom-right corner: label above a bar with end ticks
+	const double pad = 8.0, gap = 4.0, tick = 6.0, margin = 10.0;
+	const double cardW = std::max(barPx, tw) + 2 * pad;
+	const double cardH = pad + th + gap + tick + pad;
+	const wxSize canvas = GetClientSize();
+	const double cardX = canvas.GetWidth() - margin - cardW;
+	const double cardY = canvas.GetHeight() - margin - cardH;
+	DrawOverlayCard(gc_, cardX, cardY, cardW, cardH);
+
+	gc_->DrawText(label, cardX + (cardW - tw) / 2.0, cardY + pad);
+
+	const double barX0 = cardX + (cardW - barPx) / 2.0, barX1 = barX0 + barPx;
+	const double barY = cardY + pad + th + gap + tick / 2.0;
+	wxPen pen(wxColour(240, 240, 240), 2);
+	pen.SetCap(wxCAP_BUTT);
+	gc_->SetPen(pen);
+	gc_->StrokeLine(barX0, barY, barX1, barY);
+	gc_->StrokeLine(barX0 + 1, barY - tick / 2.0, barX0 + 1, barY + tick / 2.0);
+	gc_->StrokeLine(barX1 - 1, barY - tick / 2.0, barX1 - 1, barY + tick / 2.0);
+
 }
 
 auto cCamPreview::DrawHEWCircle(wxGraphicsContext* gc_) -> void
@@ -2555,85 +2619,174 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 	}
 }
 
+auto cCamPreview::UpdateMinimapBitmap(const int width, const int height) -> void
+{
+	if (m_MinimapBitmap.IsOk() && m_MinimapBitmapRevision == m_ImageRevision &&
+		m_MinimapBitmap.GetWidth() == width && m_MinimapBitmap.GetHeight() == height)
+		return;
+
+	const int W = m_ImageSize.GetWidth(), H = m_ImageSize.GetHeight();
+	wxImage thumb(width, height, false);
+	unsigned char* dst = thumb.GetData();
+	for (int r = 0; r < height; ++r)
+	{
+		const size_t y = std::min<size_t>(H - 1, static_cast<size_t>((r + 0.5) * H / height));
+		for (int c = 0; c < width; ++c, dst += 3)
+		{
+			const size_t x = std::min<size_t>(W - 1, static_cast<size_t>((c + 0.5) * W / width));
+			const unsigned short v = std::min(m_ImageData[y * W + x], m_ColourLutMax);
+			const unsigned char* rgb = &m_ColourLut[static_cast<size_t>(v) * 3];
+			dst[0] = rgb[0];
+			dst[1] = rgb[1];
+			dst[2] = rgb[2];
+		}
+	}
+	m_MinimapBitmap = wxBitmap(thumb);
+	m_MinimapBitmapRevision = m_ImageRevision;
+}
+
+auto cCamPreview::CenterViewOnImagePoint(const wxRealPoint& imagePoint) -> void
+{
+	const double k = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 0.0;
+	if (k <= 0.0 || m_Zoom <= 0.0) return;
+
+	const wxSize canvas = GetClientSize();
+	// Keep the view inside the image where it is larger than the view (no empty margins)
+	auto clampCentre = [](double v, double halfView, double size)
+		{
+			return size > 2.0 * halfView ? std::clamp(v, halfView, size - halfView) : size / 2.0;
+		};
+	const double ix = clampCentre(imagePoint.x, canvas.GetWidth() / (2.0 * k), (double)m_ImageSize.GetWidth());
+	const double iy = clampCentre(imagePoint.y, canvas.GetHeight() / (2.0 * k), (double)m_ImageSize.GetHeight());
+
+	// Screen x of image x is (m_StartDrawPos.x + x) * k; put the point in the canvas centre
+	m_StartDrawPos.x = canvas.GetWidth() / (2.0 * k) - ix;
+	m_StartDrawPos.y = canvas.GetHeight() / (2.0 * k) - iy;
+	m_PanOffset.x = (m_StartDrawPos.x - m_NotZoomedGraphicsBitmapOffset.x) * m_Zoom;
+	m_PanOffset.y = (m_StartDrawPos.y - m_NotZoomedGraphicsBitmapOffset.y) * m_Zoom;
+
+	m_CrossHairTool->SetImageStartDrawPos(wxRealPoint
+	(
+		m_StartDrawPos.x * m_Zoom / m_ZoomOnOriginalSizeImage,
+		m_StartDrawPos.y * m_Zoom / m_ZoomOnOriginalSizeImage
+	));
+	Refresh();
+}
+
+auto cCamPreview::MinimapHitTest(const wxPoint& canvasPos) const -> bool
+{
+	return m_MinimapVisible && m_MinimapThumbRect.Contains(wxPoint2DDouble(canvasPos.x, canvasPos.y));
+}
+
+auto cCamPreview::MinimapToImage(const wxPoint& canvasPos) const -> wxRealPoint
+{
+	const auto& t = m_MinimapThumbRect;
+	if (t.m_width <= 0.0 || t.m_height <= 0.0) return {};
+	return wxRealPoint
+	(
+		(canvasPos.x - t.m_x) / t.m_width * m_ImageSize.GetWidth(),
+		(canvasPos.y - t.m_y) / t.m_height * m_ImageSize.GetHeight()
+	);
+}
+
 auto cCamPreview::DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> void
 {
-	if (m_Zoom <= m_MinZoom) return;
-	if (!HasImage()) return;
+	m_MinimapVisible = false;
+	if (m_Zoom <= m_MinZoom || !HasImage() || m_ColourLut.empty()) return;
 
-	wxDouble offset_x{ 50.0 }, offset_y{ 50.0 };
-	wxDouble max_width{ 100.0 }, max_height{ 100.0 };
-	auto image_minuature = wxRect2DDouble
-	(
-		GetSize().GetWidth() - max_width - offset_x,
-		offset_y,
-		m_ImageSize.GetWidth() >= m_ImageSize.GetHeight() ? max_width : max_height * m_ImageSize.GetWidth() / (wxDouble)m_ImageSize.GetHeight(),
-		m_ImageSize.GetHeight() >= m_ImageSize.GetWidth() ? max_height : max_width * m_ImageSize.GetHeight() / (wxDouble)m_ImageSize.GetWidth()
-	);
+	const double k = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 0.0;
+	if (k <= 0.0) return;
 
-	auto bgColor = GetCanvasColour(image_minuature.GetCentre().m_x, image_minuature.GetCentre().m_y);
-	wxColour widgetColour(255 - bgColor.Red(), 255 - bgColor.Green(), 255 - bgColor.Blue());
+	// Thumbnail of the whole image (fitted into 168 x 120 px) in a card at the top right
+	const wxSize canvas = GetClientSize();
+	const double maxW = 168.0, maxH = 120.0;
+	const double aspect = (double)m_ImageSize.GetWidth() / m_ImageSize.GetHeight();
+	const int thumbW = std::max(16, (int)std::round(aspect >= maxW / maxH ? maxW : maxH * aspect));
+	const int thumbH = std::max(16, (int)std::round(aspect >= maxW / maxH ? maxW / aspect : maxH));
 
-	widgetColour = bgColor.GetRed() == bgColor.GetGreen() && bgColor.GetGreen() == bgColor.GetBlue() && bgColor.GetRed() == bgColor.GetBlue() ? m_ContrastDefaultColor : widgetColour;
+	const wxFont font(8, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+	const wxFont boldFont(8, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+	gc_->SetFont(font, *wxWHITE);
+	wxDouble lineW{}, lineH{};
+	gc_->GetTextExtent("Ag", &lineW, &lineH);
 
-	gc_->SetPen(wxPen(widgetColour, 1, wxPENSTYLE_SOLID));
-	gc_->DrawRectangle
-	(
-		image_minuature.m_x,
-		image_minuature.m_y,
-		image_minuature.m_width,
-		image_minuature.m_height
-	);
+	const double pad = 6.0, margin = 10.0, gap = 5.0;
+	const double cardW = thumbW + 2 * pad;
+	const double cardH = pad + thumbH + gap + lineH + pad;
+	const double cardX = canvas.GetWidth() - margin - cardW;
+	const double cardY = margin;
+	if (cardX < margin || cardY + cardH > canvas.GetHeight() - margin) return; // canvas too small
 
-	auto actual_view = wxRect2DDouble
-	(
-		//image_minuature.m_x - m_StartDrawPos.x * max_width / (double)m_ImageSize.GetWidth(),
-		//image_minuature.m_y - m_StartDrawPos.y * max_height / (double)m_ImageSize.GetHeight(),
-		image_minuature.m_x - m_StartDrawPos.x * image_minuature.m_width / (double)m_ImageSize.GetWidth(),
-		image_minuature.m_y - m_StartDrawPos.y * image_minuature.m_height / (double)m_ImageSize.GetHeight(),
-		GetSize().GetWidth() * m_ZoomOnOriginalSizeImage / m_Zoom / m_ImageSize.GetWidth() * image_minuature.m_width,
-		GetSize().GetHeight() * m_ZoomOnOriginalSizeImage / m_Zoom / m_ImageSize.GetHeight() * image_minuature.m_height
-	);
-	//LOG2F("Width: ", actual_view.m_width, " Height: ", actual_view.m_height);
+	DrawOverlayCard(gc_, cardX, cardY, cardW, cardH);
 
+	const wxRect2DDouble thumb(cardX + pad, cardY + pad, thumbW, thumbH);
+	UpdateMinimapBitmap(thumbW, thumbH);
+	gc_->DrawBitmap(m_MinimapBitmap, thumb.m_x, thumb.m_y, thumb.m_width, thumb.m_height);
+	m_MinimapThumbRect = thumb;
+	m_MinimapVisible = true;
 
-	gc_->SetPen(wxPen(widgetColour, 2, wxPENSTYLE_SOLID));
-	if (actual_view.m_width < 7.0 || actual_view.m_height < 7.0)
+	// Visible part of the image, in thumbnail coordinates
+	const double sx = thumb.m_width / m_ImageSize.GetWidth(), sy = thumb.m_height / m_ImageSize.GetHeight();
+	double vx0 = (-m_StartDrawPos.x) * sx + thumb.m_x;
+	double vy0 = (-m_StartDrawPos.y) * sy + thumb.m_y;
+	double vx1 = vx0 + canvas.GetWidth() / k * sx;
+	double vy1 = vy0 + canvas.GetHeight() / k * sy;
+	vx0 = std::clamp(vx0, thumb.m_x, thumb.GetRight());
+	vx1 = std::clamp(vx1, thumb.m_x, thumb.GetRight());
+	vy0 = std::clamp(vy0, thumb.m_y, thumb.GetBottom());
+	vy1 = std::clamp(vy1, thumb.m_y, thumb.GetBottom());
+
+	// Dim everything outside the visible area
 	{
-		wxPoint2DDouble start_draw_cross =
-		{
-			actual_view.m_x + actual_view.m_width / 2.0,
-			actual_view.m_y + actual_view.m_height / 2.0
-		};
+		wxGraphicsPath shade = gc_->CreatePath();
+		shade.AddRectangle(thumb.m_x, thumb.m_y, thumb.m_width, thumb.m_height);
+		if (vx1 > vx0 && vy1 > vy0) shade.AddRectangle(vx0, vy0, vx1 - vx0, vy1 - vy0);
+		gc_->SetPen(*wxTRANSPARENT_PEN);
+		gc_->SetBrush(wxBrush(wxColour(0, 0, 0, 140)));
+		gc_->FillPath(shade, wxODDEVEN_RULE);
+	}
 
-		// Length of the line
-		wxDouble leg_length{ 10.0 };
-		auto rotate_angle = M_PI / 4.0; // Rotation in [rad]
-		// Draw the cross
-		gc_->StrokeLine
-		(
-			start_draw_cross.m_x - leg_length / 2.0 * cos(rotate_angle),
-			start_draw_cross.m_y - leg_length / 2.0 * sin(rotate_angle),
-			start_draw_cross.m_x + leg_length / 2.0 * cos(rotate_angle),
-			start_draw_cross.m_y + leg_length / 2.0 * sin(rotate_angle)
-		);  // Horizontal line
-		gc_->StrokeLine
-		(
-			start_draw_cross.m_x - leg_length / 2.0 * cos(rotate_angle),
-			start_draw_cross.m_y + leg_length / 2.0 * sin(rotate_angle),
-			start_draw_cross.m_x + leg_length / 2.0 * cos(rotate_angle),
-			start_draw_cross.m_y - leg_length / 2.0 * sin(rotate_angle)
-		);  // Vertical line
+	// Viewport outline; a very small one gets a ring around it so it stays findable
+	const wxColour accent(66, 146, 255);
+	gc_->SetBrush(*wxTRANSPARENT_BRUSH);
+	if (vx1 - vx0 < 6.0 || vy1 - vy0 < 6.0)
+	{
+		const double cx = (vx0 + vx1) / 2.0, cy = (vy0 + vy1) / 2.0;
+		gc_->SetPen(wxPen(wxColour(0, 0, 0, 160), 3));
+		gc_->DrawEllipse(cx - 6, cy - 6, 12, 12);
+		gc_->SetPen(wxPen(accent, 1.5));
+		gc_->DrawEllipse(cx - 6, cy - 6, 12, 12);
+		gc_->SetBrush(wxBrush(accent));
+		gc_->SetPen(*wxTRANSPARENT_PEN);
+		gc_->DrawEllipse(cx - 1.5, cy - 1.5, 3, 3);
 	}
 	else
 	{
-		gc_->DrawRectangle
-		(
-			actual_view.m_x,
-			actual_view.m_y,
-			actual_view.m_width,
-			actual_view.m_height
-		);
+		gc_->SetPen(wxPen(wxColour(0, 0, 0, 160), 3));
+		gc_->DrawRectangle(vx0, vy0, vx1 - vx0, vy1 - vy0);
+		gc_->SetPen(wxPen(accent, 1.5));
+		gc_->DrawRectangle(vx0, vy0, vx1 - vx0, vy1 - vy0);
 	}
+
+	// Thin frame around the thumbnail
+	gc_->SetBrush(*wxTRANSPARENT_BRUSH);
+	gc_->SetPen(wxPen(wxColour(255, 255, 255, 60), 1));
+	gc_->DrawRectangle(thumb.m_x, thumb.m_y, thumb.m_width, thumb.m_height);
+
+	// Footer: zoom on the left, centre of the view (1-based pixels) on the right
+	const double zoomPct = k * 100.0;
+	const wxString zoomTxt = zoomPct >= 100.0 ? wxString::Format("%.0f%%", zoomPct) : wxString::Format("%.1f%%", zoomPct);
+	const double centreX = canvas.GetWidth() / (2.0 * k) - m_StartDrawPos.x;
+	const double centreY = canvas.GetHeight() / (2.0 * k) - m_StartDrawPos.y;
+	const wxString posTxt = FormatInt((long long)std::floor(centreX) + 1) + ", " + FormatInt((long long)std::floor(centreY) + 1);
+
+	const double textY = thumb.GetBottom() + gap;
+	gc_->SetFont(boldFont, wxColour(240, 240, 240));
+	gc_->DrawText(zoomTxt, thumb.m_x, textY);
+	gc_->SetFont(font, wxColour(180, 180, 185));
+	wxDouble pw{}, ph{};
+	gc_->GetTextExtent(posTxt, &pw, &ph);
+	gc_->DrawText(posTxt, thumb.GetRight() - pw, textY);
 }
 
 auto cCamPreview::DrawROI(wxGraphicsContext* gc_) -> void

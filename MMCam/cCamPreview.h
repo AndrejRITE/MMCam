@@ -361,6 +361,16 @@ private:
 	/// Bottom edge of the badges stacked in the top-left corner (FPS, HEW, ...), reset on every paint
 	wxDouble m_TopLeftOverlayBottom{};
 	auto DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> void;
+	/* Minimap (top right while zoomed in): click or drag on it to move the view */
+	auto UpdateMinimapBitmap(const int width, const int height) -> void;
+	auto CenterViewOnImagePoint(const wxRealPoint& imagePoint) -> void;
+	auto MinimapHitTest(const wxPoint& canvasPos) const -> bool;
+	auto MinimapToImage(const wxPoint& canvasPos) const -> wxRealPoint;
+	wxBitmap m_MinimapBitmap{};
+	unsigned long long m_ImageRevision{};         ///< bumped whenever the displayed colours change
+	unsigned long long m_MinimapBitmapRevision{}; ///< m_ImageRevision the thumbnail was built for
+	wxRect2DDouble m_MinimapThumbRect{};
+	bool m_MinimapVisible{}, m_MinimapDragging{};
 
 	auto DrawROI(wxGraphicsContext* gc_) -> void;
 
@@ -370,6 +380,16 @@ private:
 	void OnMouseMoved(wxMouseEvent& evt);
 	auto OnEnterPanel(wxMouseEvent& evt) -> void;
 	auto OnLeavePanel(wxMouseEvent& evt) -> void;
+	void OnMouseCaptureLost(wxMouseCaptureLostEvent& evt);
+
+	/* Dragging the crosshair (line profile) lines */
+	struct CrossHairHit { bool row{}, column{}; bool Any() const { return row || column; } };
+	/// Which crosshair line(s) are within grabbing distance of a canvas point.
+	auto HitTestCrossHair(const wxPoint& canvasPos) const -> CrossHairHit;
+	auto MoveCrossHairTo(const wxPoint& canvasPos) -> void;
+	auto SetCrossHairHover(const CrossHairHit& hit) -> void;
+	auto EndCrossHairDrag() -> void;
+	CrossHairHit m_CrossHairHover{}, m_CrossHairDrag{};
 	/* Zooming */
 	void OnMouseWheelMoved(wxMouseEvent& evt);
 	void AddZoom(const double& zoom, bool zoom_in_center_of_window = false);
@@ -388,7 +408,6 @@ private:
 
 	/* CrossHair */
 	void DrawCrossHair(wxGraphicsContext* graphics_context);
-	void DrawCrossHairAveragingOverlay(wxGraphicsContext* gc_);
 	auto DrawPixelValues(wxGraphicsContext* gc) -> void;
 
 	/* Annulus */

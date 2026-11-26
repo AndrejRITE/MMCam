@@ -5,6 +5,8 @@
 #include "wx/wx.h"
 #include "wx/graphics.h"
 
+#include <vector>
+
 // Macros
 #ifdef _DEBUG
 #define LOG(message) wxLogDebug(message);
@@ -31,6 +33,18 @@ namespace ToolsVariables
 		DATA_U8,
 		DATA_U12,
 		DATA_U16,
+	};
+
+	/// Everything the line profile needs to know about the image and how it is shown.
+	struct ProfileView
+	{
+		const unsigned short* data{};
+		wxSize imageSize{};
+		double scale{};                 ///< canvas pixels per image pixel
+		wxRealPoint origin{};           ///< canvas position of the image's top-left corner
+		wxSize canvas{};
+		wxPoint position{};             ///< crosshair column (x) and row (y), 0-based
+		unsigned long long revision{};  ///< changes whenever the image data changes
 	};
 }
 
@@ -88,7 +102,8 @@ public:
 	void CalculateCrossHairPositionOnCanvas();
 	void UpdateParentCrossHairTextCtrls();
 	wxStockCursor UpdateCursor(const wxStockCursor& current_cursor) override;
-	void DrawCrossHair(wxGraphicsContext* graphics_context_, unsigned short* data_);
+	/// Draws the crosshair, its averaging bands and the row / column intensity profiles.
+	void DrawCrossHair(wxGraphicsContext* gc, const ToolsVariables::ProfileView& view);
 	bool PositionCanBeChanged() const;
 	bool CanProcessPanning() const;
 	void ProcessChangingCrossHairPos();
@@ -101,30 +116,27 @@ public:
 	auto ActivateSetPositionFromParentWindow(bool activate) -> void;
 
 	auto SetAveragingWidthPX(const int& avgWidth) -> void;
+	/// Draws the row / column line emphasised (hovered or being dragged).
+	auto SetHighlight(bool row, bool column) -> void { m_HighlightRow = row; m_HighlightColumn = column; }
 	auto ActivateAdaptiveScaling(const bool isActive = false) -> void { m_AdaptiveScaling = isActive; };
 
 private:
 	void CheckIfMouseAboveCrossHair();
 	void CalculateCrossHairOnImage();
-	void DrawData(wxGraphicsContext* graphics_context, uint16_t* data);
-
-	auto DrawDataOnHorizontalLine
-	(
-		wxGraphicsContext* gc,
-		uint16_t* image_data,
-		const int& curve_height_offset,
-		const int& curve_max_height,
-		const uint16_t& fixed_max_value
-	) -> void;
-
-	auto DrawDataOnVerticalLine
-	(
-		wxGraphicsContext* gc,
-		uint16_t* image_data,
-		const int& curve_width_px,
-		const int& curve_max_width,
-		const uint16_t& fixed_max_value
-	) -> void;
+	/// Averaged profile along a row band (horizontal) or a column band (vertical), cached
+	/// until the image, the position or the averaging width changes.
+	struct ProfileCache
+	{
+		std::vector<float> values{};
+		float minValue{}, maxValue{};
+		int position{ -1 }, first{}, last{}; ///< centre and inclusive band limits
+		unsigned long long revision{ ~0ull };
+		const unsigned short* data{};
+		wxSize imageSize{};
+	};
+	void UpdateProfile(ProfileCache& cache, bool alongRow, const ToolsVariables::ProfileView& view);
+	void DrawProfilePanel(wxGraphicsContext* gc, const ProfileCache& cache, bool alongRow,
+		const ToolsVariables::ProfileView& view, const wxColour& colour);
 
 	void UpdateParentCrossHairTextCtrlsWithRefresh();
 
@@ -149,6 +161,8 @@ private:
 
 	int m_AveragingWidthPX{ 1 };
 	bool m_AdaptiveScaling{};
+	ProfileCache m_RowProfile{}, m_ColumnProfile{};
+	bool m_HighlightRow{}, m_HighlightColumn{};
 };
 
 class RectangleSelectionTool final : public Tool
