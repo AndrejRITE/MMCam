@@ -5705,6 +5705,11 @@ auto cMain::DisplayAndSaveImageFromTheCamera
 			cv::imwrite(file.GetFullPath().ToStdString(), m_final);
 	}
 
+	// Keep the preview's value range in step with the frame (a file opened earlier may have changed it)
+	m_CamPreview->SetCameraDataType(dataType == CameraControlVariables::ImageDataTypes::RAW_12BIT
+		? CameraPreviewVariables::ImageDataTypes::RAW_12BIT
+		: CameraPreviewVariables::ImageDataTypes::RAW_16BIT);
+
 	m_CamPreview->SetCameraCapturedImage
 	(
 		reinterpret_cast<unsigned short*>(m_final.data),
@@ -6331,24 +6336,41 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 	if (image.empty())
 		return;
 
-	auto dataType = HistogramPanelVariables::ImageDataTypes::RAW_12BIT;
+	// The preview and the histogram work on single-channel 16-bit data. Reading an
+	// 8-bit or colour TIFF as 16-bit used to run past the end of its pixel buffer.
+	if (image.channels() == 3)
+		cv::cvtColor(image, image, cv::COLOR_BGR2GRAY);
+	else if (image.channels() == 4)
+		cv::cvtColor(image, image, cv::COLOR_BGRA2GRAY);
 
-	dataType = image.type() == CV_16U ? HistogramPanelVariables::ImageDataTypes::RAW_16BIT : dataType;
+	const bool is16Bit = image.depth() == CV_16U;
+	if (!is16Bit)
+		image.convertTo(image, CV_16U);
+	if (!image.isContinuous())
+		image = image.clone();
 
-	auto dataPtr = std::make_unique<unsigned short[]>(image.rows * image.cols);
+	const auto dataType = is16Bit
+		? HistogramPanelVariables::ImageDataTypes::RAW_16BIT
+		: HistogramPanelVariables::ImageDataTypes::RAW_12BIT;
 
-	for (auto y{ 0 }; y < image.rows; ++y)
-	{
-		for (auto x{ 0 }; x < image.cols; ++x)
-			dataPtr[y * image.cols + x] = image.at<unsigned short>(y, x);
-	}
+	// Otherwise a 16-bit file opened while no (or a 12-bit) camera is connected is shown
+	// with every value above 4095 clipped to the same colour.
+	m_CamPreview->SetCameraDataType(is16Bit
+		? CameraPreviewVariables::ImageDataTypes::RAW_16BIT
+		: CameraPreviewVariables::ImageDataTypes::RAW_12BIT);
+
+	const wxSize imageSize(image.cols, image.rows);
+	const size_t pixelCount = static_cast<size_t>(image.rows) * static_cast<size_t>(image.cols);
+	auto dataPtr = std::make_unique<unsigned short[]>(pixelCount);
+	std::memcpy(dataPtr.get(), image.ptr<unsigned short>(), pixelCount * sizeof(unsigned short));
+	image.release(); // the copy above is all we need; frees ~200 MB for a 100 MP frame
 
 	auto histogram = std::make_unique<unsigned long long[]>(USHRT_MAX + 1);
 
 	unsigned short minValue{}, maxValue{};
 	const size_t totalPx =
-		static_cast<size_t>(image.cols) *
-		static_cast<size_t>(image.rows);
+		static_cast<size_t>(imageSize.GetWidth()) *
+		static_cast<size_t>(imageSize.GetHeight());
 
 	// ~0.002% of pixels, but never below 5.
 	// Example: 1 MP -> 20 counts; 16 MP -> 320 counts.
@@ -6358,8 +6380,8 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 	if (!CalculateHistogram
 	(
 		dataPtr.get(),
-		image.cols,
-		image.rows,
+		imageSize.GetWidth(),
+		imageSize.GetHeight(),
 		minimumCount,
 		histogram.get(),
 		&minValue,
@@ -6392,7 +6414,7 @@ auto cMain::OnOpen(wxCommandEvent& evt) -> void
 	m_CamPreview->SetCameraCapturedImage
 	(
 		dataPtr.get(),
-		wxSize(image.cols, image.rows),
+		imageSize,
 		wasHistogramRangeChanged ? m_HistogramPanel->GetLeftBorderValue() : minValue,
 		wasHistogramRangeChanged ? m_HistogramPanel->GetRightBorderValue() : maxValue
 	);

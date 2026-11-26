@@ -194,19 +194,26 @@ void cCamPreview::UpdateImageParameters(const wxSize oldImageSize)
 	LOG("Finished: " + wxString(__FUNCSIG__))
 }
 
-auto cCamPreview::GetPixelColorFromImage(const wxImage& image, int x, int y) -> wxColour
+auto cCamPreview::GetImagePixelColour(int x, int y) const -> wxColour
 {
-	if (!image.IsOk()) return wxColour(0, 0, 0);  // Return black if invalid
+	if (!HasImage() || m_ColourLut.empty()) return wxColour(0, 0, 0);
+	if (x < 0 || y < 0 || x >= m_ImageSize.GetWidth() || y >= m_ImageSize.GetHeight()) return wxColour(0, 0, 0);
 
-	if (x >= 0 && x < image.GetWidth() && y >= 0 && y < image.GetHeight()) 
-	{
-		unsigned char r = image.GetRed(x, y);
-		unsigned char g = image.GetGreen(x, y);
-		unsigned char b = image.GetBlue(x, y);
-		return wxColour(r, g, b);
-	}
+	const unsigned short v = std::min(m_ImageData[static_cast<size_t>(y) * m_ImageSize.GetWidth() + x], m_ColourLutMax);
+	const unsigned char* c = &m_ColourLut[static_cast<size_t>(v) * 3];
+	return wxColour(c[0], c[1], c[2]);
+}
 
-	return wxColour(0, 0, 0);  // Default to black if out of bounds
+auto cCamPreview::GetCanvasColour(double x, double y) const -> wxColour
+{
+	const double k = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 0.0;
+	if (!HasImage() || k <= 0.0) return GetBackgroundColour();
+
+	const int ix = static_cast<int>(std::floor(x / k - m_StartDrawPos.x));
+	const int iy = static_cast<int>(std::floor(y / k - m_StartDrawPos.y));
+	if (ix < 0 || iy < 0 || ix >= m_ImageSize.GetWidth() || iy >= m_ImageSize.GetHeight())
+		return GetBackgroundColour();
+	return GetImagePixelColour(ix, iy);
 }
 
 auto cCamPreview::SetCameraCapturedImage
@@ -232,12 +239,12 @@ auto cCamPreview::SetCameraCapturedImage
 
 	++m_FrameCount;
 
-	unsigned long long readDataSize = m_ImageSize.GetWidth() * m_ImageSize.GetHeight();
+	const size_t readDataSize = static_cast<size_t>(m_ImageSize.GetWidth()) * static_cast<size_t>(m_ImageSize.GetHeight());
 
 	if (!m_ImageData || oldImageSize != m_ImageSize)
 	{
+		m_ImageData.reset(); // free the old frame before allocating a new one (large sensors)
 		m_ImageData = std::make_unique<unsigned short[]>(readDataSize);
-		m_Image = wxImage(m_ImageSize.GetWidth(), m_ImageSize.GetHeight());
 		m_HorizontalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetWidth());
 		m_VerticalSumArray = std::make_unique<unsigned int[]>(m_ImageSize.GetHeight());
 	}
@@ -246,7 +253,7 @@ auto cCamPreview::SetCameraCapturedImage
 
 	CalculateImageStatistics();
 
-	UpdateWXImage(minValue, maxValue);
+	UpdateColourLut(minValue, maxValue);
 
 	UpdateImageParameters(oldImageSize);
 	
@@ -272,7 +279,7 @@ auto cCamPreview::UpdateBlackAndWhiteRange(const int black, const int white) -> 
 {
 	if (!m_ImageData) return std::optional<int>(1);
 
-	UpdateWXImage(black, white);
+	UpdateColourLut(black, white);
 
 	m_IsImageSet = true;
 	m_IsGraphicsBitmapSet = false;
@@ -284,7 +291,7 @@ auto cCamPreview::UpdateBlackAndWhiteRange(const int black, const int white) -> 
 
 auto cCamPreview::UpdateCursorPositionOnStatusBar() -> void
 {
-	if (!m_Image.IsOk()) return;
+	if (!HasImage()) return;
 
 	int pixel_offset{ 1 };
 	auto status_bar_text = wxString("");
@@ -843,7 +850,7 @@ auto cCamPreview::DrawPixelValues(wxGraphicsContext* gc) -> void
 			{
 				if (!CheckIfPixelValueIsInsideTheImage(x, y)) continue;
 				
-				auto bgColor = GetPixelColorFromImage(m_Image, x, y);
+				auto bgColor = GetImagePixelColour(x, y);
 				wxColour textColor(255 - bgColor.Red(), 255 - bgColor.Green(), 255 - bgColor.Blue());
 				textColor = bgColor.GetRed() == bgColor.GetGreen() && bgColor.GetGreen() == bgColor.GetBlue() && bgColor.GetRed() == bgColor.GetBlue() ? m_ContrastDefaultColor : textColor;
 				gc->SetFont(font, textColor);
@@ -1256,51 +1263,72 @@ auto cCamPreview::CalculateHEW() -> void
 
 auto cCamPreview::CalculateImageStatistics() -> void
 {
-	// Fast single pass over 16-bit data
-	const auto N = static_cast<size_t>(m_ImageSize.GetWidth()) * m_ImageSize.GetHeight();
-
-	auto minValue = 0;
-	auto maxValue = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 
-		static_cast<unsigned short>(4'095) : 
-		std::numeric_limits<unsigned short>::max();
-
-	if (N) 
+	const size_t N = static_cast<size_t>(m_ImageSize.GetWidth()) * m_ImageSize.GetHeight();
+	if (!N || !m_ImageData)
 	{
-		auto* p = m_ImageData.get();
-		unsigned short mn = 0xFFFF, mx = 0;
-		long double sum = 0.0L, sum2 = 0.0L;
-
-		unsigned long long blackClippedPixelsCount{}, saturatedPixelsCount{};
-
-		for (size_t i = 0; i < N; ++i) 
-		{
-			const unsigned short v = p[i];
-			if (v < mn) mn = v;
-			if (v > mx) mx = v;
-			sum += v;
-			sum2 += static_cast<long double>(v) * v;
-
-			if (v <= minValue) ++blackClippedPixelsCount;
-			if (v >= maxValue) ++saturatedPixelsCount;
-		}
-
-		const long double mean = sum / N;
-		const long double var = std::max(0.0L, sum2 / N - mean * mean);
-		m_LastStats = 
-		{ 
-			mn, 
-			mx, 
-			static_cast<unsigned long long>(sum), 
-			static_cast<double>(mean), 
-			std::sqrt(static_cast<double>(var)), 
-			blackClippedPixelsCount,
-			saturatedPixelsCount,
-			true 
-		};
-	}
-	else {
 		m_LastStats = {};
+		return;
 	}
+
+	const unsigned short maxValue = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4'095 : USHRT_MAX;
+
+	// One pass split over the cores; integer sums are exact (65535^2 * 2^32 fits in 64 bits).
+	struct Partial { unsigned short mn{ USHRT_MAX }, mx{}; unsigned long long sum{}, sum2{}, black{}, saturated{}; };
+	const unsigned int numThreads = N < 1'000'000 ? 1u : std::clamp(std::thread::hardware_concurrency(), 1u, 16u);
+	std::vector<Partial> parts(numThreads);
+	const size_t chunk = (N + numThreads - 1) / numThreads;
+	const unsigned short* data = m_ImageData.get();
+
+	auto work = [&, data](unsigned int t)
+		{
+			Partial p{};
+			const size_t begin = t * chunk, end = std::min(N, begin + chunk);
+			for (size_t i = begin; i < end; ++i)
+			{
+				const unsigned short v = data[i];
+				if (v < p.mn) p.mn = v;
+				if (v > p.mx) p.mx = v;
+				p.sum += v;
+				p.sum2 += static_cast<unsigned long long>(v) * v;
+				p.black += (v == 0);
+				p.saturated += (v >= maxValue);
+			}
+			parts[t] = p;
+		};
+
+	if (numThreads == 1) work(0);
+	else
+	{
+		std::vector<std::thread> threads;
+		threads.reserve(numThreads);
+		for (unsigned int t = 0; t < numThreads; ++t) threads.emplace_back(work, t);
+		for (auto& th : threads) th.join();
+	}
+
+	Partial total{};
+	for (const auto& p : parts)
+	{
+		total.mn = std::min(total.mn, p.mn);
+		total.mx = std::max(total.mx, p.mx);
+		total.sum += p.sum;
+		total.sum2 += p.sum2;
+		total.black += p.black;
+		total.saturated += p.saturated;
+	}
+
+	const double mean = static_cast<double>(total.sum) / N;
+	const double var = std::max(0.0, static_cast<double>(total.sum2) / N - mean * mean);
+	m_LastStats =
+	{
+		total.mn,
+		total.mx,
+		total.sum,
+		mean,
+		std::sqrt(var),
+		total.black,
+		total.saturated,
+		true
+	};
 }
 
 void cCamPreview::TickFPS()
@@ -1576,18 +1604,7 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 
 	dc.Clear();
 
-	{
-		auto gc = wxGraphicsContext::Create(dc);
-		if (!gc)
-		{
-			// Live view waits for this flag; leaving it false would freeze the preview
-			SetExecutionFinished(true);
-			return;
-		}
-
-		DrawCameraCapturedImage(gc);
-		delete gc;
-	}
+	DrawCameraCapturedImage(dc);
 
 	if (!m_IsImageSet)
 	{
@@ -1606,15 +1623,6 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 		{
 			SetExecutionFinished(true);
 			return;
-		}
-
-		// Retrieve Canvas
-		{
-			wxBitmap buffer(m_CanvasSize.GetWidth(), m_CanvasSize.GetHeight());
-			wxMemoryDC memDC;
-			memDC.SelectObject(buffer);
-			memDC.Blit(0, 0, m_CanvasSize.GetWidth(), m_CanvasSize.GetHeight(), &dc, 0, 0);
-			m_LastBufferImage = buffer.ConvertToImage();
 		}
 
 		m_TopLeftOverlayBottom = 0.0;
@@ -1661,66 +1669,17 @@ void cCamPreview::Render(wxBufferedPaintDC& dc)
 	SetExecutionFinished(true);
 }
 
-auto cCamPreview::UpdateWXImage(int black, int white) -> void
+auto cCamPreview::UpdateColourLut(int black, int white) -> void
 {
-	LOG("Started: " + wxString(__FUNCSIG__));
-
-	const unsigned int imageHeight = static_cast<unsigned int>(std::max(0, m_ImageSize.GetHeight()));
-	if (!imageHeight || m_ImageSize.GetWidth() <= 0 || !m_ImageData || !m_Image.IsOk()) return;
-
-	// Every pixel value maps to the same colour for given levels, so build a lookup
-	// table once (at most 65,536 entries) instead of running the colormap maths and a
-	// bounds-checked SetRGB for each of the (up to tens of millions of) pixels.
-	// This keeps level changes from the histogram fast enough to follow a drag.
+	// Every pixel value maps to the same colour for given levels, so the colormap maths
+	// runs once per value (at most 65,536) and the bitmap is then built by table lookups.
+	// Only the visible part of the image is coloured (see DrawCameraCapturedImage), so
+	// a level change costs about the same for a 1 MP and a 150 MP sensor.
 	const unsigned short maxValue = m_ImageDataType == CameraPreviewVariables::ImageDataTypes::RAW_12BIT ? 4095 : USHRT_MAX;
-	std::vector<unsigned char> lut((static_cast<size_t>(maxValue) + 1) * 3);
+	m_ColourLut.resize((static_cast<size_t>(maxValue) + 1) * 3);
+	m_ColourLutMax = maxValue;
 	for (unsigned int v = 0; v <= maxValue; ++v)
-		MapValueToRGB(static_cast<unsigned short>(v), lut[v * 3], lut[v * 3 + 1], lut[v * 3 + 2], black, white);
-
-	// hardware_concurrency() may return 0, and there is no point in more threads than rows
-	const unsigned int numThreads = std::clamp(std::thread::hardware_concurrency(), 1u, imageHeight);
-	const unsigned int tileSize = (imageHeight + numThreads - 1) / numThreads;
-
-	std::vector<std::thread> threads;
-	threads.reserve(numThreads);
-	for (unsigned int i = 0; i < numThreads; ++i)
-	{
-		const unsigned int startY = i * tileSize;
-		if (startY >= imageHeight) break;
-		const unsigned int finishY = std::min(imageHeight, startY + tileSize);
-		threads.emplace_back(&cCamPreview::AdjustImageParts, this, 0u, startY, (unsigned int)m_ImageSize.GetWidth(), finishY, lut.data(), maxValue);
-	}
-	for (auto& thread : threads) thread.join();
-
-	LOG("Finished: " + wxString(__FUNCSIG__));
-}
-
-auto cCamPreview::AdjustImageParts
-(
-	const unsigned int start_x,
-	const unsigned int start_y,
-	const unsigned int finish_x,
-	const unsigned int finish_y,
-	const unsigned char* lut,
-	const unsigned short max_value
-) -> void
-{
-	if (!lut || finish_y <= start_y) return;
-
-	const size_t width = static_cast<size_t>(m_ImageSize.GetWidth());
-	unsigned char* rgb = m_Image.GetData();
-	for (size_t y = start_y; y < finish_y; ++y)
-	{
-		const unsigned short* src = &m_ImageData[y * width + start_x];
-		unsigned char* dst = rgb + (y * width + start_x) * 3;
-		for (size_t x = start_x; x < finish_x; ++x, ++src, dst += 3)
-		{
-			const unsigned char* c = lut + static_cast<size_t>(std::min(*src, max_value)) * 3;
-			dst[0] = c[0];
-			dst[1] = c[1];
-			dst[2] = c[2];
-		}
-	}
+		MapValueToRGB(static_cast<unsigned short>(v), m_ColourLut[v * 3], m_ColourLut[v * 3 + 1], m_ColourLut[v * 3 + 2], black, white);
 }
 
 auto cCamPreview::MapValueToRGB
@@ -1825,74 +1784,99 @@ auto cCamPreview::MapValueToRGB
 
 }
 
-void cCamPreview::CreateGraphicsBitmapImage(wxGraphicsContext* gc_)
+void cCamPreview::CreateScreenBitmap(const wxRect& screenRect, const double k)
 {
-	if (!m_IsImageSet || !m_Image.IsOk()) return;
+	const int W = m_ImageSize.GetWidth(), H = m_ImageSize.GetHeight();
+	const int dstW = screenRect.width, dstH = screenRect.height;
 
-	// When the image is shown smaller than 1:1 (the usual "fit to window" view of a
-	// large sensor), converting every pixel into a GDI+ bitmap is wasted work: it took
-	// over 100 ms per repaint for a 26 MP frame. Build the bitmap from every n-th pixel
-	// instead, keeping at least one bitmap pixel per screen pixel so it looks the same.
-	const double screenPerImagePx = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 1.0;
-	const int step = screenPerImagePx > 0.0 ? std::clamp((int)std::floor(1.0 / screenPerImagePx), 1, 32) : 1;
+	// Image column / row shown at the centre of every screen pixel (nearest neighbour).
+	// Image pixel i covers screen [(start + i) * k, (start + i + 1) * k), as the overlays assume.
+	std::vector<int> cols(dstW), rows(dstH);
+	for (int c = 0; c < dstW; ++c)
+		cols[c] = std::clamp((int)std::floor((screenRect.x + c + 0.5) / k - m_StartDrawPos.x), 0, W - 1);
+	for (int r = 0; r < dstH; ++r)
+		rows[r] = std::clamp((int)std::floor((screenRect.y + r + 0.5) / k - m_StartDrawPos.y), 0, H - 1);
 
-	if (m_IsGraphicsBitmapSet && step == m_GraphicsBitmapStep) return;
+	wxImage part(dstW, dstH, false);
+	unsigned char* dst = part.GetData();
+	const unsigned short* src = m_ImageData.get();
+	const unsigned char* lut = m_ColourLut.data();
+	const unsigned short lutMax = m_ColourLutMax;
+	const int* colIdx = cols.data();
+	const int* rowIdx = rows.data();
 
-	if (step == 1)
+	auto fillRows = [=](int rowBegin, int rowEnd)
+		{
+			for (int r = rowBegin; r < rowEnd; ++r)
+			{
+				const unsigned short* srcRow = src + static_cast<size_t>(rowIdx[r]) * W;
+				unsigned char* d = dst + static_cast<size_t>(r) * dstW * 3;
+				for (int c = 0; c < dstW; ++c, d += 3)
+				{
+					const unsigned char* rgb = lut + static_cast<size_t>(std::min(srcRow[colIdx[c]], lutMax)) * 3;
+					d[0] = rgb[0];
+					d[1] = rgb[1];
+					d[2] = rgb[2];
+				}
+			}
+		};
+
+	const unsigned int numThreads = static_cast<size_t>(dstW) * dstH < 200'000 ? 1u : std::clamp(std::thread::hardware_concurrency(), 1u, 8u);
+	if (numThreads == 1)
 	{
-		m_GraphicsBitmapImage = gc_->CreateBitmapFromImage(m_Image);
+		fillRows(0, dstH);
 	}
 	else
 	{
-		const int srcW = m_Image.GetWidth(), srcH = m_Image.GetHeight();
-		const int dstW = (srcW + step - 1) / step, dstH = (srcH + step - 1) / step;
-		wxImage reduced(dstW, dstH, false);
-		const unsigned char* src = m_Image.GetData();
-		unsigned char* dst = reduced.GetData();
-		for (int y = 0; y < dstH; ++y)
-		{
-			const unsigned char* srcRow = src + (static_cast<size_t>(y) * step * srcW) * 3;
-			unsigned char* dstRow = dst + static_cast<size_t>(y) * dstW * 3;
-			for (int x = 0; x < dstW; ++x)
-			{
-				const unsigned char* p = srcRow + static_cast<size_t>(x) * step * 3;
-				dstRow[x * 3] = p[0];
-				dstRow[x * 3 + 1] = p[1];
-				dstRow[x * 3 + 2] = p[2];
-			}
-		}
-		m_GraphicsBitmapImage = gc_->CreateBitmapFromImage(reduced);
+		const int rowsPerThread = (dstH + (int)numThreads - 1) / (int)numThreads;
+		std::vector<std::thread> threads;
+		threads.reserve(numThreads);
+		for (int begin = 0; begin < dstH; begin += rowsPerThread)
+			threads.emplace_back(fillRows, begin, std::min(dstH, begin + rowsPerThread));
+		for (auto& t : threads) t.join();
 	}
-	m_GraphicsBitmapStep = step;
-	m_IsGraphicsBitmapSet = true;
+
+	m_ScreenBitmap = wxBitmap(part);
 }
 
-void cCamPreview::DrawCameraCapturedImage(wxGraphicsContext* gc_)
+void cCamPreview::DrawCameraCapturedImage(wxDC& dc)
 {
-	CreateGraphicsBitmapImage(gc_);
-	
-	if (m_IsGraphicsBitmapSet)
-	{
-		auto interpolation_quality = m_Zoom / m_ZoomOnOriginalSizeImage >= m_MinZoom ? wxINTERPOLATION_NONE : wxINTERPOLATION_DEFAULT;
+	if (!m_IsImageSet || !HasImage() || m_ColourLut.empty()) return;
 
-		gc_->SetInterpolationQuality(interpolation_quality);
-		gc_->Scale(m_Zoom / m_ZoomOnOriginalSizeImage, m_Zoom / m_ZoomOnOriginalSizeImage);
-		// A reduced bitmap covers whole steps, so draw it over that exact area to keep
-		// its pixels aligned with the image coordinates used by the overlays.
-		const int step = std::max(1, m_GraphicsBitmapStep);
-		const int drawW = (m_ImageSize.GetWidth() + step - 1) / step * step;
-		const int drawH = (m_ImageSize.GetHeight() + step - 1) / step * step;
-		gc_->Clip(m_StartDrawPos.x, m_StartDrawPos.y, m_ImageSize.GetWidth(), m_ImageSize.GetHeight());
-		gc_->DrawBitmap(m_GraphicsBitmapImage,
-			m_StartDrawPos.x, m_StartDrawPos.y,
-			drawW, drawH);
-		gc_->ResetClip();
+	// The image is resampled straight to screen resolution and blitted 1:1. Letting GDI+
+	// scale a bitmap took 30-60 ms per repaint; this costs a few ms whatever the sensor
+	// size, because only the pixels that are actually on screen are ever touched.
+	const double k = m_ZoomOnOriginalSizeImage > 0.0 ? m_Zoom / m_ZoomOnOriginalSizeImage : 0.0;
+	if (k <= 0.0) return;
+
+	const wxSize canvas = GetClientSize();
+	const double sx0 = m_StartDrawPos.x * k, sy0 = m_StartDrawPos.y * k;
+	const double sx1 = (m_StartDrawPos.x + m_ImageSize.GetWidth()) * k;
+	const double sy1 = (m_StartDrawPos.y + m_ImageSize.GetHeight()) * k;
+	const int left = std::max(0, (int)std::floor(sx0)), top = std::max(0, (int)std::floor(sy0));
+	const int right = std::min(canvas.GetWidth(), (int)std::ceil(sx1));
+	const int bottom = std::min(canvas.GetHeight(), (int)std::ceil(sy1));
+	if (right <= left || bottom <= top) return;
+
+	const wxRect screenRect(left, top, right - left, bottom - top);
+
+	// Repaints that only change overlays (cursor, crosshair, ...) reuse the last bitmap
+	if (!m_IsGraphicsBitmapSet || !m_ScreenBitmap.IsOk() || screenRect != m_ScreenBitmapRect ||
+		k != m_ScreenBitmapZoom || m_StartDrawPos != m_ScreenBitmapStart)
+	{
+		CreateScreenBitmap(screenRect, k);
+		m_ScreenBitmapRect = screenRect;
+		m_ScreenBitmapZoom = k;
+		m_ScreenBitmapStart = m_StartDrawPos;
+		m_IsGraphicsBitmapSet = true;
 	}
+
+	dc.DrawBitmap(m_ScreenBitmap, m_ScreenBitmapRect.GetTopLeft());
 }
 
 auto cCamPreview::DrawFWHMValues(wxGraphicsContext* gc_) -> void
 {
-	if (!m_Image.IsOk() || !m_DisplayFWHM || !m_HorizontalSumArray || !m_VerticalSumArray) return;
+	if (!HasImage() || !m_DisplayFWHM || !m_HorizontalSumArray || !m_VerticalSumArray) return;
 
 	wxColour fontColour(181, 230, 29, 200);
 	wxFont font = wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
@@ -1954,7 +1938,7 @@ auto cCamPreview::DrawFWHMValues(wxGraphicsContext* gc_) -> void
 
 auto cCamPreview::DrawHEWValues(wxGraphicsContext* gc_) -> void
 {
-	if (!m_Image.IsOk() || !m_DisplayFocusCenter || !m_HorizontalSumArray || !m_VerticalSumArray) return;
+	if (!HasImage() || !m_DisplayFocusCenter || !m_HorizontalSumArray || !m_VerticalSumArray) return;
 	if (m_HEWDiameter <= 0.0) return;
 
 	wxColour fontColour(255, 120, 175);
@@ -2002,7 +1986,7 @@ auto cCamPreview::DrawHEWValues(wxGraphicsContext* gc_) -> void
 
 auto cCamPreview::DrawGridMesh(wxGraphicsContext* gc_) -> void
 {	
-	if (!m_Image.IsOk() || !m_DisplayGridMesh) return;
+	if (!HasImage() || !m_DisplayGridMesh) return;
 
 	auto penColour = wxColour(195, 195, 195, 100);
 	auto penSize = 1;
@@ -2112,7 +2096,7 @@ auto cCamPreview::DrawGridMesh(wxGraphicsContext* gc_) -> void
 
 auto cCamPreview::DrawCircleMesh(wxGraphicsContext* gc_) -> void
 {
-	if (!m_Image.IsOk() || !m_DisplayCircleMesh) return;
+	if (!HasImage() || !m_DisplayCircleMesh) return;
 
 	auto penColour = wxColour(237, 28, 36, 100);
 	auto penSize = 4;
@@ -2152,7 +2136,7 @@ auto cCamPreview::DrawCircleMesh(wxGraphicsContext* gc_) -> void
 
 auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 {
-	if (!m_ImageData || !m_Image.IsOk() || m_PixelSizeUM <= 0.0) return;
+	if (!m_ImageData || !HasImage() || m_PixelSizeUM <= 0.0) return;
 
 	// --- Placement & style
 	const wxRealPoint anchor(m_CanvasSize.GetWidth() - 70, m_CanvasSize.GetHeight() - 20);
@@ -2209,7 +2193,7 @@ auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 	if (lengthPx < 40.0) return;
 
 	// --- Pick contrast color against the local background (as you already do)
-	const auto bg = GetPixelColorFromImage(m_LastBufferImage, anchor.x - lengthPx / 2.0, anchor.y);
+	const auto bg = GetCanvasColour(anchor.x - lengthPx / 2.0, anchor.y);
 	wxColour widgetColor(255 - bg.Red(), 255 - bg.Green(), 255 - bg.Blue());
 	if (bg.Red() == bg.Green() && bg.Green() == bg.Blue())
 		widgetColor = m_ContrastDefaultColor;
@@ -2247,7 +2231,7 @@ auto cCamPreview::DrawScaleBar(wxGraphicsContext* gc_) -> void
 
 auto cCamPreview::DrawHEWCircle(wxGraphicsContext* gc_) -> void
 {
-	if (!m_Image.IsOk() || !m_HorizontalSumArray || !m_VerticalSumArray) return;
+	if (!HasImage() || !m_HorizontalSumArray || !m_VerticalSumArray) return;
 	if (m_HorizontalFWHM_PX == -1 || m_VerticalFWHM_PX == -1) return;
 	if (!m_DisplayFocusCenter) return;
 
@@ -2280,7 +2264,7 @@ auto cCamPreview::DrawHEWCircle(wxGraphicsContext* gc_) -> void
 
 auto cCamPreview::DrawSpotCroppedWindow(wxGraphicsContext* gc_) -> void
 {
-	if (!m_Image.IsOk() || !m_HorizontalSumArray || !m_VerticalSumArray) return;
+	if (!HasImage() || !m_HorizontalSumArray || !m_VerticalSumArray) return;
 	if (m_HorizontalFWHM_PX == -1 || m_VerticalFWHM_PX == -1) return;
 	if (!m_DisplayFocusCenter) return;
 
@@ -2418,7 +2402,7 @@ auto cCamPreview::DrawVerticalSumLine(wxGraphicsContext* gc_) -> void
 auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 {
 	if (m_Zoom > m_MinZoom) return;
-	if (!m_Image.IsOk()) return;
+	if (!HasImage()) return;
 	if (m_DisplayFWHM) return;
 	if (!gc_) return;
 
@@ -2574,7 +2558,7 @@ auto cCamPreview::DrawActualImageSize(wxGraphicsContext* gc_) -> void
 auto cCamPreview::DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> void
 {
 	if (m_Zoom <= m_MinZoom) return;
-	if (!m_Image.IsOk()) return;
+	if (!HasImage()) return;
 
 	wxDouble offset_x{ 50.0 }, offset_y{ 50.0 };
 	wxDouble max_width{ 100.0 }, max_height{ 100.0 };
@@ -2582,11 +2566,11 @@ auto cCamPreview::DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> v
 	(
 		GetSize().GetWidth() - max_width - offset_x,
 		offset_y,
-		m_Image.GetWidth() >= m_Image.GetHeight() ? max_width : max_height * m_Image.GetWidth() / (wxDouble)m_Image.GetHeight(),
-		m_Image.GetHeight() >= m_Image.GetWidth() ? max_height : max_width * m_Image.GetHeight() / (wxDouble)m_Image.GetWidth()
+		m_ImageSize.GetWidth() >= m_ImageSize.GetHeight() ? max_width : max_height * m_ImageSize.GetWidth() / (wxDouble)m_ImageSize.GetHeight(),
+		m_ImageSize.GetHeight() >= m_ImageSize.GetWidth() ? max_height : max_width * m_ImageSize.GetHeight() / (wxDouble)m_ImageSize.GetWidth()
 	);
 
-	auto bgColor = GetPixelColorFromImage(m_LastBufferImage, image_minuature.GetCentre().m_x, image_minuature.GetCentre().m_y);
+	auto bgColor = GetCanvasColour(image_minuature.GetCentre().m_x, image_minuature.GetCentre().m_y);
 	wxColour widgetColour(255 - bgColor.Red(), 255 - bgColor.Green(), 255 - bgColor.Blue());
 
 	widgetColour = bgColor.GetRed() == bgColor.GetGreen() && bgColor.GetGreen() == bgColor.GetBlue() && bgColor.GetRed() == bgColor.GetBlue() ? m_ContrastDefaultColor : widgetColour;
@@ -2602,12 +2586,12 @@ auto cCamPreview::DrawActualZoomedPositionOverImage(wxGraphicsContext* gc_) -> v
 
 	auto actual_view = wxRect2DDouble
 	(
-		//image_minuature.m_x - m_StartDrawPos.x * max_width / (double)m_Image.GetWidth(),
-		//image_minuature.m_y - m_StartDrawPos.y * max_height / (double)m_Image.GetHeight(),
-		image_minuature.m_x - m_StartDrawPos.x * image_minuature.m_width / (double)m_Image.GetWidth(),
-		image_minuature.m_y - m_StartDrawPos.y * image_minuature.m_height / (double)m_Image.GetHeight(),
-		GetSize().GetWidth() * m_ZoomOnOriginalSizeImage / m_Zoom / m_Image.GetWidth() * image_minuature.m_width,
-		GetSize().GetHeight() * m_ZoomOnOriginalSizeImage / m_Zoom / m_Image.GetHeight() * image_minuature.m_height
+		//image_minuature.m_x - m_StartDrawPos.x * max_width / (double)m_ImageSize.GetWidth(),
+		//image_minuature.m_y - m_StartDrawPos.y * max_height / (double)m_ImageSize.GetHeight(),
+		image_minuature.m_x - m_StartDrawPos.x * image_minuature.m_width / (double)m_ImageSize.GetWidth(),
+		image_minuature.m_y - m_StartDrawPos.y * image_minuature.m_height / (double)m_ImageSize.GetHeight(),
+		GetSize().GetWidth() * m_ZoomOnOriginalSizeImage / m_Zoom / m_ImageSize.GetWidth() * image_minuature.m_width,
+		GetSize().GetHeight() * m_ZoomOnOriginalSizeImage / m_Zoom / m_ImageSize.GetHeight() * image_minuature.m_height
 	);
 	//LOG2F("Width: ", actual_view.m_width, " Height: ", actual_view.m_height);
 

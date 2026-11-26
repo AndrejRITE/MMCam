@@ -206,7 +206,10 @@ public:
 	//auto InitializeSelectedCamera(const std::string& camera_sn) -> void;
 	auto UpdateImageParameters(const wxSize oldImageSize) -> void;
 
-	auto GetPixelColorFromImage(const wxImage& image, int x, int y) -> wxColour;
+	/// Displayed colour of image pixel (x, y) for the current colormap and levels.
+	auto GetImagePixelColour(int x, int y) const -> wxColour;
+	/// Colour shown at canvas point (x, y): an image pixel, or the background outside the image.
+	auto GetCanvasColour(double x, double y) const -> wxColour;
 
 	auto SetCameraCapturedImage
 	(
@@ -322,17 +325,9 @@ private:
 	void Render(wxBufferedPaintDC& dc);
 	void DrawImage(wxGraphicsContext* gc);
 	
-	auto UpdateWXImage(const int black, const int white) -> void;
-	/// Fills rows [start_y, finish_y) of m_Image from m_ImageData through an RGB lookup table.
-	auto AdjustImageParts
-	(
-		const unsigned int start_x,
-		const unsigned int start_y,
-		const unsigned int finish_x,
-		const unsigned int finish_y,
-		const unsigned char* lut,
-		const unsigned short max_value
-	) -> void;
+	/// Rebuilds the value -> RGB lookup table for the given black/white levels.
+	auto UpdateColourLut(const int black, const int white) -> void;
+	auto HasImage() const -> bool { return m_ImageData && m_ImageSize.GetWidth() > 0 && m_ImageSize.GetHeight() > 0; }
 	/// Colour of one pixel value for the current colormap and black/white levels.
 	auto MapValueToRGB
 	(
@@ -345,8 +340,9 @@ private:
 	) -> void;
 
 
-	void CreateGraphicsBitmapImage(wxGraphicsContext* gc_);
-	void DrawCameraCapturedImage(wxGraphicsContext* gc_);
+	/// Resamples the image into m_ScreenBitmap for the given canvas rectangle and zoom.
+	void CreateScreenBitmap(const wxRect& screenRect, const double k);
+	void DrawCameraCapturedImage(wxDC& dc);
 	auto DrawFWHMValues(wxGraphicsContext* gc_) -> void;
 	auto DrawHEWValues(wxGraphicsContext* gc_) -> void;
 
@@ -425,13 +421,17 @@ private:
 
 	int m_Width{}, m_Height{};
 	bool m_IsGraphicsBitmapSet{}, m_IsImageSet{};
-	wxGraphicsBitmap m_GraphicsBitmapImage{};
-	int m_GraphicsBitmapStep{ 1 }; ///< pixel step used to build m_GraphicsBitmapImage (1 = full resolution)
+	/// The visible part of the image at screen resolution. Memory and repaint time do not
+	/// depend on the sensor size (a full-frame copy of a 100 MP image would need a 300 MB
+	/// RGB image plus a 400 MB GDI+ bitmap). m_IsGraphicsBitmapSet = false forces a rebuild.
+	wxBitmap m_ScreenBitmap{};
+	wxRect m_ScreenBitmapRect{};      ///< canvas area covered by m_ScreenBitmap
+	double m_ScreenBitmapZoom{};      ///< canvas pixels per image pixel it was built for
+	wxRealPoint m_ScreenBitmapStart{};///< m_StartDrawPos it was built for
 
-	wxImage m_Image{};
+	std::vector<unsigned char> m_ColourLut{}; ///< RGB triplets indexed by pixel value
+	unsigned short m_ColourLutMax{};
 	std::unique_ptr<unsigned short[]> m_ImageData{};
-	
-	wxImage m_LastBufferImage{};
 
 	wxSize m_SensorSize{};
 
